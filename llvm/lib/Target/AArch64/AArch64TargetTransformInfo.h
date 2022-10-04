@@ -38,6 +38,17 @@ class Type;
 class Value;
 class VectorType;
 
+// Start Metro
+/**
+ * オプションとOCLから、指定ループがSWP適用候補かどうか返す
+ * @param L 対象のLoop情報を指定する
+ * @retval true SWP適用候補
+ * @retval false SWP適用しない
+ */
+bool enableSWP(const Loop*);
+
+// End Metro
+
 class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   using BaseT = BasicTTIImplBase<AArch64TTIImpl>;
   using TTI = TargetTransformInfo;
@@ -369,6 +380,19 @@ public:
                                  ArrayRef<int> Mask, int Index,
                                  VectorType *SubTp,
                                  ArrayRef<const Value *> Args = None);
+
+// Start Metro
+
+  bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
+      AssumptionCache &AC,
+  TargetLibraryInfo *LibInfo,
+      HardwareLoopInfo &HWLoopInfo);
+
+  bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
+                  DominatorTree *DT, AssumptionCache *AC,
+                  TargetLibraryInfo *LibInfo);
+// End Metro
+
   /// @}
 };
 

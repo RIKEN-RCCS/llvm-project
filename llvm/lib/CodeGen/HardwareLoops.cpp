@@ -35,6 +35,9 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+// Start Metro
+#include "llvm/Support/FormatVariadic.h"
+// End Metro
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -46,6 +49,9 @@
 #define HW_LOOPS_NAME "Hardware Loop Insertion"
 
 using namespace llvm;
+// Start Metro
+static cl::opt<bool> DebugOutput("debug-hardwareloops",cl::init(false), cl::ReallyHidden);
+// End Metro
 
 static cl::opt<bool>
 ForceHardwareLoops("force-hardware-loops", cl::Hidden, cl::init(false),
@@ -99,6 +105,14 @@ createHWLoopAnalysis(StringRef RemarkName, Loop *L, Instruction *I) {
     if (I->getDebugLoc())
       DL = I->getDebugLoc();
   }
+
+// Start Metro
+  if (DebugOutput) {
+    if (!RemarkName.equals("HWLoopNotProfitable") &&
+        !RemarkName.equals("HWLoopNested"))
+      dbgs() << *CodeRegion;
+  }
+// End Metro
 
   OptimizationRemarkAnalysis R(DEBUG_TYPE, RemarkName, DL, CodeRegion);
   R << "hardware-loop not created: ";
@@ -260,8 +274,14 @@ bool HardwareLoops::TryConvertLoop(Loop *L) {
 
   if (!ForceHardwareLoops &&
       !TTI->isHardwareLoopProfitable(L, *SE, *AC, LibInfo, HWLoopInfo)) {
-    reportHWLoopFailure("it's not profitable to create a hardware-loop",
-                        "HWLoopNotProfitable", ORE, L);
+// Start Metro
+    StringRef msg1="it's not profitable to create a hardware-loop";
+    std::string msg=msg1.data();
+    if (!HWLoopInfo.Reason.empty()) {
+      msg=llvm::formatv("{0}(reason={1})", msg1, HWLoopInfo.Reason);
+    }
+    reportHWLoopFailure(msg,"HWLoopNotProfitable", ORE, L);
+// End Metro
     return false;
   }
 
@@ -321,6 +341,20 @@ void HardwareLoop::Create() {
   }
 
   Value *Setup = InsertIterationSetup(LoopCountInit);
+
+// Start Metro
+  // OptimizationRemarkで成功メッセージを生成するのであれば、下記のデバッグメッセージは不要。
+  // しかし、できるかぎり、現状のLLVMの仕様を変えたくなかったため、デバッグメッセージを選択した。
+  if (DebugOutput) {
+    const auto &start=L->getLocRange().getStart();
+    const auto &end=L->getLocRange().getEnd();
+    errs() << "DBG(" << __func__ << ") HardwareLoopInsertion succeeded :";
+    start.print(errs());
+    errs() << " - ";
+    end.print(errs());
+    errs() <<"\n";
+  }
+// End Metro
 
   if (UsePHICounter || ForceHardwareLoopPHI) {
     Instruction *LoopDec = InsertLoopRegDec(LoopCountInit);
