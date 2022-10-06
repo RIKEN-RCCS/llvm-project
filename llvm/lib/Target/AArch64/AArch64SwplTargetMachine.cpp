@@ -1,4 +1,4 @@
-//=- AArch64Tm.cpp - Target Machine Info for FJ SWP ------------*- C++ -*----=//
+//=- AArch64SwplTargetMachine.cpp - Target Machine Info for SWP -*- C++ -*---=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,25 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Target Machine Info for FJ SWP.
+// Target Machine Info for SWP.
 //
-//===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include "AArch64SWPipeliner.h"
+#include "AArch64SwplTargetMachine.h"
+#include "AArch64TargetTransformInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "AArch64SWPipeliner.h"
-#include "AArch64TargetTransformInfo.h"
-#include "AArch64Tm.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace swpl;
 
-#define DEBUG_TYPE "fj-swpl-tm"
+#define DEBUG_TYPE "swpl-tm"
 #undef ALLOCATED_IS_CCR_ONLY
 
 static cl::opt<bool> DebugTm("swpl-debug-tm",cl::init(false), cl::ReallyHidden);
@@ -406,7 +404,7 @@ bool Tm::isPseudo(const MachineInstr &mi) const {
   return !isImplimented(mi);
 }
 
-#ifdef TMTEST
+#ifdef STMTEST
 
 void TmX4TmTest::init(llvm::MachineFunction&mf, bool first, int TestID) {
   Tm::initialize(mf);
@@ -425,7 +423,7 @@ void TmX4TmTest::init(llvm::MachineFunction&mf, bool first, int TestID) {
 
 #define DEF_RESOURCE(N) {llvm::A64FXRes::PortKind::P_##N, #N}
 
-void TmTest::run(llvm::MachineFunction&MF) {
+void StmTest::run(llvm::MachineFunction&MF) {
   bool firstCall=TM.getMachineRegisterInfo()==nullptr;
   DebugTm = true;
   TM.init(MF, firstCall, TestID);

@@ -9,8 +9,6 @@
 // AArch64 Machine Software Pipeliner Pass.
 //
 //===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
-//===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
 
@@ -23,12 +21,12 @@
 #include "llvm/InitializePasses.h"
 #include "AArch64TargetTransformInfo.h"
 
-#include "AArch64Tm.h"
 #include "AArch64SWPipeliner.h"
-#include "AArch64DataDependenceAnalysis.h"
-#include "AArch64Linda.h"
+#include "AArch64SwplDataDependenceAnalysis.h"
 #include "AArch64SwplPlan.h"
-#include "AArch64TransformLinda.h"
+#include "AArch64SwplScr.h"
+#include "AArch64SwplTargetMachine.h"
+#include "AArch64SwplTransformMIR.h"
 
 using namespace llvm;
 using namespace swpl;
@@ -38,7 +36,7 @@ static cl::opt<bool> DisableSwpl("swpl-disable",cl::init(false), cl::ReallyHidde
 static cl::opt<bool> EnableSensitiveCheck("swpl-sensitive-check",cl::init(false), cl::ReallyHidden);
 static cl::opt<unsigned> MaxInstNum("swpl-max-inst-num",cl::init(500), cl::ReallyHidden);
 static cl::opt<unsigned> MaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyHidden);
-static cl::opt<int> TestTm("swpl-test-tm",cl::init(0), cl::ReallyHidden);
+static cl::opt<int> TestStm("swpl-test-tm",cl::init(0), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpPlan("swpl-debug-dump-plan",cl::init(false), cl::ReallyHidden);
 
 /// OCLによるswpのon/offの代わりにSWPL化Loopを絞り込む
@@ -50,7 +48,7 @@ MachineOptimizationRemarkEmitter *ORE = nullptr;
 const TargetInstrInfo *TII = nullptr;
 const TargetRegisterInfo *TRI = nullptr;
 MachineRegisterInfo *MRI = nullptr;
-Tm TM;
+Tm STM;
 AliasAnalysis *AA;
 
 /// swpl-choice-loopで対象Loop特定に利用する
@@ -103,7 +101,7 @@ private:
   bool isNonTargetLoop(MachineLoop &L);
   void outputRemarkAnalysis(MachineLoop &L, int msg_id);
   bool shouldOptimize(MachineLoop &L);
-  swpl::TmTest *tmTest=nullptr; ///< Tmのテスト用領域
+  swpl::StmTest *stmTest =nullptr; ///< Stmのテスト用領域
 };
 
 struct AArch64PreSWPipeliner : public MachineFunctionPass {
@@ -191,18 +189,18 @@ bool AArch64SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
   MRI = &(MF->getRegInfo());
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
-#ifdef TMTEST
-  if (TestTm) {
+#ifdef STMTEST
+  if (TestStm) {
     // Tmの動作テスト(SchedModel確認のため、ここでテストを動作させている)
-    if (tmTest==nullptr) {
-      tmTest=new swpl::TmTest(TestTm);
+    if (stmTest ==nullptr) {
+      stmTest =new swpl::StmTest(TestStm);
     }
-    tmTest->run(mf);
+    stmTest->run(mf);
     return false;
   }
 #endif
 
-  TM.initialize(*MF);
+  STM.initialize(*MF);
 
   for (auto &L : *MLI)
     scheduleLoop(*L);
@@ -211,11 +209,11 @@ bool AArch64SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
 }
 
 bool AArch64SWPipeliner::doFinalization(Module &) {
-#ifdef TMTEST
-  if (TestTm && tmTest!=nullptr) {
+#ifdef STMTEST
+  if (TestStm && stmTest !=nullptr) {
     // testで利用する領域の解放
-    delete tmTest;
-    tmTest=nullptr;
+    delete stmTest;
+    stmTest =nullptr;
   }
 #endif
   return false;
@@ -265,10 +263,10 @@ bool AArch64SWPipeliner::scheduleLoop(MachineLoop &L) {
   // TargetLoopが指定された場合、それ以外のSWPL処理はおこなわない
   if (TargetLoop>0 && TargetLoop!=loopCountForDebug) return Changed;
 
-  LindaScr lindaScr(L);
+  SwplScr swplScr(L);
   UseMap liveOutReg;
   // SwplLoop::Initialize()でLoop複製されるため、その前に出口Busyレジスタ情報を収集する
-  lindaScr.collectLiveOut(liveOutReg);
+  swplScr.collectLiveOut(liveOutReg);
 
   // データ抽出
   swpl::SwplLoop *loop = SwplLoop::Initialize(L, liveOutReg);
@@ -292,8 +290,8 @@ bool AArch64SWPipeliner::scheduleLoop(MachineLoop &L) {
       if ( OptionDumpPlan ) {
         plan->dump( dbgs() );
       }
-      swpl::SwplTransformLinda tran(*MF, *plan, liveOutReg);
-      Changed = tran.transformLinda();
+      swpl::SwplTransformMIR tran(*MF, *plan, liveOutReg);
+      Changed = tran.transformMIR();
     }
     SwplPlan::destroy( plan );
   } else {

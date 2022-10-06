@@ -1,4 +1,4 @@
-//=- AArch64Linda.cpp -  Swpl Scheduling common function -*- C++ -*----------=//
+//=- AArch64SwplScr.cpp -  Swpl Scheduling common function -*- C++ -*--------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,29 +9,26 @@
 // Swpl Scheduling common function
 //
 //===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
-//===----------------------------------------------------------------------===//
 
-#include "llvm/Support/raw_ostream.h"
+#include "AArch64SwplScr.h"
+#include "AArch64SWPipeliner.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "AArch64SWPipeliner.h"
-#include "AArch64Linda.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace swpl;
 
 // private
 
-bool
-LindaScr::getCoefficient(const MachineOperand &cnt, int *coefficient) const {
-  if (cnt.isImm()) {
-    *coefficient=cnt.getImm();
-  } else if (cnt.isCImm()) {
-    const auto *cimm=cnt.getCImm();
+bool SwplScr::getCoefficient(const MachineOperand &op, int *coefficient) const {
+  if (op.isImm()) {
+    *coefficient= op.getImm();
+  } else if (op.isCImm()) {
+    const auto *cimm= op.getCImm();
     if (cimm->getBitWidth()>31) {
       if (DebugOutput) {
-        dbgs() << "DBG(LindaScr::getCoefficient): size(constant)>31\n";
+        dbgs() << "DBG(SwplScr::getCoefficient): size(constant)>31\n";
       }
       *coefficient=0;
       return false;
@@ -43,23 +40,22 @@ LindaScr::getCoefficient(const MachineOperand &cnt, int *coefficient) const {
   return true;
 }
 
-void
-LindaScr::makeBypass(const TransformedLindaInfo &TLI,
+void SwplScr::makeBypass(const TransformedMIRInfo &tmi,
                      const DebugLoc& dbgloc,
                      MachineBasicBlock &skip_kernel_from,
                      MachineBasicBlock &skip_kernel_to,
                      MachineBasicBlock &skip_mod_from,
                      MachineBasicBlock &skip_mod_to) {
 
-  makeBypassKernel (TLI.originalDoInitVar, dbgloc,
+  makeBypassKernel (
+      tmi.originalDoInitVar, dbgloc,
                     skip_kernel_from, skip_kernel_to,
-                    TLI.requiredKernelIteration * TLI.coefficient + TLI.minConstant);
-  AArch64CC::CondCode CC=(AArch64CC::CondCode)(int)TLI.branchDoPrgGen->getOperand(0).getImm();
-  makeBypassMod (TLI.updateDoPrgGen->getOperand(0).getReg(),  dbgloc, CC,skip_mod_from, skip_mod_to);
+      tmi.requiredKernelIteration * tmi.coefficient + tmi.minConstant);
+  AArch64CC::CondCode CC=(AArch64CC::CondCode)(int)tmi.branchDoVRegMI->getOperand(0).getImm();
+  makeBypassMod(tmi.updateDoVRegMI->getOperand(0).getReg(), dbgloc, CC, skip_mod_from, skip_mod_to);
 }
 
-void
-LindaScr::makeBypassKernel(Register doInitVar,
+void SwplScr::makeBypassKernel(Register doInitVar,
                            const DebugLoc& dbgloc,
                            MachineBasicBlock &from,
                            MachineBasicBlock &to,
@@ -86,8 +82,7 @@ LindaScr::makeBypassKernel(Register doInitVar,
   from.addSuccessor(&to);
 }
 
-void
-LindaScr::makeBypassMod(Register doUpdateVar,
+void SwplScr::makeBypassMod(Register doUpdateVar,
                         const DebugLoc &dbgloc,
                         AArch64CC::CondCode CC,
                         MachineBasicBlock &from,
@@ -114,8 +109,7 @@ LindaScr::makeBypassMod(Register doUpdateVar,
   from.addSuccessor(&to);
 }
 
-bool
-LindaScr::getDoInitialValue(swpl::TransformedLindaInfo& TLI) const {
+bool SwplScr::getDoInitialValue(swpl::TransformedMIRInfo &TMI) const {
   ///
   /// ```
   /// PH: %reg1=MOVi32imm imm OR %regs=MOVi64imm imm
@@ -123,17 +117,17 @@ LindaScr::getDoInitialValue(swpl::TransformedLindaInfo& TLI) const {
   /// L:  %reg3=PHI %reg2, PH, %reg5, L
   /// ```
   ///
-  const auto phiIter=MRI->def_instr_begin(TLI.originalDoPrg);
-  TLI.initDoPrgGen=&*phiIter;
+  const auto phiIter=MRI->def_instr_begin(TMI.originalDoVReg);
+  TMI.initDoVRegMI =&*phiIter;
   const MachineOperand *t;
-  assert(TLI.initDoPrgGen->isPHI());
+  assert(TMI.initDoVRegMI->isPHI());
 
-  if (TLI.initDoPrgGen->getOperand(2).getMBB()==ML.getTopBlock())
-    t=&(TLI.initDoPrgGen->getOperand(3));
+  if (TMI.initDoVRegMI->getOperand(2).getMBB()==ML.getTopBlock())
+    t=&(TMI.initDoVRegMI->getOperand(3));
   else
-    t=&(TLI.initDoPrgGen->getOperand(1));
+    t=&(TMI.initDoVRegMI->getOperand(1));
 
-  TLI.originalDoInitVar=t->getReg();
+  TMI.originalDoInitVar=t->getReg();
   assert (t->isReg());
 
   // 物理レジスタは仮引数のため、探索を中断する
@@ -148,14 +142,13 @@ LindaScr::getDoInitialValue(swpl::TransformedLindaInfo& TLI) const {
   }
 
   if (t->isImm() || t->isCImm()) {
-    TLI.isIterationCountConstant=getCoefficient(*t, &(TLI.doPrgInitialValue));
-    return TLI.isIterationCountConstant;
+    TMI.isIterationCountConstant=getCoefficient(*t, &(TMI.doVRegInitialValue));
+    return TMI.isIterationCountConstant;
   }
   return false;
 }
 
-void
-LindaScr::moveBody(llvm::MachineBasicBlock*newBody, llvm::MachineBasicBlock*oldBody) {
+void SwplScr::moveBody(llvm::MachineBasicBlock*newBody, llvm::MachineBasicBlock*oldBody) {
   auto I=newBody->getFirstTerminator();
   auto E=oldBody->end();
   for (auto J=oldBody->begin(); J!=E;) {
@@ -167,15 +160,14 @@ LindaScr::moveBody(llvm::MachineBasicBlock*newBody, llvm::MachineBasicBlock*oldB
 
 // public
 
-bool
-LindaScr::findBasicInductionVariable(TransformedLindaInfo &TLI) const {
-  /// TransformedLindaInfoの以下メンバを設定する(括弧内は下記例のどれかを示す)
+bool SwplScr::findBasicInductionVariable(TransformedMIRInfo &TMI) const {
+  /// TransformedMIRInfoの以下メンバを設定する(括弧内は下記例のどれかを示す)
   /// - isIterationCountConstant(immを抽出成功)
-  /// - doPrgInitialValue(imm)
-  /// - originalKernelIteration((doPrgInitialValue-constant)/coefficient)
-  /// - originalDoPrg(reg3:updateDoPrgGenの比較対象レジスタ)
-  /// - updateDoPrgGen(SUBSXri)
-  /// - branchDoPrgGen(Bcc)
+  /// - doVRegInitialValue(imm)
+  /// - originalKernelIteration((doVRegInitialValue-constant)/coefficient)
+  /// - originalDoVReg(reg3:updateDoVRegMIの比較対象レジスタ)
+  /// - updateDoVRegMI(SUBSXri)
+  /// - branchDoVRegMI(Bcc)
   /// - coefficient(1)
   /// - constant(下の場合は0-coefficient)
   ///
@@ -195,46 +187,45 @@ LindaScr::findBasicInductionVariable(TransformedLindaInfo &TLI) const {
   MachineInstr*cmp=nullptr;
   MachineInstr*addsub=nullptr;
 
-  /// (1) findGensForLoop() : loop制御に関わる言を探す(branch, cmp, addsub)
-  if (!findGensForLoop (&branch, &cmp, &addsub)) return false;
+  /// (1) findMIsForLoop() : loop制御に関わる言を探す(branch, cmp, addsub)
+  if (!findMIsForLoop(&branch, &cmp, &addsub)) return false;
 
   AArch64CC::CondCode CC = (AArch64CC::CondCode)branch->getOperand(0).getImm();
 
   if (CC  == AArch64CC::NE) {
     /// (2) ラッチ言がbneccの場合
     /// (2-1)getCoefficient() : 制御変数の増減値を取得する
-    if (!getCoefficient(addsub->getOperand(2), &(TLI.coefficient))) {
+    if (!getCoefficient(addsub->getOperand(2), &(TMI.coefficient))) {
       return false;
     }
 
     /// (2-2)比較と制御変数の増減を同一命令で行っているため、,0との比較になる(constant=0)
     /// \note 対象ループ判定で、SUBWSXriで減算＋比較の場合のみ対象としている
-    TLI.minConstant = 0;
+    TMI.minConstant = 0;
 
   } else if (CC == AArch64CC::GE ) {
     /// (3) ラッチ言がbgeccの場合
     /// (3-1)getCoefficient() : 制御変数の増減値を取得する
-    if (!getCoefficient(addsub->getOperand(2), &(TLI.coefficient))) {
+    if (!getCoefficient(addsub->getOperand(2), &(TMI.coefficient))) {
       return false;
     }
 
     /// (3-2)比較と制御変数の増減を同一命令で行っているため、0との比較になる(constant=0-coefficient)
     /// \note 対象ループ判定で、SUBWSXriで減算＋比較の場合のみ対象としている
-    TLI.minConstant = 0 - TLI.coefficient;
-    /// (3-3)prg=比較言(LLVMではaddsubと同一命令)のop1
+    TMI.minConstant = 0 - TMI.coefficient;
+    /// (3-3)mi=比較言(LLVMではaddsubと同一命令)のop1
   }
-  TLI.originalDoPrg = addsub->getOperand(1).getReg();
+  TMI.originalDoVReg = addsub->getOperand(1).getReg();
 
-  TLI.updateDoPrgGen=addsub;
-  TLI.branchDoPrgGen=branch;
-  if (getDoInitialValue(TLI))
-    TLI.originalKernelIteration=(TLI.doPrgInitialValue-TLI.minConstant)/TLI.coefficient;
+  TMI.updateDoVRegMI =addsub;
+  TMI.branchDoVRegMI =branch;
+  if (getDoInitialValue(TMI))
+    TMI.originalKernelIteration=(TMI.doVRegInitialValue - TMI.minConstant)/ TMI.coefficient;
 
   return true;
 }
 
-bool
-LindaScr::findGensForLoop(MachineInstr **Branch,
+bool SwplScr::findMIsForLoop(MachineInstr **Branch,
                           MachineInstr **Cmp,
                           MachineInstr **Addsub) const {
   auto mbb=ML.getTopBlock();
@@ -299,8 +290,7 @@ LindaScr::findGensForLoop(MachineInstr **Branch,
 /// nb->nb [tailport = s, headport = n];
 /// }
 /// \enddot
-void
-LindaScr::prepareCompensationLoop(TransformedLindaInfo &TLI) {
+void SwplScr::prepareCompensationLoop(TransformedMIRInfo &tmi) {
 
   MachineBasicBlock* ob=ML.getTopBlock();
   const BasicBlock*ob_bb=ob->getBasicBlock();
@@ -325,9 +315,9 @@ LindaScr::prepareCompensationLoop(TransformedLindaInfo &TLI) {
   }
   assert(oe!=nullptr);
 
-  TLI.OrgPreHeader=op;
-  TLI.OrgBody=ob;
-  TLI.OrgExit=oe;
+  tmi.OrgPreHeader=op;
+  tmi.OrgBody=ob;
+  tmi.OrgExit=oe;
 
   // MBBを生成する
   MachineBasicBlock* prolog=MF->CreateMachineBasicBlock(ob_bb);
@@ -342,13 +332,13 @@ LindaScr::prepareCompensationLoop(TransformedLindaInfo &TLI) {
   const auto &debugLoc=ob->getFirstTerminator()->getDebugLoc();
   BuildMI(ne, debugLoc, TII->get(AArch64::B)).addMBB(oe);
 
-  TLI.Prolog=prolog;
-  TLI.Epilog=epilog;
-  TLI.Check1=c1;
-  TLI.Check2=c2;
-  TLI.NewPreHeader=np;
-  TLI.NewBody=nb;
-  TLI.NewExit=ne;
+  tmi.Prolog=prolog;
+  tmi.Epilog=epilog;
+  tmi.Check1=c1;
+  tmi.Check2=c2;
+  tmi.NewPreHeader=np;
+  tmi.NewBody=nb;
+  tmi.NewExit=ne;
 
   // MBBを並べる(オブジェクトの並びを整理しているのみで、実行経路は未設定)、op~oeは直列に並んでいない場合がある。
   // [op-]ob[-oe]
@@ -410,7 +400,7 @@ LindaScr::prepareCompensationLoop(TransformedLindaInfo &TLI) {
   //                   ^ |                     ^ |
   //                   +-+                     +-+
 
-  makeBypass(TLI, dbgloc, *c1, *np,*c2, *ne);
+  makeBypass(tmi, dbgloc, *c1, *np,*c2, *ne);
   //                                  +-------------+
   //                                  |             v
   // op-->c1-->prolog-->ob-->epilog-->c2-->np-->nb-->ne-->oe
@@ -419,34 +409,32 @@ LindaScr::prepareCompensationLoop(TransformedLindaInfo &TLI) {
   //      +-------------------------------+
 }
 
-void
-LindaScr::postSSA(TransformedLindaInfo &TLI, swpl::SwplLoop &Loop) {
-  if (!TLI.isNecessaryBypassKernel()) {
-    removeMBB(TLI.Check1, TLI.OrgPreHeader, TLI.Prolog);
-    TLI.Check1=nullptr;
+void SwplScr::postSSA(TransformedMIRInfo &tmi, swpl::SwplLoop &Loop) {
+  if (!tmi.isNecessaryBypassKernel()) {
+    removeMBB(tmi.Check1, tmi.OrgPreHeader, tmi.Prolog);
+    tmi.Check1=nullptr;
   }
-  if (!TLI.isNecessaryBypassMod()) {
+  if (!tmi.isNecessaryBypassMod()) {
     // 余りループ実行判断は不要：余りループは必ず実行する。または必ず実行しない。
     // 余りループを実行しない（削除）場合、合流点のPHIを書き換える必要がある
-    removeMBB(TLI.Check2, TLI.Epilog, TLI.NewPreHeader, !TLI.isNecessaryMod());
-    TLI.Check2=nullptr;
+    removeMBB(tmi.Check2, tmi.Epilog, tmi.NewPreHeader, !tmi.isNecessaryMod());
+    tmi.Check2=nullptr;
   }
-  if (TLI.isNecessaryMod()) {
+  if (tmi.isNecessaryMod()) {
     /// 余りループ通過回数が1の場合は分岐が不要
-    if (!TLI.isNecessaryModIterationBranch()) {
-      removeIterationBranch(TLI.branchDoPrgGen, TLI.NewBody);
+    if (!tmi.isNecessaryModIterationBranch()) {
+      removeIterationBranch(tmi.branchDoVRegMI, tmi.NewBody);
     }
   } else {
-      removeMBB(TLI.NewBody, TLI.NewPreHeader, TLI.NewExit);
-      TLI.NewBody=nullptr;
+      removeMBB(tmi.NewBody, tmi.NewPreHeader, tmi.NewExit);
+      tmi.NewBody=nullptr;
   }
-  if (!TLI.isNecessaryKernelIterationBranch()) {
-    removeIterationBranch(TLI.branchDoPrgGenKernel, TLI.OrgBody);
+  if (!tmi.isNecessaryKernelIterationBranch()) {
+    removeIterationBranch(tmi.branchDoVRegMIKernel, tmi.OrgBody);
   }
 }
 
-void
-LindaScr::removeMBB(llvm::MachineBasicBlock *target, llvm::MachineBasicBlock*from, llvm::MachineBasicBlock *to, bool unnecessaryMod) {
+void SwplScr::removeMBB(llvm::MachineBasicBlock *target, llvm::MachineBasicBlock*from, llvm::MachineBasicBlock *to, bool unnecessaryMod) {
   MachineBasicBlock *rmSucc=nullptr;
   for (auto *p:target->successors()) {
     if (p!=target && p!=to) {
@@ -477,16 +465,14 @@ LindaScr::removeMBB(llvm::MachineBasicBlock *target, llvm::MachineBasicBlock*fro
   target->eraseFromParent();
 }
 
-void
-LindaScr::removeIterationBranch(MachineInstr *br, MachineBasicBlock *body) {
+void SwplScr::removeIterationBranch(MachineInstr *br, MachineBasicBlock *body) {
   /// latch命令を削除する
   br->eraseFromParent();
   body->removeSuccessor(body);
   removePredFromPhi(body, body);
 }
 
-void
-LindaScr::removePredFromPhi(MachineBasicBlock *fromMBB,
+void SwplScr::removePredFromPhi(MachineBasicBlock *fromMBB,
                             MachineBasicBlock *removeMBB) {
   std::vector<MachineInstr*> phis;
   for (auto &phi:fromMBB->phis()) {
@@ -517,11 +503,10 @@ LindaScr::removePredFromPhi(MachineBasicBlock *fromMBB,
   else                  \
     llvm::dbgs() << llvm::printMBBReference(*name) << "\n";
 
-void
-TransformedLindaInfo::print() {
-  llvm::dbgs() << "originalDoPrg:" << printReg(originalDoPrg, TRI) << "\n"
+void TransformedMIRInfo::print() {
+  llvm::dbgs() << "originalDoVReg:" << printReg(originalDoVReg, TRI) << "\n"
                << "originalDoInitVar:" << printReg(originalDoInitVar, TRI) << "\n"
-               << "doPrg:" << printReg(doPrg, TRI) << "\n"
+               << "doVReg:" << printReg(doVReg, TRI) << "\n"
                << "iterationInterval:" << iterationInterval << "\n"
                << "minimumIterationInterval:" << minimumIterationInterval << "\n"
                << "coefficient: " << coefficient << "\n"
@@ -534,22 +519,22 @@ TransformedLindaInfo::print() {
                << "kernelEndIndx: " << kernelEndIndx << "\n"
                << "epilogEndIndx: " << epilogEndIndx << "\n"
                << "isIterationCountConstant: " << isIterationCountConstant << "\n"
-               << "doPrgInitialValue: " << doPrgInitialValue << "\n"
+               << "doVRegInitialValue: " << doVRegInitialValue << "\n"
                << "originalKernelIteration: " << originalKernelIteration << "\n"
                << "transformedKernelIteration: " << transformedKernelIteration << "\n"
                << "transformedModIteration: " << transformedModIteration << "\n";
-  if (updateDoPrgGen!=nullptr)
-    llvm::dbgs() << "updateDoPrgGen:" << *updateDoPrgGen;
+  if (updateDoVRegMI !=nullptr)
+    llvm::dbgs() << "updateDoVRegMI:" << *updateDoVRegMI;
   else
-    llvm::dbgs() << "updateDoPrgGen: nullptr\n";
-  if (branchDoPrgGen!=nullptr)
-    llvm::dbgs() << "branchDoPrgGen:" << *branchDoPrgGen;
+    llvm::dbgs() << "updateDoVRegMI: nullptr\n";
+  if (branchDoVRegMI !=nullptr)
+    llvm::dbgs() << "branchDoVRegMI:" << *branchDoVRegMI;
   else
-    llvm::dbgs() << "branchDoPrgGen: nullptr\n";
-  if (branchDoPrgGenKernel!=nullptr)
-    llvm::dbgs() << "branchDoPrgGenKernel:" << *branchDoPrgGenKernel;
+    llvm::dbgs() << "branchDoVRegMI: nullptr\n";
+  if (branchDoVRegMIKernel !=nullptr)
+    llvm::dbgs() << "branchDoVRegMIKernel:" << *branchDoVRegMIKernel;
   else
-    llvm::dbgs() << "branchDoPrgGenKernel: nullptr\n";
+    llvm::dbgs() << "branchDoVRegMIKernel: nullptr\n";
   PRINT_MBB(OrgPreHeader);
   PRINT_MBB(Check1);
   PRINT_MBB(Prolog);
@@ -560,14 +545,14 @@ TransformedLindaInfo::print() {
   PRINT_MBB(NewBody);
   PRINT_MBB(NewExit);
   PRINT_MBB(OrgExit);
-  llvm::dbgs() << "gens:\n";
+  llvm::dbgs() << "mis:\n";
   int i=0;
-  for (const auto *mi:gens) {
+  for (const auto *mi: mis) {
     llvm::dbgs() << i++ << *mi;
   }
 }
 
-void LindaScr::collectLiveOut(UseMap &usemap) {
+void SwplScr::collectLiveOut(UseMap &usemap) {
   auto*mbb=ML.getTopBlock();
   for (auto& mi: *(mbb)) {
     for (auto& op: mi.operands()){

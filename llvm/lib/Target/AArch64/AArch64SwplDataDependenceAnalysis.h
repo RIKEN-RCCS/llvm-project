@@ -1,4 +1,4 @@
-//=- AArch64DataDependenceAnalysis.h - SWPL DDG -*- c++ -*-------------------=//
+//=- AArch64SwplDataDependenceAnalysis.h - SWPL DDG -*- c++ -*---------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,9 +9,9 @@
 /// AArch64 Data Dependency analysis Generation (SwplDdg)
 //
 //===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
-//===----------------------------------------------------------------------===//
-
+#ifndef AArch64SwplDataDependenceAnalysis_h
+#define AArch64SwplDataDependenceAnalysis_h
 #include "AArch64SWPipeliner.h"
 
 bool isPrefetch(const swpl::SwplInst &inst);
+#endif

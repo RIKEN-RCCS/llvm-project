@@ -1,4 +1,4 @@
-//=- AArch64DataDependenceAnalysis.cpp - SWPL DDG -*- c++ -*-----------------=//
+//=- AArch64SwplDataDependenceAnalysis.cpp - SWPL DDG -*- c++ -*-------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,24 +9,22 @@
 /// AArch64 Data Dependency analysis Generation (SwplDdg)
 //
 //===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
-//===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
 
+#include "AArch64SWPipeliner.h"
+#include "AArch64SwplDataDependenceAnalysis.h"
+#include "AArch64SwplTargetMachine.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "AArch64SWPipeliner.h"
-#include "AArch64Tm.h"
-#include "AArch64DataDependenceAnalysis.h"
 
 using namespace llvm;
 using namespace swpl;
 
-#define DEBUG_TYPE "fj-swp-ddg"
+#define DEBUG_TYPE "swp-ddg"
 
 static cl::opt<bool> DebugDdg("swpl-debug-ddg",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableInstDep("swpl-enable-instdep",cl::init(false), cl::ReallyHidden);
@@ -224,8 +222,6 @@ void SwplDdg::analysisRegDependence() {
 /// ループボディ内の全ての SwplInst (inst)に対して、
 /// 参照レジスタを定義する命令(def_inst)を検索し、依存関係（def_inst → inst）
 /// の依存を貼り命令間のエッジに対してDistance/DelayそれぞれのMapを登録する。
-/// \note delayの算出に、TradではTm_reg_flow_dependence()を利用していたが、
-/// LLVMでは Tm::computeRegFlowDependence を利用する。
 void SwplDdg::analysisRegsFlowDependence() {
   for (auto *use_inst:getLoopBodyInsts()) {
     for (auto *reg:use_inst->getUseRegs()) {
@@ -240,7 +236,7 @@ void SwplDdg::analysisRegsFlowDependence() {
         // def-regがearly-clobberの場合は、命令のLatencyに関係なく１とする
         delay = 1;
       } else {
-        delay = swpl::TM.computeRegFlowDependence(def_inst->getMI(), use_inst->getMI());
+        delay = swpl::STM.computeRegFlowDependence(def_inst->getMI(), use_inst->getMI());
       }
       update_distance_and_delay(*this, *def_inst, *use_inst, distance, delay);
     }
@@ -298,7 +294,6 @@ void SwplDdg::analysisRegsOutputDependence() {
 /// SwplMem同士の依存関係を解析し、
 /// 命令間のエッジに対してDistance/DelayそれぞれのMapを登録する。\n
 /// 真依存、逆依存、出力依存のそれぞれの依存を以下のルーチンを利用してDelayを算出する。\n
-/// \note Tradで利用していたTmルーチンをそれぞれLLVMのTmルーチンを利用するように変更する。\n
 void SwplDdg::analysisMemDependence() {
   for (auto *former_mem:getLoopMems()) {
     for (auto *latter_mem:getLoopMems()) {
@@ -313,13 +308,13 @@ void SwplDdg::analysisMemDependence() {
       int distance, delay;
       if (former_mem->isMemDef()) {
         if (latter_mem->isMemDef()) {
-          delay = TM.computeMemOutputDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
+          delay = STM.computeMemOutputDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
         } else {
-          delay = TM.computeMemFlowDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
+          delay = STM.computeMemFlowDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
         }
       } else {
         if (latter_mem->isMemDef()) {
-          delay = TM.computeMemAntiDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
+          delay = STM.computeMemAntiDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
         } else {
           // Not dependence (input-dependence)
           continue;

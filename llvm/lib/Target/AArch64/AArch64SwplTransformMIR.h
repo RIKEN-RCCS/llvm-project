@@ -1,4 +1,4 @@
-//=- AArch64TransformLinda.h -  Transform MachineIR for FJ SWP -*- C++ -*----=//
+//=- AArch64SwplTransformMIR.h -  Transform MachineIR for SWP -*- C++ -*-----=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Transform MachineIR for FJ SWP.
+// Transform MachineIR for SWP.
 //
-//===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
 //===----------------------------------------------------------------------===//
 #ifndef AARCH64TRANSFORMLINDA_H
 #define AARCH64TRANSFORMLINDA_H
-
+#include "AArch64SwplScr.h"
+#include "AArch64SwplPlan.h"
+#include "Utils/AArch64BaseInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/Register.h"
+#include <unordered_map>
 namespace swpl {
 
 // 元の型名: Swpl_Reg_Linda_Prg_Vector_Map
@@ -31,7 +34,7 @@ using MIList=std::vector<llvm::MachineInstr*>;
 using RegMap=std::map<llvm::Register,llvm::Register>;
 
 /// スケジューリング結果反映
-class SwplTransformLinda {
+class SwplTransformMIR {
 private:
   /// 変換結果の移動先
   enum BLOCK {  PRO_MOVE,  PROLOGUE,  KERNEL,  EPILOGUE,  EPI_MOVE};
@@ -42,7 +45,7 @@ private:
   swpl::SwplPlan &Plan; ///< 処理対象のスケジュールプラン
   swpl::SwplInstSlotHashmap &InstSlotMap; ///< Planの命令配置
   swpl::SwplLoop &Loop; ///< 処理対象のループ
-  swpl::TransformedLindaInfo TLI; ///< 変換に必要な回転数などの情報
+  swpl::TransformedMIRInfo TMI; ///< 変換に必要な回転数などの情報
   Reg2Vreg PrgMap;  ///< オリジナルRegisterと新Register＋Versionのマップ
   llvm::MachineFunction& MF; ///< llvm::MachineInstrを扱う際に必要なクラス
 
@@ -63,7 +66,7 @@ private:
   /// \return 新レジスタ 対応レジスタが登録されていない場合は!isValid()なレジスタを返す
   llvm::Register getPrgFromMap (const swpl::SwplReg* orgReg, unsigned version) const;
 
-  /// <reg, version> と prg の対応表をつくり、SwplTransformLinda::prgMapに設定する
+  /// <reg, version> と prg の対応表をつくり、SwplTransformMIR::prgMapに設定する
   /// \param [in] n_versions
   void constructPrgMap(size_t n_versions);
 
@@ -176,10 +179,10 @@ public:
   /// \param [in] mf 対象MachineFunction
   /// \param [in] plan スケジューリング計画
   /// \param [in] liveOutReg 対象ループから出力Busyとなるレジスタ（スケジューリング結果反映時にレジスタ修正範囲を特定するために利用）
-  SwplTransformLinda(llvm::MachineFunction&mf, swpl::SwplPlan&plan, UseMap&liveOutReg)
+  SwplTransformMIR(llvm::MachineFunction&mf, swpl::SwplPlan&plan, UseMap&liveOutReg)
   :Plan(plan),InstSlotMap(plan.getInstSlotMap()),Loop(plan.getLoop()),MF(mf),LiveOutReg(liveOutReg) {}
 
-  virtual ~SwplTransformLinda() {
+  virtual ~SwplTransformMIR() {
     for (auto &p:PrgMap) {
       delete p.second;
       p.second=nullptr;
@@ -188,7 +191,7 @@ public:
   /// Planに従い、対象ループをSWPL化する
   /// \retval true MIRを更新した
   /// \retval false MIRを更新しなかった
-  bool transformLinda();
+  bool transformMIR();
 
   /// SwplPlan情報をファイルに出力する
   void exportPlan();

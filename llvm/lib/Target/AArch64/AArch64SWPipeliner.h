@@ -9,19 +9,17 @@
 // AArch64 Machine Software Pipeliner Pass definitions.
 //
 //===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
-//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64SWPIPELINER_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64SWPIPELINER_H
 
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "AArch64.h"
+#include "AArch64SwplScr.h"
+#include "AArch64SwplTargetMachine.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
-#include "AArch64Tm.h"
-#include "AArch64Linda.h"
 
 using namespace llvm;
 
@@ -58,13 +56,13 @@ class SwplInstEdge;
 class SwplInstGraph;
 class SwplDdg;
 
-/// swpl機能のデバッグ出力（Trad::Swpl_option_messageに対応）
+/// swpl機能のデバッグ出力
 extern  llvm::cl::opt<bool> DebugOutput;
 extern  llvm::MachineOptimizationRemarkEmitter *ORE;
 extern const llvm::TargetInstrInfo *TII;
 extern const llvm::TargetRegisterInfo *TRI;
 extern llvm::MachineRegisterInfo *MRI;
-extern Tm TM;
+extern Tm STM;
 extern AliasAnalysis *AA;
 
 /// \class SwplLoop
@@ -211,7 +209,7 @@ public:
   /// \return former_memとlatter_memが重なる可能性のある最小の回転数
   unsigned getMemsMinOverlapDistance(SwplMem *former_mem, SwplMem *latter_mem);
 
-  bool findBasicInductionVariable(TransformedLindaInfo &TLI) const;
+  bool findBasicInductionVariable(TransformedMIRInfo &TMI) const;
   
   /// SwplLoop::OrgMI2NewMI および SwplLoop::NewMI2OrgMI に要素を追加する
   /// \param [in] orgMI オリジナルMI
@@ -528,12 +526,10 @@ public:
   void printDefInst(void);
 
   TmRegKind getRegKind() const {
-    return TM.getRegKind(Reg);
+    return STM.getRegKind(Reg);
   }
 
   /// Stack-pointerを扱うレジスタかどうかを判定する
-  /// \note tradはframe-pointerを扱うレジスタも特別視しているが
-  /// llvmでは区別していないため、Stack-pointerを扱うかどうかのみを判定する。
   bool isStack() const { return (llvm::Register::isStackSlot(Reg)); }
 
   /// レジスタの数を返す

@@ -9,15 +9,13 @@
 // Processing related to checking Iteration in SWPL.
 //
 //===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
-//===----------------------------------------------------------------------===//
 
+#include "AArch64SwplCalclIterations.h"
 #include "AArch64.h"
-#include "AArch64Tm.h"
 #include "AArch64SWPipeliner.h"
 #include "AArch64SwplPlan.h"
 #include "AArch64SwplScheduling.h"
-#include "AArch64SwplCalclIterations.h"
+#include "AArch64SwplTargetMachine.h"
 
 using namespace llvm;
 
@@ -54,7 +52,7 @@ bool SwplCalclIterations::preCheckIterationCount(const PlanSpec& spec, unsigned 
   unsigned int const minimum_n_copies = 3;
   *required_itr = spec.pre_expand_num * minimum_n_copies;
 
-  /* 定数の場合、OCL 指定よりも、実際のLINDA上の数を優先する */
+  /* 定数の場合、OCL 指定よりも、実際のMIR上の数を優先する */
   if(spec.is_itr_count_constant) {
     if (spec.itr_count <= 2) {
       if (DebugOutput) {
@@ -62,7 +60,7 @@ bool SwplCalclIterations::preCheckIterationCount(const PlanSpec& spec, unsigned 
       }
       return false;
     }
-    return true; /* LINDA上に定数がある場合は、見積値を参照しない. */
+    return true; /* MIR上に定数がある場合は、見積値を参照しない. */
   } else {
     /* 見積り値 */
     int assumed_iterations = spec.assumed_iterations;

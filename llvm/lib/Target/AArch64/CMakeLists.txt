@@ -86,15 +86,15 @@ add_llvm_target(AArch64CodeGen
   AArch64SIMDInstrOpt.cpp
 # Start Fujitsu Extension: 7-L-076
   AArch64SWPipeliner.cpp
-  AArch64Tm.cpp
-  AArch64LoopDataExtraction.cpp
-  AArch64DataDependenceAnalysis.cpp
-  AArch64Linda.cpp
+        AArch64SwplTargetMachine.cpp
+        AArch64SwplLoopDataExtraction.cpp
+        AArch64SwplDataDependenceAnalysis.cpp
+        AArch64SwplScr.cpp
   AArch64SwplPlan.cpp
   AArch64SwplScheduling.cpp
   AArch64SwplRegEstimate.cpp
   AArch64SwplCalclIterations.cpp
-  AArch64TransformLinda.cpp
+        AArch64SwplTransformMIR.cpp
 # End Fujitsu Extension: 7-L-076
   AArch64A64FXResourceInfo.cpp
   DEPENDS

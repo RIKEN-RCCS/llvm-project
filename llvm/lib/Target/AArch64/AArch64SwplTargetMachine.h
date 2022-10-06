@@ -1,4 +1,4 @@
-//=- AArch64Tm.h - Target Machine Info for FJ SWP --------------*- C++ -*----=//
+//=- AArch64SwplTargetMachine.h - Target Machine Info for SWP --*- C++ -*----=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Target Machine Info for FJ SWP.
+// Target Machine Info for SWP.
 //
 //===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
-//===----------------------------------------------------------------------===//
-#ifndef AARCH64TM_H
-#define AARCH64TM_H
+#ifndef AARCH64SWPLTM_H
+#define AARCH64SWPLTM_H
 
 #include "AArch64TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "AArch64A64FXResourceInfo.h"
-#define TMTEST
+#define STMTEST
 
 namespace swpl {
 
@@ -324,7 +322,7 @@ public:
   /// \retval false Pseudo命令ではない
   bool isPseudo(const llvm::MachineInstr& mi) const;
 };
-#ifdef TMTEST
+#ifdef STMTEST
 /// TmTestからTmをテストするための派生クラス
 class TmX4TmTest: public Tm {
 public:
@@ -334,12 +332,12 @@ public:
 };
 
 /// Tmの動作テストをおこなうクラス
-class TmTest {
+class StmTest {
   swpl::TmX4TmTest TM;
   int TestID;
 public:
   /// constructor
-  TmTest(int id):TestID(id) {}
+  StmTest(int id):TestID(id) {}
 
   /// 動作テスト実行
   void run(llvm::MachineFunction&mf);

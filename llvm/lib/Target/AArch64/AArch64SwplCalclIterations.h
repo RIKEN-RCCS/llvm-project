@@ -9,17 +9,15 @@
 // Processing related to checking Iteration in SWPL.
 //
 //===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
-//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64SWPLCALSITERATIONS_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64SWPLCALSITERATIONS_H
 
 #include "AArch64.h"
-#include "AArch64Tm.h"
 #include "AArch64SWPipeliner.h"
 #include "AArch64SwplPlan.h"
 #include "AArch64SwplScheduling.h"
+#include "AArch64SwplTargetMachine.h"
 
 namespace swpl{
 extern  llvm::cl::opt<bool> DebugOutput;
