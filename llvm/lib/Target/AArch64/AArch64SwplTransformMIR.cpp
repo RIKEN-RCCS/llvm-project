@@ -59,8 +59,8 @@ bool SwplTransformMIR::transformMIR() {
 
   if (DumpMIR & (int)BEFORE) dumpMIR(BEFORE);
 
-  /// (1) convertPlan2Linda()でSwplPlanの情報をTLIに移し変える
-  convertPlan2Linda();
+  /// (1) convertPlan2MIR()でSwplPlanの情報をTMIに移し変える
+  convertPlan2MIR();
   if (TMI.isNecessaryTransformMIR()){
     updated=true;
     /// (2) TransformedMIRInfo::isNecessaryTransformMIR()であれば\n
@@ -70,7 +70,7 @@ bool SwplTransformMIR::transformMIR() {
     transformKernel();
     /// (2-3) SwplLoop::deleteNewBodyMBB() データ抽出で生成したMBBを削除する
     Loop.deleteNewBodyMBB();
-    /// TLI.gensをリセットする(gensで指しているMIRは削除済のため)
+    /// TMI.misをリセットする(misで指しているMIRは削除済のため)
     TMI.mis.clear();
     /// (2-4) postTransformKernel() Check1,Check2合流点でPHIを生成する
     postTransformKernel();
@@ -160,7 +160,7 @@ size_t SwplTransformMIR::chooseCmpIteration(size_t bandwidth, size_t slot) {
 /// - phi instの定義するSwplRegについて
 /// ```
 ///     def = φ(out, use) において
-///     (def, 0) = [original prg] = (use, n_versions - 1);
+///     (def, 0) = [original vreg] = (use, n_versions - 1);
 ///     1 <= i < n_versions のとき (def, version) = (use, version - 1);
 /// ```
 /// - 他のSwplReg
@@ -173,43 +173,43 @@ size_t SwplTransformMIR::chooseCmpIteration(size_t bandwidth, size_t slot) {
 ///       入口busyの解決の為には,prologでmoveを出す.
 ///       出口busyの解決の為には,epilogの最後の定義をoriginal llvm::Registerに行なうため,
 ///       version == n_version - 1がEPILOGの最後のversionになるよう展開する.
-void SwplTransformMIR::constructPrgMap(size_t n_versions) {
+void SwplTransformMIR::constructVRegMap(size_t n_versions) {
 
-  llvm::SmallSet<llvm::Register, 32> defined_prg;
+  llvm::SmallSet<llvm::Register, 32> defined_vreg;
   /* phi instに関して*/
   for (auto* inst: Loop.getPhiInsts()){
 
     auto &def_reg=inst->getDefRegs(0);
-    preparePrgVectorForReg(&def_reg, n_versions);
+    prepareVRegVectorForReg(&def_reg, n_versions);
 
-    /* (def, 0) = [original prg] = (use, n_versions - 1);
+    /* (def, 0) = [original vreg] = (use, n_versions - 1);
      * def_regのversion == 0はphi instの定義の参照
      * use_regのversion == n_versions -1 はphi instで参照される
      */
     const auto &use_reg=inst->getPhiUseRegFromIn();
-    preparePrgVectorForReg (&use_reg, n_versions);
+    prepareVRegVectorForReg(&use_reg, n_versions);
     /*
-     * phiのuse_reg  == original_prgを定義しているのは,
+     * phiのuse_reg  == original_vregを定義しているのは,
      * use_regのversion == n_versions - 1 としてsetする.
      */
-    setPrg (&use_reg, n_versions - 1, use_reg.getReg());
-    defined_prg.insert(use_reg.getReg());
+    setVReg(&use_reg, n_versions - 1, use_reg.getReg());
+    defined_vreg.insert(use_reg.getReg());
   }
 
-  /* bodyで定義されるprgに関してmapを構成する*/
+  /* bodyで定義されるvregに関してmapを構成する*/
   for (const auto* inst: Loop.getBodyInsts()) {
     for (const auto* def_reg: inst->getDefRegs()) {
-      if (PrgMap.count(def_reg)==0) {
-        llvm::Register original_prg = def_reg->getReg();
-        preparePrgVectorForReg(def_reg, n_versions);
+      if (VRegMap.count(def_reg)==0) {
+        llvm::Register original_vreg = def_reg->getReg();
+        prepareVRegVectorForReg(def_reg, n_versions);
 
-        /* vgatherなどでoriginal_prgはNoRegがありうる*/
-        if (!original_prg.isValid()) { continue; }
+        /* vgatherなどでoriginal_vregはNoRegがありうる*/
+        if (!original_vreg.isValid()) { continue; }
 
-        if (defined_prg.count(original_prg)==0) {
-          /* original_prgへdefするversionは,上記のphi instと併せて全てsetする*/
-          setPrg (def_reg, n_versions - 1, original_prg);
-          defined_prg.insert(original_prg);
+        if (defined_vreg.count(original_vreg)==0) {
+          /* original_vregへdefするversionは,上記のphi instと併せて全てsetする*/
+          setVReg(def_reg, n_versions - 1, original_vreg);
+          defined_vreg.insert(original_vreg);
         }
       }
     }
@@ -217,12 +217,12 @@ void SwplTransformMIR::constructPrgMap(size_t n_versions) {
 }
 
 const SwplReg*
-SwplTransformMIR::controlPrg2RegInLoop(const SwplInst **updateInst) {
+SwplTransformMIR::controlVReg2RegInLoop(const SwplInst **updateInst) {
   auto &map=Loop.getOrgMI2NewMI();
   const auto *update=map[TMI.updateDoVRegMI];
   /// データ抽出でレジスタを書き換えているため、オリジナルMIRでの誘導変数(Register)から変換後のRegisterを取得する。
 
-  /// (1) レジスタ同士の変換はできないため、（誘導変数更新MIRである）UpdateDoPrgGenの変換後MIRを取得し、そのOP1を利用する
+  /// (1) レジスタ同士の変換はできないため、（誘導変数更新MIRである）UpdateDoVRegMIの変換後MIRを取得し、そのOP1を利用する
   TMI.nonSSAOriginalDoVReg =update->getOperand(1).getReg();
   const auto *copy=map[TMI.initDoVRegMI];
   assert(copy->getOpcode()==AArch64::COPY);
@@ -242,7 +242,7 @@ SwplTransformMIR::controlPrg2RegInLoop(const SwplInst **updateInst) {
   return nullptr;
 }
 
-void SwplTransformMIR::convertPlan2Linda() {
+void SwplTransformMIR::convertPlan2MIR() {
   /**
    * min_n_iterations:
    *  kernelを繰り返す為に必要なループ制御変数の値\n
@@ -250,7 +250,7 @@ void SwplTransformMIR::convertPlan2Linda() {
    *  cmp_iterationに応じて値が変わる事に注意.
    */
   size_t min_n_iterations;
-  size_t do_prg_versions;
+  size_t do_vreg_versions;
   /**
    * cmp_iteration:
    * kernelに展開したループ制御変数の比較言の内, 最終的なkernelの比較言に採用した回転数の順番を表す.\n
@@ -265,7 +265,7 @@ void SwplTransformMIR::convertPlan2Linda() {
   /// (1) SwplScr::findBasicInductionVariable():元のループの制御変数に関する情報の取得
   ///  制御変数の初期値を見つける
   if (!SCR.findBasicInductionVariable (TMI)) {
-    llvm_unreachable ("LindaSr::findBasicInductionVariable() returned false");
+    llvm_unreachable ("SwplScr::findBasicInductionVariable() returned false");
     return;
   }
 
@@ -308,8 +308,8 @@ void SwplTransformMIR::convertPlan2Linda() {
       TMI.kernelEndIndx;
 
   const SwplInst *update=nullptr;
-  /// (6) controlPrg2RegInLoop(): 分岐用のDO制御変数を獲得
-  const auto* induction_reg = controlPrg2RegInLoop (&update);
+  /// (6) controlVReg2RegInLoop(): 分岐用のDO制御変数を獲得
+  const auto* induction_reg = controlVReg2RegInLoop(&update);
 
   const auto* def_inst = update;
   /// (7) chooseCmpIteration(): 分岐用のDO制御変数を更新する命令を獲得
@@ -320,18 +320,18 @@ void SwplTransformMIR::convertPlan2Linda() {
   /// (9) 分岐言と更新言を考慮して誘導変数と比較できる値へ換算
   TMI.expansion = TMI.coefficient * min_n_iterations + TMI.minConstant;
 
-  /// (10) constructPrgMap(): SwplRegとRegisterのMapを用意
-  constructPrgMap (TMI.nVersions);
-  /// (11) prepareGens(): 展開用の言の生成
-  prepareGens ();
+  /// (10) constructVRegMap(): SwplRegとRegisterのMapを用意
+  constructVRegMap(TMI.nVersions);
+  /// (11) prepareMIs(): 展開用の言の生成
+  prepareMIs();
 
-  /// (12) getPrg() Do制御変数の新レジスタを取得
-  do_prg_versions = (cmp_iteration +
+  /// (12) getVReg() Do制御変数の新レジスタを取得
+  do_vreg_versions = (cmp_iteration +
                      shiftConvertIteration2Version(
                                          TMI.nVersions, TMI.nCopies)) %
                     TMI.nVersions ;
 
-  TMI.doVReg = getPrg(*induction_reg, do_prg_versions);
+  TMI.doVReg = getVReg(*induction_reg, do_vreg_versions);
 
   /**
    * @note
@@ -344,73 +344,74 @@ void SwplTransformMIR::convertPlan2Linda() {
   assert (min_n_iterations >= 2);
 }
 
-llvm::MachineInstr *SwplTransformMIR::createGenFromInst(const SwplInst &inst, size_t version) {
+llvm::MachineInstr *SwplTransformMIR::createMIFromInst(const SwplInst &inst, size_t version) {
 
   /* 新規言の生成 */
   /// (1) 引数：instを元に、llvm::MachineInstrを生成する
-  const auto* org_gen = inst.getMI();  /* オリジナルの言 */
-  assert(org_gen);
-  auto *new_gen=MF.CloneMachineInstr(org_gen); /* コピー */
-  LLVM_DEBUG(dbgs() << "SwplTransformMIR::createGenFromInst() begin\n");
-  LLVM_DEBUG(dbgs() << "before vwesion:" << version << " new_gen:" << *new_gen << "\n");
+  const auto*org_MI = inst.getMI();  /* オリジナルの言 */
+  assert(org_MI);
+  auto *new_MI=MF.CloneMachineInstr(org_MI); /* コピー */
+  LLVM_DEBUG(dbgs() << "SwplTransformMIR::createMIFromInst() begin\n");
+  LLVM_DEBUG(dbgs() << "before vwesion:" << version << " new_MI:" << *new_MI
+                    << "\n");
 
   // 同一命令のDef/useに同じレジスタが存在する場合、異なるSwplRegが割りあたる方式に対応
   int i=-1;
   for (auto *reg:inst.getDefRegs()) {
-    /// (2) def-register(virtualのみ)に割り当てるレジスタを getPrg() で取得する
+    /// (2) def-register(virtualのみ)に割り当てるレジスタを getVReg() で取得する
     i++;
     Register r=reg->getReg();
     if (r.isPhysical()) continue;
-    LLVM_DEBUG(dbgs() << "swplreg=" << reg << ":" << printReg(r, TRI) << "from(" << inst.getDefOperandIx(i) << "):" << new_gen->getOperand(inst.getDefOperandIx(i)) <<"\n");
-    auto new_reg = getPrg (*reg, version);
+    LLVM_DEBUG(dbgs() << "swplreg=" << reg << ":" << printReg(r, TRI) << "from(" << inst.getDefOperandIx(i) << "):" << new_MI->getOperand(inst.getDefOperandIx(i)) <<"\n");
+    auto new_reg = getVReg(*reg, version);
     LLVM_DEBUG(dbgs() << "newreg=" << printReg(new_reg, TRI) << "\n" );
     if (new_reg==r) continue; // 新しいレジスタを割り当てる必要がなかったので、何もしない
-    auto &mo=new_gen->getOperand(inst.getDefOperandIx(i));
+    auto &mo= new_MI->getOperand(inst.getDefOperandIx(i));
     mo.setReg(new_reg);
   }
   i=-1;
   for (auto *reg:inst.getUseRegs()) {
-    /// (3) use-register(virtualのみ)に割り当てるレジスタを getPrg() で取得する
+    /// (3) use-register(virtualのみ)に割り当てるレジスタを getVReg() で取得する
     i++;
     Register r=reg->getReg();
     if (r.isPhysical()) continue;
-    LLVM_DEBUG(dbgs() << "swplreg=" << reg << ":" << printReg(r, TRI) << "from(" << inst.getDefOperandIx(i) << "):" << new_gen->getOperand(inst.getDefOperandIx(i)) <<"\n");
-    auto new_reg = getPrg (*reg, version);
+    LLVM_DEBUG(dbgs() << "swplreg=" << reg << ":" << printReg(r, TRI) << "from(" << inst.getDefOperandIx(i) << "):" << new_MI->getOperand(inst.getDefOperandIx(i)) <<"\n");
+    auto new_reg = getVReg(*reg, version);
     LLVM_DEBUG(dbgs() << "newreg=" << printReg(new_reg, TRI) << "\n" );
     if (new_reg==r) continue; // 新しいレジスタを割り当てる必要がなかったので、何もしない
-    auto &mo=new_gen->getOperand(inst.getUseOperandIx(i));
+    auto &mo= new_MI->getOperand(inst.getUseOperandIx(i));
     mo.setReg(new_reg);
   }
-  LLVM_DEBUG(dbgs() << "after new_gen:" << *new_gen << "\n");
-  LLVM_DEBUG(dbgs() << "SwplTransformMIR::createGenFromInst() end\n");
-  return new_gen;
+  LLVM_DEBUG(dbgs() << "after new_MI:" << *new_MI << "\n");
+  LLVM_DEBUG(dbgs() << "SwplTransformMIR::createMIFromInst() end\n");
+  return new_MI;
 }
 
-llvm::Register SwplTransformMIR::getPrgFromMap (const swpl::SwplReg *org, unsigned version)  const {
+llvm::Register SwplTransformMIR::getVRegFromMap(const swpl::SwplReg *org, unsigned version)  const {
   // llvm::Register割当がない場合はInValidなRegisterを返す
-  auto it_prgs = PrgMap.find(org);
-  if (it_prgs==PrgMap.end()) return llvm::Register();
-  auto prgs=it_prgs->getSecond();
-  if (prgs==nullptr) return llvm::Register();
-  auto reg=prgs->at(version);
+  auto it_vregs = VRegMap.find(org);
+  if (it_vregs == VRegMap.end()) return llvm::Register();
+  auto vregs = it_vregs->getSecond();
+  if (vregs ==nullptr) return llvm::Register();
+  auto reg= vregs->at(version);
   return reg;
 }
 
-llvm::Register SwplTransformMIR::getPrg(const swpl::SwplReg& org, size_t version)  {
+llvm::Register SwplTransformMIR::getVReg(const swpl::SwplReg& org, size_t version)  {
 
   auto orgReg=org.getReg();
 
-  /// (1) regにlinda_prgが未設定(llvm::Register::isValid()ではない)の場合はそのレジスタを返す。
+  /// (1) regにvregが未設定(llvm::Register::isValid()ではない)の場合はそのレジスタを返す。
   if (!orgReg.isValid()) {
     llvm_unreachable("original-register is invalid");
     return orgReg;
   }
 
-  /// (2) 既に allocate されてて、元の prg を使わなければならない場合、元のprgを使う。
+  /// (2) 既に allocate されてて、元の vreg を使わなければならない場合、元のvregを使う。
   /// \note allocate済レジスタ：Physicalレジスタのこと。Physicalレジスタは変更しない
   if (orgReg.isPhysical()) {
     // ここで setReg() を実行しているが、実際には不要と考えられる
-    setPrg (&org, version, orgReg);
+    setVReg(&org, version, orgReg);
     return orgReg;
   }
 
@@ -420,8 +421,8 @@ llvm::Register SwplTransformMIR::getPrg(const swpl::SwplReg& org, size_t version
   auto* def_inst=org.getDefInst();
   if (!def_inst->isInLoop()) return orgReg;
 
-  /// (4) 既にprgMapに登録済みである場合はそれを返す。
-  auto newReg = getPrgFromMap (&org, version);
+  /// (4) 既にvregMapに登録済みである場合はそれを返す。
+  auto newReg = getVRegFromMap(&org, version);
   if (newReg.isValid()) {
     return newReg;
   }
@@ -430,47 +431,47 @@ llvm::Register SwplTransformMIR::getPrg(const swpl::SwplReg& org, size_t version
   if (def_inst->isPhi()) {
     if (version == 0) {
       /**
-       * original_prgはversion == 0で参照される.
+       * original_vregはversion == 0で参照される.
        * またφ命令により定義、つまり前回転の最後のversionとして定義される.
-       * ==> original_prgを返す
+       * ==> original_vregを返す
       */
-      setPrg (&org, version, orgReg);
+      setVReg(&org, version, orgReg);
       return orgReg;
     } else {
       /**
-       * version == 0でない場合、 SwplInst::getPhiUseRegFromIn() で取得したuseRegを指定して getPrg()し、結果を返す。
+       * version == 0でない場合、 SwplInst::getPhiUseRegFromIn() で取得したuseRegを指定して getVReg()し、結果を返す。
        */
 
       const auto &useReg = def_inst->getPhiUseRegFromIn ();
 
-      newReg = getPrg (useReg, version - 1);
-      setPrg (&org, version, newReg);
+      newReg = getVReg(useReg, version - 1);
+      setVReg(&org, version, newReg);
       return newReg;
     }
   }
 
    /// (8) その他のregの場合.\n
-   /// この部分入力となるdef_prgは常に新しいllvm::Registerを作成する.
+   /// この部分入力となるdef_vregは常に新しいllvm::Registerを作成する.
    /// 主にループ内で定義前参照ではないllvm::Registerに対する定義.
    /// ただし下記の場合には注意が必要である.
    /// @attention
    ///   (1) def->ref->def->のように同一Registerを二度定義する場合
-   ///   後者のdef_regは constructPrgMap() で登録済みである.
-   ///   SWPLの出力結果はSSAの必要がある為,original_prgへの定義は後者のみである.
-   ///   ただし,def_regがiccなどの場合はoriginal_prgへの定義となるが,
+   ///   後者のdef_regは constructVRegMap() で登録済みである.
+   ///   SWPLの出力結果はSSAの必要がある為,original_vregへの定義は後者のみである.
+   ///   ただし,def_regがccなどの場合はoriginal_vregへの定義となるが,
    ///   これらの考慮は上で行なっている為、この入力とはならない.\n
    ///   (2) ref->def->ref->defのように同一Registerを二度定義する場合
-   ///   後者のdef_regはphi_instでuseされる為,constructPrgMapで登録済みである.
-   ///   SSAのため前者のdef_regはoriginal_prgに定義してはならない.
-   ///   本処理に到達するprgは前者のdefのprgのみである.
+   ///   後者のdef_regはphi_instでuseされる為,constructVRegMapで登録済みである.
+   ///   SSAのため前者のdef_regはoriginal_vregに定義してはならない.
+   ///   本処理に到達するvregは前者のdefのvregのみである.
 
     newReg = MRI->cloneVirtualRegister(orgReg);
-    setPrg (&org, version, newReg);
+    setVReg(&org, version, newReg);
     return newReg;
 }
 
 
-void SwplTransformMIR::insertGens(llvm::MachineBasicBlock& ins,
+void SwplTransformMIR::insertMIs(llvm::MachineBasicBlock& ins,
                                   SwplTransformMIR::BLOCK block) {
 
   size_t start_index=0;
@@ -534,13 +535,13 @@ void SwplTransformMIR::makeKernelIterationBranch(MachineBasicBlock &MBB) {
   }
 
   /// compare(SUBSXri)生成
-  // $XZR(+CC)=SUBSXri %TLI.doVReg, TLI.expansion
+  // $XZR(+CC)=SUBSXri %TMI.doVReg, TMI.expansion
   BuildMI(MBB, insertionPoint, debugLoc, TII->get(AArch64::SUBSXri), AArch64::XZR)
           .addReg(ini)
           .addImm(TMI.expansion)
           .addImm(0);
 
-  /// すでに存在するCheck2(ModLoop迂回用チェック)の比較命令の対象レジスタをTLI.nonSSAOriginalDoPrgに書き換える
+  /// すでに存在するCheck2(ModLoop迂回用チェック)の比較命令の対象レジスタをTMI.nonSSAOriginalDoVRegに書き換える
   // c2 mbbの先頭命令を取得（SUBSXRiのはず）
   auto *cmp=&*(TMI.Check2->begin());
   assert(cmp->getOpcode()==AArch64::SUBSXri);
@@ -553,7 +554,7 @@ void SwplTransformMIR::makeKernelIterationBranch(MachineBasicBlock &MBB) {
   if (TMI.coefficient > 0) {
     CC=AArch64CC::GE;
   }
-  /// Bcc命令を生成し、TLI.branchDoPrgGenKernelに記録しておく
+  /// Bcc命令を生成し、TMI.branchDoVRegMIKernelに記録しておく
   auto br=BuildMI(MBB, insertionPoint, debugLoc, TII->get(AArch64::Bcc))
           .addImm(CC)
           .addMBB(&MBB);
@@ -589,7 +590,7 @@ void SwplTransformMIR::outputNontunedMessage() {
   }
 }
 
-void SwplTransformMIR::prepareGens() {
+void SwplTransformMIR::prepareMIs() {
 
   unsigned iteration_interval_slot;
 
@@ -606,15 +607,15 @@ void SwplTransformMIR::prepareGens() {
 
     /// (2) relativeInstSlot() 命令の相対位置を計算する
     slot = relativeInstSlot(sinst);
-    /// (3) TLI.nCopies分、命令を生成する
+    /// (3) TMI.nCopies分、命令を生成する
     for (size_t j = 0; j < TMI.nCopies; ++j) {
       size_t version;
       unsigned new_slot;
 
-      /// (3-1) 命令の挿入位置を計算し、createGenFromInst() で生成した命令を挿入する
+      /// (3-1) 命令の挿入位置を計算し、createMIFromInst() で生成した命令を挿入する
       version = (j + n_shift) % TMI.nVersions;
       new_slot = slot + iteration_interval_slot * j;
-      auto *newMI = createGenFromInst (*sinst, version);
+      auto *newMI = createMIFromInst(*sinst, version);
       TMI.mis[new_slot]=newMI;
     }
   }
@@ -630,7 +631,7 @@ void SwplTransformMIR::prepareGens() {
 
     for (auto *sphi: Loop.getPhiInsts()) {
       const SwplReg &originalSReg = sphi->getPhiUseRegFromIn ();
-      Register newReg = getPrg (originalSReg, target_version);
+      Register newReg = getVReg(originalSReg, target_version);
       if (newReg == originalSReg.getReg()) {
         continue;
       }
@@ -643,14 +644,14 @@ void SwplTransformMIR::prepareGens() {
   return ;
 }
 
-void SwplTransformMIR::preparePrgVectorForReg(const swpl::SwplReg *reg, size_t n_versions) {
+void SwplTransformMIR::prepareVRegVectorForReg(const swpl::SwplReg *reg, size_t n_versions) {
   auto *regs=new std::vector<llvm::Register>;
   regs->resize(n_versions);
-  PrgMap[reg]=regs;
+  VRegMap[reg]=regs;
 }
 
-void SwplTransformMIR::setPrg(const swpl::SwplReg *orgReg, size_t version, llvm::Register newReg) {
-  auto *regs=PrgMap[orgReg];
+void SwplTransformMIR::setVReg(const swpl::SwplReg *orgReg, size_t version, llvm::Register newReg) {
+  auto *regs= VRegMap[orgReg];
   assert(regs!=nullptr);
   assert(regs->size()>version);
   regs->at(version)=newReg;
@@ -692,15 +693,15 @@ void SwplTransformMIR::transformKernel() {
   /// (3) body,prolog,epilogの命令を挿入
 
   /// (3-1) MOVE in PROLOGUE 部の作成
-  insertGens (*(TMI.Prolog), PRO_MOVE);
+  insertMIs(*(TMI.Prolog), PRO_MOVE);
   /// (3-2) PROLOGUE部の作成
-  insertGens (*(TMI.Prolog), PROLOGUE);
+  insertMIs(*(TMI.Prolog), PROLOGUE);
 
   /// (3-3) KERNEL部の作成
-  insertGens (*(TMI.OrgBody), KERNEL);
+  insertMIs(*(TMI.OrgBody), KERNEL);
 
   /// (3-4) EPILOGUE部の作成
-  insertGens (*(TMI.Epilog), EPILOGUE);
+  insertMIs(*(TMI.Epilog), EPILOGUE);
 
   /// (4) SWPL KERNELの繰返し分岐を生成
   makeKernelIterationBranch(*(TMI.OrgBody));

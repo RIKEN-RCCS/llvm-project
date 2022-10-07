@@ -37,12 +37,12 @@ namespace swpl {
 
 /// 利用資源パターンを生成するための生成過程で使われるデータ構造
 struct work_node {
-  TmResourceId id; ///< 利用資源
+  StmResourceId id; ///< 利用資源
   int startCycle=0; ///< 開始サイクル
   llvm::SmallVector<work_node*, 8> nodes; ///< 次の利用資源
 
   /// constructor
-  explicit work_node(TmResourceId id):id(id){}
+  explicit work_node(StmResourceId id):id(id){}
 
   /// destructor
   ~work_node() {
@@ -61,12 +61,12 @@ struct work_node {
   /// 資源の利用パターンを生成する
   ///
   /// \param [in] SM SchedModel
-  /// \param [out] tmPipelines 生成結果
-  void gen_patterns(llvm::TargetSchedModel&SM, TmPipelinesImpl &tmPipelines) {
-    std::vector<TmResourceId> ptn;
+  /// \param [out] stmPipelines 生成結果
+  void gen_patterns(llvm::TargetSchedModel&SM, StmPipelinesImpl &stmPipelines) {
+    std::vector<StmResourceId> ptn;
     std::vector<int> cycle;
-    TmPatternId patternId=0;
-    gen_pattern(SM, patternId, ptn, cycle, tmPipelines);
+    StmPatternId patternId=0;
+    gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
   }
 
   /// 資源の利用パターンを生成する
@@ -75,15 +75,16 @@ struct work_node {
   /// \param [in] patternId 利用資源パターンのID
   /// \param [in] ptn 利用資源パターン
   /// \param [in] cycle 開始サイクル
-  /// \param [out] tmPipelines 生成結果
-  void gen_pattern(llvm::TargetSchedModel&SM, TmPatternId &patternId, std::vector<TmResourceId> ptn, std::vector<int> cycle, TmPipelinesImpl &tmPipelines) {
+  /// \param [out] stmPipelines 生成結果
+  void gen_pattern(llvm::TargetSchedModel&SM, StmPatternId &patternId, std::vector<StmResourceId> ptn, std::vector<int> cycle,
+                   StmPipelinesImpl &stmPipelines) {
     // 引数：ptnはコピーコンストラクタで複製させている。
     if (id!=llvm::A64FXRes::PortKind::P_NULL) {
       ptn.push_back(id);
       cycle.push_back(startCycle);
       if (nodes.empty()) {
-        TmPipeline *t=new TmPipeline(SM);
-        tmPipelines.push_back(t);
+        StmPipeline *t=new StmPipeline(SM);
+        stmPipelines.push_back(t);
         t->patternId=patternId++;
         for (auto resource:ptn) {
           t->resources.push_back(resource);
@@ -96,7 +97,7 @@ struct work_node {
     }
     for ( work_node* c : nodes ) {
       // and-node
-      c->gen_pattern(SM, patternId, ptn, cycle, tmPipelines);
+      c->gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
     }
   }
 };
@@ -170,7 +171,7 @@ static work_node* makePrePatterns(llvm::TargetSchedModel& sm, const llvm::AArch6
   return root;
 }
 
-void Tm::initialize(const llvm::MachineFunction &mf) {
+void Stm::initialize(const llvm::MachineFunction &mf) {
   if (MF==nullptr) {
     const llvm::TargetSubtargetInfo &ST = mf.getSubtarget();
     SM.init(&ST);
@@ -189,30 +190,30 @@ void Tm::initialize(const llvm::MachineFunction &mf) {
   MRI=&(MF->getRegInfo());
 }
 
-unsigned int Tm::getFetchBandwidth(void) const {
+unsigned int Stm::getFetchBandwidth(void) const {
   return getRealFetchBandwidth()+OptionVirtualFetchWidth;
 }
 
-unsigned int Tm::getRealFetchBandwidth(void) const {
+unsigned int Stm::getRealFetchBandwidth(void) const {
   return OptionRealFetchWidth;
 }
 
-int Tm::getNumSameKindResources(TmResourceId resource) {
+int Stm::getNumSameKindResources(StmResourceId resource) {
   int num=tmNumSameKindResources[resource];
-  assert(num && "Tm::getNumSameKindResources: invalid resource");
+  assert(num && "Stm::getNumSameKindResources: invalid resource");
   return num;
 }
 
-int TmPipeline::getNResources(TmResourceId resource) const {
+int StmPipeline::getNResources(StmResourceId resource) const {
   int counter=0;
-  for (TmResourceId r: resources) {
+  for (StmResourceId r: resources) {
     if (r==resource) counter++;
   }
   return counter;
 }
 
-void TmPipeline::print(raw_ostream &ost) const {
-  ost << "DBG(TmPipeline::print) stage/resource("<< patternId << "): ";
+void StmPipeline::print(raw_ostream &ost) const {
+  ost << "DBG(StmPipeline::print) stage/resource("<< patternId << "): ";
   int last=stages.size();
   const char *sep="";
   for (int ix=0; ix<last; ix++) {
@@ -222,7 +223,7 @@ void TmPipeline::print(raw_ostream &ost) const {
   ost << "\n";
 }
 
-const char * TmPipeline::getResourceName(TmResourceId resource) {
+const char *StmPipeline::getResourceName(StmResourceId resource) {
   const char *name="";
   switch (resource) {
   case llvm::A64FXRes::PortKind::P_FLA:name="FLA";break;
@@ -239,26 +240,27 @@ const char * TmPipeline::getResourceName(TmResourceId resource) {
   return name;
 }
 
-int Tm::getNumSlot(void) const {
+int Stm::getNumSlot(void) const {
   return getFetchBandwidth();
 }
 
-int Tm::computeMemFlowDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
+int Stm::computeMemFlowDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
   if (OptionStoreLatency > 0) return OptionStoreLatency;
   if (OptionFlowDep > 0) return OptionFlowDep;
   return 1;
 }
 
-const TmPipelinesImpl *Tm::getPipelines(const MachineInstr &mi) {
-  auto *tps=tmPipelines[mi.getOpcode()];
+const StmPipelinesImpl *Stm::getPipelines(const MachineInstr &mi) {
+  auto *tps= stmPipelines[mi.getOpcode()];
   if (tps==nullptr) {
-    tps=generateTmPipelines(mi);
-    tmPipelines[mi.getOpcode()]=tps;
+    tps= generateStmPipelines(mi);
+    stmPipelines[mi.getOpcode()]=tps;
   }
   return tps;
 }
 
-const TmPipeline *Tm::getPipeline(const MachineInstr &mi, TmPatternId patternid) {
+const StmPipeline *Stm::getPipeline(const MachineInstr &mi,
+                                  StmPatternId patternid) {
   auto *tps= getPipelines(mi);
   if (tps==nullptr) return nullptr;
   if (patternid >= tps->size()) return nullptr;
@@ -266,23 +268,23 @@ const TmPipeline *Tm::getPipeline(const MachineInstr &mi, TmPatternId patternid)
   return t;
 }
 
-TmPipelinesImpl *Tm::generateTmPipelines(const MachineInstr &mi) {
+StmPipelinesImpl *Stm::generateStmPipelines(const MachineInstr &mi) {
 
   work_node *t=nullptr;
   if (isImplimented(mi)) {
     t=makePrePatterns(SM, *ResInfo, mi);
     if (t==nullptr) {
       if (DebugTm)
-        dbgs() << "DBG(Tm::generateTmPipelines): makePrePatterns() is nullptr. MIR=" << mi;
+        dbgs() << "DBG(Stm::generateStmPipelines): makePrePatterns() is nullptr. MIR=" << mi;
       return nullptr;
     }
   }
-  auto *pipelines=new TmPipelines;
+  auto *pipelines=new StmPipelines;
   if (t) {
     t->gen_patterns(SM, *pipelines);
     delete t;
   } else {
-    pipelines->push_back(new TmPipeline(SM));
+    pipelines->push_back(new StmPipeline(SM));
   }
   if (DebugTm) {
     for (auto*pipeline:*pipelines) {
@@ -291,22 +293,22 @@ TmPipelinesImpl *Tm::generateTmPipelines(const MachineInstr &mi) {
   }
   return pipelines;
 }
-int Tm::computeRegFlowDependence(const llvm::MachineInstr* def, const llvm::MachineInstr* use) const {
+int Stm::computeRegFlowDependence(const llvm::MachineInstr* def, const llvm::MachineInstr* use) const {
   const auto *IResDesc=ResInfo->getInstResDesc(*def);
   if (IResDesc==nullptr) return 1;
   return IResDesc->getLatency();
 }
 
-int Tm::computeMemAntiDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
+int Stm::computeMemAntiDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
   return 1;
 }
 
-int Tm::computeMemOutputDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
+int Stm::computeMemOutputDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
   return 1;
 }
 
-int Tm::getMinNResources(TmOpcodeId opcode, TmResourceId resource) {
-  auto *tps=tmPipelines[opcode];
+int Stm::getMinNResources(StmOpcodeId opcode, StmResourceId resource) {
+  auto *tps= stmPipelines[opcode];
   int min_n=INT_MAX;
   for (auto *t:*tps) {
     int n=t->getNResources(resource);
@@ -318,17 +320,16 @@ int Tm::getMinNResources(TmOpcodeId opcode, TmResourceId resource) {
   return min_n;
 }
 
-unsigned int Tm::getNumResource(void) const {
+unsigned int Stm::getNumResource(void) const {
   return numResource;
 }
 
-
-TmRegKind Tm::getRegKind(llvm::Register reg) const {
+StmRegKind Stm::getRegKind(llvm::Register reg) const {
   unsigned regClassId=0;
   bool pReg=false;
   if (reg.isVirtual()) {
     const auto * regClass=MRI->getRegClass(reg);
-    LLVM_DEBUG(dbgs() << "Tm::getRegKind: register is " << MRI->getTargetRegisterInfo()->getRegClassName(regClass) << "\n");
+    LLVM_DEBUG(dbgs() << "Stm::getRegKind: register is " << MRI->getTargetRegisterInfo()->getRegClassName(regClass) << "\n");
     if (regClass->hasSuperClassEq(&AArch64::GPR64allRegClass) || regClass->hasSuperClassEq(&AArch64::GPR32allRegClass)) {
       regClassId = AArch64::GPR64RegClassID;
     } else if (regClass->hasSuperClassEq(&AArch64::FPR8RegClass) ||
@@ -390,9 +391,9 @@ TmRegKind Tm::getRegKind(llvm::Register reg) const {
     }
   }
 
-  return TmRegKind(regClassId, pReg, *MRI);
+  return StmRegKind(regClassId, pReg, *MRI);
 }
-bool Tm::isImplimented(const llvm::MachineInstr&mi) const {
+bool Stm::isImplimented(const llvm::MachineInstr&mi) const {
   if (OptionCopyIsVirtual) {
     if (mi.isCopy()) return false;
   }
@@ -400,14 +401,14 @@ bool Tm::isImplimented(const llvm::MachineInstr&mi) const {
   return ResInfo->getInstResDesc(mi)!=nullptr;
 }
 
-bool Tm::isPseudo(const MachineInstr &mi) const {
+bool Stm::isPseudo(const MachineInstr &mi) const {
   return !isImplimented(mi);
 }
 
 #ifdef STMTEST
 
-void TmX4TmTest::init(llvm::MachineFunction&mf, bool first, int TestID) {
-  Tm::initialize(mf);
+void StmX4StmTest::init(llvm::MachineFunction&mf, bool first, int TestID) {
+  Stm::initialize(mf);
   if (TestID==1) {
 
     const char *result="OK";
@@ -416,7 +417,7 @@ void TmX4TmTest::init(llvm::MachineFunction&mf, bool first, int TestID) {
     if (MF!=&mf || MRI==nullptr || tmNumSameKindResources.empty()) {
       result="NG";
     }
-    dbgs() << "<<<TEST: 001 Tm>>>\n";
+    dbgs() << "<<<TEST: 001 Stm>>>\n";
     dbgs() << "DBG(TmX::init): " << firstcall << " is  " << result << "\n";
   }
 }
@@ -424,10 +425,10 @@ void TmX4TmTest::init(llvm::MachineFunction&mf, bool first, int TestID) {
 #define DEF_RESOURCE(N) {llvm::A64FXRes::PortKind::P_##N, #N}
 
 void StmTest::run(llvm::MachineFunction&MF) {
-  bool firstCall=TM.getMachineRegisterInfo()==nullptr;
+  bool firstCall= STM.getMachineRegisterInfo()==nullptr;
   DebugTm = true;
-  TM.init(MF, firstCall, TestID);
-  const std::map<TmResourceId, const char *> resources={
+  STM.init(MF, firstCall, TestID);
+  const std::map<StmResourceId, const char *> resources={
           DEF_RESOURCE(FLA),
           DEF_RESOURCE(FLB),
           DEF_RESOURCE(EXA),
@@ -437,7 +438,7 @@ void StmTest::run(llvm::MachineFunction&MF) {
           DEF_RESOURCE(PRX),
           DEF_RESOURCE(BR)
   };
-  const std::vector<TmResourceId> resourceIds= {
+  const std::vector<StmResourceId> resourceIds= {
           llvm::A64FXRes::PortKind::P_FLA,
           llvm::A64FXRes::PortKind::P_FLB,
           llvm::A64FXRes::PortKind::P_EXA,
@@ -453,11 +454,11 @@ void StmTest::run(llvm::MachineFunction&MF) {
     for (auto &bb:MF) {
       for (auto &instr:bb) {
         dbgs() << "*************************\nmir:" << instr;
-        if (TM.isPseudo(instr)) {
+        if (STM.isPseudo(instr)) {
           dbgs() << "Pseudo\n";
         }
-        (void) TM.getPipelines(instr);
-        dbgs() << "latency:" << TM.computeRegFlowDependence(&instr, nullptr) << "\n";
+        (void)STM.getPipelines(instr);
+        dbgs() << "latency:" << STM.computeRegFlowDependence(&instr, nullptr) << "\n";
       }
     }
   } else if (TestID==1) {
@@ -466,53 +467,53 @@ void StmTest::run(llvm::MachineFunction&MF) {
     int defaultStoreLatency = OptionStoreLatency;
     int defaultFlowDep = OptionFlowDep;
     dbgs() << "option:swpl-store-latency is default, swpl-flow-dep is default \n";
-    dbgs() << "Tm::computeMemFlowDependence():" << TM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemAntiDependence():" << TM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemOutputDependence():" << TM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is default, swpl-flow-dep is 0 \n";
     OptionFlowDep = 0;
-    dbgs() << "Tm::computeMemFlowDependence():" << TM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemAntiDependence():" << TM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemOutputDependence():" << TM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is default, swpl-flow-dep is 1 \n";
     OptionFlowDep = 1;
-    dbgs() << "Tm::computeMemFlowDependence():" << TM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemAntiDependence():" << TM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemOutputDependence():" << TM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
 
     OptionStoreLatency = 0;
     dbgs() << "option:swpl-store-latency is 0, swpl-flow-dep is default \n";
     OptionFlowDep = defaultFlowDep;
-    dbgs() << "Tm::computeMemFlowDependence():" << TM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemAntiDependence():" << TM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemOutputDependence():" << TM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is 0, swpl-flow-dep is 0 \n";
     OptionFlowDep = 0;
-    dbgs() << "Tm::computeMemFlowDependence():" << TM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemAntiDependence():" << TM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemOutputDependence():" << TM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is 0, swpl-flow-dep is 1 \n";
     OptionFlowDep = 1;
-    dbgs() << "Tm::computeMemFlowDependence():" << TM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemAntiDependence():" << TM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemOutputDependence():" << TM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
 
     OptionStoreLatency = 1;
     dbgs() << "option:swpl-store-latency is 1, swpl-flow-dep is default \n";
     OptionFlowDep = defaultFlowDep;
-    dbgs() << "Tm::computeMemFlowDependence():" << TM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemAntiDependence():" << TM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemOutputDependence():" << TM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is 1, swpl-flow-dep is 0 \n";
     OptionFlowDep = 0;
-    dbgs() << "Tm::computeMemFlowDependence():" << TM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemAntiDependence():" << TM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemOutputDependence():" << TM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is 1, swpl-flow-dep is 1 \n";
     OptionFlowDep = 1;
-    dbgs() << "Tm::computeMemFlowDependence():" << TM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemAntiDependence():" << TM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Tm::computeMemOutputDependence():" << TM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     OptionFlowDep = defaultFlowDep;
     OptionStoreLatency = defaultStoreLatency;
 
@@ -520,64 +521,64 @@ void StmTest::run(llvm::MachineFunction&MF) {
     int defaultRealFetchWidth = OptionRealFetchWidth;
     int defaultVirtualFetchWidth = OptionVirtualFetchWidth;
     dbgs() << "option:swpl-real-fetch-width is default, swpl-virtual-fetch-width is default\n";
-    dbgs() << "Tm::getFetchBandwidth():" << TM.getFetchBandwidth() << ", ";
-    dbgs() << "Tm::getRealFetchBandwidth():" << TM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Tm::getNumSlot():" << TM.getNumSlot() << "\n";
+    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 0;
     dbgs() << "option:swpl-real-fetch-width is default, swpl-virtual-fetch-width is 0\n";
-    dbgs() << "Tm::getFetchBandwidth():" << TM.getFetchBandwidth() << ", ";
-    dbgs() << "Tm::getRealFetchBandwidth():" << TM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Tm::getNumSlot():" << TM.getNumSlot() << "\n";
+    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 1;
     dbgs() << "option:swpl-real-fetch-width is default, swpl-virtual-fetch-width is 1\n";
-    dbgs() << "Tm::getFetchBandwidth():" << TM.getFetchBandwidth() << ", ";
-    dbgs() << "Tm::getRealFetchBandwidth():" << TM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Tm::getNumSlot():" << TM.getNumSlot() << "\n";
+    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
 
     OptionRealFetchWidth = 0;
     OptionVirtualFetchWidth = defaultVirtualFetchWidth;
     dbgs() << "option:swpl-real-fetch-width is 0, swpl-virtual-fetch-width is default\n";
-    dbgs() << "Tm::getFetchBandwidth():" << TM.getFetchBandwidth() << ", ";
-    dbgs() << "Tm::getRealFetchBandwidth():" << TM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Tm::getNumSlot():" << TM.getNumSlot() << "\n";
+    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 0;
     dbgs() << "option:swpl-real-fetch-width is 0, swpl-virtual-fetch-width is 0\n";
-    dbgs() << "Tm::getFetchBandwidth():" << TM.getFetchBandwidth() << ", ";
-    dbgs() << "Tm::getRealFetchBandwidth():" << TM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Tm::getNumSlot():" << TM.getNumSlot() << "\n";
+    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 1;
     dbgs() << "option:swpl-real-fetch-width is 0, swpl-virtual-fetch-width is 1\n";
-    dbgs() << "Tm::getFetchBandwidth():" << TM.getFetchBandwidth() << ", ";
-    dbgs() << "Tm::getRealFetchBandwidth():" << TM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Tm::getNumSlot():" << TM.getNumSlot() << "\n";
+    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
 
     OptionRealFetchWidth = 1;
     OptionVirtualFetchWidth = defaultVirtualFetchWidth;
     dbgs() << "option:swpl-real-fetch-width is 1, swpl-virtual-fetch-width is default\n";
-    dbgs() << "Tm::getFetchBandwidth():" << TM.getFetchBandwidth() << ", ";
-    dbgs() << "Tm::getRealFetchBandwidth():" << TM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Tm::getNumSlot():" << TM.getNumSlot() << "\n";
+    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 0;
     dbgs() << "option:swpl-real-fetch-width is 1, swpl-virtual-fetch-width is 0\n";
-    dbgs() << "Tm::getFetchBandwidth():" << TM.getFetchBandwidth() << ", ";
-    dbgs() << "Tm::getRealFetchBandwidth():" << TM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Tm::getNumSlot():" << TM.getNumSlot() << "\n";
+    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 1;
     dbgs() << "option:swpl-real-fetch-width is 1, swpl-virtual-fetch-width is 1\n";
-    dbgs() << "Tm::getFetchBandwidth():" << TM.getFetchBandwidth() << ", ";
-    dbgs() << "Tm::getRealFetchBandwidth():" << TM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Tm::getNumSlot():" << TM.getNumSlot() << "\n";
+    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
 
     OptionRealFetchWidth = defaultRealFetchWidth;
     OptionVirtualFetchWidth = defaultVirtualFetchWidth;
 
 
     dbgs() << "<<<TEST: 001-03 getNumResource>>>\n";
-    dbgs() << "Tm::getNumResource():" << TM.getNumResource() << "\n";
+    dbgs() << "Stm::getNumResource():" << STM.getNumResource() << "\n";
     dbgs() << "<<<TEST: 001-04 getNumSameResource>>>\n";
     for (const auto &rc:resourceIds) {
       // 同じ資源数を出力
-      dbgs() << "Tm::getNumSameKindResources(" << resources.at(rc) << "):" << TM.getNumSameKindResources(rc) << "\n";
+      dbgs() << "Stm::getNumSameKindResources(" << resources.at(rc) << "):" << STM.getNumSameKindResources(rc) << "\n";
     }
 
     dbgs() << "<<<TEST: 001-05 by MachineInstr/>>>\n";
@@ -602,12 +603,12 @@ void StmTest::run(llvm::MachineFunction&MF) {
           target = true;
         }
         if (target) {
-          bool isPseudo = TM.isPseudo(instr);
+          bool isPseudo = STM.isPseudo(instr);
           dbgs() << "**\nmir:" << instr;
           if (!isPseudo)
-            dbgs() << "Tm::computeRegFlowDependence(): " << TM.computeRegFlowDependence(&instr, &instr) << ", ";
-          dbgs() << "Tm::isIssuedOneByOne(): " << TM.isIssuedOneByOne(instr) << ", ";
-          dbgs() << "Tm::isPseudo(): " << isPseudo << "\n";
+            dbgs() << "Stm::computeRegFlowDependence(): " << STM.computeRegFlowDependence(&instr, &instr) << ", ";
+          dbgs() << "Stm::isIssuedOneByOne(): " << STM.isIssuedOneByOne(instr) << ", ";
+          dbgs() << "Stm::isPseudo(): " << isPseudo << "\n";
         }
       }
     }
@@ -615,7 +616,7 @@ void StmTest::run(llvm::MachineFunction&MF) {
   } else if (TestID==2) {
     dbgs() << "<<<TEST: 002 TmRegKindNum>>>\n";
     dbgs() << "<<<TEST: 002-01 getKindNum>>>\n";
-    dbgs() << "TmRegKind::getKindNum():" << TmRegKind::getKindNum() << "\n";
+    dbgs() << "StmRegKind::getKindNum():" << StmRegKind::getKindNum() << "\n";
     dbgs() << "<<<TEST: 002-02 >>>\n";
     for (auto &bb:MF) {
       for (auto &instr:bb) {
@@ -628,9 +629,9 @@ void StmTest::run(llvm::MachineFunction&MF) {
             continue;
           // register kind
           const auto usereg = op.getReg();
-          auto regkind = TM.getRegKind(usereg);
+          auto regkind = STM.getRegKind(usereg);
           regkind.print(dbgs());
-          dbgs() << "TmRegKind::isInteger:" << regkind.isInteger() << " isFloating:" << regkind.isFloating()
+          dbgs() << "StmRegKind::isInteger:" << regkind.isInteger() << " isFloating:" << regkind.isFloating()
                  << " isPredicate:" << regkind.isPredicate() << " isisCCRegister:" << regkind.isCCRegister()
                  << " isIntegerCCRegister:" << regkind.isIntegerCCRegister()
                  << " isAllocated:" << regkind.isAllocalted() << " getNum:" << regkind.getNum() << "\n";
@@ -645,7 +646,7 @@ void StmTest::run(llvm::MachineFunction&MF) {
     bool alreadyADDVv4i32v = false;
     bool alreadyST2Twov4s_POST = false;
     bool alreadyBFMXri = false;
-    dbgs() << "<<<TEST: 003 TmPipeline>>>\n";
+    dbgs() << "<<<TEST: 003 StmPipeline>>>\n";
     for (auto &bb:MF) {
       for (auto &instr:bb) {
         bool target = false;
@@ -673,24 +674,24 @@ void StmTest::run(llvm::MachineFunction&MF) {
         }
         if (target) {
           dbgs() << "OPCODE: " << TII->getName(instr.getOpcode()) << "\n";
-          const auto *pipes = TM.getPipelines(instr);
+          const auto *pipes = STM.getPipelines(instr);
           assert(pipes && pipes->size() >= 1);
-          dbgs() << "TmPipeline::getPipeline(" << TII->getName(instr.getOpcode()) << ", 0): ";
-          const TmPipeline *p = TM.getPipeline(instr, 0);
+          dbgs() << "StmPipeline::getPipeline(" << TII->getName(instr.getOpcode()) << ", 0): ";
+          const StmPipeline *p = STM.getPipeline(instr, 0);
           p->print(dbgs());
-          p = TM.getPipeline(instr, 1000);
-          dbgs() << "TmPipeline::getPipeline(" << TII->getName(instr.getOpcode()) << ", 1000): " << (p?"NG\n":"OK\n");
+          p = STM.getPipeline(instr, 1000);
+          dbgs() << "StmPipeline::getPipeline(" << TII->getName(instr.getOpcode()) << ", 1000): " << (p?"NG\n":"OK\n");
           for (const auto &rc:resourceIds) {
             int ptn = 0;
-            dbgs() << "Tmpipeline::getNResources(" << resources.at(rc) << "):";
+            dbgs() << "Stmpipeline::getNResources(" << resources.at(rc) << "):";
             char sep = ' ';
             for (const auto *pipe:*pipes) {
               dbgs() << sep << " ptn=" << ptn++ << "/N=" << pipe->getNResources(rc);
               sep = ',';
             }
             dbgs() << "\n";
-            dbgs() << "Tm::getMinNResources(" << resources.at(rc) << "): "
-                   << TM.getMinNResources(instr.getOpcode(), rc) << "\n";
+            dbgs() << "Stm::getMinNResources(" << resources.at(rc) << "): "
+                   << STM.getMinNResources(instr.getOpcode(), rc) << "\n";
           }
         }
       }

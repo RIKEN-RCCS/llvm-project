@@ -65,7 +65,7 @@ namespace swpl{
 /// \note 引数pipelineは、資源使用パターンに応じたTmPipeline情報
 void SwplMrt::reserveResourcesForInst(unsigned cycle,
                                       const SwplInst& inst,
-                                      const TmPipeline& pipeline ) {
+                                      const StmPipeline & pipeline ) {
   // cycle:1, stage:{ 1, 5, 9 }, resources:{ ID1, ID2, ID3 }
   //   ->     resource ID1  ID2  ID3  ID4
   //      cycle   :  1 予約
@@ -140,7 +140,7 @@ void SwplMrt::reserveResourcesForInst(unsigned cycle,
 ///       予約するのではなく、すでに予約されていれば、そのInstを記録していく。
 SwplInstSet* SwplMrt::findBlockingInsts(unsigned cycle,
                                         const SwplInst& inst,
-                                        const TmPipeline& pipeline)
+                                        const StmPipeline & pipeline)
 {
   SwplInstSet* blocking_insts = new SwplInstSet();
   assert( (pipeline.resources.size()==pipeline.stages.size()) && "Unexpected resource information.");
@@ -172,7 +172,7 @@ SwplInstSet* SwplMrt::findBlockingInsts(unsigned cycle,
 ///       （現在のところ使い道なし）
 bool SwplMrt::isOpenForInst(unsigned cycle,
                             const SwplInst& inst,
-                            const TmPipeline& pipeline) {
+                            const StmPipeline & pipeline) {
   SwplInstSet* blocking_insts;
   bool is_open;
 
@@ -224,7 +224,7 @@ void SwplMrt::cancelResourcesForInst(const SwplInst& inst) {
 /// \return なし
 void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream) {
   unsigned modulo_cycle;
-  TmResourceId resource_id;
+  StmResourceId resource_id;
   unsigned res_max_length = 0;
   unsigned word_width, inst_gen_width, inst_rotation_width;
   unsigned ii = iteration_interval;
@@ -237,7 +237,7 @@ void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream
   // １～STM.getNumResource()をリソースとして扱う 。
   // ０はP_NULLであり、リソースではない。
   for (resource_id = 1; (unsigned)resource_id <= numresource; ++resource_id) {
-    res_max_length = std::max( res_max_length, (unsigned)(strlen(TmPipeline::getResourceName(resource_id))) );
+    res_max_length = std::max( res_max_length, (unsigned)(strlen(StmPipeline::getResourceName(resource_id))) );
   }
 
   inst_gen_width = std::max( getMaxOpcodeNameLength()+1, res_max_length);  // 1 = 'p|f' の分
@@ -247,8 +247,8 @@ void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream
   // Resource名の出力
   stream << "\n       ";
   for (resource_id = 1; (unsigned)resource_id <= numresource; ++resource_id) {
-    stream << TmPipeline::getResourceName(resource_id);
-    for (unsigned l=strlen(TmPipeline::getResourceName(resource_id)); l<word_width; l++) {
+    stream << StmPipeline::getResourceName(resource_id);
+    for (unsigned l=strlen(StmPipeline::getResourceName(resource_id)); l<word_width; l++) {
       stream << " ";
     }
   }
@@ -315,7 +315,7 @@ SwplMrt* SwplMrt::construct (unsigned iteration_interval) {
   SwplMrt*  mrt = new SwplMrt(iteration_interval);
   unsigned ii = mrt->iteration_interval;
   for(unsigned i=0; i<ii; i++) {
-    mrt->table.push_back( (new std::map<TmResourceId, const SwplInst*>()) );
+    mrt->table.push_back( (new std::map<StmResourceId, const SwplInst*>()) );
   }
   return mrt;
 }
@@ -700,7 +700,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
         // 資源競合がなければ配置可能
         for( auto pl : *(STM.getPipelines(mi)) ) {
           if( mrt->isOpenForInst(cycle, inst, *pl) ) {
-            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<TmPipeline*>(pl) );
+            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<StmPipeline *>(pl) );
           }
         }
       }
@@ -763,7 +763,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::latestValidSlot(const SwplInst&
             //
             // 現時点では、資源が予約できるcycleかつ、inst_slot_map上で競合しないslotを返している。
             // このため、この命令の配置時に、資源競合となる命令は存在しないこととなる。
-            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<TmPipeline*>(pl) );
+            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<StmPipeline *>(pl) );
           }
         }
       }
@@ -1046,13 +1046,13 @@ void PlanSpec::countLoadStore(unsigned *num_load, unsigned *num_store, unsigned 
 /// \retval TRUE ループ回転数が取得できた
 /// \retval FALSE ループ回転数が取得できなかった
 bool PlanSpec::isIterationCountConstant(const SwplLoop& c_loop, unsigned* iteration_count) {
-  SwplScr linda_scr( *(const_cast<llvm::MachineLoop*>(c_loop.getML())) );
+  SwplScr swpl_scr( *(const_cast<llvm::MachineLoop*>(c_loop.getML())) );
   TransformedMIRInfo temp_tli;
 
   *iteration_count = 0;
 
   /* 制御変数の初期値など、元のループの制御変数に関する情報の取得*/
-  if( !linda_scr.findBasicInductionVariable(temp_tli) ) {
+  if( !swpl_scr.findBasicInductionVariable(temp_tli) ) {
     llvm_unreachable("failed at findBasicInductionVariable.");
     return false;
   }

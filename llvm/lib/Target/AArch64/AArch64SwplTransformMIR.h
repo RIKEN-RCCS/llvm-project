@@ -9,8 +9,8 @@
 // Transform MachineIR for SWP.
 //
 //===----------------------------------------------------------------------===//
-#ifndef AARCH64TRANSFORMLINDA_H
-#define AARCH64TRANSFORMLINDA_H
+#ifndef AARCH64TRANSFORMMIR_H
+#define AARCH64TRANSFORMMIR_H
 #include "AArch64SwplScr.h"
 #include "AArch64SwplPlan.h"
 #include "Utils/AArch64BaseInfo.h"
@@ -19,16 +19,12 @@
 #include <unordered_map>
 namespace swpl {
 
-// 元の型名: Swpl_Reg_Linda_Prg_Vector_Map
 using Reg2Vreg=llvm::DenseMap<const swpl::SwplReg*, std::vector<llvm::Register>*>;
 
-// 元の型名: Linda_Gen_Swpl_Inst_Hashmap
 using MI2SwplInst=std::unordered_map<const llvm::MachineInstr*, swpl::SwplInst*>;
 
-// 元の型名: Swpl_Inst_Swpl_Slot_Hashmap
 using SwplInst2Slot=std::unordered_map<const SwplInst*, unsigned>;
 
-// 元の型名: Linda_Gen_Vector
 using MIList=std::vector<llvm::MachineInstr*>;
 
 using RegMap=std::map<llvm::Register,llvm::Register>;
@@ -46,7 +42,7 @@ private:
   swpl::SwplInstSlotHashmap &InstSlotMap; ///< Planの命令配置
   swpl::SwplLoop &Loop; ///< 処理対象のループ
   swpl::TransformedMIRInfo TMI; ///< 変換に必要な回転数などの情報
-  Reg2Vreg PrgMap;  ///< オリジナルRegisterと新Register＋Versionのマップ
+  Reg2Vreg VRegMap;  ///< オリジナルRegisterと新Register＋Versionのマップ
   llvm::MachineFunction& MF; ///< llvm::MachineInstrを扱う際に必要なクラス
 
   // SSA化で利用するメンバ変数
@@ -64,19 +60,19 @@ private:
   /// \param [in] orgReg オリジナルレジスタ
   /// \param [in] version 新レジスタが必要なVersion
   /// \return 新レジスタ 対応レジスタが登録されていない場合は!isValid()なレジスタを返す
-  llvm::Register getPrgFromMap (const swpl::SwplReg* orgReg, unsigned version) const;
+  llvm::Register getVRegFromMap(const swpl::SwplReg* orgReg, unsigned version) const;
 
-  /// <reg, version> と prg の対応表をつくり、SwplTransformMIR::prgMapに設定する
+  /// <reg, version> と vreg の対応表をつくり、SwplTransformMIR::VRegMapに設定する
   /// \param [in] n_versions
-  void constructPrgMap(size_t n_versions);
+  void constructVRegMap(size_t n_versions);
 
-  /// TLI::originalDoPrgを定義している命令をLoop内からさがし,対応するSwplRegを返す
+  /// TMI::originalDoVRegを定義している命令をLoop内からさがし,対応するSwplRegを返す
   /// \param [out] update 更新している命令に対応したSwplInstを返す
   /// \return 定義SwplReg
-  const swpl::SwplReg* controlPrg2RegInLoop(const SwplInst**update);
+  const swpl::SwplReg*controlVReg2RegInLoop(const SwplInst**update);
 
-  /// SwplPlanの情報からTransformLindaInfoを設定する
-  void convertPlan2Linda();
+  /// SwplPlanの情報からTransformMIRInfoを設定する
+  void convertPlan2MIR();
 
   /// kernelのcopyの順番に対応するversionへの変換量を取得する
   /// \details
@@ -96,45 +92,43 @@ private:
   /// \param [in] inst
   /// \param [in] version
   /// \return 生成したMachineInstr
-  llvm::MachineInstr* createGenFromInst(const swpl::SwplInst &inst, size_t version);
+  llvm::MachineInstr*createMIFromInst(const swpl::SwplInst &inst, size_t version);
 
-  /// 指定したversionのSwplRegに対応するLindaPrgを取得する
+  /// 指定したversionのSwplRegに対応するMIRVRegを取得する
   /// \param [in] org
   /// \param [in] version
-  /// \return 取得したprg
-  llvm::Register getPrg(const swpl::SwplReg& org, size_t version );
+  /// \return 取得したvreg
+  llvm::Register getVReg(const swpl::SwplReg& org, size_t version );
 
-  /// Transformed_Linda_Info::gensに格納された命令を指定ブロック(KERNEL, PROLOGUE等)へ挿入する
+  /// TransformedMIRInfo::MIsに格納された命令を指定ブロック(KERNEL, PROLOGUE等)へ挿入する
   /// \param [in] ins
   /// \param [in] block
-  void insertGens(llvm::MachineBasicBlock&ins, BLOCK block);
+  void insertMIs(llvm::MachineBasicBlock&ins, BLOCK block);
 
   /// kernelのbodyの繰返し分岐を生成する
   /// \param [in,out] MBB
   void makeKernelIterationBranch(llvm::MachineBasicBlock&MBB);
 
-  /// planからLindaに反映したループ情報を表示
+  /// planからMIRに反映したループ情報を表示
   void outputNontunedMessage();
 
   /// SWPLのPROLOGUE,KERNEL,EPILOGUE,MOVE部分に入る言をVectorに用意する
-  void prepareGens();
+  void prepareMIs();
 
-  /// SwplRegとPRGをマップするための領域を用意する
+  /// SwplRegとVRegをマップするための領域を用意する
   /// \param [in] reg
   /// \param [in] n_versions
-  void preparePrgVectorForReg(const swpl::SwplReg *reg, size_t n_versions);
+  void prepareVRegVectorForReg(const swpl::SwplReg *reg, size_t n_versions);
 
-  /// SwplRegとPRGをマップする
+  /// SwplRegとVRegをマップする
   /// \param [in] orgReg
   /// \param [in] version
   /// \param [in] newReg
-  void setPrg(const swpl::SwplReg* orgReg, size_t version, llvm::Register newReg);
+  void setVReg(const swpl::SwplReg* orgReg, size_t version, llvm::Register newReg);
 
   /// Swpl成功メッセージ出力
   /// \param [in] n_body_inst
   /// \param [in] policy
-  /// \note Swpl_setOptInfo_forSSDEをoutputLoopoptMessageに名称変更。
-  /// 元outputLoopoptMessageは利用削除。
   void outputLoopoptMessage(int n_body_inst, swpl::SwplSchedPolicy policy);
 
   /// SWPL後の新しいKERNEL部分を構成する
@@ -183,7 +177,7 @@ public:
   :Plan(plan),InstSlotMap(plan.getInstSlotMap()),Loop(plan.getLoop()),MF(mf),LiveOutReg(liveOutReg) {}
 
   virtual ~SwplTransformMIR() {
-    for (auto &p:PrgMap) {
+    for (auto &p: VRegMap) {
       delete p.second;
       p.second=nullptr;
     }

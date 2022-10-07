@@ -62,7 +62,7 @@ extern  llvm::MachineOptimizationRemarkEmitter *ORE;
 extern const llvm::TargetInstrInfo *TII;
 extern const llvm::TargetRegisterInfo *TRI;
 extern llvm::MachineRegisterInfo *MRI;
-extern Tm STM;
+extern Stm STM;
 extern AliasAnalysis *AA;
 
 /// \class SwplLoop
@@ -525,7 +525,7 @@ public:
 
   void printDefInst(void);
 
-  TmRegKind getRegKind() const {
+  StmRegKind getRegKind() const {
     return STM.getRegKind(Reg);
   }
 

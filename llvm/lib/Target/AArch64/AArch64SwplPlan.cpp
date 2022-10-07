@@ -163,7 +163,7 @@ bool SwplPlan::isSufficientWithRenamingVersions(const SwplLoop& c_loop,
 
 /// \brief SwplPlanを取得し、スケジューリング結果からPlanの要素を設定する
 /// \details SwplPlanを取得し、スケジューリング結果からSwplPlanの要素を設定する。
-///          SwplPlanは、schedulingが完了した後, transform lindaへ渡す情報となる。
+///          SwplPlanは、schedulingが完了した後, transform mirへ渡す情報となる。
 /// \param [in] c_loop ループを構成する命令の情報
 /// \param [in] inst_slot_map スケジューリング結果
 /// \param [in] min_ii 計算されたMinII
@@ -304,7 +304,7 @@ unsigned SwplPlan::calculateResourceII(const SwplLoop& c_loop) {
 
     for(auto pipeline : *pipes ) {
       for(unsigned i=0; i<pipeline->resources.size(); i++) {
-        TmResourceId resource = pipeline->resources[i];
+        StmResourceId resource = pipeline->resources[i];
 
         // どの資源パターンが使用されるかはわからないため、
         // n_appearsには"1.0/資源利用のパターン数"の値を足しこむ
