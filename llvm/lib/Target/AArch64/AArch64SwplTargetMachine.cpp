@@ -614,7 +614,7 @@ void StmTest::run(llvm::MachineFunction&MF) {
     }
 
   } else if (TestID==2) {
-    dbgs() << "<<<TEST: 002 TmRegKindNum>>>\n";
+    dbgs() << "<<<TEST: 002 StmRegKindNum>>>\n";
     dbgs() << "<<<TEST: 002-01 getKindNum>>>\n";
     dbgs() << "StmRegKind::getKindNum():" << StmRegKind::getKindNum() << "\n";
     dbgs() << "<<<TEST: 002-02 >>>\n";
@@ -683,7 +683,7 @@ void StmTest::run(llvm::MachineFunction&MF) {
           dbgs() << "StmPipeline::getPipeline(" << TII->getName(instr.getOpcode()) << ", 1000): " << (p?"NG\n":"OK\n");
           for (const auto &rc:resourceIds) {
             int ptn = 0;
-            dbgs() << "Stmpipeline::getNResources(" << resources.at(rc) << "):";
+            dbgs() << "StmPipeline::getNResources(" << resources.at(rc) << "):";
             char sep = ' ';
             for (const auto *pipe:*pipes) {
               dbgs() << sep << " ptn=" << ptn++ << "/N=" << pipe->getNResources(rc);
