@@ -418,7 +418,7 @@ void StmX4StmTest::init(llvm::MachineFunction&mf, bool first, int TestID) {
       result="NG";
     }
     dbgs() << "<<<TEST: 001 Stm>>>\n";
-    dbgs() << "DBG(TmX::init): " << firstcall << " is  " << result << "\n";
+    dbgs() << "DBG(StmX::init): " << firstcall << " is  " << result << "\n";
   }
 }
 
