@@ -25,7 +25,7 @@ using namespace swpl;
 #define DEBUG_TYPE "swpl-tm"
 #undef ALLOCATED_IS_CCR_ONLY
 
-static cl::opt<bool> DebugTm("swpl-debug-tm",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> DebugStm("swpl-debug-tm",cl::init(false), cl::ReallyHidden);
 static cl::opt<int> OptionStoreLatency("swpl-store-latency",cl::init(6), cl::ReallyHidden);
 static cl::opt<int> OptionFlowDep("swpl-flow-dep",cl::init(10), cl::ReallyHidden);
 static cl::opt<int> OptionRealFetchWidth("swpl-real-fetch-width",cl::init(4), cl::ReallyHidden);
@@ -274,7 +274,7 @@ StmPipelinesImpl *Stm::generateStmPipelines(const MachineInstr &mi) {
   if (isImplimented(mi)) {
     t=makePrePatterns(SM, *ResInfo, mi);
     if (t==nullptr) {
-      if (DebugTm)
+      if (DebugStm)
         dbgs() << "DBG(Stm::generateStmPipelines): makePrePatterns() is nullptr. MIR=" << mi;
       return nullptr;
     }
@@ -286,7 +286,7 @@ StmPipelinesImpl *Stm::generateStmPipelines(const MachineInstr &mi) {
   } else {
     pipelines->push_back(new StmPipeline(SM));
   }
-  if (DebugTm) {
+  if (DebugStm) {
     for (auto*pipeline:*pipelines) {
       pipeline->print(dbgs());
     }
@@ -426,7 +426,7 @@ void StmX4StmTest::init(llvm::MachineFunction&mf, bool first, int TestID) {
 
 void StmTest::run(llvm::MachineFunction&MF) {
   bool firstCall= STM.getMachineRegisterInfo()==nullptr;
-  DebugTm = true;
+  DebugStm = true;
   STM.init(MF, firstCall, TestID);
   const std::map<StmResourceId, const char *> resources={
           DEF_RESOURCE(FLA),
