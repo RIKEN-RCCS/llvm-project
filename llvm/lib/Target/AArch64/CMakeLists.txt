@@ -84,7 +84,6 @@ add_llvm_target(AArch64CodeGen
   AArch64TargetTransformInfo.cpp
   SVEIntrinsicOpts.cpp
   AArch64SIMDInstrOpt.cpp
-# Start Fujitsu Extension: 7-L-076
   AArch64SWPipeliner.cpp
         AArch64SwplTargetMachine.cpp
         AArch64SwplLoopDataExtraction.cpp
@@ -95,7 +94,6 @@ add_llvm_target(AArch64CodeGen
   AArch64SwplRegEstimate.cpp
   AArch64SwplCalclIterations.cpp
         AArch64SwplTransformMIR.cpp
-# End Fujitsu Extension: 7-L-076
   AArch64A64FXResourceInfo.cpp
   DEPENDS
   intrinsics_gen
