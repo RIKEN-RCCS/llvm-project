@@ -62,7 +62,7 @@ extern  llvm::MachineOptimizationRemarkEmitter *ORE;
 extern const llvm::TargetInstrInfo *TII;
 extern const llvm::TargetRegisterInfo *TRI;
 extern llvm::MachineRegisterInfo *MRI;
-extern Stm STM;
+extern SwplTargetMachine STM;
 extern AliasAnalysis *AA;
 
 /// \class SwplLoop

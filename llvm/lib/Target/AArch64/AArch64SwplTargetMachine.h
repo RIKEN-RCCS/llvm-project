@@ -191,7 +191,7 @@ public:
 };
 
 /// SchedModelを利用してターゲット情報を取得し、SWPL機能に提供する
-class Stm {
+class SwplTargetMachine {
 protected:
   const llvm::MachineFunction *MF=nullptr; ///< Tmで必要な情報を取得するため、大元のMachineFunctionを記憶する。関数毎に再設定する。
   llvm::TargetSchedModel SM;         ///< SchedModel
@@ -214,9 +214,9 @@ protected:
 
 public:
   /// constructor
-  Stm() {}
+  SwplTargetMachine() {}
   /// destructor
-  virtual ~Stm() {
+  virtual ~SwplTargetMachine() {
     for (auto tms: stmPipelines) {
         if (tms.getSecond()) {
           for (auto *t:*(tms.getSecond())) {
@@ -325,7 +325,7 @@ public:
 };
 #ifdef STMTEST
 /// StmTestからStmをテストするための派生クラス
-class StmX4StmTest : public Stm {
+class StmX4StmTest : public SwplTargetMachine {
 public:
   void init(llvm::MachineFunction&mf, bool first, int TestID);
   const llvm::TargetSchedModel& getSchedModel() {return SM;}

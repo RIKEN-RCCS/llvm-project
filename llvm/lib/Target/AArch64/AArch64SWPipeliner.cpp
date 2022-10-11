@@ -48,7 +48,7 @@ MachineOptimizationRemarkEmitter *ORE = nullptr;
 const TargetInstrInfo *TII = nullptr;
 const TargetRegisterInfo *TRI = nullptr;
 MachineRegisterInfo *MRI = nullptr;
-Stm STM;
+SwplTargetMachine STM;
 AliasAnalysis *AA;
 
 /// swpl-choice-loopで対象Loop特定に利用する

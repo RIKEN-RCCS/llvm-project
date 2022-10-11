@@ -171,7 +171,7 @@ static work_node* makePrePatterns(llvm::TargetSchedModel& sm, const llvm::AArch6
   return root;
 }
 
-void Stm::initialize(const llvm::MachineFunction &mf) {
+void SwplTargetMachine::initialize(const llvm::MachineFunction &mf) {
   if (MF==nullptr) {
     const llvm::TargetSubtargetInfo &ST = mf.getSubtarget();
     SM.init(&ST);
@@ -190,17 +190,17 @@ void Stm::initialize(const llvm::MachineFunction &mf) {
   MRI=&(MF->getRegInfo());
 }
 
-unsigned int Stm::getFetchBandwidth(void) const {
+unsigned int SwplTargetMachine::getFetchBandwidth(void) const {
   return getRealFetchBandwidth()+OptionVirtualFetchWidth;
 }
 
-unsigned int Stm::getRealFetchBandwidth(void) const {
+unsigned int SwplTargetMachine::getRealFetchBandwidth(void) const {
   return OptionRealFetchWidth;
 }
 
-int Stm::getNumSameKindResources(StmResourceId resource) {
+int SwplTargetMachine::getNumSameKindResources(StmResourceId resource) {
   int num=tmNumSameKindResources[resource];
-  assert(num && "Stm::getNumSameKindResources: invalid resource");
+  assert(num && "SwplTargetMachine::getNumSameKindResources: invalid resource");
   return num;
 }
 
@@ -240,17 +240,18 @@ const char *StmPipeline::getResourceName(StmResourceId resource) {
   return name;
 }
 
-int Stm::getNumSlot(void) const {
+int SwplTargetMachine::getNumSlot(void) const {
   return getFetchBandwidth();
 }
 
-int Stm::computeMemFlowDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
+int SwplTargetMachine::computeMemFlowDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
   if (OptionStoreLatency > 0) return OptionStoreLatency;
   if (OptionFlowDep > 0) return OptionFlowDep;
   return 1;
 }
 
-const StmPipelinesImpl *Stm::getPipelines(const MachineInstr &mi) {
+const StmPipelinesImpl *
+SwplTargetMachine::getPipelines(const MachineInstr &mi) {
   auto *tps= stmPipelines[mi.getOpcode()];
   if (tps==nullptr) {
     tps= generateStmPipelines(mi);
@@ -259,7 +260,7 @@ const StmPipelinesImpl *Stm::getPipelines(const MachineInstr &mi) {
   return tps;
 }
 
-const StmPipeline *Stm::getPipeline(const MachineInstr &mi,
+const StmPipeline *SwplTargetMachine::getPipeline(const MachineInstr &mi,
                                   StmPatternId patternid) {
   auto *tps= getPipelines(mi);
   if (tps==nullptr) return nullptr;
@@ -268,14 +269,15 @@ const StmPipeline *Stm::getPipeline(const MachineInstr &mi,
   return t;
 }
 
-StmPipelinesImpl *Stm::generateStmPipelines(const MachineInstr &mi) {
+StmPipelinesImpl *
+SwplTargetMachine::generateStmPipelines(const MachineInstr &mi) {
 
   work_node *t=nullptr;
   if (isImplimented(mi)) {
     t=makePrePatterns(SM, *ResInfo, mi);
     if (t==nullptr) {
       if (DebugStm)
-        dbgs() << "DBG(Stm::generateStmPipelines): makePrePatterns() is nullptr. MIR=" << mi;
+        dbgs() << "DBG(SwplTargetMachine::generateStmPipelines): makePrePatterns() is nullptr. MIR=" << mi;
       return nullptr;
     }
   }
@@ -293,21 +295,21 @@ StmPipelinesImpl *Stm::generateStmPipelines(const MachineInstr &mi) {
   }
   return pipelines;
 }
-int Stm::computeRegFlowDependence(const llvm::MachineInstr* def, const llvm::MachineInstr* use) const {
+int SwplTargetMachine::computeRegFlowDependence(const llvm::MachineInstr* def, const llvm::MachineInstr* use) const {
   const auto *IResDesc=ResInfo->getInstResDesc(*def);
   if (IResDesc==nullptr) return 1;
   return IResDesc->getLatency();
 }
 
-int Stm::computeMemAntiDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
+int SwplTargetMachine::computeMemAntiDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
   return 1;
 }
 
-int Stm::computeMemOutputDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
+int SwplTargetMachine::computeMemOutputDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
   return 1;
 }
 
-int Stm::getMinNResources(StmOpcodeId opcode, StmResourceId resource) {
+int SwplTargetMachine::getMinNResources(StmOpcodeId opcode, StmResourceId resource) {
   auto *tps= stmPipelines[opcode];
   int min_n=INT_MAX;
   for (auto *t:*tps) {
@@ -320,16 +322,16 @@ int Stm::getMinNResources(StmOpcodeId opcode, StmResourceId resource) {
   return min_n;
 }
 
-unsigned int Stm::getNumResource(void) const {
+unsigned int SwplTargetMachine::getNumResource(void) const {
   return numResource;
 }
 
-StmRegKind Stm::getRegKind(llvm::Register reg) const {
+StmRegKind SwplTargetMachine::getRegKind(llvm::Register reg) const {
   unsigned regClassId=0;
   bool pReg=false;
   if (reg.isVirtual()) {
     const auto * regClass=MRI->getRegClass(reg);
-    LLVM_DEBUG(dbgs() << "Stm::getRegKind: register is " << MRI->getTargetRegisterInfo()->getRegClassName(regClass) << "\n");
+    LLVM_DEBUG(dbgs() << "SwplTargetMachine::getRegKind: register is " << MRI->getTargetRegisterInfo()->getRegClassName(regClass) << "\n");
     if (regClass->hasSuperClassEq(&AArch64::GPR64allRegClass) || regClass->hasSuperClassEq(&AArch64::GPR32allRegClass)) {
       regClassId = AArch64::GPR64RegClassID;
     } else if (regClass->hasSuperClassEq(&AArch64::FPR8RegClass) ||
@@ -393,7 +395,7 @@ StmRegKind Stm::getRegKind(llvm::Register reg) const {
 
   return StmRegKind(regClassId, pReg, *MRI);
 }
-bool Stm::isImplimented(const llvm::MachineInstr&mi) const {
+bool SwplTargetMachine::isImplimented(const llvm::MachineInstr&mi) const {
   if (OptionCopyIsVirtual) {
     if (mi.isCopy()) return false;
   }
@@ -401,14 +403,14 @@ bool Stm::isImplimented(const llvm::MachineInstr&mi) const {
   return ResInfo->getInstResDesc(mi)!=nullptr;
 }
 
-bool Stm::isPseudo(const MachineInstr &mi) const {
+bool SwplTargetMachine::isPseudo(const MachineInstr &mi) const {
   return !isImplimented(mi);
 }
 
 #ifdef STMTEST
 
 void StmX4StmTest::init(llvm::MachineFunction&mf, bool first, int TestID) {
-  Stm::initialize(mf);
+  SwplTargetMachine::initialize(mf);
   if (TestID==1) {
 
     const char *result="OK";
@@ -417,7 +419,7 @@ void StmX4StmTest::init(llvm::MachineFunction&mf, bool first, int TestID) {
     if (MF!=&mf || MRI==nullptr || tmNumSameKindResources.empty()) {
       result="NG";
     }
-    dbgs() << "<<<TEST: 001 Stm>>>\n";
+    dbgs() << "<<<TEST: 001 SwplTargetMachine>>>\n";
     dbgs() << "DBG(StmX::init): " << firstcall << " is  " << result << "\n";
   }
 }
@@ -467,53 +469,53 @@ void StmTest::run(llvm::MachineFunction&MF) {
     int defaultStoreLatency = OptionStoreLatency;
     int defaultFlowDep = OptionFlowDep;
     dbgs() << "option:swpl-store-latency is default, swpl-flow-dep is default \n";
-    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is default, swpl-flow-dep is 0 \n";
     OptionFlowDep = 0;
-    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is default, swpl-flow-dep is 1 \n";
     OptionFlowDep = 1;
-    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
 
     OptionStoreLatency = 0;
     dbgs() << "option:swpl-store-latency is 0, swpl-flow-dep is default \n";
     OptionFlowDep = defaultFlowDep;
-    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is 0, swpl-flow-dep is 0 \n";
     OptionFlowDep = 0;
-    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is 0, swpl-flow-dep is 1 \n";
     OptionFlowDep = 1;
-    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
 
     OptionStoreLatency = 1;
     dbgs() << "option:swpl-store-latency is 1, swpl-flow-dep is default \n";
     OptionFlowDep = defaultFlowDep;
-    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is 1, swpl-flow-dep is 0 \n";
     OptionFlowDep = 0;
-    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is 1, swpl-flow-dep is 1 \n";
     OptionFlowDep = 1;
-    dbgs() << "Stm::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "Stm::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     OptionFlowDep = defaultFlowDep;
     OptionStoreLatency = defaultStoreLatency;
 
@@ -521,64 +523,64 @@ void StmTest::run(llvm::MachineFunction&MF) {
     int defaultRealFetchWidth = OptionRealFetchWidth;
     int defaultVirtualFetchWidth = OptionVirtualFetchWidth;
     dbgs() << "option:swpl-real-fetch-width is default, swpl-virtual-fetch-width is default\n";
-    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 0;
     dbgs() << "option:swpl-real-fetch-width is default, swpl-virtual-fetch-width is 0\n";
-    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 1;
     dbgs() << "option:swpl-real-fetch-width is default, swpl-virtual-fetch-width is 1\n";
-    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
 
     OptionRealFetchWidth = 0;
     OptionVirtualFetchWidth = defaultVirtualFetchWidth;
     dbgs() << "option:swpl-real-fetch-width is 0, swpl-virtual-fetch-width is default\n";
-    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 0;
     dbgs() << "option:swpl-real-fetch-width is 0, swpl-virtual-fetch-width is 0\n";
-    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 1;
     dbgs() << "option:swpl-real-fetch-width is 0, swpl-virtual-fetch-width is 1\n";
-    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
 
     OptionRealFetchWidth = 1;
     OptionVirtualFetchWidth = defaultVirtualFetchWidth;
     dbgs() << "option:swpl-real-fetch-width is 1, swpl-virtual-fetch-width is default\n";
-    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 0;
     dbgs() << "option:swpl-real-fetch-width is 1, swpl-virtual-fetch-width is 0\n";
-    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 1;
     dbgs() << "option:swpl-real-fetch-width is 1, swpl-virtual-fetch-width is 1\n";
-    dbgs() << "Stm::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "Stm::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "Stm::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
 
     OptionRealFetchWidth = defaultRealFetchWidth;
     OptionVirtualFetchWidth = defaultVirtualFetchWidth;
 
 
     dbgs() << "<<<TEST: 001-03 getNumResource>>>\n";
-    dbgs() << "Stm::getNumResource():" << STM.getNumResource() << "\n";
+    dbgs() << "SwplTargetMachine::getNumResource():" << STM.getNumResource() << "\n";
     dbgs() << "<<<TEST: 001-04 getNumSameResource>>>\n";
     for (const auto &rc:resourceIds) {
       // 同じ資源数を出力
-      dbgs() << "Stm::getNumSameKindResources(" << resources.at(rc) << "):" << STM.getNumSameKindResources(rc) << "\n";
+      dbgs() << "SwplTargetMachine::getNumSameKindResources(" << resources.at(rc) << "):" << STM.getNumSameKindResources(rc) << "\n";
     }
 
     dbgs() << "<<<TEST: 001-05 by MachineInstr/>>>\n";
@@ -606,9 +608,9 @@ void StmTest::run(llvm::MachineFunction&MF) {
           bool isPseudo = STM.isPseudo(instr);
           dbgs() << "**\nmir:" << instr;
           if (!isPseudo)
-            dbgs() << "Stm::computeRegFlowDependence(): " << STM.computeRegFlowDependence(&instr, &instr) << ", ";
-          dbgs() << "Stm::isIssuedOneByOne(): " << STM.isIssuedOneByOne(instr) << ", ";
-          dbgs() << "Stm::isPseudo(): " << isPseudo << "\n";
+            dbgs() << "SwplTargetMachine::computeRegFlowDependence(): " << STM.computeRegFlowDependence(&instr, &instr) << ", ";
+          dbgs() << "SwplTargetMachine::isIssuedOneByOne(): " << STM.isIssuedOneByOne(instr) << ", ";
+          dbgs() << "SwplTargetMachine::isPseudo(): " << isPseudo << "\n";
         }
       }
     }
@@ -690,7 +692,7 @@ void StmTest::run(llvm::MachineFunction&MF) {
               sep = ',';
             }
             dbgs() << "\n";
-            dbgs() << "Stm::getMinNResources(" << resources.at(rc) << "): "
+            dbgs() << "SwplTargetMachine::getMinNResources(" << resources.at(rc) << "): "
                    << STM.getMinNResources(instr.getOpcode(), rc) << "\n";
           }
         }
