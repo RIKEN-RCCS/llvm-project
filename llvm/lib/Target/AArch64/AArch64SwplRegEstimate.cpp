@@ -9,15 +9,13 @@
 // Processing related to register number calculation in SWPL.
 //
 //===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
-//===----------------------------------------------------------------------===//
 
+#include "AArch64SwplRegEstimate.h"
 #include "AArch64.h"
-#include "AArch64Tm.h"
 #include "AArch64SWPipeliner.h"
 #include "AArch64SwplPlan.h"
 #include "AArch64SwplScheduling.h"
-#include "AArch64SwplRegEstimate.h"
+#include "AArch64SwplTargetMachine.h"
 
 using namespace llvm;
 
@@ -147,28 +145,28 @@ void SwplRegEstimate::setRenamedReg(SwplRegEstimate::Renamed_Reg* reg,
 /// ```
 ///   - 以下では、T = MVE*IIと定義する.
 ///   また、RAが割り付けるレジスタの意味で、"レジスタ"
-///   SwplRegの意味で、"prg"という言葉を用いる.実際は、std,vtdもありうる.
-///   また、RAが割付ける場合、renaming versiong後ろのそれぞれのprgは,
+///   SwplRegの意味で、"vreg"という言葉を用いる.
+///   また、RAが割付ける場合、renaming versiong後ろのそれぞれのvregは,
 ///   単一のレジスタに割付けられ、live rangeの途中で、二つのレジスタ間で乗り換える
 ///   様なことはない事を前提としている.
 ///     
 ///   - 一次補正
-///   ライブレンンジL1がT/2を越えるようなprgが要求するレジスタ数の最小値を求める.
-///   L1はT/2を超えるため、renaming versionされた自身のprgは
+///   ライブレンンジL1がT/2を越えるようなvregが要求するレジスタ数の最小値を求める.
+///   L1はT/2を超えるため、renaming versionされた自身のvregは
 ///   すべてのversionと互いに干渉するため, レジスタをMVE個だけ要求する.
-///   また、他のprライブレンジL1がT/2を越えるprgも,
-///   T/2以上のprg同士は常に重なるため, レジスタを共有する事はないため、
+///   また、他のprライブレンジL1がT/2を越えるvregも,
+///   T/2以上のvreg同士は常に重なるため, レジスタを共有する事はないため、
 ///   要求するレジスタを単純に加算すればよい.
-///   さらに、prgの空き区間(T-L1)に、同じレジスタを使用できる他のprgは、
+///   さらに、vregの空き区間(T-L1)に、同じレジスタを使用できる他のvregは、
 ///   T/2以上のライブレンジを持たないため、無視している.
 ///
 ///   - 二次補正
-///   prgの空き区間(T-L1)区間に、埋めるられないライブレンジL2をもつ
-///   prgをカウントする。以下の点が、L1のprgと異なる.
-///   - L2のライブレンジをもつprgは、自身のすべてのversionとかさなるとは限らない。
+///   vregの空き区間(T-L1)区間に、埋めるられないライブレンジL2をもつ
+///   vregをカウントする。以下の点が、L1のvregと異なる.
+///   - L2のライブレンジをもつvregは、自身のすべてのversionとかさなるとは限らない。
 ///   => 要求するレジスタがMVE個でない場合があり、L2とversion数の関係で定まる.
 ///   - L2のライブレンジをもつ異なるレジスタ同士が、重なるとは限らない.
-///   => 異なるprgの要求レジスタ数同士を単純に加算してはならない.
+///   => 異なるvregの要求レジスタ数同士を単純に加算してはならない.
 ///
 ///   一次補正と二次補正の和と、getNumImmortalRegの結果の和が、
 ///   必要なレジスタ数の下限を与える.
@@ -192,7 +190,7 @@ unsigned SwplRegEstimate::getNumInterferedRegs(const SwplLoop& loop,
   maximum_gap = -1;
   maximum_live_range = 0;
 
-  /* 一次補正のため,ライブレンジがT/2を越えるprgの重なりを数える
+  /* 一次補正のため,ライブレンジがT/2を越えるvregの重なりを数える
    * 同時に、二次補正に必要な情報を収集する
    */
   for( auto inst : loop.getBodyInsts() ) {
@@ -229,7 +227,7 @@ unsigned SwplRegEstimate::getNumInterferedRegs(const SwplLoop& loop,
          */
         counter += reg->getRegSize();
       } else if(live_range*2 > full_kernel_cycles) {
-        /* T/2をこえるprgのうち、非生存区間の最大長 */
+        /* T/2をこえるvregのうち、非生存区間の最大長 */
         if(maximum_gap < full_kernel_cycles - live_range) {
           maximum_gap = full_kernel_cycles - live_range;
           assert(maximum_gap >= 0);
@@ -291,7 +289,7 @@ unsigned SwplRegEstimate::getNumImmortalRegs(const SwplLoop& loop, unsigned regc
       if ( reg->isRegNull() ) {
         continue;
       }
-      if( !(TmRegKind::isSameKind( reg->getRegKind(), regclassid)) ) {
+      if( !(StmRegKind::isSameKind( reg->getRegKind(), regclassid)) ) {
         continue;
       }
 
@@ -309,7 +307,7 @@ unsigned SwplRegEstimate::getNumImmortalRegs(const SwplLoop& loop, unsigned regc
     SwplReg *reg, *successor;
     reg = &(inst->getDefRegs(0));
     assert ( !(reg->isRegNull()) );
-    if( !(TmRegKind::isSameKind(reg->getRegKind(), regclassid)) ) {
+    if( !(StmRegKind::isSameKind(reg->getRegKind(), regclassid)) ) {
       continue;
     }
   
@@ -933,7 +931,7 @@ bool SwplRegEstimate::isCountedReg(const SwplReg& reg, unsigned regclassid) {
   if ( reg.isRegNull() ) {
     return false;
   }
-  if( !(TmRegKind::isSameKind(reg.getRegKind(), regclassid)) ) {
+  if( !(StmRegKind::isSameKind(reg.getRegKind(), regclassid)) ) {
     return false;
   }
   if (reg.getPredecessor() != nullptr) {

@@ -9,8 +9,6 @@
 // Classes that interface with result reflection in SWPL.
 //
 //===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
-//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64SWPLPLAN_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64SWPLPLAN_H
@@ -102,7 +100,7 @@ public:
 
 
 /// \brief スケジューリング結果を保持するクラス
-/// \details transform lindaへ渡す情報となる
+/// \details transform mirへ渡す情報となる
 class SwplPlan {
   const SwplLoop& loop;              ///< スケジューリング対象のループ情報
   SwplInstSlotHashmap inst_slot_map; ///< スケジューリング結果

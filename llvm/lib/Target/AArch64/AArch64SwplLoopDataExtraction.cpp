@@ -9,8 +9,6 @@
 // AArch64 Loop Data Extraction (SwplLoop)
 //
 //===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
-//===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
 
@@ -27,7 +25,7 @@
 
 using namespace llvm;
 using namespace swpl;
-#define DEBUG_TYPE "fj-swp-loop"
+#define DEBUG_TYPE "swp-loop"
 
 #define UNKNOWN_MEM_DIFF INT_MIN        /* 0 の正反対 */
 
@@ -89,7 +87,7 @@ int SwplReg::getRegSize() const {
 
 bool SwplInst::isDefinePredicate() const {
   for (auto *reg:getDefRegs()) {
-    TmRegKind rk=TM.getRegKind(reg->getReg());
+    StmRegKind rk= STM.getRegKind(reg->getReg());
     if (rk.isPredicate()) return true;
   }
   return false;
@@ -97,7 +95,7 @@ bool SwplInst::isDefinePredicate() const {
 
 bool SwplInst::isFloatingPoint() const {
   for (auto *reg:getDefRegs()) {
-    TmRegKind rk=TM.getRegKind(reg->getReg());
+    StmRegKind rk= STM.getRegKind(reg->getReg());
     if (rk.isFloating()) return true;
   }
   return false;
@@ -203,7 +201,7 @@ void SwplLoop::makeBodyInsts(Register2SwplRegMap &rmap) {
   MachineInstr*branch=nullptr;
   MachineInstr*cmp=nullptr;
   MachineInstr*addsub=nullptr;
-  (void)LindaScr(*(getML())).findGensForLoop(&branch, &cmp, &addsub);
+  (void)SwplScr(*(getML())).findMIsForLoop(&branch, &cmp, &addsub);
   for (auto &MI:getNewBodyMBB()->instrs()) {
     if (MI.isDebugInstr()) { continue; }
     if (&MI == branch) { continue; }
@@ -292,7 +290,7 @@ size_t SwplLoop::getSizeBodyRealInsts() const {
   size_t n = 0;
   for (auto *inst:getBodyInsts()) {
     const llvm::MachineInstr *MI = inst->getMI();
-    if (swpl::TM.isPseudo(*MI)) { continue; }
+    if (swpl::STM.isPseudo(*MI)) { continue; }
     n++;
   }
   return n;

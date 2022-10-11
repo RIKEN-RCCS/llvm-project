@@ -9,16 +9,14 @@
 // Classes that interface with result reflection in SWPL.
 //
 //===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
-//===----------------------------------------------------------------------===//
 
-#include "AArch64.h"
-#include "AArch64Tm.h"
-#include "AArch64SWPipeliner.h"
-#include "AArch64SwplScheduling.h"
-#include "AArch64SwplCalclIterations.h"
 #include "AArch64SwplPlan.h"
+#include "AArch64.h"
+#include "AArch64SWPipeliner.h"
+#include "AArch64SwplCalclIterations.h"
 #include "AArch64SwplRegEstimate.h"
+#include "AArch64SwplScheduling.h"
+#include "AArch64SwplTargetMachine.h"
 
 using namespace llvm;
 using namespace ore; // for NV
@@ -41,7 +39,7 @@ unsigned SwplPlan::relativeInstSlot(const SwplInst& c_inst) const {
 /// \brief 命令が配置された範囲のCycle数を返す
 /// \return 命令が配置された範囲のCycle数
 int SwplPlan::getTotalSlotCycles() {
-  return (end_slot - begin_slot) / TM.getFetchBandwidth();
+  return (end_slot - begin_slot) / STM.getFetchBandwidth();
 }
 
 /// \brief SwplPlanのpolicyに該当する文字列を返す
@@ -95,7 +93,7 @@ void SwplPlan::dumpInstTable(raw_ostream &stream) {
     if(slot.calcFetchSlot() == 0) {
       stream << "\n";
     }
-    if(i!=0 && i%(TM.getFetchBandwidth() * iteration_interval) == 0 ) { // IIごとに改行
+    if(i!=0 && i%(STM.getFetchBandwidth() * iteration_interval) == 0 ) { // IIごとに改行
       stream << "\n";
     }
 
@@ -165,7 +163,7 @@ bool SwplPlan::isSufficientWithRenamingVersions(const SwplLoop& c_loop,
 
 /// \brief SwplPlanを取得し、スケジューリング結果からPlanの要素を設定する
 /// \details SwplPlanを取得し、スケジューリング結果からSwplPlanの要素を設定する。
-///          SwplPlanは、schedulingが完了した後, transform lindaへ渡す情報となる。
+///          SwplPlanは、schedulingが完了した後, transform mirへ渡す情報となる。
 /// \param [in] c_loop ループを構成する命令の情報
 /// \param [in] inst_slot_map スケジューリング結果
 /// \param [in] min_ii 計算されたMinII
@@ -274,7 +272,7 @@ std::string SwplPlan::getPolicyString(SwplSchedPolicy policy) {
   return name;
 }
 
-/// \brief TmのResource情報により制限されるmin IIを計算する
+/// \brief StmのResource情報により制限されるmin IIを計算する
 /// \details resource min IIは以下の手順で求める。
 ///          1. 演算器数分のカウンタを用意（0.0で初期化）
 ///          2. スケジューリング対象の命令ごとに以下を実施
@@ -293,20 +291,20 @@ unsigned SwplPlan::calculateResourceII(const SwplLoop& c_loop) {
   unsigned numresource;
 
   // 資源ごとの利用カウントをresource_appearsで保持する。
-  // resource_appearsは、TM.getNumResource()+1分確保し、
+  // resource_appearsは、STM.getNumResource()+1分確保し、
   // resource_appears[A64FXRes::PortKind]が資源ごとの利用カウントとなる。
   // 要素[0]はA64FXRes::PortKind::P_NULLに該当する要素とし、使用しない。
-  numresource = TM.getNumResource();
+  numresource = STM.getNumResource();
   std::vector<float> resource_appears(numresource+1, 0.0);
 
   for (auto inst : c_loop.getBodyInsts()) {
     // 資源情報の生成と資源パターン数の取得
-    const auto *pipes = TM.getPipelines( *(inst->getMI()) );
+    const auto *pipes = STM.getPipelines( *(inst->getMI()) );
     unsigned num_pattern = pipes->size();
 
     for(auto pipeline : *pipes ) {
       for(unsigned i=0; i<pipeline->resources.size(); i++) {
-        TmResourceId resource = pipeline->resources[i];
+        StmResourceId resource = pipeline->resources[i];
 
         // どの資源パターンが使用されるかはわからないため、
         // n_appearsには"1.0/資源利用のパターン数"の値を足しこむ
@@ -338,7 +336,7 @@ unsigned SwplPlan::calcResourceMinIterationInterval(const SwplLoop& c_loop) {
   assert (n_body_insts != 0);
 
   /* 1cycleにつきfetch slot数しか命令は発行できない事による制約 */
-  fetch_constrained_ii = ceil_div(n_body_insts, TM.getRealFetchBandwidth() );
+  fetch_constrained_ii = ceil_div(n_body_insts, STM.getRealFetchBandwidth() );
 
   // メモリポート数による制約は、
   // calculateResorceIIで計算されるmemory unitの制約の方が厳しい為、
@@ -765,11 +763,11 @@ SwplSlot SwplInstSlotHashmap::getEmptySlotInCycle( unsigned cycle,
   // cycle 2  slot  slot  slot  slot  slot  slot  slot  slot
   //       :  slot  slot  slot  slot  slot  slot  slot  slot
   // cycle n  slot  slot  slot  slot  slot  slot  slot  slot
-  //         |<-------------------------------------------->| TM.getFetchBandwidth()
-  //                                 |<-------------------->| TM.getRealFetchBandwidth()
+  //         |<-------------------------------------------->| STM.getFetchBandwidth()
+  //                                 |<-------------------->| STM.getRealFetchBandwidth()
 
-  unsigned bandwidth = TM.getFetchBandwidth();
-  unsigned realbandwidth = TM.getRealFetchBandwidth();
+  unsigned bandwidth = STM.getFetchBandwidth();
+  unsigned realbandwidth = STM.getRealFetchBandwidth();
 
   std::vector<bool> openslot(bandwidth);
   for(unsigned i=0; i<bandwidth; i++) {
@@ -810,7 +808,7 @@ void SwplInstSlotHashmap::dump() {
   max_cycle = max_slot.calcCycle();
   min_cycle = min_slot.calcCycle();
 
-  max_slot = SwplSlot::construct(max_cycle, 0) + TM.getFetchBandwidth();
+  max_slot = SwplSlot::construct(max_cycle, 0) + STM.getFetchBandwidth();
   min_slot = SwplSlot::construct(min_cycle, 0);
 
   size_t table_size = (size_t)max_slot - (size_t)min_slot;
@@ -848,14 +846,14 @@ void SwplInstSlotHashmap::dump() {
 /// \details cycleに換算した値を返す
 /// \return cycle
 unsigned SwplSlot::calcCycle() {
-  return slot_index / TM.getFetchBandwidth();
+  return slot_index / STM.getFetchBandwidth();
 }
 
 /// \brief slotのFetchSlotを返す
 /// \details FetchSlot = 各cycleの何番目のslotか
 /// \return FetchSlot
 unsigned SwplSlot::calcFetchSlot() {
-  return slot_index % TM.getFetchBandwidth();
+  return slot_index % STM.getFetchBandwidth();
 }
 
 /// \brief slotが何番目のblockであるかを返す
@@ -885,14 +883,14 @@ SwplSlot SwplSlot::baseSlot(unsigned iteration_interval) {
 SwplSlot SwplSlot::construct(unsigned cycle, unsigned fetch_slot) {
   if( ( SwplSlot::slotMin().calcCycle() > cycle ) ||
       ( cycle > SwplSlot::slotMax().calcCycle() ) ||
-      ( fetch_slot >= TM.getFetchBandwidth() )
+      ( fetch_slot >= STM.getFetchBandwidth() )
        ) {
     if (DebugOutput) {
       dbgs() << "!swp-msg: Used cycle for scheduling is out of the range.\n";
     }
     return SWPL_ILLEGAL_SLOT;
   }
-  return cycle * TM.getFetchBandwidth() + fetch_slot;
+  return cycle * STM.getFetchBandwidth() + fetch_slot;
 }
 
 /// \brief block番号からSwplSlotを生成する

@@ -1,4 +1,4 @@
-//=- AArch64Linda.h -  Swpl Scheduling common function -*- C++ -*------------=//
+//=- AArch64SwplScr.h -  Swpl Scheduling common function -*- C++ -*----------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,25 +9,27 @@
 // Swpl Scheduling common function
 //
 //===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
-//===----------------------------------------------------------------------===//
-#ifndef AARCH64LINDA_H
-#define AARCH64LINDA_H
+#ifndef AARCH64SWPLSCR_H
+#define AARCH64SWPLSCR_H
 
+#include "Utils/AArch64BaseInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/Register.h"
 namespace swpl {
 class SwplLoop;
 
 /// 命令列変換情報
-struct TransformedLindaInfo {
-  llvm::Register originalDoPrg=0; ///<  オリジナルの制御変数（updateDoPrgGenのop1。Tradはop0を制御変数にしている）
+struct TransformedMIRInfo {
+  llvm::Register originalDoVReg=0; ///<  オリジナルの制御変数（updateDoVRegMIのop1）
   llvm::Register originalDoInitVar=0; ///< オリジナル制御変数の定義PHIの初期値
-  llvm::Register nonSSAOriginalDoPrg=0; ///< オリジナルの制御変数に対応した、データ抽出処理で非SSAに変換したMIR
+  llvm::Register nonSSAOriginalDoVReg =0; ///< オリジナルの制御変数に対応した、データ抽出処理で非SSAに変換したMIR
   llvm::Register nonSSAOriginalDoInitVar=0; ///< 定義PHIの初期値に対応した、データ抽出処理で非SSAに変換したMIR
-  llvm::Register doPrg=0; ///<  renaming後の制御変数
-  llvm::MachineInstr *updateDoPrgGen=nullptr; ///< オリジナルの制御変数の更新命令
-  llvm::MachineInstr *branchDoPrgGen=nullptr; ///< オリジナルの繰り返し分岐命令
-  llvm::MachineInstr *initDoPrgGen=nullptr; ///< オリジナルの制御変数の誘導変数(Phi)
-  llvm::MachineInstr *branchDoPrgGenKernel=nullptr; ///< kernel loopの繰り返し分岐命令
+  llvm::Register doVReg=0; ///<  renaming後の制御変数
+  llvm::MachineInstr *updateDoVRegMI=nullptr; ///< オリジナルの制御変数の更新命令
+  llvm::MachineInstr *branchDoVRegMI=nullptr; ///< オリジナルの繰り返し分岐命令
+  llvm::MachineInstr *initDoVRegMI=nullptr; ///< オリジナルの制御変数の誘導変数(Phi)
+  llvm::MachineInstr *branchDoVRegMIKernel=nullptr; ///< kernel loopの繰り返し分岐命令
   int iterationInterval=0; ///< ii
   int minimumIterationInterval=0; ///< min_ii
   int coefficient=0; ///< オリジナルの制御変数の更新言のop3
@@ -36,12 +38,12 @@ struct TransformedLindaInfo {
   size_t nVersions=0; ///< kernelに展開されるループの数を表す
   size_t nCopies=0; ///< kernel,prolog,epilogに必要なオリジナルループの回転数
   size_t requiredKernelIteration=0; ///< tune前の展開に必要な回転数
-  std::vector<llvm::MachineInstr*> gens; ///< prepareGens() で使用するgen_tableの情報
-  size_t prologEndIndx=0; ///< prepareGens() で使用するgen_tableの情報
-  size_t kernelEndIndx=0; ///< prepareGens() で使用するgen_tableの情報
-  size_t epilogEndIndx=0; ///< prepareGens() で使用するgen_tableの情報
+  std::vector<llvm::MachineInstr*> mis; ///< prepareMIs() で使用するmi_tableの情報
+  size_t prologEndIndx=0; ///< prepareMIs() で使用するmi_tableの情報
+  size_t kernelEndIndx=0; ///< prepareMIs() で使用するmi_tableの情報
+  size_t epilogEndIndx=0; ///< prepareMIs() で使用するmi_tableの情報
   bool   isIterationCountConstant=false; ///< 制御変数の初期値が定数として見つかったか (ループ回転数による展開制御に関する変数)
-  int    doPrgInitialValue=0; ///< オリジナルの制御変数の初期値 (if isIterationCountConstant == true)
+  int doVRegInitialValue=0; ///< オリジナルの制御変数の初期値 (if isIterationCountConstant == true)
   size_t originalKernelIteration=0; ///< 展開前のkernel部分の繰返し数 (if isIterationCountConstant == true)
   size_t transformedKernelIteration=0; ///< 展開後のkernel部分の繰返し数 (if isIterationCountConstant == true)
   size_t transformedModIteration=0; ///<展開後のmod部分の繰返し数 (if isIterationCountConstant == true)
@@ -58,15 +60,13 @@ struct TransformedLindaInfo {
 
   void print();
 
-  virtual ~TransformedLindaInfo() {
-    // gensがLindaGenの集合になったら以下のdeleteが必要になる
-    // for (auto *p:gens) delete p;
+  virtual ~TransformedMIRInfo() {
   }
 
   /// SWPL変換が必要かどうかの判定
   /// \retval true 変換必要
   /// \retval false 変換不要
-  bool isNecessaryTransformLinda() const {
+  bool isNecessaryTransformMIR() const {
     return !isIterationCountConstant || transformedKernelIteration != 0;
   }
 
@@ -109,31 +109,31 @@ struct TransformedLindaInfo {
 using UseMap=std::map<llvm::Register, std::vector<llvm::MachineOperand*>>;
 
 /// Loop形状を変形したり、Loopから情報を探し出す機能を提供する
-class LindaScr {
+class SwplScr {
 private:
   llvm::MachineLoop& ML;
 
   /// DO制御変数の初期値を取得する
-  /// \param [out] TLI
+  /// \param [out] TMI
   /// \retval true 取得成功
   /// \retval false 取得失敗
-  bool getDoInitialValue(swpl::TransformedLindaInfo&TLI) const;
+  bool getDoInitialValue(swpl::TransformedMIRInfo &TMI) const;
 
   /// 定数オペランドを３２ビット整数に変換する
-  /// \param [in] cnt
+  /// \param [in] op
   /// \param [out] coefficient
   /// \retval true 変換がうまくいった
   /// \retval false 変換できなかった
-  bool getCoefficient (const llvm::MachineOperand& cnt, int *coefficient) const;
+  bool getCoefficient (const llvm::MachineOperand&op, int *coefficient) const;
 
   /// SWPLで必要な回避分岐を生成する
-  /// \param [in] tli
+  /// \param [in] tmi
   /// \param [in] dbgloc
   /// \param [out] skip_kernel_from
   /// \param [out] skip_kernel_to
   /// \param [out] skip_mod_from
   /// \param [out] skip_mod_to
-  void makeBypass(const TransformedLindaInfo &tli, const llvm::DebugLoc&dbgloc,
+  void makeBypass(const TransformedMIRInfo &tmi, const llvm::DebugLoc&dbgloc,
                   llvm::MachineBasicBlock &skip_kernel_from, llvm::MachineBasicBlock &skip_kernel_to,
                   llvm::MachineBasicBlock &skip_mod_from, llvm::MachineBasicBlock &skip_mod_to);
 
@@ -176,15 +176,14 @@ private:
   void removePredFromPhi(llvm::MachineBasicBlock *fromMBB, llvm::MachineBasicBlock *removeMBB);
 
 public:
-  LindaScr(llvm::MachineLoop&ml):ML(ml){}
+  SwplScr(llvm::MachineLoop&ml):ML(ml){}
 
-  /// scr に対し、イタレーションの最後で常に prg == coefficient * nRemainedIterations + constant を満たすような prg を探す。
-  /// 見つかった場合は prg の他に、係数や定義点を設定し、 true を返す。
-  /// \param [out] TLI
+  /// scr に対し、イタレーションの最後で常に vreg == coefficient * nRemainedIterations + constant を満たすような vreg を探す。
+  /// 見つかった場合は vreg の他に、係数や定義点を設定し、 true を返す。
+  /// \param [out] TMI
   /// \retval true 誘導変数発見
   /// \retval false 誘導変数検出できず
-  /// \note Tradでは、getIterationValue()でループ制御変数の初期値の定数を取得していたが、llvmでは本処理でおこなう
-  bool findBasicInductionVariable(TransformedLindaInfo& TLI) const;
+  bool findBasicInductionVariable(TransformedMIRInfo &TMI) const;
 
 
   /// loopの制御をおこなう言を探す。
@@ -194,16 +193,16 @@ public:
   ///
   /// \retval true loopを構成する各命令を特定できた
   /// \retval false loopを構成する革命例を特定できず
-  bool findGensForLoop(llvm::MachineInstr **Branch, llvm::MachineInstr **Cmp, llvm::MachineInstr **Addsub) const;
+  bool findMIsForLoop(llvm::MachineInstr **Branch, llvm::MachineInstr **Cmp, llvm::MachineInstr **Addsub) const;
 
-  /// SWPLの結果をLindaへ反映するために,SCR,OUDの構成を行なう.
-  /// \param [in,out] tli
-  void prepareCompensationLoop(TransformedLindaInfo &tli);
+  /// SWPLの結果をMIRへ反映するために,MBBの構成を行なう.
+  /// \param [in,out] tmi
+  void prepareCompensationLoop(TransformedMIRInfo &tmi);
 
   /// SWPL処理の最後に、無駄な分岐等を削除する
-  /// \param [in] tli
+  /// \param [in] tmi
   /// \param [in] loop
-  void postSSA(TransformedLindaInfo& tli, swpl::SwplLoop &loop);
+  void postSSA(TransformedMIRInfo &tmi, swpl::SwplLoop &loop);
 
   /// original loopから、loop外で参照しているregister情報を収集する
   void collectLiveOut(UseMap &usemap);

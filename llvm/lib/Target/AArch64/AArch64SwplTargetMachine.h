@@ -1,4 +1,4 @@
-//=- AArch64Tm.h - Target Machine Info for FJ SWP --------------*- C++ -*----=//
+//=- AArch64SwplTargetMachine.h - Target Machine Info for SWP --*- C++ -*----=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,29 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Target Machine Info for FJ SWP.
+// Target Machine Info for SWP.
 //
 //===----------------------------------------------------------------------===//
-//=== Copyright FUJITSU LIMITED 2021  and FUJITSU LABORATORIES LTD. 2021   ===//
-//===----------------------------------------------------------------------===//
-#ifndef AARCH64TM_H
-#define AARCH64TM_H
+#ifndef AARCH64SWPLTM_H
+#define AARCH64SWPLTM_H
 
 #include "AArch64TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "AArch64A64FXResourceInfo.h"
-#define TMTEST
+#define STMTEST
 
 namespace swpl {
 
 /// Reource識別ID
-typedef int TmResourceId;
+typedef int StmResourceId;
 
-/// TmPipelineのパターンを識別するID
-typedef unsigned TmPatternId;
+/// StmPipelineのパターンを識別するID
+typedef unsigned StmPatternId;
 
 /// MachineInstr::Opcodeを示すID
-typedef unsigned TmOpcodeId;
+typedef unsigned StmOpcodeId;
 
 /// 命令が使う資源を表現する。
 /// 例：LDNP EAG* / EAG*
@@ -43,40 +41,40 @@ typedef unsigned TmOpcodeId;
 ///  pipe4  [label = "{pipeline:}|{stage:|1|1}|{resource:|EAGB|EAGB}"];
 /// }
 // \enddot
-class TmPipeline {
+class StmPipeline {
   llvm::TargetSchedModel& SM;///< SchedModel
 public:
   // 命令に対して生成した順番に付加されるID
-  TmPatternId  patternId=0;
+  StmPatternId patternId=0;
   llvm::SmallVector<unsigned,4> stages;
-  llvm::SmallVector<TmResourceId,4> resources;
+  llvm::SmallVector<StmResourceId,4> resources;
 
   /// constructor
-  TmPipeline(llvm::TargetSchedModel&sm):SM(sm){}
+  StmPipeline(llvm::TargetSchedModel&sm):SM(sm){}
 
-  /// TmPipelineをダンプする。
+  /// StmPipelineをダンプする。
   /// \param ost 出力先
   void print(llvm::raw_ostream& ost) const;
 
   /// resourcesに存在する資源を数える
   /// \param [in] resource カウントしてほしい資源
   /// \return リソース数
-  int getNResources(TmResourceId resource) const;
+  int getNResources(StmResourceId resource) const;
 
   /// ResourceIdに応じた名前を返す
   /// \param [in] resource 名前を取得したい資源
   /// \return ResourceIdに応じた名前
-  static const char* getResourceName(TmResourceId resource);
+  static const char* getResourceName(StmResourceId resource);
 };
 
-/// TmPipelineリスト（引数など受け取り側で理帳する）
-using TmPipelinesImpl=std::vector<const TmPipeline*>;
+/// StmPipelineリスト（引数など受け取り側で理帳する）
+using StmPipelinesImpl =std::vector<const StmPipeline *>;
 
-/// TmPipelineリスト(変数として宣言する際に利用する)
-using TmPipelines=std::vector<const TmPipeline*>;
+/// StmPipelineリスト(変数として宣言する際に利用する)
+using StmPipelines =std::vector<const StmPipeline *>;
 
 /// SWPL向けにRegisterの種別を判断する。
-class TmRegKind {
+class StmRegKind {
   unsigned registerClassId=0; ///< TargetRegisterClassのID
   bool allocated=false;
   const llvm::MachineRegisterInfo &MRI;    ///< RegisterInfo
@@ -85,7 +83,7 @@ public:
   /// constructor
   /// \param id register class id
   /// \param isPReg 割当済か
-  TmRegKind(unsigned id, bool isPReg, const llvm::MachineRegisterInfo&mri):registerClassId(id),allocated(isPReg),MRI(mri){}
+  StmRegKind(unsigned id, bool isPReg, const llvm::MachineRegisterInfo&mri):registerClassId(id),allocated(isPReg),MRI(mri){}
 
   /// Intergerレジスタかどうかを確認する
   /// \retval true Intergerレジスタ
@@ -152,7 +150,7 @@ public:
     llvm_unreachable("registerClassId is 0");
   }
 
-  /// TmRegKindの内容を出力する
+  /// StmRegKindの内容を出力する
   /// \param [out] os 出力先
   void print(llvm::raw_ostream& os) {
     const llvm::TargetRegisterClass *r=nullptr;
@@ -170,42 +168,42 @@ public:
       r=&llvm::AArch64::CCRRegClass;
       break;
     }
-    os << "TmRegKind:" << MRI.getTargetRegisterInfo()->getRegClassName(r) << "\n";
+    os << "StmRegKind:" << MRI.getTargetRegisterInfo()->getRegClassName(r) << "\n";
   }
 
   /// 同一のレジスタ種別であるか
-  /// \param [in] tmregkind1 比較対象1
-  /// \param [in] tmregkind1 比較対象2
+  /// \param [in] kind1 比較対象1
+  /// \param [in] kind2 比較対象2
   /// \retval true 同一
   /// \retval false　同一ではない
-  static bool isSameKind( const TmRegKind& kind1, const TmRegKind& kind2 ) {
+  static bool isSameKind( const StmRegKind & kind1, const StmRegKind & kind2 ) {
     return kind1.registerClassId == kind2.registerClassId;
   }
   /// 同一のレジスタ種別であるか
-  /// \param [in] tmregkind1 比較対象1
-  /// \param [in] tmregkind1 比較対象2のレジスタクラスID
+  /// \param [in] kind1 比較対象1
+  /// \param [in] regclassid 比較対象2のレジスタクラスID
   /// \retval true 同一
   /// \retval false 同一ではない
-  static bool isSameKind( const TmRegKind& kind1, unsigned regclassid ) {
+  static bool isSameKind( const StmRegKind & kind1, unsigned regclassid ) {
     return kind1.registerClassId == regclassid;
   }
 
 };
 
 /// SchedModelを利用してターゲット情報を取得し、SWPL機能に提供する
-class Tm {
+class SwplTargetMachine {
 protected:
   const llvm::MachineFunction *MF=nullptr; ///< Tmで必要な情報を取得するため、大元のMachineFunctionを記憶する。関数毎に再設定する。
   llvm::TargetSchedModel SM;         ///< SchedModel
   const llvm::MachineRegisterInfo *MRI=nullptr;    ///< RegisterInfo
   const llvm::AArch64A64FXResInfo *ResInfo=nullptr;
   const llvm::TargetInstrInfo* TII;
-  llvm::DenseMap<TmResourceId, int> tmNumSameKindResources;  ///< 資源種別ごとの数
-  llvm::DenseMap<TmOpcodeId, TmPipelinesImpl* > tmPipelines; ///< Opcodeが利用する資源
-  /// TmPipelineを生成する
+  llvm::DenseMap<StmResourceId, int> tmNumSameKindResources;  ///< 資源種別ごとの数
+  llvm::DenseMap<StmOpcodeId, StmPipelinesImpl * > stmPipelines; ///< Opcodeが利用する資源
+  /// StmPipelineを生成する
   /// \param [in] mp 対象となる命令
-  /// \return 生成したTmPipeline
-  TmPipelinesImpl* generateTmPipelines(const llvm::MachineInstr&mp);
+  /// \return 生成したStmPipeline
+  StmPipelinesImpl *generateStmPipelines(const llvm::MachineInstr&mp);
   unsigned numResource=0; ///< 資源数（資源種別数ではない）
 
   /// 指定命令の資源情報が取得できるかどうかをチェックする
@@ -216,13 +214,13 @@ protected:
 
 public:
   /// constructor
-  Tm() {}
+  SwplTargetMachine() {}
   /// destructor
-  virtual ~Tm() {
-    for (auto tms: tmPipelines) {
+  virtual ~SwplTargetMachine() {
+    for (auto tms: stmPipelines) {
         if (tms.getSecond()) {
           for (auto *t:*(tms.getSecond())) {
-            delete const_cast<TmPipeline*>(t);
+            delete const_cast<StmPipeline *>(t);
           }
           delete tms.getSecond();
         }
@@ -284,20 +282,21 @@ public:
 
   /// 指定命令が利用するリソースの利用パターンをすべて返す。
   /// \param [in] mi 対象命令
-  /// \return TmPipelinesを返す
-  const TmPipelinesImpl* getPipelines(const llvm::MachineInstr& mi);
+  /// \return StmPipelinesを返す
+  const StmPipelinesImpl * getPipelines(const llvm::MachineInstr& mi);
 
   /// 指定した命令のリソース利用パターンの中から、指定した利用パターンを返す。
   /// \param [in] mi 対象命令
   /// \param [in] patternid 対象パターン
-  /// \return TmPipelineを返す
-  const TmPipeline* getPipeline(const llvm::MachineInstr&mi, TmPatternId patternid);
+  /// \return StmPipelineを返す
+  const StmPipeline * getPipeline(const llvm::MachineInstr&mi,
+                                StmPatternId patternid);
 
   /// 指定命令が利用するリソースが一番少ない数を返す
   /// \param [in] opcode 対象命令
   /// \param [in] resource 数えたいリソース
   /// \return 一番少ない数
-  int getMinNResources(TmOpcodeId opcode, TmResourceId resource);
+  int getMinNResources(StmOpcodeId opcode, StmResourceId resource);
 
   /// 利用可能な資源の数を返す
   /// \return 資源数
@@ -310,12 +309,12 @@ public:
   /// 指定リソースの数を返す
   /// \param [in] resource 調査したいリソース
   /// \return リソース数
-  int getNumSameKindResources(TmResourceId resource);
+  int getNumSameKindResources(StmResourceId resource);
 
   /// 指定レジスタの種別を返す
   /// \param [in] reg
   /// \return レジスタの種別を表すオブジェクト
-  TmRegKind getRegKind(llvm::Register reg) const;
+  StmRegKind getRegKind(llvm::Register reg) const;
 
   /// 命令がPseudoかどうかを判断する
   /// \details 命令がSchedModelに定義されていない場合のみ、Pseudoと判断する
@@ -324,9 +323,9 @@ public:
   /// \retval false Pseudo命令ではない
   bool isPseudo(const llvm::MachineInstr& mi) const;
 };
-#ifdef TMTEST
-/// TmTestからTmをテストするための派生クラス
-class TmX4TmTest: public Tm {
+#ifdef STMTEST
+/// StmTestからStmをテストするための派生クラス
+class StmX4StmTest : public SwplTargetMachine {
 public:
   void init(llvm::MachineFunction&mf, bool first, int TestID);
   const llvm::TargetSchedModel& getSchedModel() {return SM;}
@@ -334,12 +333,12 @@ public:
 };
 
 /// Tmの動作テストをおこなうクラス
-class TmTest {
-  swpl::TmX4TmTest TM;
+class StmTest {
+  swpl::StmX4StmTest STM;
   int TestID;
 public:
   /// constructor
-  TmTest(int id):TestID(id) {}
+  StmTest(int id):TestID(id) {}
 
   /// 動作テスト実行
   void run(llvm::MachineFunction&mf);
