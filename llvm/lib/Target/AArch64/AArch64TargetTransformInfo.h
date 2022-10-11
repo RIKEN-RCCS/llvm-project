@@ -38,16 +38,13 @@ class Type;
 class Value;
 class VectorType;
 
-// Start Metro
 /**
- * オプションとOCLから、指定ループがSWP適用候補かどうか返す
+ * オプションとPragmaから、指定ループがSWP適用候補かどうか返す
  * @param L 対象のLoop情報を指定する
  * @retval true SWP適用候補
  * @retval false SWP適用しない
  */
 bool enableSWP(const Loop*);
-
-// End Metro
 
 class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   using BaseT = BasicTTIImplBase<AArch64TTIImpl>;

@@ -52,7 +52,7 @@ bool SwplCalclIterations::preCheckIterationCount(const PlanSpec& spec, unsigned 
   unsigned int const minimum_n_copies = 3;
   *required_itr = spec.pre_expand_num * minimum_n_copies;
 
-  /* 定数の場合、OCL 指定よりも、実際のMIR上の数を優先する */
+  /* 定数の場合、Pragma 指定よりも、実際のMIR上の数を優先する */
   if(spec.is_itr_count_constant) {
     if (spec.itr_count <= 2) {
       if (DebugOutput) {
