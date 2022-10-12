@@ -204,6 +204,14 @@ void SwplDdg::analysisInstDependence() {
       const auto *qmi=Loop->getOrgMI(q->getMI());
       if (qmi->isPHI()) continue;
       if (isDependence(pmi, qmi)) {
+        if (DebugOutput) {
+          dbgs() << "DBG(SwplDdg::analysisInstDependence):\n"
+                 << " former_inst:" << *(p->getMI())
+                 << " latter_inst:" << *(q->getMI())
+                 << " distance:" << 0 << "\n"
+                 << " delay:" << 1 << "\n";
+        }
+
         update_distance_and_delay(*this, *p, *q, 0, 1);
       }
     }
@@ -238,6 +246,14 @@ void SwplDdg::analysisRegsFlowDependence() {
       } else {
         delay = swpl::STM.computeRegFlowDependence(def_inst->getMI(), use_inst->getMI());
       }
+      if (DebugOutput) {
+        dbgs() << "DBG(SwplDdg::analysisRegsFlowDependence):\n"
+               << " former_inst:" << *(def_inst->getMI())
+               << " latter_inst:" << *(use_inst->getMI())
+               << " use reg:" << printReg(reg->getReg(), TRI) << "\n"
+               << " distance:" << distance << "\n"
+               << " delay:" << delay << "\n";
+      }
       update_distance_and_delay(*this, *def_inst, *use_inst, distance, delay);
     }
   }
@@ -262,6 +278,14 @@ void SwplDdg::analysisRegsAntiDependence() {
         }
         int distance = (getLoop()->areBodyInstsOrder(use_inst, def_inst) ? 0 : 1);
         int delay = 1;
+        if (DebugOutput) {
+          dbgs() << "DBG(SwplDdg::analysisRegsAntiDependence):\n"
+                 << " former_inst:" << *(use_inst->getMI())
+                 << " latter_inst:" << *(def_inst->getMI())
+                 << " use reg:" << printReg(reg->getReg(), TRI) << "\n"
+                 << " distance:" << distance << "\n"
+                 << " delay:" << delay << "\n";
+        }
         update_distance_and_delay(*this, *use_inst, *def_inst, distance, delay);
       }      
     }
@@ -286,6 +310,14 @@ void SwplDdg::analysisRegsOutputDependence() {
       assert(def_indx >= 0);
       int distance = (getLoop()->areBodyInstsOrder(pred_def_inst, def_inst) ? 0 : 1);
       int delay = 1;
+      if (DebugOutput) {
+        dbgs() << "DBG(SwplDdg::analysisRegsOutputDependence):\n"
+               << " former_inst:" << *(pred_def_inst->getMI())
+               << " latter_inst:" << *(def_inst->getMI())
+               << " use reg:" << printReg(reg->getReg(), TRI) << "\n"
+               << " distance:" << distance << "\n"
+               << " delay:" << delay << "\n";
+      }
       update_distance_and_delay(*this, *pred_def_inst, *def_inst, distance, delay);
     }
   }
@@ -306,29 +338,42 @@ void SwplDdg::analysisMemDependence() {
       }
       
       int distance, delay;
+      enum class DepKind {init, flow, anti, output};
+      DepKind depKind = DepKind::init;
+
       if (former_mem->isMemDef()) {
         if (latter_mem->isMemDef()) {
           delay = STM.computeMemOutputDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
+          depKind = DepKind::output;
         } else {
           delay = STM.computeMemFlowDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
+          depKind = DepKind::flow;
         }
       } else {
         if (latter_mem->isMemDef()) {
           delay = STM.computeMemAntiDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
+          depKind = DepKind::anti;
         } else {
           // Not dependence (input-dependence)
           continue;
         }
       }
-      if (DebugOutput) {
-        dbgs() << "DBG(SwplDdg::analysisMemDependenc):\n"
-        << " former_inst:" <<  *(former_mem->getInst()->getMI())
-        << " latter_inst:" <<  *(latter_mem->getInst()->getMI());
-      }
-
       distance = getLoop()->getMemsMinOverlapDistance(former_mem, latter_mem);
-      if (DebugOutput)
-        dbgs() << "DBG(getMemsMinOverlapDistance): distance=" << distance << "\n";
+      if (DebugOutput) {
+        auto *p="";
+        switch (depKind) {
+        case DepKind::flow: p="flow"; break;
+        case DepKind::anti: p="anti"; break;
+        case DepKind::output: p="output"; break;
+        case DepKind::init:
+          llvm_unreachable("Unknown Dependency Kind");
+        }
+        dbgs() << "DBG(SwplDdg::analysisMemDependenc):" << p << "\n"
+        << " former_inst:" << *(former_mem->getInst()->getMI())
+        << " latter_inst:" << *(latter_mem->getInst()->getMI())
+        << " distance:" << distance << "\n"
+        << " delay:" << delay << "\n";
+      }
 
       update_distance_and_delay(*this, *(former_mem->getInst()), *(latter_mem->getInst()), distance, delay);
     }
