@@ -358,24 +358,22 @@ void SwplDdg::analysisMemDependence() {
           continue;
         }
       }
+      distance = getLoop()->getMemsMinOverlapDistance(former_mem, latter_mem);
       if (DebugOutput) {
         auto *p="";
         switch (depKind) {
-        case DepKind::flow: p="flow\n"; break;
-        case DepKind::anti: p="anti\n"; break;
-        case DepKind::output: p="output\n"; break;
+        case DepKind::flow: p="flow"; break;
+        case DepKind::anti: p="anti"; break;
+        case DepKind::output: p="output"; break;
         case DepKind::init:
           llvm_unreachable("Unknown Dependency Kind");
         }
-        dbgs() << "DBG(SwplDdg::analysisMemDependenc):" << p
+        dbgs() << "DBG(SwplDdg::analysisMemDependenc):" << p << "\n"
         << " former_inst:" << *(former_mem->getInst()->getMI())
         << " latter_inst:" << *(latter_mem->getInst()->getMI())
+        << " distance:" << distance << "\n"
         << " delay:" << delay << "\n";
       }
-
-      distance = getLoop()->getMemsMinOverlapDistance(former_mem, latter_mem);
-      if (DebugOutput)
-        dbgs() << "DBG(getMemsMinOverlapDistance): distance=" << distance << "\n";
 
       update_distance_and_delay(*this, *(former_mem->getInst()), *(latter_mem->getInst()), distance, delay);
     }
