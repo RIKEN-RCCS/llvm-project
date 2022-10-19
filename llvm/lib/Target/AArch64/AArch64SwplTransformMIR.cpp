@@ -86,7 +86,7 @@ bool SwplTransformMIR::transformMIR() {
     if (DumpMIR & (int)AFTER_SSA) dumpMIR(AFTER_SSA);
     if (!DisableRemoveUnnecessaryBR) {
       /// (2-6) SwplScr::postSSA() 不要な分岐を削除する("-swpl-disable-rm-br"が指定されていなければ)
-      SCR.postSSA(TMI, Loop);
+      SCR.postSSA(TMI);
       if (DumpMIR & (int)LAST) dumpMIR(LAST);
     }
 
