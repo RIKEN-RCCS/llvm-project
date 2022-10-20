@@ -404,7 +404,7 @@ bool AArch64SWPipeliner::canPipelineLoop(MachineLoop &L) {
   
   // 最適化指示の判定
   if (!shouldOptimize(L)) {
-    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/ocl. ", L);
+    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
     return false;
   }
   
