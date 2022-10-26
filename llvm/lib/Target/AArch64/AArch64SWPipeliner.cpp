@@ -760,7 +760,7 @@ bool AArch64PreSWPipeliner::createPreHeader(MachineLoop &L) {
     // preheaderに追加するPHIで定義するレジスタ
     Register newReg=MRI->cloneVirtualRegister(phi->getOperand(0).getReg());
     // preheaderに追加するPHI
-    auto phPhi=BuildMI(ph, phi->getDebugLoc(), TII->get(AArch64::PHI), newReg);
+    auto phPhi=BuildMI(ph, phi->getDebugLoc(), TII->get(TargetOpcode::PHI), newReg);
     Register iv;
     Register t;
     for (auto &op:phi->operands()) {
@@ -776,7 +776,7 @@ bool AArch64PreSWPipeliner::createPreHeader(MachineLoop &L) {
       }
     }
     // loop-bodyに追加するPHI
-    BuildMI(*body, phi, phi->getDebugLoc(), TII->get(AArch64::PHI), phi->getOperand(0).getReg())
+    BuildMI(*body, phi, phi->getDebugLoc(), TII->get(TargetOpcode::PHI), phi->getOperand(0).getReg())
         .addReg(newReg)
         .addMBB(ph)
         .addReg(iv)
