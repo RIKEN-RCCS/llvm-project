@@ -39,6 +39,9 @@ static cl::opt<unsigned> MaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyH
 static cl::opt<int> TestStm("swpl-test-tm",cl::init(0), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpPlan("swpl-debug-dump-plan",cl::init(false), cl::ReallyHidden);
 
+// TargetLoopのMI出力オプション。SWPL処理はしない。
+static cl::opt<bool> OptionDumpTargetLoop("swpl-debug-dump-targetloop",cl::init(false), cl::ReallyHidden);
+
 /// Pragmaによるswpのon/offの代わりにSWPL化Loopを絞り込む
 static cl::opt<int> TargetLoop("swpl-choice-loop",cl::init(0), cl::ReallyHidden);
 
@@ -202,6 +205,11 @@ bool AArch64SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
 
   STM.initialize(*MF);
 
+  if(OptionDumpTargetLoop) { // TargetLoopのMI出力。SWPL処理はしない。
+    // 関数名を出力
+    dbgs() << "--- " << mf.getName() << " ---\n";
+  }
+
   for (auto &L : *MLI)
     scheduleLoop(*L);
 
@@ -257,6 +265,10 @@ bool AArch64SWPipeliner::scheduleLoop(MachineLoop &L) {
     });
 
     return Changed;
+  }
+
+  if(OptionDumpTargetLoop) { // TargetLoopのMI出力オプション。SWPL処理はしない。
+    return false;
   }
 
   loopCountForDebug++;
@@ -423,7 +435,20 @@ bool AArch64SWPipeliner::canPipelineLoop(MachineLoop &L) {
     printDebug(__func__, "[canPipelineLoop:NG] Unable to analyzeLoop, can NOT pipeline Loop. ", L);
     return false;
   }
-  
+
+  if(OptionDumpTargetLoop) { // TargetLoopのMI出力。SWPL処理はしない。
+    // 行番号を出力
+    auto m = L.getStartLoc();
+    if (m.get()) {
+      dbgs() << "------ LineNumber: " << m.getLine() << "\n";
+    }
+    else {
+      dbgs() << "------ LineNumber: Could not get.\n";
+    }
+    // MIをダンプ
+    dbgs() << *(L.getTopBlock());
+  }
+
   // 対象ループ判定だけして最適化は未実施 
   printDebug(__func__, "[canPipelineLoop:OK] Passed all checks. ", L);
 
@@ -524,11 +549,13 @@ bool AArch64SWPipeliner::isNonTargetLoop(MachineLoop &L) {
   int mem_counter=MaxMemNum;
   AArch64CC::CondCode CC;
 
-  // 命令数はBasickBlockから取得できる
-  if (LoopBB->size() > MaxInstNum) {
-    printDebug(__func__, "pipeliner info:over inst limit num", L);
-    outputRemarkAnalysis(L, MsgID_swpl_many_insts);
-    return true;
+  if(!OptionDumpTargetLoop) { // TargetLoopのMI出力オプション。SWPL処理はしない。
+    //命令数はBasickBlockから取得できる
+    if (LoopBB->size() > MaxInstNum) {
+      printDebug(__func__, "pipeliner info:over inst limit num", L);
+      outputRemarkAnalysis(L, MsgID_swpl_many_insts);
+      return true;
+    }
   }
 
   for (; I != E; --I) {
@@ -574,6 +601,11 @@ bool AArch64SWPipeliner::isNonTargetLoop(MachineLoop &L) {
         return true;
       }
     }
+
+    if(OptionDumpTargetLoop) { // TargetLoopのMI出力オプション。SWPL処理はしない。
+      continue;
+    }
+
     /* CCを更新する命令が複数出現した。 */
     if (CompMI && hasRegisterImplicitDefOperand (&*I, AArch64::NZCV)) {
       printDebug(__func__, "pipeliner info:multi-defoperand==NZCV", L);
@@ -620,6 +652,11 @@ bool AArch64SWPipeliner::isNonTargetLoop(MachineLoop &L) {
       return true;
     }
   }
+
+  if(OptionDumpTargetLoop) { // TargetLoopのMI出力オプション。SWPL処理はしない。
+    return false;
+  }
+
   if (!(BccMI && CompMI)) {
     printDebug(__func__, "pipeliner info:not found (BCC || SUBSXri)", L);
     outputRemarkAnalysis(L, MsgID_swpl_not_covered_loop_shape);
