@@ -62,6 +62,14 @@ static bool hasRegisterImplicitDefOperand(MachineInstr *MI, unsigned Reg);
 static bool isCompMI(MachineInstr *MI, AArch64CC::CondCode CC);
 
 namespace {
+enum isNonTargetLoopResult {
+  POSSIBLE_LOOP,
+  LIMIT_INST,
+  IMPOSSIBILITY_INST,
+  MANY_CC_INST,
+  UNEXPECTED_BRANCH,
+  LIMIT_MEMINST
+};
 
 struct AArch64SWPipeliner : public MachineFunctionPass {
 public:
@@ -101,7 +109,7 @@ public:
 private:
   bool canPipelineLoop(MachineLoop &L);
   bool scheduleLoop(MachineLoop &L);
-  bool isNonTargetLoop(MachineLoop &L);
+  isNonTargetLoopResult isNonTargetLoop(MachineLoop &L);
   void outputRemarkAnalysis(MachineLoop &L, int msg_id);
   bool shouldOptimize(MachineLoop &L);
   swpl::StmTest *stmTest =nullptr; ///< Stmのテスト用領域
@@ -205,11 +213,6 @@ bool AArch64SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
 
   STM.initialize(*MF);
 
-  if(OptionDumpTargetLoop) { // TargetLoopのMI出力。SWPL処理はしない。
-    // 関数名を出力
-    dbgs() << "--- " << mf.getName() << " ---\n";
-  }
-
   for (auto &L : *MLI)
     scheduleLoop(*L);
 
@@ -265,10 +268,6 @@ bool AArch64SWPipeliner::scheduleLoop(MachineLoop &L) {
     });
 
     return Changed;
-  }
-
-  if(OptionDumpTargetLoop) { // TargetLoopのMI出力オプション。SWPL処理はしない。
-    return false;
   }
 
   loopCountForDebug++;
@@ -431,22 +430,32 @@ bool AArch64SWPipeliner::canPipelineLoop(MachineLoop &L) {
   }
   
   // BasicBlock内の命令チェック
-  if (isNonTargetLoop(L)) {
+  isNonTargetLoopResult checkresult = isNonTargetLoop(L);
+  if( checkresult == LIMIT_INST || checkresult == IMPOSSIBILITY_INST ) {
     printDebug(__func__, "[canPipelineLoop:NG] Unable to analyzeLoop, can NOT pipeline Loop. ", L);
     return false;
-  }
+  } else {
+    // 本処理は、TargetLoopとする場合と、上記以外のTargetLoopとしない場合を含む
+    if(OptionDumpTargetLoop) { // TargetLoopのMI出力。SWPL処理はしない。
+      auto topblock = L.getTopBlock();
 
-  if(OptionDumpTargetLoop) { // TargetLoopのMI出力。SWPL処理はしない。
-    // 行番号を出力
-    auto m = L.getStartLoc();
-    if (m.get()) {
-      dbgs() << "------ LineNumber: " << m.getLine() << "\n";
+      // 関数名を出力
+      dbgs() << "--- " << topblock->getParent()->getName() << " ---\n";
+      // 行番号を出力
+      auto m = L.getStartLoc();
+      if (m.get()) {
+        dbgs() << "------ LineNumber: " << m.getLine() << "\n";
+      }
+      else {
+        dbgs() << "------ LineNumber: Could not get.\n";
+      }
+      // MIをダンプ
+      dbgs() << *topblock;
     }
-    else {
-      dbgs() << "------ LineNumber: Could not get.\n";
-    }
-    // MIをダンプ
-    dbgs() << *(L.getTopBlock());
+  }
+  if( checkresult != POSSIBLE_LOOP ) {
+    printDebug(__func__, "[canPipelineLoop:NG] Unable to analyzeLoop, can NOT pipeline Loop. ", L);
+    return false;
   }
 
   // 対象ループ判定だけして最適化は未実施 
@@ -534,10 +543,14 @@ static bool isCompMI(MachineInstr *MI, AArch64CC::CondCode CC) {
  *
  *       
  * \param[in] L 対象のMachineLoop
- * \retval true  最適化対象ループではない。
- * \retval false 最適化対象ループである。
+ * \retval POSSIBLE_LOOP 最適化対象ループである。
+ * \retval LIMIT_INST 最適化対象ループではない。(命令数が限度を超えた)
+ * \retval IMPOSSIBILITY_INST 最適化対象ループではない。(SWPL対象としない命令を含む)
+ * \retval MANY_CC_INST 最適化対象ループではない。(CCに関連する命令が複数存在する)
+ * \retval UNEXPECTED_BRANCH 最適化対象ループではない。(意図した分岐命令の形状でない)
+ * \retval LIMIT_MEMINST 最適化対象ループではない。(メモリアクセス命令数が限度を超えた)
  */
-bool AArch64SWPipeliner::isNonTargetLoop(MachineLoop &L) {
+isNonTargetLoopResult AArch64SWPipeliner::isNonTargetLoop(MachineLoop &L) {
   MachineBasicBlock *LoopBB = L.getTopBlock();
 
   AArch64CC::CondCode _NE = AArch64CC::NE;
@@ -549,13 +562,11 @@ bool AArch64SWPipeliner::isNonTargetLoop(MachineLoop &L) {
   int mem_counter=MaxMemNum;
   AArch64CC::CondCode CC;
 
-  if(!OptionDumpTargetLoop) { // TargetLoopのMI出力オプション。SWPL処理はしない。
-    //命令数はBasickBlockから取得できる
-    if (LoopBB->size() > MaxInstNum) {
-      printDebug(__func__, "pipeliner info:over inst limit num", L);
-      outputRemarkAnalysis(L, MsgID_swpl_many_insts);
-      return true;
-    }
+  //命令数はBasickBlockから取得できる
+  if (LoopBB->size() > MaxInstNum) {
+    printDebug(__func__, "pipeliner info:over inst limit num", L);
+    outputRemarkAnalysis(L, MsgID_swpl_many_insts);
+    return LIMIT_INST;
   }
 
   for (; I != E; --I) {
@@ -563,60 +574,56 @@ bool AArch64SWPipeliner::isNonTargetLoop(MachineLoop &L) {
     if (I->isCall()) {
       printDebug(__func__, "pipeliner info:found call", L);
       outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
-      return true;
+      return IMPOSSIBILITY_INST;
     }
     if (EnableSensitiveCheck && I->mayRaiseFPException()) {
         printDebug(__func__, "pipeliner info:found mayRaiseFPException", L);
         outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
-        return true;
+        return IMPOSSIBILITY_INST;
     }
     if (EnableSensitiveCheck && I->hasUnmodeledSideEffects()) {
       printDebug(__func__, "pipeliner info:found hasUnmodeledSideEffects", L);
       outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
-      return true;
+      return IMPOSSIBILITY_INST;
     }
     if (EnableSensitiveCheck && I->hasOrderedMemoryRef() &&  (!I->mayLoad() || !I->isDereferenceableInvariantLoad())) {
           printDebug(__func__, "pipeliner info:found hasOrderedMemoryRef", L);
           outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
-          return true;
+          return IMPOSSIBILITY_INST;
     }
     // gnuasm命令である
     auto Op = I->getOpcode();
     if (Op == AArch64::INLINEASM || Op == AArch64::INLINEASM_BR) {
       printDebug(__func__, "pipeliner info:found gnuasm", L);
       outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
-      return true;
+      return IMPOSSIBILITY_INST;
     }
     // DMB命令（fence相当）である
     if (Op == AArch64::DMB) {
       printDebug(__func__, "pipeliner info:found non-target-inst", L);
       outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
-      return true;
+      return IMPOSSIBILITY_INST;
     }
     // volatile属性を含む命令である
     for (MachineMemOperand *MMO : I->memoperands()) {
       if (MMO->isVolatile()) {
         printDebug(__func__, "pipeliner info:found volataile operand", L);
         outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
-        return true;
+        return IMPOSSIBILITY_INST;
       }
-    }
-
-    if(OptionDumpTargetLoop) { // TargetLoopのMI出力オプション。SWPL処理はしない。
-      continue;
     }
 
     /* CCを更新する命令が複数出現した。 */
     if (CompMI && hasRegisterImplicitDefOperand (&*I, AArch64::NZCV)) {
       printDebug(__func__, "pipeliner info:multi-defoperand==NZCV", L);
       outputRemarkAnalysis(L, MsgID_swpl_branch_not_for_loop);
-      return true;
+      return MANY_CC_INST;
     }
     /* CCを参照する命令が複数出現した。 */
     if (BccMI && I->hasRegisterImplicitUseOperand(AArch64::NZCV)) {
       printDebug(__func__, "pipeliner info:multi-refoperand==NZCV", L);
       outputRemarkAnalysis(L, MsgID_swpl_branch_not_for_loop);
-      return true;
+      return MANY_CC_INST;
     }
     /* ループ分岐命令を捕捉 */
     if (I->getOpcode() == AArch64::Bcc
@@ -627,7 +634,7 @@ bool AArch64SWPipeliner::isNonTargetLoop(MachineLoop &L) {
       if (CC != _NE && CC != _GE) {
         printDebug(__func__, "pipeliner info:BCC condition!=NE && GE", L);
         outputRemarkAnalysis(L, MsgID_swpl_not_covered_loop_shape);
-        return true;
+        return UNEXPECTED_BRANCH;
       }
     } else if (BccMI && isCompMI(&*I, CC)) {
       /* Bccが先に見つかっていて、かつループ終了条件比較命令が見つかった。 */
@@ -635,34 +642,30 @@ bool AArch64SWPipeliner::isNonTargetLoop(MachineLoop &L) {
         /* ループ終了条件比較命令が複数見つかった。 */
         printDebug(__func__, "pipeliner info:not found SUBSXri", L);
         outputRemarkAnalysis(L, MsgID_swpl_branch_not_for_loop);
-        return true;
+        return UNEXPECTED_BRANCH;
       }
       const auto phiIter=MRI->def_instr_begin(I->getOperand(1).getReg());
       if (!phiIter->isPHI()) {
         /* 正規化されたループ制御変数がない（PHIとSUBの間に命令が存在する）。 */
         printDebug(__func__, "pipeliner info:not found induction var", L);
         outputRemarkAnalysis(L, MsgID_swpl_not_covered_loop_shape);
-        return true;
+        return UNEXPECTED_BRANCH;
       }
       CompMI = &*I;
     }
     if ((!I->memoperands_empty()) && (--mem_counter)<=0) {
       printDebug(__func__, "pipeliner info:over mem limit num", L);
       outputRemarkAnalysis(L, MsgID_swpl_many_memory_insts);
-      return true;
+      return LIMIT_MEMINST;
     }
-  }
-
-  if(OptionDumpTargetLoop) { // TargetLoopのMI出力オプション。SWPL処理はしない。
-    return false;
   }
 
   if (!(BccMI && CompMI)) {
     printDebug(__func__, "pipeliner info:not found (BCC || SUBSXri)", L);
     outputRemarkAnalysis(L, MsgID_swpl_not_covered_loop_shape);
-    return true;
+    return UNEXPECTED_BRANCH;
   }
-  return false;
+  return POSSIBLE_LOOP;
 }
 
 
