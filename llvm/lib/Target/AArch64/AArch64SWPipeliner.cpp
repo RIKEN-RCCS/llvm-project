@@ -39,7 +39,7 @@ static cl::opt<unsigned> MaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyH
 static cl::opt<int> TestStm("swpl-test-tm",cl::init(0), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpPlan("swpl-debug-dump-plan",cl::init(false), cl::ReallyHidden);
 
-// TargetLoopのMI出力オプション。SWPL処理はしない。
+// TargetLoopのMI出力オプション
 static cl::opt<bool> OptionDumpTargetLoop("swpl-debug-dump-targetloop",cl::init(false), cl::ReallyHidden);
 
 /// Pragmaによるswpのon/offの代わりにSWPL化Loopを絞り込む
@@ -436,7 +436,7 @@ bool AArch64SWPipeliner::canPipelineLoop(MachineLoop &L) {
     return false;
   } else {
     // 本処理は、TargetLoopとする場合と、上記以外のTargetLoopとしない場合を含む
-    if(OptionDumpTargetLoop) { // TargetLoopのMI出力。SWPL処理はしない。
+    if(OptionDumpTargetLoop) { // TargetLoopのMI出力
       auto topblock = L.getTopBlock();
 
       // 関数名を出力
