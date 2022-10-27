@@ -13,12 +13,7 @@
 #include "AArch64.h"
 
 #include "AArch64SWPipeliner.h"
-#include "AArch64SwplDataDependenceAnalysis.h"
-#include "AArch64SwplTargetMachine.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 using namespace llvm;
@@ -368,7 +363,7 @@ void SwplDdg::analysisMemDependence() {
         case DepKind::init:
           llvm_unreachable("Unknown Dependency Kind");
         }
-        dbgs() << "DBG(SwplDdg::analysisMemDependenc):" << p << "\n"
+        dbgs() << "DBG(SwplDdg::analysisMemDependence):" << p << "\n"
         << " former_inst:" << *(former_mem->getInst()->getMI())
         << " latter_inst:" << *(latter_mem->getInst()->getMI())
         << " distance:" << distance << "\n"

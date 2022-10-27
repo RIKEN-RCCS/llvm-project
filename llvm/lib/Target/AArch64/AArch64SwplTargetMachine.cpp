@@ -331,7 +331,6 @@ StmRegKind SwplTargetMachine::getRegKind(llvm::Register reg) const {
   bool pReg=false;
   if (reg.isVirtual()) {
     const auto * regClass=MRI->getRegClass(reg);
-    LLVM_DEBUG(dbgs() << "SwplTargetMachine::getRegKind: register is " << MRI->getTargetRegisterInfo()->getRegClassName(regClass) << "\n");
     if (regClass->hasSuperClassEq(&AArch64::GPR64allRegClass) || regClass->hasSuperClassEq(&AArch64::GPR32allRegClass)) {
       regClassId = AArch64::GPR64RegClassID;
     } else if (regClass->hasSuperClassEq(&AArch64::FPR8RegClass) ||
@@ -348,12 +347,18 @@ StmRegKind SwplTargetMachine::getRegKind(llvm::Register reg) const {
         regClass->hasSuperClassEq(&AArch64::FPR16_loRegClass) ||
         regClass->hasSuperClassEq(&AArch64::FPR64_loRegClass) ||
         regClass->hasSuperClassEq(&AArch64::FPR128_loRegClass) ||
-        regClass->hasSuperClassEq(&AArch64::ZPRRegClass)) {
+        regClass->hasSuperClassEq(&AArch64::ZPRRegClass) ||
+        regClass->hasSuperClassEq(&AArch64::ZPR_3bRegClass) ||
+        regClass->hasSuperClassEq(&AArch64::ZPR_4bRegClass) ||
+        regClass->hasSuperClassEq(&AArch64::ZPR2RegClass) ||
+        regClass->hasSuperClassEq(&AArch64::ZPR3RegClass) ||
+        regClass->hasSuperClassEq(&AArch64::ZPR4RegClass)) {
       regClassId=AArch64::FPR64RegClassID;
     }else if (regClass->hasSuperClassEq(&AArch64::PPRRegClass) ||
         regClass->hasSuperClassEq(&AArch64::PPR_3bRegClass)) {
       regClassId=AArch64::PPRRegClassID;
     }else {
+      dbgs() << "unknown register class: " << MRI->getTargetRegisterInfo()->getRegClassName(regClass) << "\n";
       llvm_unreachable("unknown register");
     }
 

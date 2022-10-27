@@ -86,7 +86,7 @@ bool SwplTransformMIR::transformMIR() {
     if (DumpMIR & (int)AFTER_SSA) dumpMIR(AFTER_SSA);
     if (!DisableRemoveUnnecessaryBR) {
       /// (2-6) SwplScr::postSSA() 不要な分岐を削除する("-swpl-disable-rm-br"が指定されていなければ)
-      SCR.postSSA(TMI, Loop);
+      SCR.postSSA(TMI);
       if (DumpMIR & (int)LAST) dumpMIR(LAST);
     }
 
@@ -375,7 +375,7 @@ llvm::MachineInstr *SwplTransformMIR::createMIFromInst(const SwplInst &inst, siz
     i++;
     Register r=reg->getReg();
     if (r.isPhysical()) continue;
-    LLVM_DEBUG(dbgs() << "swplreg=" << reg << ":" << printReg(r, TRI) << "from(" << inst.getDefOperandIx(i) << "):" << new_MI->getOperand(inst.getDefOperandIx(i)) <<"\n");
+    LLVM_DEBUG(dbgs() << "swplreg=" << reg << ":" << printReg(r, TRI) << "from(" << inst.getUseOperandIx(i) << "):" << new_MI->getOperand(inst.getUseOperandIx(i)) <<"\n");
     auto new_reg = getVReg(*reg, version);
     LLVM_DEBUG(dbgs() << "newreg=" << printReg(new_reg, TRI) << "\n" );
     if (new_reg==r) continue; // 新しいレジスタを割り当てる必要がなかったので、何もしない

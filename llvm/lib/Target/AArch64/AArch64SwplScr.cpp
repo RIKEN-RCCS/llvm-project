@@ -409,7 +409,7 @@ void SwplScr::prepareCompensationLoop(TransformedMIRInfo &tmi) {
   //      +-------------------------------+
 }
 
-void SwplScr::postSSA(TransformedMIRInfo &tmi, swpl::SwplLoop &Loop) {
+void SwplScr::postSSA(TransformedMIRInfo &tmi) {
   if (!tmi.isNecessaryBypassKernel()) {
     removeMBB(tmi.Check1, tmi.OrgPreHeader, tmi.Prolog);
     tmi.Check1=nullptr;

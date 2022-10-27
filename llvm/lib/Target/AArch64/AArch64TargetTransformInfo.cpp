@@ -3191,7 +3191,7 @@ static int enableLoopSWP(const Loop* L, bool &exists) {
       continue;
 
     // loopメタ情報を表示する。
-    LLVM_DEBUG( dbgs() << __func__ << ":loop=" << L->getLocRange().getStart().getLine() << "-" << L->getLocRange().getEnd().getLine() << " meta:" << S->getString() << "\n");
+    LLVM_DEBUG( if (L->getLocRange().getStart().get()) dbgs() << __func__ << ":loop=" << L->getLocRange().getStart().getLine() << "-" << L->getLocRange().getEnd().getLine() << " meta:" << S->getString() << "\n");
 
     if (S->getString()=="llvm.loop.swp.enable") {
       exists=true;

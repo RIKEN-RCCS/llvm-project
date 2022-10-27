@@ -201,8 +201,7 @@ public:
 
   /// SWPL処理の最後に、無駄な分岐等を削除する
   /// \param [in] tmi
-  /// \param [in] loop
-  void postSSA(TransformedMIRInfo &tmi, swpl::SwplLoop &loop);
+  void postSSA(TransformedMIRInfo &tmi);
 
   /// original loopから、loop外で参照しているregister情報を収集する
   void collectLiveOut(UseMap &usemap);
