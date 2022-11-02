@@ -1,4 +1,4 @@
-//=- AArch64SwplTransformMIR.cpp -  Transform MachineIR for SWP -*- C++ -*---=//
+//=- SwplTransformMIR.cpp -  Transform MachineIR for SWP -*- C++ -*----------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,13 +19,13 @@ namespace swpl {
   struct TransformedMIRInfo;
 }
 
-#include "AArch64SwplTransformMIR.h"
+#include "SwplTransformMIR.h"
 #include "AArch64.h"
-#include "AArch64SWPipeliner.h"
-#include "AArch64SwplPlan.h"
-#include "AArch64SwplScr.h"
 #include "AArch64SwplTargetMachine.h"
 #include "AArch64TargetTransformInfo.h"
+#include "SWPipeliner.h"
+#include "SwplPlan.h"
+#include "SwplScr.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -37,7 +37,7 @@ namespace swpl {
 using namespace llvm;
 using namespace swpl;
 
-#define DEBUG_TYPE "aarch64-swpipeliner"
+#define DEBUG_TYPE "swpipeliner"
 
 static cl::opt<std::string> ImportPlan("swpl-plan-import", cl::init(""), cl::ReallyHidden);
 static cl::opt<std::string> ExportPlan("swpl-plan-export", cl::init(""), cl::ReallyHidden);
@@ -225,7 +225,7 @@ SwplTransformMIR::controlVReg2RegInLoop(const SwplInst **updateInst) {
   /// (1) レジスタ同士の変換はできないため、（誘導変数更新MIRである）UpdateDoVRegMIの変換後MIRを取得し、そのOP1を利用する
   TMI.nonSSAOriginalDoVReg =update->getOperand(1).getReg();
   const auto *copy=map[TMI.initDoVRegMI];
-  assert(copy->getOpcode()==AArch64::COPY);
+  assert(copy->getOpcode()==TargetOpcode::COPY);
   TMI.nonSSAOriginalDoInitVar=copy->getOperand(1).getReg();
 
   LLVM_DEBUG(dbgs() << "updateDoVRegMI:" << *(TMI.updateDoVRegMI));
@@ -635,7 +635,7 @@ void SwplTransformMIR::prepareMIs() {
       if (newReg == originalSReg.getReg()) {
         continue;
       }
-      llvm::MachineInstr *copy=BuildMI(MF,firstMI->getDebugLoc(),TII->get(AArch64::COPY), newReg)
+      llvm::MachineInstr *copy=BuildMI(MF,firstMI->getDebugLoc(),TII->get(TargetOpcode::COPY), newReg)
                                   .addReg(originalSReg.getReg());
       TMI.mis.push_back(copy);
     }
@@ -727,7 +727,7 @@ void SwplTransformMIR::postTransformKernel() {
     auto op0=cp->getOperand(0).getReg();
     auto op1=cp->getOperand(1).getReg();
     auto defPhi=MRI->cloneVirtualRegister(op0);
-    BuildMI(*(TMI.NewPreHeader), InsertPoint1, mi.getDebugLoc(), TII->get(AArch64::PHI), defPhi)
+    BuildMI(*(TMI.NewPreHeader), InsertPoint1, mi.getDebugLoc(), TII->get(TargetOpcode::PHI), defPhi)
             .addReg(op1).addMBB(TMI.Check1).addReg(op0).addMBB(TMI.Check2);
 
     /// (2-1) NP側のレジスタを新規生成するPHIで定義するレジスタに切り替える
@@ -748,7 +748,7 @@ void SwplTransformMIR::postTransformKernel() {
     // p.first: reg, p.second:vector<MO*>
     auto newreg=regmap[p.first];
     auto defPhi=MRI->cloneVirtualRegister(newreg);
-    BuildMI(*(TMI.NewExit), InsertPoint2, debugLoc, TII->get(AArch64::PHI), defPhi)
+    BuildMI(*(TMI.NewExit), InsertPoint2, debugLoc, TII->get(TargetOpcode::PHI), defPhi)
             .addReg(p.first).addMBB(TMI.NewBody).addReg(newreg).addMBB(TMI.Check2);
     for (auto *mo:p.second) {
       assert(mo->getReg()==p.first);
@@ -786,7 +786,7 @@ void SwplTransformMIR::replaceDefReg(MachineBasicBlock &mbb, std::map<Register,R
         if (useregs.count(def) != 0) {
           // 参照先行なのでリカレンスになっている--> PHIが必要
           auto defPhi = MRI->cloneVirtualRegister(def);
-          BuildMI(mbb, InsertPoint, debugLoc, TII->get(AArch64::PHI), defPhi)
+          BuildMI(mbb, InsertPoint, debugLoc, TII->get(TargetOpcode::PHI), defPhi)
                   .addReg(def).addMBB(TMI.Prolog).addReg(newDef).addMBB(TMI.OrgBody);
 
           // ここまでの参照レジスタをPHI定義のレジスタに書き換える。

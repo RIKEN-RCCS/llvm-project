@@ -1,4 +1,4 @@
-//=- AArch64SWPipeliner.h - Machine Software Pipeliner Pass -*- c++ -*-------=//
+//=- SWPipeliner.h - Machine Software Pipeliner Pass -*- c++ -*--------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// AArch64 Machine Software Pipeliner Pass definitions.
+// Machine Software Pipeliner Pass definitions.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AARCH64_AARCH64SWPIPELINER_H
-#define LLVM_LIB_TARGET_AARCH64_AARCH64SWPIPELINER_H
+#ifndef LLVM_LIB_CODEGEN_SWPIPELINER_H
+#define LLVM_LIB_CODEGEN_SWPIPELINER_H
 
 #include "AArch64.h"
-#include "AArch64SwplScr.h"
 #include "AArch64SwplTargetMachine.h"
+#include "SwplScr.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"

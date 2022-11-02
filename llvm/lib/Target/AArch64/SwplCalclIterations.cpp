@@ -1,4 +1,4 @@
-//=- AArch64SwplCalclIterations.cpp - check Iterations in SWPL -*- C++ -*----=//
+//=- SwplCalclIterations.cpp - check Iterations in SWPL -*- C++ -*-----------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64SwplCalclIterations.h"
+#include "SwplCalclIterations.h"
 #include "AArch64.h"
-#include "AArch64SWPipeliner.h"
-#include "AArch64SwplPlan.h"
-#include "AArch64SwplScheduling.h"
 #include "AArch64SwplTargetMachine.h"
+#include "SWPipeliner.h"
+#include "SwplPlan.h"
+#include "SwplScheduling.h"
 
 using namespace llvm;
 

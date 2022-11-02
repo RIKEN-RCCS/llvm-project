@@ -1,4 +1,4 @@
-//=- AArch64SwplScheduling.cpp - Scheduling process in SWPL -*- C++ -*-------=//
+//=- SwplScheduling.cpp - Scheduling process in SWPL -*- C++ -*--------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,18 +13,18 @@
 #include "AArch64.h"
 #include "AArch64TargetTransformInfo.h"
 
-#include "AArch64SWPipeliner.h"
-#include "AArch64SwplCalclIterations.h"
-#include "AArch64SwplPlan.h"
-#include "AArch64SwplRegEstimate.h"
-#include "AArch64SwplScheduling.h"
-#include "AArch64SwplScr.h"
 #include "AArch64SwplTargetMachine.h"
+#include "SWPipeliner.h"
+#include "SwplCalclIterations.h"
+#include "SwplPlan.h"
+#include "SwplRegEstimate.h"
+#include "SwplScheduling.h"
+#include "SwplScr.h"
 
 using namespace llvm;
 using namespace ore; // for NV
 
-#define DEBUG_TYPE "aarch64-swpipeliner"
+#define DEBUG_TYPE "swpipeliner"
 
 static cl::opt<bool> OptionDumpMrt("swpl-debug-dump-mrt",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> OptionBsearch("swpl-ii-by-Bsearch",cl::init(true), cl::ReallyHidden);

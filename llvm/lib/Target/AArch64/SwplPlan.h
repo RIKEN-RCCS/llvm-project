@@ -1,4 +1,4 @@
-//=- AArch64SwplPlan.h - Classes as cheduling results in SWPL -*- C++ -*-----=//
+//=- SwplPlan.h - Classes as cheduling results in SWPL -*- C++ -*------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AARCH64_AARCH64SWPLPLAN_H
-#define LLVM_LIB_TARGET_AARCH64_AARCH64SWPLPLAN_H
+#ifndef LLVM_LIB_CODEGEN_SWPLPLAN_H
+#define LLVM_LIB_CODEGEN_SWPLPLAN_H
 
 #include "AArch64.h"
 
-#include "AArch64SWPipeliner.h"
+#include "SWPipeliner.h"
 
 namespace swpl{
 extern  llvm::cl::opt<bool> DebugOutput;
@@ -193,4 +193,4 @@ private:
 };
 
 }
-#endif // LLVM_LIB_TARGET_AARCH64_AARCH64SWPLPLAN_H
+#endif

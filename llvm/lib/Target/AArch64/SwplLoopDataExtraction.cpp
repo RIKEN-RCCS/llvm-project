@@ -1,4 +1,4 @@
-//=- AArch64LoopDataExtraction.cpp - SWPL LOOP -*- c++ -*--------------------=//
+//=- LoopDataExtraction.cpp - SWPL LOOP -*- c++ -*---------------------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,22 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// AArch64 Loop Data Extraction (SwplLoop)
+//  Loop Data Extraction (SwplLoop)
 //
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
 
-#include "llvm/CodeGen/MachineLoopInfo.h"
-#include "AArch64SWPipeliner.h"
-#include <iostream>
+#include "AArch64TargetTransformInfo.h"
+#include "SWPipeliner.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "AArch64TargetTransformInfo.h"
+#include <iostream>
 
 using namespace llvm;
 using namespace swpl;
@@ -515,7 +514,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     if (LiveOutReg.count(org_def_r)!=0) {
       auto backup_def_r=def_r;
       def_r=MRI->cloneVirtualRegister(def_r);
-      MachineInstr *Copy = BuildMI(*body, body->getFirstNonPHI(), dbgloc,TII->get(AArch64::COPY), backup_def_r)
+      MachineInstr *Copy = BuildMI(*body, body->getFirstNonPHI(), dbgloc,TII->get(TargetOpcode::COPY), backup_def_r)
               .addReg(def_r);
       NewMI2OrgMI[Copy]=org_phi;
     }
@@ -541,12 +540,12 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     ///````
 
     ///   (1)-3. preにin_rからown_rへのCopy命令を挿入する(def_r = Copy in_r)。
-    MachineInstr *Copy = BuildMI(*pre, pre->getFirstTerminator(), dbgloc,TII->get(AArch64::COPY), def_r)
+    MachineInstr *Copy = BuildMI(*pre, pre->getFirstTerminator(), dbgloc,TII->get(TargetOpcode::COPY), def_r)
                                 .addReg(in_r);
     addCopies(Copy);
 
     ///   (1)-4. preにin_rからown_rへのCopy命令を挿入する(def_r = Copy own_r)。
-    MachineInstr *c=BuildMI(*body, body->getFirstTerminator(), dbgloc,TII->get(AArch64::COPY), def_r)
+    MachineInstr *c=BuildMI(*body, body->getFirstTerminator(), dbgloc,TII->get(TargetOpcode::COPY), def_r)
             .addReg(own_r);
     NewMI2OrgMI[c]=org_phi;
 

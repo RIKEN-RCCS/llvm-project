@@ -1,4 +1,4 @@
-//=- AArch64SwplScr.h -  Swpl Scheduling common function -*- C++ -*----------=//
+//=- SwplScr.h -  Swpl Scheduling common function -*- C++ -*-----------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,8 +9,8 @@
 // Swpl Scheduling common function
 //
 //===----------------------------------------------------------------------===//
-#ifndef AARCH64SWPLSCR_H
-#define AARCH64SWPLSCR_H
+#ifndef SWPLSCR_H
+#define SWPLSCR_H
 
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"

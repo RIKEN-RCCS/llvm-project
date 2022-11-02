@@ -1,4 +1,4 @@
-//=- AArch64SwplScr.cpp -  Swpl Scheduling common function -*- C++ -*--------=//
+//=- SwplScr.cpp -  Swpl Scheduling common function -*- C++ -*---------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64SwplScr.h"
-#include "AArch64SWPipeliner.h"
+#include "SwplScr.h"
+#include "SWPipeliner.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/raw_ostream.h"
@@ -330,7 +330,7 @@ void SwplScr::prepareCompensationLoop(TransformedMIRInfo &tmi) {
 
   // neとoeは直列に並んでいない場合があるため、Branch命令で明にSuccessorを指定する
   const auto &debugLoc=ob->getFirstTerminator()->getDebugLoc();
-  BuildMI(ne, debugLoc, TII->get(AArch64::B)).addMBB(oe);
+  BuildMI(ne, debugLoc, TII->get(TargetOpcode::G_BR)).addMBB(oe);
 
   tmi.Prolog=prolog;
   tmi.Epilog=epilog;
