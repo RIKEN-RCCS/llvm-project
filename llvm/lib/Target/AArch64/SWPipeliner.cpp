@@ -29,7 +29,7 @@
 
 using namespace llvm;
 using namespace swpl;
-#define DEBUG_TYPE "swpipeliner"
+#define DEBUG_TYPE "aarch64-swpipeliner"
 
 static cl::opt<bool> DisableSwpl("swpl-disable",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableSensitiveCheck("swpl-sensitive-check",cl::init(false), cl::ReallyHidden);
