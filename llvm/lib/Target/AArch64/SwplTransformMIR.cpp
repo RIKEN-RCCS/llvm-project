@@ -37,7 +37,7 @@ namespace swpl {
 using namespace llvm;
 using namespace swpl;
 
-#define DEBUG_TYPE "swpipeliner"
+#define DEBUG_TYPE "aarch64-swpipeliner"
 
 static cl::opt<std::string> ImportPlan("swpl-plan-import", cl::init(""), cl::ReallyHidden);
 static cl::opt<std::string> ExportPlan("swpl-plan-export", cl::init(""), cl::ReallyHidden);

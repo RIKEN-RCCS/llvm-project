@@ -24,7 +24,7 @@
 using namespace llvm;
 using namespace ore; // for NV
 
-#define DEBUG_TYPE "swpipeliner"
+#define DEBUG_TYPE "aarch64-swpipeliner"
 
 static cl::opt<bool> OptionDumpMrt("swpl-debug-dump-mrt",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> OptionBsearch("swpl-ii-by-Bsearch",cl::init(true), cl::ReallyHidden);

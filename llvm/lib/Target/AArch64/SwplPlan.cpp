@@ -21,7 +21,7 @@
 using namespace llvm;
 using namespace ore; // for NV
 
-#define DEBUG_TYPE "swpipeliner"
+#define DEBUG_TYPE "aarch64-swpipeliner"
 
 namespace swpl{
 
