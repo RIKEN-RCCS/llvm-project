@@ -151,7 +151,7 @@ private:
   /// \param [in] CC
   /// \param [out] from
   /// \param [out] to
-  void makeBypassMod(llvm::Register doUpdateVar, const llvm::DebugLoc&dbgloc, llvm::AArch64CC::CondCode CC, llvm::MachineBasicBlock &from, llvm::MachineBasicBlock &to) const;
+  void makeBypassMod(llvm::Register doUpdateVar, const llvm::DebugLoc&dbgloc, llvm::MachineOperand &CC, llvm::MachineBasicBlock &from, llvm::MachineBasicBlock &to) const;
 
   /// MBBを削除する（およびSuccessor、PHI、Brの更新）
   /// \param [in,out] target 削除対象

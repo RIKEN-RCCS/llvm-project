@@ -44,6 +44,10 @@ static cl::opt<bool> OptionDumpTargetLoop("swpl-debug-dump-targetloop",cl::init(
 /// Pragmaによるswpのon/offの代わりにSWPL化Loopを絞り込む
 static cl::opt<int> TargetLoop("swpl-choice-loop",cl::init(0), cl::ReallyHidden);
 
+// TODO:STEP2でTTIに移動したisNonTargetMI4SWPL()にｈ
+bool isNonTargetMI4SWPL(MachineInstr &inst);
+
+
 namespace swpl {
 cl::opt<bool> DebugOutput("swpl-debug",cl::init(false), cl::ReallyHidden);
 MachineOptimizationRemarkEmitter *ORE = nullptr;
@@ -590,19 +594,13 @@ isNonTargetLoopResult SWPipeliner::isNonTargetLoop(MachineLoop &L) {
           outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
           return IMPOSSIBILITY_INST;
     }
-    // gnuasm命令である
-    auto Op = I->getOpcode();
-    if (Op == AArch64::INLINEASM || Op == AArch64::INLINEASM_BR) {
-      printDebug(__func__, "pipeliner info:found gnuasm", L);
+    // fenceもしくはgnuasm命令である
+    if (isNonTargetMI4SWPL(*I)) {
+      printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
       outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
       return IMPOSSIBILITY_INST;
     }
-    // DMB命令（fence相当）である
-    if (Op == AArch64::DMB) {
-      printDebug(__func__, "pipeliner info:found non-target-inst", L);
-      outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
-      return IMPOSSIBILITY_INST;
-    }
+
     // volatile属性を含む命令である
     for (MachineMemOperand *MMO : I->memoperands()) {
       if (MMO->isVolatile()) {

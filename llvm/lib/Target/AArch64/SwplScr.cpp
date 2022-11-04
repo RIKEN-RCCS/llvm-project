@@ -51,8 +51,7 @@ void SwplScr::makeBypass(const TransformedMIRInfo &tmi,
       tmi.originalDoInitVar, dbgloc,
                     skip_kernel_from, skip_kernel_to,
       tmi.requiredKernelIteration * tmi.coefficient + tmi.minConstant);
-  AArch64CC::CondCode CC=(AArch64CC::CondCode)(int)tmi.branchDoVRegMI->getOperand(0).getImm();
-  makeBypassMod(tmi.updateDoVRegMI->getOperand(0).getReg(), dbgloc, CC, skip_mod_from, skip_mod_to);
+  makeBypassMod(tmi.updateDoVRegMI->getOperand(0).getReg(), dbgloc, tmi.branchDoVRegMI->getOperand(0), skip_mod_from, skip_mod_to);
 }
 
 void SwplScr::makeBypassKernel(Register doInitVar,
@@ -84,7 +83,7 @@ void SwplScr::makeBypassKernel(Register doInitVar,
 
 void SwplScr::makeBypassMod(Register doUpdateVar,
                         const DebugLoc &dbgloc,
-                        AArch64CC::CondCode CC,
+                        llvm::MachineOperand &CC,
                         MachineBasicBlock &from,
                         MachineBasicBlock &to) const {
 
@@ -92,18 +91,21 @@ void SwplScr::makeBypassMod(Register doUpdateVar,
       .addReg(doUpdateVar)
       .addImm(0)
       .addImm(0);
-  switch(CC) {
+
+  AArch64CC::CondCode newCC;
+
+  switch(CC.getImm()) {
   case AArch64CC::NE:
-    CC=AArch64CC::EQ;
+    newCC=AArch64CC::EQ;
     break;
   case AArch64CC::GE:
-    CC=AArch64CC::LT;
+    newCC=AArch64CC::LT;
     break;
   default:
     llvm_unreachable("CC is not (NE or GE)");
   }
   BuildMI(&from, dbgloc, TII->get(AArch64::Bcc))
-      .addImm(CC)
+      .addImm(newCC)
       .addMBB(&to);
 
   from.addSuccessor(&to);

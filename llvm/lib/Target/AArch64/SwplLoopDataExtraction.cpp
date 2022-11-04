@@ -39,7 +39,9 @@ static void construct_use(Register2SwplRegMap &rmap, SwplInst &inst, MachineOper
 static void construct_mem_use(Register2SwplRegMap &rmap, SwplInst &inst, const MachineMemOperand *MMO, SwplInsts &insts,
                               SwplMems *mems, SwplMems *memsOtherBody);
 static void construct_def(Register2SwplRegMap &rmap, SwplInst &inst, MachineOperand &MO);
-static bool isNonTarget(MachineInstr &inst);
+
+// todo: ステップ２でTTIに移動する
+bool isNonTargetMI4SWPL(MachineInstr &inst);
 
 void SwplReg::inheritReg(SwplReg *former_reg, SwplReg *latter_reg) {
   assert (former_reg->Successor == NULL);
@@ -890,7 +892,7 @@ static void follow_single_predecessor_MBBs(MachineLoop *L, BasicBlocks *BBs) {
   MachineBasicBlock *BB = pred_BB;
   while(BB) {
     for (auto &MI:BB->instrs()) {
-      if (isNonTarget(MI)) { return; }
+      if (isNonTargetMI4SWPL(MI)) { return; }
     }
     BBs->push_back(BB);
     BB = getPredecessorBB(*BB);
@@ -980,7 +982,7 @@ static void construct_def(Register2SwplRegMap &rmap, SwplInst &inst, MachineOper
 /// \param [in] inst
 /// \retval true 対象命令でない
 /// \retval false 対象命令である
-static bool isNonTarget(MachineInstr &inst) {
+bool isNonTargetMI4SWPL(MachineInstr &inst) {
   switch(inst.getOpcode()) {
   case AArch64::DMB: /// fence相当
   case AArch64::INLINEASM:
