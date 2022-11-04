@@ -332,7 +332,7 @@ void SwplScr::prepareCompensationLoop(TransformedMIRInfo &tmi) {
 
   // neとoeは直列に並んでいない場合があるため、Branch命令で明にSuccessorを指定する
   const auto &debugLoc=ob->getFirstTerminator()->getDebugLoc();
-  BuildMI(ne, debugLoc, TII->get(AArch64::B)).addMBB(oe);
+  TII->insertUnconditionalBranch(*ne, oe, debugLoc);
 
   tmi.Prolog=prolog;
   tmi.Epilog=epilog;
