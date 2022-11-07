@@ -44,7 +44,7 @@ static cl::opt<bool> OptionDumpTargetLoop("swpl-debug-dump-targetloop",cl::init(
 /// Pragmaによるswpのon/offの代わりにSWPL化Loopを絞り込む
 static cl::opt<int> TargetLoop("swpl-choice-loop",cl::init(0), cl::ReallyHidden);
 
-// TODO:STEP2でTTIに移動したisNonTargetMI4SWPL()にｈ
+// TODO:STEP2でTIIに移動したisNonTargetMI4SWPL()に変更する
 bool isNonTargetMI4SWPL(MachineInstr &inst);
 
 

@@ -40,7 +40,7 @@ static void construct_mem_use(Register2SwplRegMap &rmap, SwplInst &inst, const M
                               SwplMems *mems, SwplMems *memsOtherBody);
 static void construct_def(Register2SwplRegMap &rmap, SwplInst &inst, MachineOperand &MO);
 
-// todo: ステップ２でTTIに移動する
+// todo: ステップ２でTIIに移動する
 bool isNonTargetMI4SWPL(MachineInstr &inst);
 
 void SwplReg::inheritReg(SwplReg *former_reg, SwplReg *latter_reg) {
