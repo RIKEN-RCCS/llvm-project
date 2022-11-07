@@ -1,17 +1,19 @@
-//=- AArch64SwplDataDependenceAnalysis.h - SWPL DDG -*- c++ -*---------------=//
+//=- SwplLoopDataExtraction.h - SWPL LOOP -*- c++ -*-------------------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-/// 
-/// AArch64 Data Dependency analysis Generation (SwplDdg)
+//
+// Loop Data Extraction (SwplLoop)
 //
 //===----------------------------------------------------------------------===//
-#ifndef AArch64SwplDataDependenceAnalysis_h
-#define AArch64SwplDataDependenceAnalysis_h
-#include "AArch64SWPipeliner.h"
+#ifndef SwplLoopDataExtraction_H
+#define SwplLoopDataExtraction_H
 
-bool isPrefetch(const swpl::SwplInst &inst);
+#include "SWPipeliner.h"
+using namespace llvm;
+using namespace swpl;
+
 #endif

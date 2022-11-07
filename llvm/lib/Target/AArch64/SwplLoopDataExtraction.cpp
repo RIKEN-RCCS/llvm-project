@@ -1,4 +1,4 @@
-//=- AArch64LoopDataExtraction.cpp - SWPL LOOP -*- c++ -*--------------------=//
+//=- LoopDataExtraction.cpp - SWPL LOOP -*- c++ -*---------------------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,22 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// AArch64 Loop Data Extraction (SwplLoop)
+//  Loop Data Extraction (SwplLoop)
 //
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
 
-#include "llvm/CodeGen/MachineLoopInfo.h"
-#include "AArch64SWPipeliner.h"
-#include <iostream>
+#include "AArch64TargetTransformInfo.h"
+#include "SWPipeliner.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "AArch64TargetTransformInfo.h"
+#include <iostream>
 
 using namespace llvm;
 using namespace swpl;
@@ -40,7 +39,9 @@ static void construct_use(Register2SwplRegMap &rmap, SwplInst &inst, MachineOper
 static void construct_mem_use(Register2SwplRegMap &rmap, SwplInst &inst, const MachineMemOperand *MMO, SwplInsts &insts,
                               SwplMems *mems, SwplMems *memsOtherBody);
 static void construct_def(Register2SwplRegMap &rmap, SwplInst &inst, MachineOperand &MO);
-static bool isNonTarget(MachineInstr &inst);
+
+// todo: ステップ２でTIIに移動する
+bool isNonTargetMI4SWPL(MachineInstr &inst);
 
 void SwplReg::inheritReg(SwplReg *former_reg, SwplReg *latter_reg) {
   assert (former_reg->Successor == NULL);
@@ -515,7 +516,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     if (LiveOutReg.count(org_def_r)!=0) {
       auto backup_def_r=def_r;
       def_r=MRI->cloneVirtualRegister(def_r);
-      MachineInstr *Copy = BuildMI(*body, body->getFirstNonPHI(), dbgloc,TII->get(AArch64::COPY), backup_def_r)
+      MachineInstr *Copy = BuildMI(*body, body->getFirstNonPHI(), dbgloc,TII->get(TargetOpcode::COPY), backup_def_r)
               .addReg(def_r);
       NewMI2OrgMI[Copy]=org_phi;
     }
@@ -541,12 +542,12 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     ///````
 
     ///   (1)-3. preにin_rからown_rへのCopy命令を挿入する(def_r = Copy in_r)。
-    MachineInstr *Copy = BuildMI(*pre, pre->getFirstTerminator(), dbgloc,TII->get(AArch64::COPY), def_r)
+    MachineInstr *Copy = BuildMI(*pre, pre->getFirstTerminator(), dbgloc,TII->get(TargetOpcode::COPY), def_r)
                                 .addReg(in_r);
     addCopies(Copy);
 
     ///   (1)-4. preにin_rからown_rへのCopy命令を挿入する(def_r = Copy own_r)。
-    MachineInstr *c=BuildMI(*body, body->getFirstTerminator(), dbgloc,TII->get(AArch64::COPY), def_r)
+    MachineInstr *c=BuildMI(*body, body->getFirstTerminator(), dbgloc,TII->get(TargetOpcode::COPY), def_r)
             .addReg(own_r);
     NewMI2OrgMI[c]=org_phi;
 
@@ -891,7 +892,7 @@ static void follow_single_predecessor_MBBs(MachineLoop *L, BasicBlocks *BBs) {
   MachineBasicBlock *BB = pred_BB;
   while(BB) {
     for (auto &MI:BB->instrs()) {
-      if (isNonTarget(MI)) { return; }
+      if (isNonTargetMI4SWPL(MI)) { return; }
     }
     BBs->push_back(BB);
     BB = getPredecessorBB(*BB);
@@ -981,7 +982,7 @@ static void construct_def(Register2SwplRegMap &rmap, SwplInst &inst, MachineOper
 /// \param [in] inst
 /// \retval true 対象命令でない
 /// \retval false 対象命令である
-static bool isNonTarget(MachineInstr &inst) {
+bool isNonTargetMI4SWPL(MachineInstr &inst) {
   switch(inst.getOpcode()) {
   case AArch64::DMB: /// fence相当
   case AArch64::INLINEASM:

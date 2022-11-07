@@ -84,16 +84,16 @@ add_llvm_target(AArch64CodeGen
   AArch64TargetTransformInfo.cpp
   SVEIntrinsicOpts.cpp
   AArch64SIMDInstrOpt.cpp
-  AArch64SWPipeliner.cpp
+        SWPipeliner.cpp
         AArch64SwplTargetMachine.cpp
-        AArch64SwplLoopDataExtraction.cpp
-        AArch64SwplDataDependenceAnalysis.cpp
-        AArch64SwplScr.cpp
-  AArch64SwplPlan.cpp
-  AArch64SwplScheduling.cpp
-  AArch64SwplRegEstimate.cpp
-  AArch64SwplCalclIterations.cpp
-        AArch64SwplTransformMIR.cpp
+        SwplLoopDataExtraction.cpp
+        SwplDataDependenceAnalysis.cpp
+        SwplScr.cpp
+        SwplPlan.cpp
+        SwplScheduling.cpp
+        SwplRegEstimate.cpp
+        SwplCalclIterations.cpp
+        SwplTransformMIR.cpp
   AArch64A64FXResourceInfo.cpp
   DEPENDS
   intrinsics_gen

@@ -235,10 +235,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64SLSHardeningPass(*PR);
   initializeAArch64StackTaggingPass(*PR);
   initializeAArch64StackTaggingPreRAPass(*PR);
-// Start Metro
-  initializeAArch64PreSWPipelinerPass(*PR);
-  initializeAArch64SWPipelinerPass(*PR);
-// End Metro
+
+  initializeSWPipelinerPrePass(*PR);
+  initializeSWPipelinerPass(*PR);
+
   initializeAArch64LowerHomogeneousPrologEpilogPass(*PR);
 }
 
@@ -749,8 +749,8 @@ void AArch64PassConfig::addPreRegAlloc() {
 
 // Start Metro
   if (TM->getTargetCPU().equals_insensitive("a64fx") && TM->getOptLevel() != CodeGenOpt::None) {
-    addPass(createAArch64PreSWPipelinerPass());
-    addPass(createAArch64SWPipelinerPass());
+    addPass(createSWPipelinerPrePass());
+    addPass(createSWPipelinerPass());
   }
 // End Metro
 }

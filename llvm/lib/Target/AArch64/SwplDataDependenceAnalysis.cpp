@@ -1,4 +1,4 @@
-//=- AArch64SwplDataDependenceAnalysis.cpp - SWPL DDG -*- c++ -*-------------=//
+//=- SwplDataDependenceAnalysis.cpp - SWPL DDG -*- c++ -*--------------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 /// 
-/// AArch64 Data Dependency analysis Generation (SwplDdg)
+///  Data Dependency analysis Generation (SwplDdg)
 //
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
 
-#include "AArch64SWPipeliner.h"
+#include "SWPipeliner.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
