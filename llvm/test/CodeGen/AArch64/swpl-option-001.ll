@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=a64fx -O1 -ffj-swp -ffj-no-swp -debug-hardwareloops -debug-aarch64tti -o - 2>&1 | FileCheck %s
+; RUN: llc < %s -mcpu=a64fx -O1 -ffj-swp -ffj-no-swp -debug-aarch64tti -o - 2>&1 | FileCheck %s
 ; CHECK: enableSWP() is false
 ; ModuleID = '2901-1.c'
 source_filename = "2901-1.c"
