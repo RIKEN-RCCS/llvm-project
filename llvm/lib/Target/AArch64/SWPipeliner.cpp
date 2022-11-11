@@ -637,7 +637,7 @@ bool SWPipeliner::isNonTargetLoop(MachineLoop &L) {
 /**
  * \brief isNonTargetLoopForInstDump
  *        ローカルオプションによるMI出力対象かを判定する
- * \details 判定内容は、isNonTargetLoopの判定のうち、
+ * #details 判定内容は、isNonTargetLoopの判定のうち、
  *          以下の判定を除いたものとしている。
  *          - ループ制御命令の判定
  *          - ループ内の命令数/メモリアクセス命令数の判定
@@ -692,8 +692,8 @@ bool SWPipeliner::isNonTargetLoopForInstDump(MachineLoop &L) {
 
 /**
  * \brief dumpLoopInst
- *        MachineLoopのFirstNonDebugInstrからFirstTerminatorの命令をdumpする
- * \details 判定内容は、isNonTargetLoopの判定のうち、
+ *        MachineLoopをdumpする
+ * #details 判定内容は、isNonTargetLoopの判定のうち、
  *          以下の判定を除いたものとしている。
  *          - ループ制御命令の判定
  *          - ループ内の命令数/メモリアクセス命令数の判定
@@ -705,7 +705,6 @@ void SWPipeliner::dumpLoopInst(MachineLoop &L) {
 
   // 関数名を出力
   dbgs() << "--- " << topblock->getParent()->getName() << " ---\n";
-
   // 行番号を出力
   auto m = L.getStartLoc();
   if (m.get()) {
@@ -714,38 +713,8 @@ void SWPipeliner::dumpLoopInst(MachineLoop &L) {
   else {
     dbgs() << "------ LineNumber: Could not get.\n";
   }
-
-  // Block名を出力
-  dbgs() << "------ BlockName: ";
-  topblock->printName(dbgs());
-  dbgs() << "\n";
-
   // MIをダンプ
-  //  以下をTSVで出力
-  //  - 空フィールド
-  //  - opcode名
-  //  - Pseudo命令であれば"PSEUDO"。Pseudo命令でない場合は空フィールド
-  //  - MI.dump()
-  MachineBasicBlock::iterator I = topblock->getFirstNonDebugInstr();
-  MachineBasicBlock::iterator E = topblock->getFirstTerminator();
-  for (; I != E; I++) {
-    dbgs() << "\t";
-
-    // opcode名を出力
-    if (TII)
-      dbgs() << TII->getName(I->getOpcode());
-    else
-      dbgs() << "UNKNOWN";
-    dbgs() << "\t";
-
-    // Pseudo命令かを出力
-    if( I->isPseudo() )
-      dbgs() << "PSEUDO";
-    dbgs() << "\t";
-
-    // MachineInstrをダンプ
-    I->print(dbgs());
-  }
+  dbgs() << *topblock;
 }
 
 
