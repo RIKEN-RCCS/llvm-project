@@ -693,56 +693,61 @@ bool SWPipeliner::isNonTargetLoopForInstDump(MachineLoop &L) {
 /**
  * \brief dumpLoopInst
  *        MachineLoopのFirstNonDebugInstrからFirstTerminatorの命令をdumpする
- * \details 判定内容は、isNonTargetLoopの判定のうち、
- *          以下の判定を除いたものとしている。
- *          - ループ制御命令の判定
- *          - ループ内の命令数/メモリアクセス命令数の判定
+ * \details 命令のdumpは、以下の情報をTSVで出力する。
+ *  - 関数名
+ *  - 行番号
+ *  - opcode名
+ *  - Pseudo命令であれば"PSEUDO"。Pseudo命令でない場合は空フィールド
+ *  - 命令が持つメモリオペランド数を出力
+ *  - MI.dump()
  * \param[in] L 対象のMachineLoop
  * \return なし
  */
 void SWPipeliner::dumpLoopInst(MachineLoop &L) {
   auto topblock = L.getTopBlock();
 
-  // 関数名を出力
-  dbgs() << "--- " << topblock->getParent()->getName() << " ---\n";
+  // 関数名を取得
+  auto funcname = topblock->getParent()->getName();
 
-  // 行番号を出力
-  auto m = L.getStartLoc();
-  if (m.get()) {
-    dbgs() << "------ LineNumber: " << m.getLine() << "\n";
-  }
-  else {
-    dbgs() << "------ LineNumber: Could not get.\n";
-  }
-
-  // Block名を出力
-  dbgs() << "------ BlockName: ";
-  topblock->printName(dbgs());
-  dbgs() << "\n";
-
-  // MIをダンプ
-  //  以下をTSVで出力
-  //  - 空フィールド
-  //  - opcode名
-  //  - Pseudo命令であれば"PSEUDO"。Pseudo命令でない場合は空フィールド
-  //  - MI.dump()
   MachineBasicBlock::iterator I = topblock->getFirstNonDebugInstr();
   MachineBasicBlock::iterator E = topblock->getFirstTerminator();
   for (; I != E; I++) {
+    // 関数名を出力
+    dbgs() << funcname;
     dbgs() << "\t";
 
+    // 行番号を出力
+    auto DL = I->getDebugLoc();
+    if( DL.get() ) {
+      dbgs() << DL.getLine();
+    }
+    else {
+      dbgs() << " ";
+    }
+    dbgs() << "\t";
+    
     // opcode名を出力
-    if (TII)
+    if (TII) {
       dbgs() << TII->getName(I->getOpcode());
-    else
+    }
+    else {
       dbgs() << "UNKNOWN";
+    }
     dbgs() << "\t";
 
     // Pseudo命令かを出力
-    if( I->isPseudo() )
+    if( I->isPseudo() ) {
       dbgs() << "PSEUDO";
+    }
+    else {
+      dbgs() << " ";
+    }
     dbgs() << "\t";
 
+    // 命令が持つメモリオペランド数を出力
+    dbgs() << I->getNumMemOperands();
+    dbgs() << "\t";
+    
     // MachineInstrをダンプ
     I->print(dbgs());
   }
