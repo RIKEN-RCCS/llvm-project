@@ -82,10 +82,12 @@ class SwplLoop {
                                        ///このCopy命令の集合
   SwplRegs Regs;                       ///< 対象ループ内で生成した SwplReg を管理する \note メモリ解放時に利用する
   SwplMems MemsOtherBody;              ///< Body以外で生成された SwplMem を管理する \note メモリ解放時に利用する
+  MachineFunction *MF=nullptr;
+  const MachineInstr* replace(const MachineInstr*erase_mi, MachineInstr*mi);
 
 public:
-  SwplLoop() {};
-  SwplLoop(llvm::MachineLoop &l) {
+  SwplLoop(){}
+  SwplLoop(llvm::MachineLoop &l, MachineFunction* MF):MF(MF) {
     ML = &l;
   }
 
@@ -190,7 +192,7 @@ public:
   /// \param[in]  L MachineLoop
   /// \param [in] LiveOutReg 対象ループの出口BusyRegister（非SSA化で特別処理を行うために利用する）
   /// \return ループ内の命令情報
-  static SwplLoop *Initialize(MachineLoop &L, const UseMap& LiveOutReg);
+  static SwplLoop *Initialize(MachineLoop &L, const UseMap& LiveOutReg, MachineFunction *MF);
 
   /// SwplLoop::MemIncrementMap に要素を追加する
   void addMemIncrementMap(SwplMem *mem, int increment) { MemIncrementMap[mem] = increment; }
@@ -276,6 +278,12 @@ private:
   /// \param[in]  LiveOutReg UseMap
   void convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBlock *pre, const DebugLoc &dbgloc,
                      llvm::MachineBasicBlock *org, const UseMap &LiveOutReg);
+
+  /// pre/post index命令を検索し演算命令＋load/store命令に変換する
+  /// @todo 本メソッドTIIに移動する必要がある
+  /// \param[in,out]  body ループボディの llvm::MachineBasicBlock
+  void convertPostPreIndexTo(llvm::MachineBasicBlock *body);
+
   /// SwplLoop::OrgMI2NewMI の命令列を走査し、SwplLoop::OrgReg2NewReg に登録されているレジスタへのリネーミングを行う
   void renameReg(void);
   /// llvm::Register クラスからレジスタIDを表示する

@@ -283,7 +283,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   swplScr.collectLiveOut(liveOutReg);
 
   // データ抽出
-  swpl::SwplLoop *loop = SwplLoop::Initialize(L, liveOutReg);
+  swpl::SwplLoop *loop = SwplLoop::Initialize(L, liveOutReg, MF);
   swpl::SwplDdg *ddg = SwplDdg::Initialize(*loop);
 
   // スケジューリング

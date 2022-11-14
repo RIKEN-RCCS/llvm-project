@@ -30,6 +30,7 @@ using namespace swpl;
 
 static cl::opt<bool> DebugLoop("swpl-debug-loop",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> NoUseAA("swpl-no-use-aa",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> DisableConvPrePost("swpl-disable-convert-prepost",cl::init(false), cl::ReallyHidden);
 
 using BasicBlocks = std::vector<MachineBasicBlock *>;
 using BasicBlocksIterator = std::vector<MachineBasicBlock *>::iterator ;
@@ -110,8 +111,8 @@ const SwplReg &SwplInst::getPhiUseRegFromIn() const {
   return getUseRegs(1);
 }
 
-SwplLoop *SwplLoop::Initialize(MachineLoop &L, const UseMap& LiveOutReg) {
-  SwplLoop *loop = new SwplLoop(L);
+SwplLoop *SwplLoop::Initialize(MachineLoop &L, const UseMap& LiveOutReg, MachineFunction *MF) {
+  SwplLoop *loop = new SwplLoop(L, MF);
   Register2SwplRegMap rmap;
 
   /// convertSSAtoNonSSA() を呼び出し、対象ループの非SSA化を行う。
@@ -639,8 +640,70 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const UseMap &LiveOutReg) {
   
   /// cloneBody() を呼び出し、MachineBasickBlockの複製とレジスタリネーミングを行う。
   cloneBody(new_bb, ob);
+  /// convertPostPreIndeTo()を呼び出し、post/pre index命令を演算＋load/store命令に変換する
+  if (!DisableConvPrePost)
+    convertPostPreIndexTo(new_bb);
   /// convertNonSSA() を呼び出し、非SSA化と複製したMachineBasicBlockの回収を行う。
   convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);
+}
+
+const MachineInstr* SwplLoop::replace(const MachineInstr* erase_mi, MachineInstr* mi) {
+  auto *org = NewMI2OrgMI.at(erase_mi);
+  OrgMI2NewMI.erase(org);
+  NewMI2OrgMI.erase(erase_mi);
+  OrgMI2NewMI[org] = mi;
+  NewMI2OrgMI[mi] = org;
+  return org;
+}
+
+void SwplLoop::convertPostPreIndexTo(llvm::MachineBasicBlock *body) {
+  std::vector<llvm::MachineInstr *> delete_mi;
+  for (auto &mi:*body) {
+    MachineInstr *add=nullptr;
+    MachineInstr *ldst=nullptr;
+    Register def_addrreg;
+    Register use_addrreg;
+    Register val;
+    int64_t imm;
+
+    switch (mi.getOpcode()) {
+    case AArch64::LDRSpost:
+      def_addrreg = mi.getOperand(0).getReg();
+      val = mi.getOperand(1).getReg();
+      use_addrreg = mi.getOperand(2).getReg();
+      imm = mi.getOperand(3).getImm();
+
+      ldst = BuildMI(*body, mi, mi.getDebugLoc(), TII->get(AArch64::LDURSi), val)
+                 .addReg(use_addrreg).addImm(imm) ;
+      for (MachineMemOperand *MMO : mi.memoperands()) {
+        ldst->addMemOperand(*MF, MMO);
+      }
+      add = BuildMI(*body, mi, mi.getDebugLoc(),TII->get(AArch64::ADDXri), def_addrreg)
+                               .addReg(use_addrreg).addImm(imm).addImm(0) ;
+      NewMI2OrgMI[add] = replace(&mi, ldst);
+      delete_mi.push_back(&mi);
+      break;
+    case AArch64::STRSpost:
+      def_addrreg = mi.getOperand(0).getReg();
+      val = mi.getOperand(1).getReg();
+      use_addrreg = mi.getOperand(2).getReg();
+      imm = mi.getOperand(3).getImm();
+
+      ldst = BuildMI(*body, mi, mi.getDebugLoc(), TII->get(AArch64::STURSi))
+                 .addReg(val).addReg(use_addrreg).addImm(imm) ;
+      for (MachineMemOperand *MMO : mi.memoperands()) {
+        ldst->addMemOperand(*MF, MMO);
+      }
+      add = BuildMI(*body, mi, mi.getDebugLoc(),TII->get(AArch64::ADDXri), def_addrreg)
+                .addReg(use_addrreg).addImm(imm).addImm(0) ;
+      NewMI2OrgMI[add] = replace(&mi, ldst);
+      delete_mi.push_back(&mi);
+      break;
+    }
+  }
+  for (auto *mi:delete_mi)
+    mi->eraseFromParent();
+
 }
 
 void SwplInst::pushAllRegs(SwplLoop *loop) {
@@ -835,6 +898,8 @@ void SwplInst::print() {
 }
 
 void SwplLoop::dumpOrgMI2NewMI() {
+  // @todo オリジナル命令がpost/pre命令の場合は、変換後のadd命令が出力されない
+  // これは、MAPがオリジナル命令とクローンした命令が1対1を前提としているため
   for (auto itr: getOrgMI2NewMI()) {
     dbgs() << "OldMI=" << *itr.first << "\n";
     dbgs() << "NewMI=" << *itr.second << "\n";
