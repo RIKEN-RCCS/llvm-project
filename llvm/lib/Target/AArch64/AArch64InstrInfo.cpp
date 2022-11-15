@@ -8141,6 +8141,56 @@ AArch64InstrInfo::getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
   return OptLevel >= CodeGenOpt::Aggressive ? 6 : 2;
 }
 
+bool AArch64InstrInfo::convertPrePostIndexTo(
+    MachineBasicBlock &MBB, MachineInstr &MI, SmallVectorImpl<MachineInstr *> &MIs ) const {
+  MachineInstr *add=nullptr;
+  MachineInstr *ldst=nullptr;
+  Register def_addrreg;
+  Register use_addrreg;
+  Register val;
+  int64_t imm;
+
+  switch (MI.getOpcode()) {
+  case AArch64::LDRSpost:
+    def_addrreg = MI.getOperand(0).getReg();
+    val = MI.getOperand(1).getReg();
+    use_addrreg = MI.getOperand(2).getReg();
+    imm = MI.getOperand(3).getImm();
+
+    ldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::LDURSi), val)
+               .addReg(use_addrreg).addImm(imm) ;
+    for (MachineMemOperand *MMO : MI.memoperands()) {
+      ldst->addMemOperand(*MI.getMF(), MMO);
+    }
+    add = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addrreg)
+              .addReg(use_addrreg).addImm(imm).addImm(0);
+    MIs.push_back(ldst);
+    MIs.push_back(add);
+    break;
+  case AArch64::STRSpost:
+    def_addrreg = MI.getOperand(0).getReg();
+    val = MI.getOperand(1).getReg();
+    use_addrreg = MI.getOperand(2).getReg();
+    imm = MI.getOperand(3).getImm();
+
+    ldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::STURSi))
+               .addReg(val).addReg(use_addrreg).addImm(imm) ;
+    for (MachineMemOperand *MMO : MI.memoperands()) {
+      ldst->addMemOperand(*MI.getMF(), MMO);
+    }
+    add = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addrreg)
+              .addReg(use_addrreg).addImm(imm).addImm(0) ;
+    MIs.push_back(ldst);
+    MIs.push_back(add);
+    break;
+  default:
+    return false;
+  }
+
+  return true;
+}
+
+
 unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {
   if (MF.getSubtarget<AArch64Subtarget>().hardenSlsBlr())
     return AArch64::BLRNoIP;

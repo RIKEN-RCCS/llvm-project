@@ -83,7 +83,6 @@ class SwplLoop {
   SwplRegs Regs;                       ///< 対象ループ内で生成した SwplReg を管理する \note メモリ解放時に利用する
   SwplMems MemsOtherBody;              ///< Body以外で生成された SwplMem を管理する \note メモリ解放時に利用する
   MachineFunction *MF=nullptr;
-  const MachineInstr* replace(const MachineInstr*erase_mi, MachineInstr*mi);
 
 public:
   SwplLoop(){}

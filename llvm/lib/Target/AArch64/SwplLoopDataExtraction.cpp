@@ -647,58 +647,27 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const UseMap &LiveOutReg) {
   convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);
 }
 
-const MachineInstr* SwplLoop::replace(const MachineInstr* erase_mi, MachineInstr* mi) {
-  auto *org = NewMI2OrgMI.at(erase_mi);
-  OrgMI2NewMI.erase(org);
-  NewMI2OrgMI.erase(erase_mi);
-  OrgMI2NewMI[org] = mi;
-  NewMI2OrgMI[mi] = org;
-  return org;
-}
-
 void SwplLoop::convertPostPreIndexTo(llvm::MachineBasicBlock *body) {
   std::vector<llvm::MachineInstr *> delete_mi;
   for (auto &mi:*body) {
-    MachineInstr *add=nullptr;
-    MachineInstr *ldst=nullptr;
-    Register def_addrreg;
-    Register use_addrreg;
-    Register val;
-    int64_t imm;
-
-    switch (mi.getOpcode()) {
-    case AArch64::LDRSpost:
-      def_addrreg = mi.getOperand(0).getReg();
-      val = mi.getOperand(1).getReg();
-      use_addrreg = mi.getOperand(2).getReg();
-      imm = mi.getOperand(3).getImm();
-
-      ldst = BuildMI(*body, mi, mi.getDebugLoc(), TII->get(AArch64::LDURSi), val)
-                 .addReg(use_addrreg).addImm(imm) ;
-      for (MachineMemOperand *MMO : mi.memoperands()) {
-        ldst->addMemOperand(*MF, MMO);
+    llvm::SmallVector<MachineInstr *, 2> MIs;
+    if (TII->convertPrePostIndexTo(*body, mi, MIs)){
+      // クローン前命令とクローン後命令の再紐づけ
+      auto *org = NewMI2OrgMI.at(&mi);
+      OrgMI2NewMI.erase(org);
+      NewMI2OrgMI.erase(&mi);
+      if (MIs[0]->mayLoadOrStore()) {
+        OrgMI2NewMI[org] = MIs[0];
+        NewMI2OrgMI[MIs[0]] = org;
+        NewMI2OrgMI[MIs[1]] = org;
+      } else {
+        OrgMI2NewMI[org] = MIs[1];
+        NewMI2OrgMI[MIs[1]] = org;
+        NewMI2OrgMI[MIs[0]] = org;
       }
-      add = BuildMI(*body, mi, mi.getDebugLoc(),TII->get(AArch64::ADDXri), def_addrreg)
-                               .addReg(use_addrreg).addImm(imm).addImm(0) ;
-      NewMI2OrgMI[add] = replace(&mi, ldst);
-      delete_mi.push_back(&mi);
-      break;
-    case AArch64::STRSpost:
-      def_addrreg = mi.getOperand(0).getReg();
-      val = mi.getOperand(1).getReg();
-      use_addrreg = mi.getOperand(2).getReg();
-      imm = mi.getOperand(3).getImm();
 
-      ldst = BuildMI(*body, mi, mi.getDebugLoc(), TII->get(AArch64::STURSi))
-                 .addReg(val).addReg(use_addrreg).addImm(imm) ;
-      for (MachineMemOperand *MMO : mi.memoperands()) {
-        ldst->addMemOperand(*MF, MMO);
-      }
-      add = BuildMI(*body, mi, mi.getDebugLoc(),TII->get(AArch64::ADDXri), def_addrreg)
-                .addReg(use_addrreg).addImm(imm).addImm(0) ;
-      NewMI2OrgMI[add] = replace(&mi, ldst);
+      // MBBから削除する命令の収集
       delete_mi.push_back(&mi);
-      break;
     }
   }
   for (auto *mi:delete_mi)
