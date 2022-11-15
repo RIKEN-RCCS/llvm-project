@@ -91,18 +91,13 @@ bool SwplTransformMIR::transformMIR() {
     }
 
     /// (2-7) outputLoopoptMessage() SWPL成功の最適化messageを出力する
-    outputLoopoptMessage(n_body_real_inst, Plan.getPolicy());
+    outputLoopoptMessage(n_body_real_inst);
   }
 
   if (swpl::DebugOutput) {
     /// (3) "-swpl-debug"が指定されている場合は、デバッグ情報を出力する
     if (TMI.isNecessaryTransformMIR()){
-      const char *p;
-      switch(Plan.getPolicy()) {
-      case swpl::SwplSchedPolicy::SWPL_SCHED_POLICY_SMALL:p="S";break;
-      case swpl::SwplSchedPolicy::SWPL_SCHED_POLICY_LARGE:p="L";break;
-      default:p="A";break;
-      }
+      const char *p="";
       dbgs()  << formatv(
               "        :\n"
               "        : Loop is software pipelined. (ii={0}, kernel={1} cycles, prologue,epilogue ={2} cycles)\n"
@@ -657,7 +652,7 @@ void SwplTransformMIR::setVReg(const swpl::SwplReg *orgReg, size_t version, llvm
   regs->at(version)=newReg;
 }
 
-void SwplTransformMIR::outputLoopoptMessage(int n_body_inst, SwplSchedPolicy policy) {
+void SwplTransformMIR::outputLoopoptMessage(int n_body_inst) {
 
   int ipc100=0;
   assert(TMI.iterationInterval != 0);
@@ -678,8 +673,8 @@ void SwplTransformMIR::outputLoopoptMessage(int n_body_inst, SwplSchedPolicy pol
   } else if (mve > 255) {
     mve = 255;
   }
-  std::string msg=formatv("software pipelining (IPC: {0}, ITR: {1}, MVE: {2}, POL: {3})",
-                          (ipc100/100.), TMI.nCopies, mve, (policy==SwplSchedPolicy::SWPL_SCHED_POLICY_SMALL?"S":"L"));
+  std::string msg=formatv("software pipelining (IPC: {0}, ITR: {1}, MVE: {2})",
+                          (ipc100/100.), TMI.nCopies, mve);
 
   swpl::ORE->emit([&]() {
     return MachineOptimizationRemark(DEBUG_TYPE, "SoftwarePipelined",

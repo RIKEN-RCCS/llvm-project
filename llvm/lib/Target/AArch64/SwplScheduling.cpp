@@ -950,18 +950,16 @@ void SwplTrialState::destroy(SwplTrialState* state) {
 /// \brief PlanSpecを初期化する
 /// \details PlanSpecをSwplDdgの情報他で初期化する。
 ///          - 初期化に失敗した場合は falseを返却する。
-///          - policy は SWPL_SCHED_POLICY_SMALLにのみ対応。
 ///
 /// \param [in] res_mii リソースMII
-/// \param [in] policy スケジューリングポリシー
 /// \retval true specの初期化成功
 /// \retval false specの初期化失敗
 ///
 /// \note 現在、PlanSpec.assumed_iterationは常にASSUMED_ITERATIONS_NONE (-1)
 /// \note 現在、PlanSpec.pre_expand_numは常に1
-bool PlanSpec::init(unsigned arg_res_mii, SwplSchedPolicy arg_policy) {
+bool PlanSpec::init(unsigned arg_res_mii) {
   if (DebugOutput) {
-    dbgs() << "        : (" << SwplPlan::getPolicyString(arg_policy)
+    dbgs() << "        : (Iterative Modulo Scheduling"
            << ". ResMII " << arg_res_mii << ". ";
   }
 
@@ -978,24 +976,11 @@ bool PlanSpec::init(unsigned arg_res_mii, SwplSchedPolicy arg_policy) {
 
   n_fillable_float_invariants = 0; /* IMS＝fillを許容しないポリシー であるため0 */
 
-  policy = arg_policy;
-  switch(policy) {
-  case SwplSchedPolicy::SWPL_SCHED_POLICY_SMALL:
-    ims_base_info.budget  = getBudget(n_insts);
-    if (DebugOutput) {
-      dbgs() << "Budget " << ims_base_info.budget << ". ";
-    }
-    min_ii = res_mii;
-    break;
-  case SwplSchedPolicy::SWPL_SCHED_POLICY_LARGE:
-    report_fatal_error("LARGE policy(via SMS) is not implemented.");
-    return false;
-    break;
-  default:
-    report_fatal_error("invalid policy found.");
-    return false;
-    break;
+  ims_base_info.budget  = getBudget(n_insts);
+  if (DebugOutput) {
+    dbgs() << "Budget " << ims_base_info.budget << ". ";
   }
+  min_ii = res_mii;
 
   if(OptionMinIIBase>0) {
     min_ii = OptionMinIIBase; // option value (default:65)
@@ -1254,31 +1239,23 @@ bool MsResult::constructInstSlotMapAtSpecifiedII(PlanSpec spec) {
   }
   state = SwplTrialState::construct(*modulo_ddg);
 
-  switch(spec.policy) {
-  case SwplSchedPolicy::SWPL_SCHED_POLICY_SMALL:
-    for (unsigned i = 0; i < spec.ims_base_info.budget; ++i) {
-      bool trial_is_success = false;
-      trial_is_success = state->tryNext();
+  for (unsigned i = 0; i < spec.ims_base_info.budget; ++i) {
+    bool trial_is_success = false;
+    trial_is_success = state->tryNext();
 
-      /* 適切なtryNextがおこなわれなかった場合 */
-      if (!trial_is_success) {
-        break;
-      }
-
-      // 未配置の命令がある場合
-      if (!state->isCompleted()) {
-        continue;
-      } else {
-        /* 命令がすべて配置できた場合 */
-        is_schedule_completed = true;
-        break;
-      }
+    /* 適切なtryNextがおこなわれなかった場合 */
+    if (!trial_is_success) {
+      break;
     }
-    break;
-  case SwplSchedPolicy::SWPL_SCHED_POLICY_LARGE:
-    report_fatal_error("!!! into SMS root in constructInstSlotMapAtSpecifiedII.");
-  default:
-    abort();
+
+    // 未配置の命令がある場合
+    if (!state->isCompleted()) {
+      continue;
+    } else {
+      /* 命令がすべて配置できた場合 */
+      is_schedule_completed = true;
+      break;
+    }
   }
 
   if(is_schedule_completed) {
