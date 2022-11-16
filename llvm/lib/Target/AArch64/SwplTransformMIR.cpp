@@ -97,24 +97,21 @@ bool SwplTransformMIR::transformMIR() {
   if (swpl::DebugOutput) {
     /// (3) "-swpl-debug"が指定されている場合は、デバッグ情報を出力する
     if (TMI.isNecessaryTransformMIR()){
-      const char *p="";
       dbgs()  << formatv(
               "        :\n"
               "        : Loop is software pipelined. (ii={0}, kernel={1} cycles, prologue,epilogue ={2} cycles)\n"
-              "        :      {3}\n"
-              "        :      IPC (initial={4}, real={5}, rate={6:P})\n"
-              "        :      = Instructions({7})/II({8})\n"
-              "        :      Virtual inst:({9})\n"
+              "        :      IPC (initial={3}, real={4}, rate={5:P})\n"
+              "        :      = Instructions({6})/II({7})\n"
+              "        :      Virtual inst:({8})\n"
               "        :\n",
               /* 0 */ (int)TMI.iterationInterval,
               /* 1 */ (int)(TMI.iterationInterval * TMI.nVersions),
               /* 2 */ (int)(TMI.iterationInterval * (TMI.nCopies - TMI.nVersions)),
-              /* 3 */ p,
-              /* 4 */ (float)n_body_real_inst / (float)TMI.minimumIterationInterval,
-              /* 5 */ (float)n_body_real_inst / (float)TMI.iterationInterval,
-              /* 6 */ (float)TMI.minimumIterationInterval / (float)TMI.iterationInterval,
-              /* 7 */ (int)n_body_real_inst,
-              /* 8 */ (int)TMI.iterationInterval,
+              /* 3 */ (float)n_body_real_inst / (float)TMI.minimumIterationInterval,
+              /* 4 */ (float)n_body_real_inst / (float)TMI.iterationInterval,
+              /* 5 */ (float)TMI.minimumIterationInterval / (float)TMI.iterationInterval,
+              /* 6 */ (int)n_body_real_inst,
+              /* 7 */ (int)TMI.iterationInterval,
               /* 0 */ (int)(n_body_inst - n_body_real_inst));
     } else {
       dbgs() <<
