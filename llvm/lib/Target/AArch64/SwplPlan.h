@@ -20,15 +20,6 @@
 namespace swpl{
 extern  llvm::cl::opt<bool> DebugOutput;
 
-/// Policyを表すenum
-enum class SwplSchedPolicy {
-                            /// ループ毎に自動選択
-                            SWPL_SCHED_POLICY_AUTO,
-                            /// 小さなループに適した方法を使う
-                            SWPL_SCHED_POLICY_SMALL,
-                            /// 大きなループに適した方法を使う
-                            SWPL_SCHED_POLICY_LARGE,
-};
 
 /// スケジューリング結果の状態を表すenum
 enum class TryScheduleResult {
@@ -114,7 +105,6 @@ class SwplPlan {
   size_t prolog_cycles;        ///< prolog部分の（MVE展開後の）サイクル数
   size_t kernel_cycles;        ///< kernal部分のサイクル数
   size_t epilog_cycles;        ///< epilog部分のサイクル数
-  SwplSchedPolicy policy;      ///< スケジューリングポリシー
 
 public:
   SwplPlan(const SwplLoop& loop) : loop(loop) {} ///< constructor
@@ -131,7 +121,6 @@ public:
   size_t getNRenamingVersions() const { return n_renaming_versions; } ///< getter
   SwplSlot getBeginSlot() { return begin_slot; } ///< getter
   SwplSlot getEndSlot() { return end_slot; } ///< getter
-  SwplSchedPolicy getPolicy() const { return policy; } ///< getter
   size_t getEpilogCycles() { return epilog_cycles; } ///< getter
   size_t getKernelCycles() { return kernel_cycles; } ///< getter
   size_t getPrologCycles() { return prolog_cycles; } ///< getter
@@ -147,7 +136,6 @@ public:
   void setBeginSlot( unsigned arg ) { begin_slot = arg; } ///< setter
   void setEndSlot( SwplSlot arg ) { end_slot = arg; } ///< setter
   void setEndSlot( unsigned arg ) { end_slot = arg; } ///< setter
-  void setPolicy( SwplSchedPolicy arg ) { policy = arg; } ///< setter
   void setEpilogCycles( size_t arg ) { epilog_cycles = arg; } ///< setter
   void setKernelCycles( size_t arg ) { kernel_cycles = arg; } ///< setter
   void setPrologCycles( size_t arg ) { prolog_cycles = arg; } ///< setter
@@ -156,7 +144,6 @@ public:
   unsigned relativeInstSlot(const SwplInst& c_inst) const;
   int getTotalSlotCycles();
   void printInstTable();
-  std::string getPolicyString() const;
   void dump(raw_ostream &stream);
   void dumpInstTable(raw_ostream &stream);
 
@@ -167,28 +154,23 @@ public:
   static SwplPlan* construct(const SwplLoop& c_loop,
                              SwplInstSlotHashmap& inst_slot_map,
                              unsigned min_ii,
-                             unsigned ii,
-                             SwplSchedPolicy policy);
+                             unsigned ii);
   static void destroy(SwplPlan* plan);
   static SwplPlan* generatePlan(SwplDdg& ddg);
-  static std::string getPolicyString(SwplSchedPolicy policy);
 
 private:
   static unsigned calculateResourceII(const SwplLoop& c_loop);
   static unsigned calcResourceMinIterationInterval(const SwplLoop& c_loop);
   static TryScheduleResult trySchedule(const SwplDdg& c_ddg,
                                        unsigned res_mii,
-                                       SwplSchedPolicy policy,
                                        SwplInstSlotHashmap** inst_slot_map,
                                        unsigned* selected_ii,
                                        unsigned* calculated_min_ii,
                                        unsigned* required_itr);
   static TryScheduleResult selectPlan(const SwplDdg& c_ddg,
-                                      SwplSchedPolicy policy,
                                       SwplInstSlotHashmap& rslt_inst_slot_map,
                                       unsigned* selected_ii,
                                       unsigned* calculated_min_ii,
-                                      SwplSchedPolicy* selected_policy,
                                       unsigned* required_itr);
 };
 

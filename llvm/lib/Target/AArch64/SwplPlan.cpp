@@ -42,14 +42,6 @@ int SwplPlan::getTotalSlotCycles() {
   return (end_slot - begin_slot) / STM.getFetchBandwidth();
 }
 
-/// \brief SwplPlanのpolicyに該当する文字列を返す
-/// \retval "sched for small loop (Iterative Modulo Scheduling)" SWPL_SCHED_POLICY_SMALL時
-/// \retval "sched for large loop (Swing Modulo Scheduling)" SWPL_SCHED_POLICY_LARGE時
-/// \retval "" その他（assert）
-std::string SwplPlan::getPolicyString() const {
-  return getPolicyString(policy);
-}
-
 /// \brief SwplPlanをダンプする
 /// \param [in] stream 出力stream
 /// \return なし
@@ -168,13 +160,11 @@ bool SwplPlan::isSufficientWithRenamingVersions(const SwplLoop& c_loop,
 /// \param [in] inst_slot_map スケジューリング結果
 /// \param [in] min_ii 計算されたMinII
 /// \param [in] ii スケジュールで採用されたII
-/// \param [in] policy スケジューリングのポリシー
 /// \return スケジューリング結果を設定したSwplPlanを返す。
 SwplPlan* SwplPlan::construct(const SwplLoop& c_loop,
                               SwplInstSlotHashmap& inst_slot_map,
                               unsigned min_ii,
-                              unsigned ii,
-                              SwplSchedPolicy policy) {
+                              unsigned ii) {
   SwplPlan* plan = new SwplPlan(c_loop); //plan->loop =loop;
   size_t prolog_blocks, kernel_blocks;
   
@@ -198,7 +188,6 @@ SwplPlan* SwplPlan::construct(const SwplLoop& c_loop,
                         + plan->kernel_cycles
                         + plan->epilog_cycles);
 
-  plan->policy = policy;
   return plan;
 }
 
@@ -220,15 +209,14 @@ SwplPlan* SwplPlan::generatePlan(SwplDdg& ddg)
 {
   SwplInstSlotHashmap inst_slot_map;
   unsigned ii, min_ii, itr;
-  SwplSchedPolicy policy;
 
   TryScheduleResult rslt =
-    selectPlan(ddg, SwplSchedPolicy::SWPL_SCHED_POLICY_SMALL,
-               inst_slot_map, &ii, &min_ii, &policy, &itr);
+    selectPlan(ddg,
+               inst_slot_map, &ii, &min_ii, &itr);
 
   switch(rslt) {
   case TryScheduleResult::TRY_SCHEDULE_SUCCESS:
-    return SwplPlan::construct( *(ddg.getLoop()), inst_slot_map, min_ii, ii, policy);
+    return SwplPlan::construct( *(ddg.getLoop()), inst_slot_map, min_ii, ii);
 
   case TryScheduleResult::TRY_SCHEDULE_FAIL:
     return nullptr;
@@ -250,27 +238,6 @@ SwplPlan* SwplPlan::generatePlan(SwplDdg& ddg)
   return nullptr;
 }
 
-/// \brief SwplPlanのpolicyに該当する文字列を返す
-/// \param [in] policy スケジューリングのポリシー
-/// \retval "sched for small loop (Iterative Modulo Scheduling)" SWPL_SCHED_POLICY_SMALL時
-/// \retval "sched for large loop (Swing Modulo Scheduling)" SWPL_SCHED_POLICY_LARGE時
-/// \retval "" その他（assert）
-std::string SwplPlan::getPolicyString(SwplSchedPolicy policy) {
-  std::string name="";
-  switch(policy) {
-  default:
-    assert(0 && "not specific policy");
-    name = "";
-    break;
-  case swpl::SwplSchedPolicy::SWPL_SCHED_POLICY_SMALL:
-    name ="sched for small loop (Iterative Modulo Scheduling)";
-    break;
-  case swpl::SwplSchedPolicy::SWPL_SCHED_POLICY_LARGE:
-    name = "sched for large loop (Swing Modulo Scheduling)";
-    break;
-  }
-  return name;
-}
 
 /// \brief StmのResource情報により制限されるmin IIを計算する
 /// \details resource min IIは以下の手順で求める。
@@ -352,7 +319,6 @@ unsigned SwplPlan::calcResourceMinIterationInterval(const SwplLoop& c_loop) {
 ///
 /// \param [in] c_ddg 対象の DDG
 /// \param [in] res_mii ddg に対して計算された ResMII
-/// \param [in] policy 使用するポリシー。 SWPL_SCHED_POLICY_AUTO は不可。
 /// \param [out] inst_slot_map スケジュールしたスロットのマップ
 /// \param [out] selected_ii スケジュールで採用された II
 /// \param [out] calculated_min_ii 計算された MinII
@@ -363,13 +329,12 @@ unsigned SwplPlan::calcResourceMinIterationInterval(const SwplLoop& c_loop) {
 ///         required_itr のみ利用できる。
 TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
                                         unsigned res_mii,
-                                        SwplSchedPolicy policy,
                                         SwplInstSlotHashmap** inst_slot_map,
                                         unsigned* selected_ii,
                                         unsigned* calculated_min_ii,
                                         unsigned* required_itr) {
   PlanSpec spec(c_ddg);
-  if( !(spec.init(res_mii, policy)) ){
+  if( !(spec.init(res_mii)) ){
     return TryScheduleResult::TRY_SCHEDULE_FAIL;
   }
 
@@ -392,24 +357,12 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
   
 }
 
-/// \brief 指定のポリシーでスケジューリングを行う
-/// \details policy に指定されたポリシー毎の動作
-///  - SWPL_SCHED_POLICY_AUTO
-///    -# まず、SWPL_SCHED_POLICY_SMALL(IMS)を試行する。
-///      - 失敗した場合
-///        - ループ回転数不足により失敗した場合、その時点でスケジュール失敗として復帰する
-///        - 他の理由で失敗した場合、SWPL_SCHED_POLICY_LARGE(SMS)を試行する
-///    -# 成功した場合
-///        - SWPL_SCHED_POLICY_SMALL(IMS)の結果を採用する
+/// \brief IMSでスケジューリングを行う
 ///
 /// \param [in] c_ddg 対象の DDG
-/// \param [in] policy スケジューリングのポリシー
 /// \param [out] rslt_inst_slot_map スケジュール結果であるスロットのマップ
 /// \param [out] selected_ii スケジュールで採用された II
 /// \param [out] calculated_min_ii 計算された MinII
-/// \param [out] selected_policy 選択されたポリシー
-///              (policy が SWPL_SCHED_POLICY_AUTO 以外の場合 policy と同じ。
-///               SWPL_SCHED_POLICY_AUTO の場合採用した特定のポリシー)
 /// \param [out] required_itr ソフトパイプルートを通るのに必要なイテレート数
 /// \retval TRY_SCHEDULE_SUCCESS スケジュール成功。全ての出力引数を利用できる。
 /// \retval TRY_SCHEDULE_FAIL スケジュール失敗。全ての出力引数は未定義。
@@ -418,11 +371,9 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
 ///
 /// \note SMALL以外のポリシーのルートは実装していない。
 TryScheduleResult SwplPlan::selectPlan(const SwplDdg& c_ddg,
-                                       SwplSchedPolicy policy,
                                        SwplInstSlotHashmap& rslt_inst_slot_map,
                                        unsigned* selected_ii,
                                        unsigned* calculated_min_ii,
-                                       SwplSchedPolicy* selected_policy,
                                        unsigned* required_itr) {
   unsigned res_mii = calcResourceMinIterationInterval( c_ddg.getLoop() );
 
@@ -430,13 +381,8 @@ TryScheduleResult SwplPlan::selectPlan(const SwplDdg& c_ddg,
   unsigned ii_tmp, min_ii_tmp, itr;
   bool is_succeeded;
 
-  if(policy != SwplSchedPolicy::SWPL_SCHED_POLICY_SMALL) {
-    report_fatal_error("An unsupported policy was specified. ");
-  }
-
   switch(trySchedule(c_ddg,
                      res_mii,
-                     policy,
                      &inst_slot_map_tmp,
                      &ii_tmp,
                      &min_ii_tmp,
@@ -447,7 +393,6 @@ TryScheduleResult SwplPlan::selectPlan(const SwplDdg& c_ddg,
     delete inst_slot_map_tmp;
     *selected_ii = ii_tmp;
     *calculated_min_ii = min_ii_tmp;
-    *selected_policy = policy;
     *required_itr = itr;
     break;
   case TryScheduleResult::TRY_SCHEDULE_FAIL:
