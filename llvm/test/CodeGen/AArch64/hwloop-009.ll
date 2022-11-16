@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=a64fx -O1  -ffj-swp  -debug-aarch64tti  -debug-hardwareloops --pass-remarks-filter=hardware-loops -o - 2>&1 | FileCheck %s
+; RUN: llc < %s -mcpu=a64fx -O1 -ffj-swp -debug-aarch64tti -debug-hardwareloops --pass-remarks-filter=hardware-loops -o - 2>&1 | FileCheck %s
 ; CHECK: HardwareLoopInsertion succeeded
 ; ModuleID = '2901-2-09.c'
 source_filename = "2901-2-09.c"
