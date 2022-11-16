@@ -128,8 +128,7 @@ private:
 
   /// Swpl成功メッセージ出力
   /// \param [in] n_body_inst
-  /// \param [in] policy
-  void outputLoopoptMessage(int n_body_inst, swpl::SwplSchedPolicy policy);
+  void outputLoopoptMessage(int n_body_inst);
 
   /// SWPL後の新しいKERNEL部分を構成する
   void transformKernel();
