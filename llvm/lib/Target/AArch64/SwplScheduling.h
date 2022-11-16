@@ -168,13 +168,12 @@ public:
   unsigned max_ii;             ///< initiative/iterative intervalの上限
   unsigned unable_max_ii;      ///< schedulingを失敗した最大のii
   unsigned n_fillable_float_invariants; ///< 浮動小数点のループ不変の仮想レジのうち、フィルしても ResII を増加させない最大数
-  SwplSchedPolicy policy;      ///< モジュロスケジューリングのアルゴリズム
   ImsBaseInfo ims_base_info;
   SmsBaseInfo sms_base_info;
 
   PlanSpec(const SwplDdg& c_ddg) : ddg(c_ddg),loop(c_ddg.getLoop()) {} ///< constructor
 
-  bool init(unsigned res_mii, SwplSchedPolicy policy);
+  bool init(unsigned res_mii);
   void countLoadStore(unsigned *num_load, unsigned *num_store, unsigned *num_float) const;
 
 private:
