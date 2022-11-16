@@ -8141,7 +8141,7 @@ AArch64InstrInfo::getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
   return OptLevel >= CodeGenOpt::Aggressive ? 6 : 2;
 }
 
-bool AArch64InstrInfo::convertPrePostIndexTo(
+bool AArch64InstrInfo::splitPrePostIndexInstr(
     MachineBasicBlock &MBB, MachineInstr &MI, SmallVectorImpl<MachineInstr *> &MIs ) const {
   MachineInstr *add=nullptr;
   MachineInstr *ldst=nullptr;

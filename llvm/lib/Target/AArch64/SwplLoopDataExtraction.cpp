@@ -642,16 +642,16 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const UseMap &LiveOutReg) {
   cloneBody(new_bb, ob);
   /// convertPostPreIndeTo()を呼び出し、post/pre index命令を演算＋load/store命令に変換する
   if (!DisableConvPrePost)
-    convertPostPreIndexTo(new_bb);
+    convertPrePostIndexInstr(new_bb);
   /// convertNonSSA() を呼び出し、非SSA化と複製したMachineBasicBlockの回収を行う。
   convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);
 }
 
-void SwplLoop::convertPostPreIndexTo(llvm::MachineBasicBlock *body) {
+void SwplLoop::convertPrePostIndexInstr(llvm::MachineBasicBlock *body) {
   std::vector<llvm::MachineInstr *> delete_mi;
   for (auto &mi:*body) {
     llvm::SmallVector<MachineInstr *, 2> MIs;
-    if (TII->convertPrePostIndexTo(*body, mi, MIs)){
+    if (TII->splitPrePostIndexInstr(*body, mi, MIs)){
       // クローン前命令とクローン後命令の再紐づけ
       auto *org = NewMI2OrgMI.at(&mi);
       OrgMI2NewMI.erase(org);

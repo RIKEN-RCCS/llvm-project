@@ -281,7 +281,7 @@ private:
   /// pre/post index命令を検索し演算命令＋load/store命令に変換する
   /// @todo 本メソッドTIIに移動する必要がある
   /// \param[in,out]  body ループボディの llvm::MachineBasicBlock
-  void convertPostPreIndexTo(llvm::MachineBasicBlock *body);
+  void convertPrePostIndexInstr(llvm::MachineBasicBlock *body);
 
   /// SwplLoop::OrgMI2NewMI の命令列を走査し、SwplLoop::OrgReg2NewReg に登録されているレジスタへのリネーミングを行う
   void renameReg(void);

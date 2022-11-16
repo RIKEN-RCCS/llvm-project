@@ -2001,7 +2001,8 @@ public:
   }
 
   /// Split pre/post index instructions
-  virtual  bool convertPrePostIndexTo(MachineBasicBlock &MBB, MachineInstr &MI, SmallVectorImpl<MachineInstr *> &MIs ) const {
+  virtual bool splitPrePostIndexInstr(
+      MachineBasicBlock &MBB, MachineInstr &MI, SmallVectorImpl<MachineInstr *> &MIs ) const {
     return false;
   }
 
