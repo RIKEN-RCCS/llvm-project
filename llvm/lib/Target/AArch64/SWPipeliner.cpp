@@ -40,6 +40,8 @@ static cl::opt<bool> OptionDumpPlan("swpl-debug-dump-plan",cl::init(false), cl::
 
 // TargetLoopのMI出力オプション
 static cl::opt<bool> OptionDumpTargetLoop("swpl-debug-dump-targetloop",cl::init(false), cl::ReallyHidden);
+// TargetLoopのMI出力オプション（swpl処理は迂回）
+static cl::opt<bool> OptionDumpTargetLoopOnly("swpl-debug-dump-targetloop-only",cl::init(false), cl::ReallyHidden);
 
 /// Pragmaによるswpのon/offの代わりにSWPL化Loopを絞り込む
 static cl::opt<int> TargetLoop("swpl-choice-loop",cl::init(0), cl::ReallyHidden);
@@ -65,14 +67,6 @@ static bool hasRegisterImplicitDefOperand(MachineInstr *MI, unsigned Reg);
 static bool isCompMI(MachineInstr *MI, AArch64CC::CondCode CC);
 
 namespace {
-enum isNonTargetLoopResult {
-  POSSIBLE_LOOP,
-  LIMIT_INST,
-  IMPOSSIBILITY_INST,
-  MANY_CC_INST,
-  UNEXPECTED_BRANCH,
-  LIMIT_MEMINST
-};
 
 struct SWPipeliner : public MachineFunctionPass {
 public:
@@ -112,7 +106,9 @@ public:
 private:
   bool canPipelineLoop(MachineLoop &L);
   bool scheduleLoop(MachineLoop &L);
-  isNonTargetLoopResult isNonTargetLoop(MachineLoop &L);
+  bool isNonTargetLoop(MachineLoop &L);
+  bool isNonTargetLoopForInstDump(MachineLoop &L);
+  void dumpLoopInst(MachineLoop &L);
   void outputRemarkAnalysis(MachineLoop &L, int msg_id);
   bool shouldOptimize(MachineLoop &L);
   swpl::StmTest *stmTest =nullptr; ///< Stmのテスト用領域
@@ -270,6 +266,11 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
              << "Failed to pipeline loop";
     });
 
+    return Changed;
+  }
+
+  // TargetLoopのMI出力オプション（swpl処理は迂回）の場合はswpl処理を迂回する
+  if( OptionDumpTargetLoopOnly ) {
     return Changed;
   }
 
@@ -432,31 +433,13 @@ bool SWPipeliner::canPipelineLoop(MachineLoop &L) {
     return false;
   }
   
-  // BasicBlock内の命令チェック
-  isNonTargetLoopResult checkresult = isNonTargetLoop(L);
-  if( checkresult == LIMIT_INST || checkresult == IMPOSSIBILITY_INST ) {
-    printDebug(__func__, "[canPipelineLoop:NG] Unable to analyzeLoop, can NOT pipeline Loop. ", L);
-    return false;
-  } else {
-    // 本処理は、TargetLoopとする場合と、上記以外のTargetLoopとしない場合を含む
-    if(OptionDumpTargetLoop) { // TargetLoopのMI出力
-      auto topblock = L.getTopBlock();
-
-      // 関数名を出力
-      dbgs() << "--- " << topblock->getParent()->getName() << " ---\n";
-      // 行番号を出力
-      auto m = L.getStartLoc();
-      if (m.get()) {
-        dbgs() << "------ LineNumber: " << m.getLine() << "\n";
-      }
-      else {
-        dbgs() << "------ LineNumber: Could not get.\n";
-      }
-      // MIをダンプ
-      dbgs() << *topblock;
-    }
+  // ローカルオプションによるTargetLoopのMI出力
+  if( (OptionDumpTargetLoop || OptionDumpTargetLoopOnly)  && !(isNonTargetLoopForInstDump(L)) ) {
+      dumpLoopInst(L);
   }
-  if( checkresult != POSSIBLE_LOOP ) {
+
+  // BasicBlock内の命令チェック
+  if (isNonTargetLoop(L)) {
     printDebug(__func__, "[canPipelineLoop:NG] Unable to analyzeLoop, can NOT pipeline Loop. ", L);
     return false;
   }
@@ -546,14 +529,10 @@ static bool isCompMI(MachineInstr *MI, AArch64CC::CondCode CC) {
  *
  *       
  * \param[in] L 対象のMachineLoop
- * \retval POSSIBLE_LOOP 最適化対象ループである。
- * \retval LIMIT_INST 最適化対象ループではない。(命令数が限度を超えた)
- * \retval IMPOSSIBILITY_INST 最適化対象ループではない。(SWPL対象としない命令を含む)
- * \retval MANY_CC_INST 最適化対象ループではない。(CCに関連する命令が複数存在する)
- * \retval UNEXPECTED_BRANCH 最適化対象ループではない。(意図した分岐命令の形状でない)
- * \retval LIMIT_MEMINST 最適化対象ループではない。(メモリアクセス命令数が限度を超えた)
+ * \retval true  最適化対象ループではない。
+ * \retval false 最適化対象ループである。
  */
-isNonTargetLoopResult SWPipeliner::isNonTargetLoop(MachineLoop &L) {
+bool SWPipeliner::isNonTargetLoop(MachineLoop &L) {
   MachineBasicBlock *LoopBB = L.getTopBlock();
 
   AArch64CC::CondCode _NE = AArch64CC::NE;
@@ -569,7 +548,7 @@ isNonTargetLoopResult SWPipeliner::isNonTargetLoop(MachineLoop &L) {
   if (LoopBB->size() > MaxInstNum) {
     printDebug(__func__, "pipeliner info:over inst limit num", L);
     outputRemarkAnalysis(L, MsgID_swpl_many_insts);
-    return LIMIT_INST;
+    return true;
   }
 
   for (; I != E; --I) {
@@ -577,50 +556,48 @@ isNonTargetLoopResult SWPipeliner::isNonTargetLoop(MachineLoop &L) {
     if (I->isCall()) {
       printDebug(__func__, "pipeliner info:found call", L);
       outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
-      return IMPOSSIBILITY_INST;
+      return true;
     }
     if (EnableSensitiveCheck && I->mayRaiseFPException()) {
         printDebug(__func__, "pipeliner info:found mayRaiseFPException", L);
         outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
-        return IMPOSSIBILITY_INST;
+        return true;
     }
     if (EnableSensitiveCheck && I->hasUnmodeledSideEffects()) {
       printDebug(__func__, "pipeliner info:found hasUnmodeledSideEffects", L);
       outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
-      return IMPOSSIBILITY_INST;
+      return true;
     }
     if (EnableSensitiveCheck && I->hasOrderedMemoryRef() &&  (!I->mayLoad() || !I->isDereferenceableInvariantLoad())) {
           printDebug(__func__, "pipeliner info:found hasOrderedMemoryRef", L);
           outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
-          return IMPOSSIBILITY_INST;
+          return true;
     }
     // fenceもしくはgnuasm命令である
     if (isNonTargetMI4SWPL(*I)) {
       printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
       outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
-      return IMPOSSIBILITY_INST;
+      return true;
     }
-
     // volatile属性を含む命令である
     for (MachineMemOperand *MMO : I->memoperands()) {
       if (MMO->isVolatile()) {
         printDebug(__func__, "pipeliner info:found volataile operand", L);
         outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
-        return IMPOSSIBILITY_INST;
+        return true;
       }
     }
-
     /* CCを更新する命令が複数出現した。 */
     if (CompMI && hasRegisterImplicitDefOperand (&*I, AArch64::NZCV)) {
       printDebug(__func__, "pipeliner info:multi-defoperand==NZCV", L);
       outputRemarkAnalysis(L, MsgID_swpl_branch_not_for_loop);
-      return MANY_CC_INST;
+      return true;
     }
     /* CCを参照する命令が複数出現した。 */
     if (BccMI && I->hasRegisterImplicitUseOperand(AArch64::NZCV)) {
       printDebug(__func__, "pipeliner info:multi-refoperand==NZCV", L);
       outputRemarkAnalysis(L, MsgID_swpl_branch_not_for_loop);
-      return MANY_CC_INST;
+      return true;
     }
     /* ループ分岐命令を捕捉 */
     if (I->getOpcode() == AArch64::Bcc
@@ -631,7 +608,7 @@ isNonTargetLoopResult SWPipeliner::isNonTargetLoop(MachineLoop &L) {
       if (CC != _NE && CC != _GE) {
         printDebug(__func__, "pipeliner info:BCC condition!=NE && GE", L);
         outputRemarkAnalysis(L, MsgID_swpl_not_covered_loop_shape);
-        return UNEXPECTED_BRANCH;
+        return true;
       }
     } else if (BccMI && isCompMI(&*I, CC)) {
       /* Bccが先に見つかっていて、かつループ終了条件比較命令が見つかった。 */
@@ -639,30 +616,148 @@ isNonTargetLoopResult SWPipeliner::isNonTargetLoop(MachineLoop &L) {
         /* ループ終了条件比較命令が複数見つかった。 */
         printDebug(__func__, "pipeliner info:not found SUBSXri", L);
         outputRemarkAnalysis(L, MsgID_swpl_branch_not_for_loop);
-        return UNEXPECTED_BRANCH;
+        return true;
       }
       const auto phiIter=MRI->def_instr_begin(I->getOperand(1).getReg());
       if (!phiIter->isPHI()) {
         /* 正規化されたループ制御変数がない（PHIとSUBの間に命令が存在する）。 */
         printDebug(__func__, "pipeliner info:not found induction var", L);
         outputRemarkAnalysis(L, MsgID_swpl_not_covered_loop_shape);
-        return UNEXPECTED_BRANCH;
+        return true;
       }
       CompMI = &*I;
     }
     if ((!I->memoperands_empty()) && (--mem_counter)<=0) {
       printDebug(__func__, "pipeliner info:over mem limit num", L);
       outputRemarkAnalysis(L, MsgID_swpl_many_memory_insts);
-      return LIMIT_MEMINST;
+      return true;
     }
   }
-
   if (!(BccMI && CompMI)) {
     printDebug(__func__, "pipeliner info:not found (BCC || SUBSXri)", L);
     outputRemarkAnalysis(L, MsgID_swpl_not_covered_loop_shape);
-    return UNEXPECTED_BRANCH;
+    return true;
   }
-  return POSSIBLE_LOOP;
+  return false;
+}
+
+/**
+ * \brief isNonTargetLoopForInstDump
+ *        ローカルオプションによるMI出力対象かを判定する
+ * \details 判定内容は、isNonTargetLoopの判定のうち、
+ *          以下の判定を除いたものとしている。
+ *          - ループ制御命令の判定
+ *          - ループ内の命令数/メモリアクセス命令数の判定
+ * \param[in] L 対象のMachineLoop
+ * \retval true  ローカルオプションによるMI出力対象ループでない
+ * \retval false ローカルオプションによるMI出力対象ループである
+ */
+bool SWPipeliner::isNonTargetLoopForInstDump(MachineLoop &L) {
+  MachineBasicBlock *LoopBB = L.getTopBlock();
+  MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
+  MachineBasicBlock::iterator E = LoopBB->getFirstNonDebugInstr();
+
+  for (; I != E; --I) {
+    // Callである
+    if (I->isCall()) {
+      printDebug(__func__, "pipeliner info:found call", L);
+      outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
+      return true; // 対象でない
+    }
+    if (EnableSensitiveCheck && I->mayRaiseFPException()) {
+        printDebug(__func__, "pipeliner info:found mayRaiseFPException", L);
+        outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
+        return true; // 対象でない
+    }
+    if (EnableSensitiveCheck && I->hasUnmodeledSideEffects()) {
+      printDebug(__func__, "pipeliner info:found hasUnmodeledSideEffects", L);
+      outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
+      return true; // 対象でない
+    }
+    if (EnableSensitiveCheck && I->hasOrderedMemoryRef() &&  (!I->mayLoad() || !I->isDereferenceableInvariantLoad())) {
+          printDebug(__func__, "pipeliner info:found hasOrderedMemoryRef", L);
+          outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
+          return true; // 対象でない
+    }
+    // fenceもしくはgnuasm命令である
+    if (isNonTargetMI4SWPL(*I)) {
+      printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
+      outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
+      return true; // 対象でない
+    }
+    // volatile属性を含む命令である
+    for (MachineMemOperand *MMO : I->memoperands()) {
+      if (MMO->isVolatile()) {
+        printDebug(__func__, "pipeliner info:found volataile operand", L);
+        outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
+        return true; // 対象でない
+      }
+    }
+  }
+  return false; // 対象である
+}
+
+/**
+ * \brief dumpLoopInst
+ *        MachineLoopのFirstNonDebugInstrからFirstTerminatorの命令をdumpする
+ * \details 命令のdumpは、以下の情報をTSVで出力する。
+ *  - 関数名
+ *  - 行番号
+ *  - opcode名
+ *  - Pseudo命令であれば"PSEUDO"。Pseudo命令でない場合は空フィールド
+ *  - 命令が持つメモリオペランド数を出力
+ *  - MI.dump()
+ * \param[in] L 対象のMachineLoop
+ * \return なし
+ */
+void SWPipeliner::dumpLoopInst(MachineLoop &L) {
+  auto topblock = L.getTopBlock();
+
+  // 関数名を取得
+  auto funcname = topblock->getParent()->getName();
+
+  MachineBasicBlock::iterator I = topblock->getFirstNonDebugInstr();
+  MachineBasicBlock::iterator E = topblock->getFirstTerminator();
+  for (; I != E; I++) {
+    // 関数名を出力
+    dbgs() << funcname;
+    dbgs() << "\t";
+
+    // 行番号を出力
+    auto DL = I->getDebugLoc();
+    if( DL.get() ) {
+      dbgs() << DL.getLine();
+    }
+    else {
+      dbgs() << " ";
+    }
+    dbgs() << "\t";
+    
+    // opcode名を出力
+    if (TII) {
+      dbgs() << TII->getName(I->getOpcode());
+    }
+    else {
+      dbgs() << "UNKNOWN";
+    }
+    dbgs() << "\t";
+
+    // Pseudo命令かを出力
+    if( I->isPseudo() ) {
+      dbgs() << "PSEUDO";
+    }
+    else {
+      dbgs() << " ";
+    }
+    dbgs() << "\t";
+
+    // 命令が持つメモリオペランド数を出力
+    dbgs() << I->getNumMemOperands();
+    dbgs() << "\t";
+    
+    // MachineInstrをダンプ
+    I->print(dbgs());
+  }
 }
 
 
