@@ -40,6 +40,8 @@ static cl::opt<bool> OptionDumpPlan("swpl-debug-dump-plan",cl::init(false), cl::
 
 // TargetLoopのMI出力オプション
 static cl::opt<bool> OptionDumpTargetLoop("swpl-debug-dump-targetloop",cl::init(false), cl::ReallyHidden);
+// TargetLoopのMI出力オプション（swpl処理は迂回）
+static cl::opt<bool> OptionDumpTargetLoopOnly("swpl-debug-dump-targetloop-only",cl::init(false), cl::ReallyHidden);
 
 /// Pragmaによるswpのon/offの代わりにSWPL化Loopを絞り込む
 static cl::opt<int> TargetLoop("swpl-choice-loop",cl::init(0), cl::ReallyHidden);
@@ -267,6 +269,11 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     return Changed;
   }
 
+  // TargetLoopのMI出力オプション（swpl処理は迂回）の場合はswpl処理を迂回する
+  if( OptionDumpTargetLoopOnly ) {
+    return Changed;
+  }
+
   loopCountForDebug++;
   // TargetLoopが指定された場合、それ以外のSWPL処理はおこなわない
   if (TargetLoop>0 && TargetLoop!=loopCountForDebug) return Changed;
@@ -427,7 +434,7 @@ bool SWPipeliner::canPipelineLoop(MachineLoop &L) {
   }
   
   // ローカルオプションによるTargetLoopのMI出力
-  if(OptionDumpTargetLoop && !(isNonTargetLoopForInstDump(L)) ) {
+  if( (OptionDumpTargetLoop || OptionDumpTargetLoopOnly)  && !(isNonTargetLoopForInstDump(L)) ) {
       dumpLoopInst(L);
   }
 
