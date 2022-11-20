@@ -30,7 +30,7 @@ using namespace swpl;
 
 static cl::opt<bool> DebugLoop("swpl-debug-loop",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> NoUseAA("swpl-no-use-aa",cl::init(false), cl::ReallyHidden);
-static cl::opt<bool> DisableConvPrePost("swpl-disable-convert-prepost",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> EnableConvPrePost("swpl-convert-prepost",cl::init(false), cl::ReallyHidden);
 
 using BasicBlocks = std::vector<MachineBasicBlock *>;
 using BasicBlocksIterator = std::vector<MachineBasicBlock *>::iterator ;
@@ -641,7 +641,7 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const UseMap &LiveOutReg) {
   /// cloneBody() を呼び出し、MachineBasickBlockの複製とレジスタリネーミングを行う。
   cloneBody(new_bb, ob);
   /// convertPostPreIndeTo()を呼び出し、post/pre index命令を演算＋load/store命令に変換する
-  if (!DisableConvPrePost)
+  if (EnableConvPrePost)
     convertPrePostIndexInstr(new_bb);
   /// convertNonSSA() を呼び出し、非SSA化と複製したMachineBasicBlockの回収を行う。
   convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);
@@ -650,21 +650,15 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const UseMap &LiveOutReg) {
 void SwplLoop::convertPrePostIndexInstr(llvm::MachineBasicBlock *body) {
   std::vector<llvm::MachineInstr *> delete_mi;
   for (auto &mi:*body) {
-    llvm::SmallVector<MachineInstr *, 2> MIs;
-    if (TII->splitPrePostIndexInstr(*body, mi, MIs)){
+    MachineInstr *ldst=nullptr;
+    MachineInstr *add=nullptr;
+    if (TII->splitPrePostIndexInstr(*body, mi, &ldst, &add)){
       // クローン前命令とクローン後命令の再紐づけ
       auto *org = NewMI2OrgMI.at(&mi);
-      OrgMI2NewMI.erase(org);
       NewMI2OrgMI.erase(&mi);
-      if (MIs[0]->mayLoadOrStore()) {
-        OrgMI2NewMI[org] = MIs[0];
-        NewMI2OrgMI[MIs[0]] = org;
-        NewMI2OrgMI[MIs[1]] = org;
-      } else {
-        OrgMI2NewMI[org] = MIs[1];
-        NewMI2OrgMI[MIs[1]] = org;
-        NewMI2OrgMI[MIs[0]] = org;
-      }
+      OrgMI2NewMI[org] = ldst;
+      NewMI2OrgMI[ldst] = org;
+      NewMI2OrgMI[add] = org;
 
       // MBBから削除する命令の収集
       delete_mi.push_back(&mi);

@@ -335,8 +335,9 @@ public:
                                                   int64_t &VGSized);
 
   bool splitPrePostIndexInstr(MachineBasicBlock &MBB,
-                           MachineInstr &MI,
-                           SmallVectorImpl<MachineInstr *> &MIs ) const override;
+                              MachineInstr &MI,
+                              MachineInstr **ldst,
+                              MachineInstr **add ) const override;
 
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"

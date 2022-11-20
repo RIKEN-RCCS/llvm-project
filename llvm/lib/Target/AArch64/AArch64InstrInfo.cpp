@@ -8142,9 +8142,9 @@ AArch64InstrInfo::getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
 }
 
 bool AArch64InstrInfo::splitPrePostIndexInstr(
-    MachineBasicBlock &MBB, MachineInstr &MI, SmallVectorImpl<MachineInstr *> &MIs ) const {
-  MachineInstr *add=nullptr;
-  MachineInstr *ldst=nullptr;
+    MachineBasicBlock &MBB, MachineInstr &MI, MachineInstr **ldst, MachineInstr **add ) const {
+  MachineInstr *tadd=nullptr;
+  MachineInstr *tldst=nullptr;
   Register def_addrreg;
   Register use_addrreg;
   Register val;
@@ -8157,15 +8157,15 @@ bool AArch64InstrInfo::splitPrePostIndexInstr(
     use_addrreg = MI.getOperand(2).getReg();
     imm = MI.getOperand(3).getImm();
 
-    ldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::LDURSi), val)
+    tldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::LDURSi), val)
                .addReg(use_addrreg).addImm(imm) ;
     for (MachineMemOperand *MMO : MI.memoperands()) {
-      ldst->addMemOperand(*MI.getMF(), MMO);
+      tldst->addMemOperand(*MI.getMF(), MMO);
     }
-    add = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addrreg)
+    tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addrreg)
               .addReg(use_addrreg).addImm(imm).addImm(0);
-    MIs.push_back(ldst);
-    MIs.push_back(add);
+    if (ldst!=nullptr) *ldst=tldst;
+    if (add!=nullptr) *add=tadd;
     break;
   case AArch64::STRSpost:
     def_addrreg = MI.getOperand(0).getReg();
@@ -8173,15 +8173,15 @@ bool AArch64InstrInfo::splitPrePostIndexInstr(
     use_addrreg = MI.getOperand(2).getReg();
     imm = MI.getOperand(3).getImm();
 
-    ldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::STURSi))
+    tldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::STURSi))
                .addReg(val).addReg(use_addrreg).addImm(imm) ;
     for (MachineMemOperand *MMO : MI.memoperands()) {
-      ldst->addMemOperand(*MI.getMF(), MMO);
+      tldst->addMemOperand(*MI.getMF(), MMO);
     }
-    add = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addrreg)
+    tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addrreg)
               .addReg(use_addrreg).addImm(imm).addImm(0) ;
-    MIs.push_back(ldst);
-    MIs.push_back(add);
+    if (ldst!=nullptr) *ldst=tldst;
+    if (add!=nullptr) *add=tadd;
     break;
   default:
     return false;

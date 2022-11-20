@@ -37,6 +37,7 @@ static cl::opt<unsigned> MaxInstNum("swpl-max-inst-num",cl::init(500), cl::Reall
 static cl::opt<unsigned> MaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyHidden);
 static cl::opt<int> TestStm("swpl-test-tm",cl::init(0), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpPlan("swpl-debug-dump-plan",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> EnablesplitInst_swp_pre("swpl-splitinst-swppre",cl::init(false), cl::ReallyHidden);
 
 // TargetLoopのMI出力オプション
 static cl::opt<bool> OptionDumpTargetLoop("swpl-debug-dump-targetloop",cl::init(false), cl::ReallyHidden);
@@ -840,6 +841,20 @@ bool SWPipelinerPre::check(MachineLoop &L) {
 
   if (!hasPreHeader(L)) Changed|=createPreHeader(L);
   if (!hasExit(L)) Changed|=createExit(L);
+
+  if (EnablesplitInst_swp_pre) {
+    llvm::SmallVector<MachineInstr *, 2> delete_mi;
+    for (auto &mi:*body) {
+      if (TII->splitPrePostIndexInstr(*body, mi, nullptr, nullptr)) {
+        Changed=true;
+
+        // MBBから削除する命令の収集
+        delete_mi.push_back(&mi);
+      }
+    }
+    for (auto *m : delete_mi)
+      m->eraseFromParent();
+  }
 
   return Changed;
 }

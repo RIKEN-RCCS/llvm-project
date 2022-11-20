@@ -2002,7 +2002,7 @@ public:
 
   /// Split pre/post index instructions
   virtual bool splitPrePostIndexInstr(
-      MachineBasicBlock &MBB, MachineInstr &MI, SmallVectorImpl<MachineInstr *> &MIs ) const {
+      MachineBasicBlock &MBB, MachineInstr &MI, MachineInstr **ldst, MachineInstr **add ) const {
     return false;
   }
 
