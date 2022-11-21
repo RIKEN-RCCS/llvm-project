@@ -8158,7 +8158,7 @@ bool AArch64InstrInfo::splitPrePostIndexInstr(
     imm = MI.getOperand(3).getImm();
 
     tldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::LDURSi), val)
-               .addReg(use_addrreg).addImm(imm) ;
+               .addReg(use_addrreg).addImm(0) ;
     for (MachineMemOperand *MMO : MI.memoperands()) {
       tldst->addMemOperand(*MI.getMF(), MMO);
     }
@@ -8174,7 +8174,7 @@ bool AArch64InstrInfo::splitPrePostIndexInstr(
     imm = MI.getOperand(3).getImm();
 
     tldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::STURSi))
-               .addReg(val).addReg(use_addrreg).addImm(imm) ;
+               .addReg(val).addReg(use_addrreg).addImm(0) ;
     for (MachineMemOperand *MMO : MI.memoperands()) {
       tldst->addMemOperand(*MI.getMF(), MMO);
     }

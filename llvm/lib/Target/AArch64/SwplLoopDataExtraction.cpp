@@ -30,7 +30,7 @@ using namespace swpl;
 
 static cl::opt<bool> DebugLoop("swpl-debug-loop",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> NoUseAA("swpl-no-use-aa",cl::init(false), cl::ReallyHidden);
-static cl::opt<bool> EnableConvPrePost("swpl-convert-prepost",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> DisableConvPrePost("swpl-disable-convert-prepost",cl::init(false), cl::ReallyHidden);
 
 using BasicBlocks = std::vector<MachineBasicBlock *>;
 using BasicBlocksIterator = std::vector<MachineBasicBlock *>::iterator ;
@@ -111,8 +111,8 @@ const SwplReg &SwplInst::getPhiUseRegFromIn() const {
   return getUseRegs(1);
 }
 
-SwplLoop *SwplLoop::Initialize(MachineLoop &L, const UseMap& LiveOutReg, MachineFunction *MF) {
-  SwplLoop *loop = new SwplLoop(L, MF);
+SwplLoop *SwplLoop::Initialize(MachineLoop &L, const UseMap& LiveOutReg) {
+  SwplLoop *loop = new SwplLoop(L);
   Register2SwplRegMap rmap;
 
   /// convertSSAtoNonSSA() を呼び出し、対象ループの非SSA化を行う。
@@ -641,7 +641,7 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const UseMap &LiveOutReg) {
   /// cloneBody() を呼び出し、MachineBasickBlockの複製とレジスタリネーミングを行う。
   cloneBody(new_bb, ob);
   /// convertPostPreIndeTo()を呼び出し、post/pre index命令を演算＋load/store命令に変換する
-  if (EnableConvPrePost)
+  if (DisableConvPrePost)
     convertPrePostIndexInstr(new_bb);
   /// convertNonSSA() を呼び出し、非SSA化と複製したMachineBasicBlockの回収を行う。
   convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);

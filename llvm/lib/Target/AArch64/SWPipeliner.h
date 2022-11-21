@@ -82,11 +82,10 @@ class SwplLoop {
                                        ///このCopy命令の集合
   SwplRegs Regs;                       ///< 対象ループ内で生成した SwplReg を管理する \note メモリ解放時に利用する
   SwplMems MemsOtherBody;              ///< Body以外で生成された SwplMem を管理する \note メモリ解放時に利用する
-  MachineFunction *MF=nullptr;
 
 public:
   SwplLoop(){}
-  SwplLoop(llvm::MachineLoop &l, MachineFunction* MF):MF(MF) {
+  SwplLoop(llvm::MachineLoop &l) {
     ML = &l;
   }
 
@@ -191,7 +190,7 @@ public:
   /// \param[in]  L MachineLoop
   /// \param [in] LiveOutReg 対象ループの出口BusyRegister（非SSA化で特別処理を行うために利用する）
   /// \return ループ内の命令情報
-  static SwplLoop *Initialize(MachineLoop &L, const UseMap& LiveOutReg, MachineFunction *MF);
+  static SwplLoop *Initialize(MachineLoop &L, const UseMap& LiveOutReg);
 
   /// SwplLoop::MemIncrementMap に要素を追加する
   void addMemIncrementMap(SwplMem *mem, int increment) { MemIncrementMap[mem] = increment; }
