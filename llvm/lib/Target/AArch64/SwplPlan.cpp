@@ -160,11 +160,13 @@ bool SwplPlan::isSufficientWithRenamingVersions(const SwplLoop& c_loop,
 /// \param [in] inst_slot_map スケジューリング結果
 /// \param [in] min_ii 計算されたMinII
 /// \param [in] ii スケジュールで採用されたII
+/// \param [in] resource スケジュールで利用する資源情報
 /// \return スケジューリング結果を設定したSwplPlanを返す。
 SwplPlan* SwplPlan::construct(const SwplLoop& c_loop,
                               SwplInstSlotHashmap& inst_slot_map,
                               unsigned min_ii,
-                              unsigned ii) {
+                              unsigned ii,
+                              MsResourceResult resource) {
   SwplPlan* plan = new SwplPlan(c_loop); //plan->loop =loop;
   size_t prolog_blocks, kernel_blocks;
   
@@ -187,6 +189,13 @@ SwplPlan* SwplPlan::construct(const SwplLoop& c_loop,
   plan->total_cycles = (plan->prolog_cycles
                         + plan->kernel_cycles
                         + plan->epilog_cycles);
+  
+  plan->num_necessary_freg = resource.getNecessaryFreg();
+  plan->num_max_freg = resource.getMaxFreg();
+  plan->num_necessary_ireg = resource.getNecessaryIreg();
+  plan->num_max_ireg = resource.getMaxIreg();
+  plan->num_necessary_preg = resource.getNecessaryPreg();
+  plan->num_max_preg = resource.getMaxPreg();
 
   return plan;
 }
@@ -209,14 +218,15 @@ SwplPlan* SwplPlan::generatePlan(SwplDdg& ddg)
 {
   SwplInstSlotHashmap inst_slot_map;
   unsigned ii, min_ii, itr;
+  MsResourceResult resource;
 
   TryScheduleResult rslt =
     selectPlan(ddg,
-               inst_slot_map, &ii, &min_ii, &itr);
+               inst_slot_map, &ii, &min_ii, &itr, resource);
 
   switch(rslt) {
   case TryScheduleResult::TRY_SCHEDULE_SUCCESS:
-    return SwplPlan::construct( *(ddg.getLoop()), inst_slot_map, min_ii, ii);
+    return SwplPlan::construct( *(ddg.getLoop()), inst_slot_map, min_ii, ii, resource);
 
   case TryScheduleResult::TRY_SCHEDULE_FAIL:
     return nullptr;
@@ -323,6 +333,7 @@ unsigned SwplPlan::calcResourceMinIterationInterval(const SwplLoop& c_loop) {
 /// \param [out] selected_ii スケジュールで採用された II
 /// \param [out] calculated_min_ii 計算された MinII
 /// \param [out] required_itr ソフトパイプルートを通るのに必要なイテレート数
+/// \param [out] resource スケジュールで利用する資源情報
 /// \retval TRY_SCHEDULE_SUCCESS スケジュール成功。全ての出力引数を利用できる。
 /// \retval TRY_SCHEDULE_FAIL スケジュール失敗。全ての出力引数は未定義。
 /// \retval TRY_SCHEDULE_FEW_ITER ループのイテレート数不足によりソフトパイプ適用不可。
@@ -332,7 +343,8 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
                                         SwplInstSlotHashmap** inst_slot_map,
                                         unsigned* selected_ii,
                                         unsigned* calculated_min_ii,
-                                        unsigned* required_itr) {
+                                        unsigned* required_itr,
+                                        MsResourceResult* resource) {
   PlanSpec spec(c_ddg);
   if( !(spec.init(res_mii)) ){
     return TryScheduleResult::TRY_SCHEDULE_FAIL;
@@ -349,6 +361,7 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
   if (ms_result != nullptr && ms_result->inst_slot_map != nullptr) {
     *inst_slot_map = ms_result->inst_slot_map;
     *selected_ii = ms_result->ii;
+    *resource = ms_result->resource;
     delete ms_result;
     return TryScheduleResult::TRY_SCHEDULE_SUCCESS;
   } else {
@@ -364,29 +377,31 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
 /// \param [out] selected_ii スケジュールで採用された II
 /// \param [out] calculated_min_ii 計算された MinII
 /// \param [out] required_itr ソフトパイプルートを通るのに必要なイテレート数
+/// \param [out] resource スケジュールで利用する資源情報
 /// \retval TRY_SCHEDULE_SUCCESS スケジュール成功。全ての出力引数を利用できる。
 /// \retval TRY_SCHEDULE_FAIL スケジュール失敗。全ての出力引数は未定義。
 /// \retval TRY_SCHEDULE_FEW_ITER ループのイテレート数不足によりソフトパイプ適用不可。
 ///                               required_itr のみ利用できる。
-///
-/// \note SMALL以外のポリシーのルートは実装していない。
 TryScheduleResult SwplPlan::selectPlan(const SwplDdg& c_ddg,
                                        SwplInstSlotHashmap& rslt_inst_slot_map,
                                        unsigned* selected_ii,
                                        unsigned* calculated_min_ii,
-                                       unsigned* required_itr) {
+                                       unsigned* required_itr,
+                                       MsResourceResult& resource) {
   unsigned res_mii = calcResourceMinIterationInterval( c_ddg.getLoop() );
 
   SwplInstSlotHashmap* inst_slot_map_tmp;
   unsigned ii_tmp, min_ii_tmp, itr;
   bool is_succeeded;
+  MsResourceResult resource_tmp;
 
   switch(trySchedule(c_ddg,
                      res_mii,
                      &inst_slot_map_tmp,
                      &ii_tmp,
                      &min_ii_tmp,
-                     &itr)) {
+                     &itr,
+                     &resource_tmp)) {
   case TryScheduleResult::TRY_SCHEDULE_SUCCESS:
     is_succeeded = true;
     rslt_inst_slot_map = *inst_slot_map_tmp; // copy
@@ -394,6 +409,7 @@ TryScheduleResult SwplPlan::selectPlan(const SwplDdg& c_ddg,
     *selected_ii = ii_tmp;
     *calculated_min_ii = min_ii_tmp;
     *required_itr = itr;
+    resource = resource_tmp; // copy
     break;
   case TryScheduleResult::TRY_SCHEDULE_FAIL:
     is_succeeded = false;
