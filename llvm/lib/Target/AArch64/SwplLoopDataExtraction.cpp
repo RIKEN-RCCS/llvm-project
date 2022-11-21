@@ -30,6 +30,7 @@ using namespace swpl;
 
 static cl::opt<bool> DebugLoop("swpl-debug-loop",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> NoUseAA("swpl-no-use-aa",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> DisableConvPrePost("swpl-disable-convert-prepost",cl::init(false), cl::ReallyHidden);
 
 using BasicBlocks = std::vector<MachineBasicBlock *>;
 using BasicBlocksIterator = std::vector<MachineBasicBlock *>::iterator ;
@@ -639,8 +640,33 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const UseMap &LiveOutReg) {
   
   /// cloneBody() を呼び出し、MachineBasickBlockの複製とレジスタリネーミングを行う。
   cloneBody(new_bb, ob);
+  /// convertPostPreIndeTo()を呼び出し、post/pre index命令を演算＋load/store命令に変換する
+  if (DisableConvPrePost)
+    convertPrePostIndexInstr(new_bb);
   /// convertNonSSA() を呼び出し、非SSA化と複製したMachineBasicBlockの回収を行う。
   convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);
+}
+
+void SwplLoop::convertPrePostIndexInstr(llvm::MachineBasicBlock *body) {
+  std::vector<llvm::MachineInstr *> delete_mi;
+  for (auto &mi:*body) {
+    MachineInstr *ldst=nullptr;
+    MachineInstr *add=nullptr;
+    if (TII->splitPrePostIndexInstr(*body, mi, &ldst, &add)){
+      // クローン前命令とクローン後命令の再紐づけ
+      auto *org = NewMI2OrgMI.at(&mi);
+      NewMI2OrgMI.erase(&mi);
+      OrgMI2NewMI[org] = ldst;
+      NewMI2OrgMI[ldst] = org;
+      NewMI2OrgMI[add] = org;
+
+      // MBBから削除する命令の収集
+      delete_mi.push_back(&mi);
+    }
+  }
+  for (auto *mi:delete_mi)
+    mi->eraseFromParent();
+
 }
 
 void SwplInst::pushAllRegs(SwplLoop *loop) {
@@ -835,6 +861,8 @@ void SwplInst::print() {
 }
 
 void SwplLoop::dumpOrgMI2NewMI() {
+  // @todo オリジナル命令がpost/pre命令の場合は、変換後のadd命令が出力されない
+  // これは、MAPがオリジナル命令とクローンした命令が1対1を前提としているため
   for (auto itr: getOrgMI2NewMI()) {
     dbgs() << "OldMI=" << *itr.first << "\n";
     dbgs() << "NewMI=" << *itr.second << "\n";

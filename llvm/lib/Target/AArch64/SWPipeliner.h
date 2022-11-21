@@ -84,7 +84,7 @@ class SwplLoop {
   SwplMems MemsOtherBody;              ///< Body以外で生成された SwplMem を管理する \note メモリ解放時に利用する
 
 public:
-  SwplLoop() {};
+  SwplLoop(){}
   SwplLoop(llvm::MachineLoop &l) {
     ML = &l;
   }
@@ -276,6 +276,12 @@ private:
   /// \param[in]  LiveOutReg UseMap
   void convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBlock *pre, const DebugLoc &dbgloc,
                      llvm::MachineBasicBlock *org, const UseMap &LiveOutReg);
+
+  /// pre/post index命令を検索し演算命令＋load/store命令に変換する
+  /// @todo 本メソッドTIIに移動する必要がある
+  /// \param[in,out]  body ループボディの llvm::MachineBasicBlock
+  void convertPrePostIndexInstr(llvm::MachineBasicBlock *body);
+
   /// SwplLoop::OrgMI2NewMI の命令列を走査し、SwplLoop::OrgReg2NewReg に登録されているレジスタへのリネーミングを行う
   void renameReg(void);
   /// llvm::Register クラスからレジスタIDを表示する

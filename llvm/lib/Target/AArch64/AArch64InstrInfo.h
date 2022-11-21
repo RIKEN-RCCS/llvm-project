@@ -333,6 +333,12 @@ public:
   static void decomposeStackOffsetForDwarfOffsets(const StackOffset &Offset,
                                                   int64_t &ByteSized,
                                                   int64_t &VGSized);
+
+  bool splitPrePostIndexInstr(MachineBasicBlock &MBB,
+                              MachineInstr &MI,
+                              MachineInstr **ldst,
+                              MachineInstr **add ) const override;
+
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 
