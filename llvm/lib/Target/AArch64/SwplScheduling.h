@@ -200,13 +200,13 @@ class MsResourceResult {
 public:
   void setSufficientWithArg(bool sufficient) { is_resource_sufficient = sufficient; return; } ///< setter
 
-  bool isSufficient() { return is_resource_sufficient; } ///< getter
-  unsigned getNecessaryIreg() { return num_necessary_ireg; } ///< getter
-  unsigned getNecessaryFreg() { return num_necessary_freg; } ///< getter
-  unsigned getNecessaryPreg() { return num_necessary_preg; } ///< getter
-  unsigned getMaxIreg() { return num_max_ireg; } ///< getter
-  unsigned getMaxFreg() { return num_max_freg; } ///< getter
-  unsigned getMaxPreg() { return num_max_preg; } ///< getter
+  bool isSufficient() const { return is_resource_sufficient; } ///< getter
+  unsigned getNecessaryIreg() const { return num_necessary_ireg; } ///< getter
+  unsigned getNecessaryFreg() const { return num_necessary_freg; } ///< getter
+  unsigned getNecessaryPreg() const { return num_necessary_preg; } ///< getter
+  unsigned getMaxIreg() const { return num_max_ireg; } ///< getter
+  unsigned getMaxFreg() const { return num_max_freg; } ///< getter
+  unsigned getMaxPreg() const { return num_max_preg; } ///< getter
 
   void init();
   bool isIregSufficient();

@@ -166,7 +166,7 @@ SwplPlan* SwplPlan::construct(const SwplLoop& c_loop,
                               SwplInstSlotHashmap& inst_slot_map,
                               unsigned min_ii,
                               unsigned ii,
-                              MsResourceResult resource) {
+                              const MsResourceResult& resource) {
   SwplPlan* plan = new SwplPlan(c_loop); //plan->loop =loop;
   size_t prolog_blocks, kernel_blocks;
   

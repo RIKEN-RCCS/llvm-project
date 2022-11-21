@@ -126,18 +126,18 @@ public:
   unsigned getIterationInterval() const { return iteration_interval; } ///< getter
   size_t getNIterationCopies() const { return n_iteration_copies; } ///< getter
   size_t getNRenamingVersions() const { return n_renaming_versions; } ///< getter
-  SwplSlot getBeginSlot() { return begin_slot; } ///< getter
-  SwplSlot getEndSlot() { return end_slot; } ///< getter
-  size_t getEpilogCycles() { return epilog_cycles; } ///< getter
-  size_t getKernelCycles() { return kernel_cycles; } ///< getter
-  size_t getPrologCycles() { return prolog_cycles; } ///< getter
-  size_t getTotalCycles() { return total_cycles; } ///< getter
-  unsigned getNecessaryIreg() { return num_necessary_ireg; } ///< getter
-  unsigned getNecessaryFreg() { return num_necessary_freg; } ///< getter
-  unsigned getNecessaryPreg() { return num_necessary_preg; } ///< getter
-  unsigned getMaxIreg() { return num_max_ireg; } ///< getter
-  unsigned getMaxFreg() { return num_max_freg; } ///< getter
-  unsigned getMaxPreg() { return num_max_preg; } ///< getter
+  SwplSlot getBeginSlot() const { return begin_slot; } ///< getter
+  SwplSlot getEndSlot() const { return end_slot; } ///< getter
+  size_t getEpilogCycles() const { return epilog_cycles; } ///< getter
+  size_t getKernelCycles() const { return kernel_cycles; } ///< getter
+  size_t getPrologCycles() const { return prolog_cycles; } ///< getter
+  size_t getTotalCycles() const { return total_cycles; } ///< getter
+  unsigned getNecessaryIreg() const { return num_necessary_ireg; } ///< getter
+  unsigned getNecessaryFreg() const { return num_necessary_freg; } ///< getter
+  unsigned getNecessaryPreg() const { return num_necessary_preg; } ///< getter
+  unsigned getMaxIreg() const { return num_max_ireg; } ///< getter
+  unsigned getMaxFreg() const { return num_max_freg; } ///< getter
+  unsigned getMaxPreg() const { return num_max_preg; } ///< getter
 
   ////////////////////
   // setters
@@ -168,7 +168,7 @@ public:
                              SwplInstSlotHashmap& inst_slot_map,
                              unsigned min_ii,
                              unsigned ii,
-                             MsResourceResult resource);
+                             const MsResourceResult& resource);
   static void destroy(SwplPlan* plan);
   static SwplPlan* generatePlan(SwplDdg& ddg);
 
