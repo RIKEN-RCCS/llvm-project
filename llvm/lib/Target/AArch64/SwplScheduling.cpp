@@ -1548,7 +1548,7 @@ void MsResult::outputDebugMessageForSchedulingResult(PlanSpec spec) {
          << " MVE: " << required_mve
          << " Last inst: " << (spec.n_insts - tried_n_insts) << "."
          << " (Itr Org: " << spec.itr_count << ", Req: " << required_itr_count <<")"
-         << " (Reg Fp: " << req_freg << "/"<< max_freg
+         << " (VReg Fp: " << req_freg << "/"<< max_freg
          << ", Int: " << req_ireg << "/"<< max_ireg
          << ", Pre: " << req_preg << "/"<< max_preg <<")"
          << " Eval:"<< evaluation <<".\n";

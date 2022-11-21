@@ -112,7 +112,7 @@ bool SwplTransformMIR::transformMIR() {
               /* 5 */ (float)TMI.minimumIterationInterval / (float)TMI.iterationInterval,
               /* 6 */ (int)n_body_real_inst,
               /* 7 */ (int)TMI.iterationInterval,
-              /* 0 */ (int)(n_body_inst - n_body_real_inst));
+              /* 8 */ (int)(n_body_inst - n_body_real_inst));
     } else {
       dbgs() <<
               "        :\n"
@@ -670,8 +670,20 @@ void SwplTransformMIR::outputLoopoptMessage(int n_body_inst) {
   } else if (mve > 255) {
     mve = 255;
   }
-  std::string msg=formatv("software pipelining (IPC: {0}, ITR: {1}, MVE: {2})",
-                          (ipc100/100.), TMI.nCopies, mve);
+  std::string msg=formatv("software pipelining ("
+                          "IPC: {0}, ITR: {1}, MVE: {2}, II: {3}, Stage: {4}, "
+                          "(VReg Fp: {5}/{6}, Int: {7}/{8}, Pred: {9}/{10})), "
+                          "SRA(PReg Fp: {11}/{12}, Int: {13}/{14}, Pred: {15}/{16})",
+                          (ipc100/100.), TMI.nCopies, mve,
+                          TMI.iterationInterval,
+                          (Plan.getPrologCycles()/TMI.iterationInterval),
+                          Plan.getNecessaryFreg(), Plan.getMaxFreg(),
+                          Plan.getNecessaryIreg(), Plan.getMaxIreg(),
+                          Plan.getNecessaryPreg(), Plan.getMaxPreg(),
+                          0, 0,
+                          0, 0,
+                          0, 0
+                          );
 
   swpl::ORE->emit([&]() {
     return MachineOptimizationRemark(DEBUG_TYPE, "SoftwarePipelined",

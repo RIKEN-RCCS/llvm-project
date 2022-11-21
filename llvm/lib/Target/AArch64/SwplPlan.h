@@ -89,6 +89,7 @@ public:
   void dump();
 };
 
+class MsResourceResult;
 
 /// \brief スケジューリング結果を保持するクラス
 /// \details transform mirへ渡す情報となる
@@ -105,6 +106,12 @@ class SwplPlan {
   size_t prolog_cycles;        ///< prolog部分の（MVE展開後の）サイクル数
   size_t kernel_cycles;        ///< kernal部分のサイクル数
   size_t epilog_cycles;        ///< epilog部分のサイクル数
+  unsigned num_necessary_ireg; ///< スケジューリング結果から算出した必要な整数レジスタ
+  unsigned num_necessary_freg; ///< スケジューリング結果から算出した必要な浮動小数点数レジスタ
+  unsigned num_necessary_preg; ///< スケジューリング結果から算出した必要なプレディケートレジスタ
+  unsigned num_max_ireg;       ///< 整数レジスタの最大数(ローカルオプションによる調整込み)
+  unsigned num_max_freg;       ///< 浮動小数点数レジスタの最大数(ローカルオプションによる調整込み)
+  unsigned num_max_preg;       ///< プレディケートレジスタの最大数(ローカルオプションによる調整込み)
 
 public:
   SwplPlan(const SwplLoop& loop) : loop(loop) {} ///< constructor
@@ -119,12 +126,18 @@ public:
   unsigned getIterationInterval() const { return iteration_interval; } ///< getter
   size_t getNIterationCopies() const { return n_iteration_copies; } ///< getter
   size_t getNRenamingVersions() const { return n_renaming_versions; } ///< getter
-  SwplSlot getBeginSlot() { return begin_slot; } ///< getter
-  SwplSlot getEndSlot() { return end_slot; } ///< getter
-  size_t getEpilogCycles() { return epilog_cycles; } ///< getter
-  size_t getKernelCycles() { return kernel_cycles; } ///< getter
-  size_t getPrologCycles() { return prolog_cycles; } ///< getter
-  size_t getTotalCycles() { return total_cycles; } ///< getter
+  SwplSlot getBeginSlot() const { return begin_slot; } ///< getter
+  SwplSlot getEndSlot() const { return end_slot; } ///< getter
+  size_t getEpilogCycles() const { return epilog_cycles; } ///< getter
+  size_t getKernelCycles() const { return kernel_cycles; } ///< getter
+  size_t getPrologCycles() const { return prolog_cycles; } ///< getter
+  size_t getTotalCycles() const { return total_cycles; } ///< getter
+  unsigned getNecessaryIreg() const { return num_necessary_ireg; } ///< getter
+  unsigned getNecessaryFreg() const { return num_necessary_freg; } ///< getter
+  unsigned getNecessaryPreg() const { return num_necessary_preg; } ///< getter
+  unsigned getMaxIreg() const { return num_max_ireg; } ///< getter
+  unsigned getMaxFreg() const { return num_max_freg; } ///< getter
+  unsigned getMaxPreg() const { return num_max_preg; } ///< getter
 
   ////////////////////
   // setters
@@ -154,7 +167,8 @@ public:
   static SwplPlan* construct(const SwplLoop& c_loop,
                              SwplInstSlotHashmap& inst_slot_map,
                              unsigned min_ii,
-                             unsigned ii);
+                             unsigned ii,
+                             const MsResourceResult& resource);
   static void destroy(SwplPlan* plan);
   static SwplPlan* generatePlan(SwplDdg& ddg);
 
@@ -166,12 +180,14 @@ private:
                                        SwplInstSlotHashmap** inst_slot_map,
                                        unsigned* selected_ii,
                                        unsigned* calculated_min_ii,
-                                       unsigned* required_itr);
+                                       unsigned* required_itr,
+                                       MsResourceResult* resource);
   static TryScheduleResult selectPlan(const SwplDdg& c_ddg,
                                       SwplInstSlotHashmap& rslt_inst_slot_map,
                                       unsigned* selected_ii,
                                       unsigned* calculated_min_ii,
-                                      unsigned* required_itr);
+                                      unsigned* required_itr,
+                                      MsResourceResult& resource);
 };
 
 }
