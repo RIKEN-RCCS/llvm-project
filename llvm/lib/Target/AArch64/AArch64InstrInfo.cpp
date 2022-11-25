@@ -8145,47 +8145,173 @@ bool AArch64InstrInfo::splitPrePostIndexInstr(
     MachineBasicBlock &MBB, MachineInstr &MI, MachineInstr **ldst, MachineInstr **add ) const {
   MachineInstr *tadd=nullptr;
   MachineInstr *tldst=nullptr;
-  Register def_addrreg;
-  Register use_addrreg;
-  Register val;
+  Register def_addr_reg;
+  Register use_addr_reg;
+  Register use_offset_reg;
+  Register use_val;
+  Register def_val;
   int64_t imm;
 
   switch (MI.getOpcode()) {
   case AArch64::LDRSpost:
-    def_addrreg = MI.getOperand(0).getReg();
-    val = MI.getOperand(1).getReg();
-    use_addrreg = MI.getOperand(2).getReg();
+    def_addr_reg = MI.getOperand(0).getReg();
+    def_val = MI.getOperand(1).getReg();
+    use_addr_reg = MI.getOperand(2).getReg();
     imm = MI.getOperand(3).getImm();
 
-    tldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::LDURSi), val)
-               .addReg(use_addrreg).addImm(0) ;
+    tldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::LDURSi), def_val)
+               .addReg(use_addr_reg).addImm(0) ;
     for (MachineMemOperand *MMO : MI.memoperands()) {
       tldst->addMemOperand(*MI.getMF(), MMO);
     }
-    tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addrreg)
-              .addReg(use_addrreg).addImm(imm).addImm(0);
-    if (ldst!=nullptr) *ldst=tldst;
-    if (add!=nullptr) *add=tadd;
+    tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addr_reg)
+              .addReg(use_addr_reg).addImm(imm).addImm(0);
+    break;
+  case AArch64::LDRSpre:
+    def_addr_reg = MI.getOperand(0).getReg();
+    def_val = MI.getOperand(1).getReg();
+    use_addr_reg = MI.getOperand(2).getReg();
+    imm = MI.getOperand(3).getImm();
+
+    tldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::LDURSi), def_val)
+                .addReg(use_addr_reg).addImm(imm) ;
+    for (MachineMemOperand *MMO : MI.memoperands()) {
+      tldst->addMemOperand(*MI.getMF(), MMO);
+    }
+    tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addr_reg)
+               .addReg(use_addr_reg).addImm(imm).addImm(0);
+    break;
+  case AArch64::LDRDpost:
+    def_addr_reg = MI.getOperand(0).getReg();
+    def_val = MI.getOperand(1).getReg();
+    use_addr_reg = MI.getOperand(2).getReg();
+    imm = MI.getOperand(3).getImm();
+
+    tldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::LDURDi), def_val)
+                .addReg(use_addr_reg).addImm(0) ;
+    for (MachineMemOperand *MMO : MI.memoperands()) {
+      tldst->addMemOperand(*MI.getMF(), MMO);
+    }
+    tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addr_reg)
+               .addReg(use_addr_reg).addImm(imm).addImm(0);
+    break;
+  case AArch64::LDRSWpost:
+    def_addr_reg = MI.getOperand(0).getReg();
+    def_val = MI.getOperand(1).getReg();
+    use_addr_reg = MI.getOperand(2).getReg();
+    imm = MI.getOperand(3).getImm();
+
+    tldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::LDURSWi), def_val)
+                .addReg(use_addr_reg).addImm(0) ;
+    for (MachineMemOperand *MMO : MI.memoperands()) {
+      tldst->addMemOperand(*MI.getMF(), MMO);
+    }
+    tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addr_reg)
+               .addReg(use_addr_reg).addImm(imm).addImm(0) ;
+    break;
+  case AArch64::LD1i32_POST:
+    def_addr_reg = MI.getOperand(0).getReg();
+    def_val = MI.getOperand(1).getReg();
+    use_val = MI.getOperand(2).getReg();
+    imm = MI.getOperand(3).getImm();
+    use_addr_reg = MI.getOperand(4).getReg();
+    use_offset_reg = MI.getOperand(5).getReg();
+
+    tldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::LD1i32), def_val)
+                .addReg(use_val).addImm(imm).addReg(use_addr_reg) ;
+    for (MachineMemOperand *MMO : MI.memoperands()) {
+      tldst->addMemOperand(*MI.getMF(), MMO);
+    }
+    if (use_offset_reg!=AArch64::XZR) {
+      tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXrr), def_addr_reg)
+                 .addReg(use_addr_reg).addReg(use_offset_reg) ;
+
+    } else {
+      tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addr_reg)
+                 .addReg(use_addr_reg).addImm(4).addImm(0) ;
+
+    }
+    break;
+  case AArch64::LD1Rv2s_POST:
+    def_addr_reg = MI.getOperand(0).getReg();
+    def_val = MI.getOperand(1).getReg();
+    use_addr_reg = MI.getOperand(2).getReg();
+    use_offset_reg = MI.getOperand(3).getReg();
+
+    tldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::LD1Rv2s), def_val)
+                .addReg(use_addr_reg) ;
+    for (MachineMemOperand *MMO : MI.memoperands()) {
+      tldst->addMemOperand(*MI.getMF(), MMO);
+    }
+    if (use_offset_reg!=AArch64::XZR) {
+      tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXrr), def_addr_reg)
+                 .addReg(use_addr_reg).addReg(use_offset_reg) ;
+
+    } else {
+      tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addr_reg)
+                 .addReg(use_addr_reg).addImm(4).addImm(0) ;
+
+    }
     break;
   case AArch64::STRSpost:
-    def_addrreg = MI.getOperand(0).getReg();
-    val = MI.getOperand(1).getReg();
-    use_addrreg = MI.getOperand(2).getReg();
+    def_addr_reg = MI.getOperand(0).getReg();
+    use_val = MI.getOperand(1).getReg();
+    use_addr_reg = MI.getOperand(2).getReg();
     imm = MI.getOperand(3).getImm();
 
     tldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::STURSi))
-               .addReg(val).addReg(use_addrreg).addImm(0) ;
+                .addReg(use_val).addReg(use_addr_reg).addImm(0) ;
     for (MachineMemOperand *MMO : MI.memoperands()) {
       tldst->addMemOperand(*MI.getMF(), MMO);
     }
-    tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addrreg)
-              .addReg(use_addrreg).addImm(imm).addImm(0) ;
-    if (ldst!=nullptr) *ldst=tldst;
-    if (add!=nullptr) *add=tadd;
+    tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addr_reg)
+               .addReg(use_addr_reg).addImm(imm).addImm(0) ;
+    break;
+  case AArch64::STRDpost:
+    def_addr_reg = MI.getOperand(0).getReg();
+    use_val = MI.getOperand(1).getReg();
+    use_addr_reg = MI.getOperand(2).getReg();
+    imm = MI.getOperand(3).getImm();
+
+    tldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::STURDi))
+                .addReg(use_val).addReg(use_addr_reg).addImm(0) ;
+    for (MachineMemOperand *MMO : MI.memoperands()) {
+      tldst->addMemOperand(*MI.getMF(), MMO);
+    }
+    tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addr_reg)
+               .addReg(use_addr_reg).addImm(imm).addImm(0) ;
+    break;
+  case AArch64::ST2Twov4s_POST:
+    def_addr_reg = MI.getOperand(0).getReg();
+    use_val = MI.getOperand(1).getReg();
+    use_addr_reg = MI.getOperand(2).getReg();
+    use_offset_reg = MI.getOperand(3).getReg();
+
+    tldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ST2Twov4s))
+                .addReg(use_val).addReg(use_addr_reg);
+    for (MachineMemOperand *MMO : MI.memoperands()) {
+      tldst->addMemOperand(*MI.getMF(), MMO);
+    }
+    if (use_offset_reg!=AArch64::XZR) {
+      tadd =
+          BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addr_reg)
+              .addReg(use_addr_reg)
+              .addImm(32) /* (Two)2*(v4)4*(s)4  */
+              .addImm(0);
+    } else {
+      tadd =
+          BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXrr), def_addr_reg)
+              .addReg(use_addr_reg)
+              .addReg(use_offset_reg);
+
+    }
     break;
   default:
     return false;
   }
+
+  if (ldst!=nullptr) *ldst=tldst;
+  if (add!=nullptr) *add=tadd;
 
   return true;
 }
