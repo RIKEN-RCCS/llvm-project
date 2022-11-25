@@ -8294,15 +8294,15 @@ bool AArch64InstrInfo::splitPrePostIndexInstr(
     }
     if (use_offset_reg!=AArch64::XZR) {
       tadd =
+          BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXrr), def_addr_reg)
+              .addReg(use_addr_reg)
+              .addReg(use_offset_reg);
+    } else {
+      tadd =
           BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addr_reg)
               .addReg(use_addr_reg)
               .addImm(32) /* (Two)2*(v4)4*(s)4  */
               .addImm(0);
-    } else {
-      tadd =
-          BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXrr), def_addr_reg)
-              .addReg(use_addr_reg)
-              .addReg(use_offset_reg);
 
     }
     break;
