@@ -641,7 +641,7 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const UseMap &LiveOutReg) {
   /// cloneBody() を呼び出し、MachineBasickBlockの複製とレジスタリネーミングを行う。
   cloneBody(new_bb, ob);
   /// convertPostPreIndeTo()を呼び出し、post/pre index命令を演算＋load/store命令に変換する
-  if (DisableConvPrePost)
+  if (!DisableConvPrePost)
     convertPrePostIndexInstr(new_bb);
   /// convertNonSSA() を呼び出し、非SSA化と複製したMachineBasicBlockの回収を行う。
   convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);
@@ -659,6 +659,12 @@ void SwplLoop::convertPrePostIndexInstr(llvm::MachineBasicBlock *body) {
       OrgMI2NewMI[org] = ldst;
       NewMI2OrgMI[ldst] = org;
       NewMI2OrgMI[add] = org;
+      if (DebugOutput) {
+        dbgs() << "DBG(SwplLoop::convertPrePostIndexInstr)\n";
+        dbgs() << " before:" << mi;
+        dbgs() << " after 1:" << *ldst;
+        dbgs() << " after 2:" << *add;
+      }
 
       // MBBから削除する命令の収集
       delete_mi.push_back(&mi);
