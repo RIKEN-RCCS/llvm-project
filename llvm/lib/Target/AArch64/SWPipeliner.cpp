@@ -1,4 +1,4 @@
-//=- AArch64SWPipeliner.cpp - Machine Software Pipeliner Pass -*- c++ -*-----=//
+//=- SWPipeliner.cpp - Machine Software Pipeliner Pass -*- c++ -*------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// AArch64 Machine Software Pipeliner Pass.
+// Machine Software Pipeliner Pass.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,12 +21,11 @@
 #include "llvm/InitializePasses.h"
 #include "AArch64TargetTransformInfo.h"
 
-#include "AArch64SWPipeliner.h"
-#include "AArch64SwplDataDependenceAnalysis.h"
-#include "AArch64SwplPlan.h"
-#include "AArch64SwplScr.h"
 #include "AArch64SwplTargetMachine.h"
-#include "AArch64SwplTransformMIR.h"
+#include "SWPipeliner.h"
+#include "SwplPlan.h"
+#include "SwplScr.h"
+#include "SwplTransformMIR.h"
 
 using namespace llvm;
 using namespace swpl;
@@ -38,9 +37,19 @@ static cl::opt<unsigned> MaxInstNum("swpl-max-inst-num",cl::init(500), cl::Reall
 static cl::opt<unsigned> MaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyHidden);
 static cl::opt<int> TestStm("swpl-test-tm",cl::init(0), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpPlan("swpl-debug-dump-plan",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> EnablesplitInst_swp_pre("swpl-splitinst-swppre",cl::init(false), cl::ReallyHidden);
+
+// TargetLoopのMI出力オプション
+static cl::opt<bool> OptionDumpTargetLoop("swpl-debug-dump-targetloop",cl::init(false), cl::ReallyHidden);
+// TargetLoopのMI出力オプション（swpl処理は迂回）
+static cl::opt<bool> OptionDumpTargetLoopOnly("swpl-debug-dump-targetloop-only",cl::init(false), cl::ReallyHidden);
 
 /// Pragmaによるswpのon/offの代わりにSWPL化Loopを絞り込む
 static cl::opt<int> TargetLoop("swpl-choice-loop",cl::init(0), cl::ReallyHidden);
+
+// TODO:STEP2でTIIに移動したisNonTargetMI4SWPL()に変更する
+bool isNonTargetMI4SWPL(MachineInstr &inst);
+
 
 namespace swpl {
 cl::opt<bool> DebugOutput("swpl-debug",cl::init(false), cl::ReallyHidden);
@@ -60,7 +69,7 @@ static bool isCompMI(MachineInstr *MI, AArch64CC::CondCode CC);
 
 namespace {
 
-struct AArch64SWPipeliner : public MachineFunctionPass {
+struct SWPipeliner : public MachineFunctionPass {
 public:
   static char ID;               ///< PassのID
 
@@ -68,10 +77,10 @@ public:
   const MachineLoopInfo *MLI = nullptr;
 
   /**
-   * \brief AArch64SWPipelinerのコンストラクタ
+   * \brief SWPipelinerのコンストラクタ
    */
-  AArch64SWPipeliner() : MachineFunctionPass(ID) {
-    initializeAArch64SWPipelinerPass(*PassRegistry::getPassRegistry());
+  SWPipeliner() : MachineFunctionPass(ID) {
+    initializeSWPipelinerPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnMachineFunction(MachineFunction &mf) override;
@@ -93,26 +102,28 @@ public:
    * 名前を指定する。
    */
   StringRef getPassName() const override {
-    return "AArch64 Software Pipeliner";
+    return "Software Pipeliner";
   }
 private:
   bool canPipelineLoop(MachineLoop &L);
   bool scheduleLoop(MachineLoop &L);
   bool isNonTargetLoop(MachineLoop &L);
+  bool isNonTargetLoopForInstDump(MachineLoop &L);
+  void dumpLoopInst(MachineLoop &L);
   void outputRemarkAnalysis(MachineLoop &L, int msg_id);
   bool shouldOptimize(MachineLoop &L);
   swpl::StmTest *stmTest =nullptr; ///< Stmのテスト用領域
 };
 
-struct AArch64PreSWPipeliner : public MachineFunctionPass {
+struct SWPipelinerPre : public MachineFunctionPass {
 public:
   static char ID;               ///< PassのID
 
   /**
-   * \brief AArch64SWPipelinerのコンストラクタ
+   * \brief SWPipelinerPreのコンストラクタ
    */
-  AArch64PreSWPipeliner() : MachineFunctionPass(ID) {
-    initializeAArch64PreSWPipelinerPass(*PassRegistry::getPassRegistry());
+  SWPipelinerPre() : MachineFunctionPass(ID) {
+    initializeSWPipelinerPrePass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnMachineFunction(MachineFunction &mf) override;
@@ -133,7 +144,7 @@ public:
    * 名前を指定する。
    */
   StringRef getPassName() const override {
-    return "AArch64 Pre Software Pipeliner";
+    return "Pre Software Pipeliner";
   }
 private:
   bool check(MachineLoop &L);
@@ -148,22 +159,22 @@ private:
 };
 } // end of anonymous namespace
 
-char AArch64SWPipeliner::ID = 0;
+char SWPipeliner::ID = 0;
 
-INITIALIZE_PASS_BEGIN(AArch64SWPipeliner, DEBUG_TYPE,
-                      "AArch64 Software Pipeliner", false, false)
+INITIALIZE_PASS_BEGIN(SWPipeliner, DEBUG_TYPE,
+                      "Software Pipeliner", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(AArch64SWPipeliner, DEBUG_TYPE,
-                    "AArch64 Software Pipeliner", false, false)
+INITIALIZE_PASS_END(SWPipeliner, DEBUG_TYPE,
+                    "Software Pipeliner", false, false)
 
 /**
- * \brief AArch64SWPipelinerを生成する
+ * \brief SWPipelinerを生成する
  *
- * \retval FunctionPass 生成されたAArch64SWPipeliner
+ * \retval FunctionPass 生成されたSWPipeliner
  */
-FunctionPass *llvm::createAArch64SWPipelinerPass() {
-  return new AArch64SWPipeliner();
+FunctionPass *llvm::createSWPipelinerPass() {
+  return new SWPipeliner();
 }
 
 /**
@@ -173,7 +184,7 @@ FunctionPass *llvm::createAArch64SWPipelinerPass() {
  * \retval true  MF に変更を加えたことを示す
  * \retval false MF を変更していないことを示す
  */
-bool AArch64SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
+bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
   bool Modified = false;
   loopCountForDebug=0;
   if (!mf.getSubtarget().getSchedModel().hasInstrSchedModel()) {
@@ -208,7 +219,7 @@ bool AArch64SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
   return Modified;
 }
 
-bool AArch64SWPipeliner::doFinalization(Module &) {
+bool SWPipeliner::doFinalization(Module &) {
 #ifdef STMTEST
   if (TestStm && stmTest !=nullptr) {
     // testで利用する領域の解放
@@ -238,7 +249,7 @@ static void printDebug(const char *f, const StringRef &msg, const MachineLoop &L
  * \retval true  Swpl最適化を適用した。
  * \retval false Swpl最適化を適用しなかった。
  */
-bool AArch64SWPipeliner::scheduleLoop(MachineLoop &L) {
+bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   bool Changed = false;
   for (auto &InnerLoop : L)
     Changed |= scheduleLoop(*InnerLoop);
@@ -256,6 +267,11 @@ bool AArch64SWPipeliner::scheduleLoop(MachineLoop &L) {
              << "Failed to pipeline loop";
     });
 
+    return Changed;
+  }
+
+  // TargetLoopのMI出力オプション（swpl処理は迂回）の場合はswpl処理を迂回する
+  if( OptionDumpTargetLoopOnly ) {
     return Changed;
   }
 
@@ -325,7 +341,7 @@ enum MsgID {
   MsgID_swpl_not_covered_inst,
   MsgID_swpl_not_covered_loop_shape
 };
-void AArch64SWPipeliner::outputRemarkAnalysis(MachineLoop &L, int msg_id) {
+void SWPipeliner::outputRemarkAnalysis(MachineLoop &L, int msg_id) {
   switch (msg_id) {
   case MsgID_swpl_branch_not_for_loop:
     ORE->emit([&]() {
@@ -374,7 +390,7 @@ void AArch64SWPipeliner::outputRemarkAnalysis(MachineLoop &L, int msg_id) {
  * \retval true  Swpl最適化対象指示がある
  * \retval false Swpl最適化対象指示がない。もしくは最適化抑止指示がある。
  */
-bool AArch64SWPipeliner::shouldOptimize(MachineLoop &L) {
+bool SWPipeliner::shouldOptimize(MachineLoop &L) {
   MachineBasicBlock *MBB = L.getTopBlock();
   
   const BasicBlock *BB = MBB->getBasicBlock();
@@ -395,7 +411,7 @@ bool AArch64SWPipeliner::shouldOptimize(MachineLoop &L) {
  * \retval true  Swpl最適化対象のループである。
  * \retval false Swpl最適化対象のループではない。
  */
-bool AArch64SWPipeliner::canPipelineLoop(MachineLoop &L) {
+bool SWPipeliner::canPipelineLoop(MachineLoop &L) {
   // ローカルオプションによる機能抑止
   if (DisableSwpl) {
     printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by local option. ", L);
@@ -418,12 +434,17 @@ bool AArch64SWPipeliner::canPipelineLoop(MachineLoop &L) {
     return false;
   }
   
+  // ローカルオプションによるTargetLoopのMI出力
+  if( (OptionDumpTargetLoop || OptionDumpTargetLoopOnly)  && !(isNonTargetLoopForInstDump(L)) ) {
+      dumpLoopInst(L);
+  }
+
   // BasicBlock内の命令チェック
   if (isNonTargetLoop(L)) {
     printDebug(__func__, "[canPipelineLoop:NG] Unable to analyzeLoop, can NOT pipeline Loop. ", L);
     return false;
   }
-  
+
   // 対象ループ判定だけして最適化は未実施 
   printDebug(__func__, "[canPipelineLoop:OK] Passed all checks. ", L);
 
@@ -512,7 +533,7 @@ static bool isCompMI(MachineInstr *MI, AArch64CC::CondCode CC) {
  * \retval true  最適化対象ループではない。
  * \retval false 最適化対象ループである。
  */
-bool AArch64SWPipeliner::isNonTargetLoop(MachineLoop &L) {
+bool SWPipeliner::isNonTargetLoop(MachineLoop &L) {
   MachineBasicBlock *LoopBB = L.getTopBlock();
 
   AArch64CC::CondCode _NE = AArch64CC::NE;
@@ -524,7 +545,7 @@ bool AArch64SWPipeliner::isNonTargetLoop(MachineLoop &L) {
   int mem_counter=MaxMemNum;
   AArch64CC::CondCode CC;
 
-  // 命令数はBasickBlockから取得できる
+  //命令数はBasickBlockから取得できる
   if (LoopBB->size() > MaxInstNum) {
     printDebug(__func__, "pipeliner info:over inst limit num", L);
     outputRemarkAnalysis(L, MsgID_swpl_many_insts);
@@ -553,16 +574,9 @@ bool AArch64SWPipeliner::isNonTargetLoop(MachineLoop &L) {
           outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
           return true;
     }
-    // gnuasm命令である
-    auto Op = I->getOpcode();
-    if (Op == AArch64::INLINEASM || Op == AArch64::INLINEASM_BR) {
-      printDebug(__func__, "pipeliner info:found gnuasm", L);
-      outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
-      return true;
-    }
-    // DMB命令（fence相当）である
-    if (Op == AArch64::DMB) {
-      printDebug(__func__, "pipeliner info:found non-target-inst", L);
+    // fenceもしくはgnuasm命令である
+    if (isNonTargetMI4SWPL(*I)) {
+      printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
       outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
       return true;
     }
@@ -628,23 +642,142 @@ bool AArch64SWPipeliner::isNonTargetLoop(MachineLoop &L) {
   return false;
 }
 
+/**
+ * \brief isNonTargetLoopForInstDump
+ *        ローカルオプションによるMI出力対象かを判定する
+ * \details 判定内容は、isNonTargetLoopの判定のうち、
+ *          以下の判定を除いたものとしている。
+ *          - ループ制御命令の判定
+ *          - ループ内の命令数/メモリアクセス命令数の判定
+ * \param[in] L 対象のMachineLoop
+ * \retval true  ローカルオプションによるMI出力対象ループでない
+ * \retval false ローカルオプションによるMI出力対象ループである
+ */
+bool SWPipeliner::isNonTargetLoopForInstDump(MachineLoop &L) {
+  MachineBasicBlock *LoopBB = L.getTopBlock();
+  MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
+  MachineBasicBlock::iterator E = LoopBB->getFirstNonDebugInstr();
 
-char AArch64PreSWPipeliner::ID = 0;
-
-INITIALIZE_PASS_BEGIN(AArch64PreSWPipeliner, "aarch64-preswpipeliner",
-                      "AArch64 Pre Software Pipeliner", false, false)
-  INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-  INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(AArch64PreSWPipeliner, "aarch64-preswpipeliner",
-                    "AArch64 Pre Software Pipeliner", false, false)
+  for (; I != E; --I) {
+    // Callである
+    if (I->isCall()) {
+      printDebug(__func__, "pipeliner info:found call", L);
+      outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
+      return true; // 対象でない
+    }
+    if (EnableSensitiveCheck && I->mayRaiseFPException()) {
+        printDebug(__func__, "pipeliner info:found mayRaiseFPException", L);
+        outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
+        return true; // 対象でない
+    }
+    if (EnableSensitiveCheck && I->hasUnmodeledSideEffects()) {
+      printDebug(__func__, "pipeliner info:found hasUnmodeledSideEffects", L);
+      outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
+      return true; // 対象でない
+    }
+    if (EnableSensitiveCheck && I->hasOrderedMemoryRef() &&  (!I->mayLoad() || !I->isDereferenceableInvariantLoad())) {
+          printDebug(__func__, "pipeliner info:found hasOrderedMemoryRef", L);
+          outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
+          return true; // 対象でない
+    }
+    // fenceもしくはgnuasm命令である
+    if (isNonTargetMI4SWPL(*I)) {
+      printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
+      outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
+      return true; // 対象でない
+    }
+    // volatile属性を含む命令である
+    for (MachineMemOperand *MMO : I->memoperands()) {
+      if (MMO->isVolatile()) {
+        printDebug(__func__, "pipeliner info:found volataile operand", L);
+        outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
+        return true; // 対象でない
+      }
+    }
+  }
+  return false; // 対象である
+}
 
 /**
- * \brief AArch64PreSWPipelinerを生成する
- *
- * \retval FunctionPass 生成されたAArch64PreSWPipeliner
+ * \brief dumpLoopInst
+ *        MachineLoopのFirstNonDebugInstrからFirstTerminatorの命令をdumpする
+ * \details 命令のdumpは、以下の情報をTSVで出力する。
+ *  - 関数名
+ *  - 行番号
+ *  - opcode名
+ *  - Pseudo命令であれば"PSEUDO"。Pseudo命令でない場合は空フィールド
+ *  - 命令が持つメモリオペランド数を出力
+ *  - MI.dump()
+ * \param[in] L 対象のMachineLoop
+ * \return なし
  */
-FunctionPass *llvm::createAArch64PreSWPipelinerPass() {
-  return new AArch64PreSWPipeliner();
+void SWPipeliner::dumpLoopInst(MachineLoop &L) {
+  auto topblock = L.getTopBlock();
+
+  // 関数名を取得
+  auto funcname = topblock->getParent()->getName();
+
+  MachineBasicBlock::iterator I = topblock->getFirstNonDebugInstr();
+  MachineBasicBlock::iterator E = topblock->getFirstTerminator();
+  for (; I != E; I++) {
+    // 関数名を出力
+    dbgs() << funcname;
+    dbgs() << "\t";
+
+    // 行番号を出力
+    auto DL = I->getDebugLoc();
+    if( DL.get() ) {
+      dbgs() << DL.getLine();
+    }
+    else {
+      dbgs() << " ";
+    }
+    dbgs() << "\t";
+    
+    // opcode名を出力
+    if (TII) {
+      dbgs() << TII->getName(I->getOpcode());
+    }
+    else {
+      dbgs() << "UNKNOWN";
+    }
+    dbgs() << "\t";
+
+    // Pseudo命令かを出力
+    if( I->isPseudo() ) {
+      dbgs() << "PSEUDO";
+    }
+    else {
+      dbgs() << " ";
+    }
+    dbgs() << "\t";
+
+    // 命令が持つメモリオペランド数を出力
+    dbgs() << I->getNumMemOperands();
+    dbgs() << "\t";
+    
+    // MachineInstrをダンプ
+    I->print(dbgs());
+  }
+}
+
+
+char SWPipelinerPre::ID = 0;
+
+INITIALIZE_PASS_BEGIN(SWPipelinerPre, "swpipelinerpre",
+                      "Software Pipeliner Pre", false, false)
+  INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+  INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_END(SWPipelinerPre, "swpipelinerpre",
+                    "Software Pipeliner Pre", false, false)
+
+/**
+ * \brief SWPipelinerPreを生成する
+ *
+ * \retval FunctionPass 生成されたSWPipelinerPre
+ */
+FunctionPass *llvm::createSWPipelinerPrePass() {
+  return new SWPipelinerPre();
 }
 
 /**
@@ -654,7 +787,7 @@ FunctionPass *llvm::createAArch64PreSWPipelinerPass() {
  * \retval true  MF に変更を加えたことを示す
  * \retval false MF を変更していないことを示す
  */
-bool AArch64PreSWPipeliner::runOnMachineFunction(MachineFunction &mf) {
+bool SWPipelinerPre::runOnMachineFunction(MachineFunction &mf) {
   bool Modified = false;
   if (!mf.getSubtarget().getSchedModel().hasInstrSchedModel()) {
     // schedmodelを持たないプロセッサ用のコードなので、本祭最適化は適用しない。
@@ -672,7 +805,7 @@ bool AArch64PreSWPipeliner::runOnMachineFunction(MachineFunction &mf) {
   return Modified;
 }
 
-bool AArch64PreSWPipeliner::check(MachineLoop &L) {
+bool SWPipelinerPre::check(MachineLoop &L) {
   bool Changed = false;
   for (auto &InnerLoop : L)
     Changed |= check(*InnerLoop);
@@ -709,26 +842,40 @@ bool AArch64PreSWPipeliner::check(MachineLoop &L) {
   if (!hasPreHeader(L)) Changed|=createPreHeader(L);
   if (!hasExit(L)) Changed|=createExit(L);
 
+  if (EnablesplitInst_swp_pre) {
+    llvm::SmallVector<MachineInstr *, 2> delete_mi;
+    for (auto &mi:*body) {
+      if (TII->splitPrePostIndexInstr(*body, mi, nullptr, nullptr)) {
+        Changed=true;
+
+        // MBBから削除する命令の収集
+        delete_mi.push_back(&mi);
+      }
+    }
+    for (auto *m : delete_mi)
+      m->eraseFromParent();
+  }
+
   return Changed;
 }
 
-bool AArch64PreSWPipeliner::doFinalization(Module &) {
+bool SWPipelinerPre::doFinalization(Module &) {
   return false;
 }
-bool AArch64PreSWPipeliner::hasPreHeader(MachineLoop &L) {
+bool SWPipelinerPre::hasPreHeader(MachineLoop &L) {
   if (DebugOutput) {
-    dbgs() << "DBG(AArch64PreSWPipeliner::hasPreHeader: " << L;
+    dbgs() << "DBG(SWPipelinerPre::hasPreHeader: " << L;
   }
   auto *body=L.getTopBlock();
   return body->pred_size()==2;
 }
-bool AArch64PreSWPipeliner::hasExit(MachineLoop &L) {
+bool SWPipelinerPre::hasExit(MachineLoop &L) {
   auto *body=L.getTopBlock();
   return body->succ_size()==2;
 }
-bool AArch64PreSWPipeliner::createPreHeader(MachineLoop &L) {
+bool SWPipelinerPre::createPreHeader(MachineLoop &L) {
   if (DebugOutput) {
-    dbgs() << "DBG(AArch64PreSWPipeliner::createPreHeader: loop-body mir(before)\n";
+    dbgs() << "DBG(SWPipelinerPre::createPreHeader: loop-body mir(before)\n";
     dbgs() << *(L.getTopBlock());
   }
   auto *body=L.getTopBlock();
@@ -789,16 +936,16 @@ bool AArch64PreSWPipeliner::createPreHeader(MachineLoop &L) {
   // 最後にPHのSuccをBodyに変更する
   ph->addSuccessor(body);
   if (DebugOutput) {
-    dbgs() << "DBG(AArch64PreSWPipeliner::createPreHeader: loop-body-mir(after)\n";
+    dbgs() << "DBG(SWPipelinerPre::createPreHeader: loop-body-mir(after)\n";
     dbgs() << *(L.getTopBlock());
   }
 
   return true;
 }
 
-bool AArch64PreSWPipeliner::createExit(MachineLoop &L) {
+bool SWPipelinerPre::createExit(MachineLoop &L) {
   if (DebugOutput) {
-    dbgs() << "DBG(AArch64PreSWPipeliner::createExit\n";
+    dbgs() << "DBG(SWPipelinerPre::createExit\n";
     dbgs() << *(L.getTopBlock());
   }
   return false;

@@ -1,4 +1,4 @@
-//=- AArch64SwplPlan.h - Classes as cheduling results in SWPL -*- C++ -*-----=//
+//=- SwplPlan.h - Classes as cheduling results in SWPL -*- C++ -*------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,25 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AARCH64_AARCH64SWPLPLAN_H
-#define LLVM_LIB_TARGET_AARCH64_AARCH64SWPLPLAN_H
+#ifndef LLVM_LIB_CODEGEN_SWPLPLAN_H
+#define LLVM_LIB_CODEGEN_SWPLPLAN_H
 
 #include "AArch64.h"
 
-#include "AArch64SWPipeliner.h"
+#include "SWPipeliner.h"
 
 namespace swpl{
 extern  llvm::cl::opt<bool> DebugOutput;
 
-/// Policyを表すenum
-enum class SwplSchedPolicy {
-                            /// ループ毎に自動選択
-                            SWPL_SCHED_POLICY_AUTO,
-                            /// 小さなループに適した方法を使う
-                            SWPL_SCHED_POLICY_SMALL,
-                            /// 大きなループに適した方法を使う
-                            SWPL_SCHED_POLICY_LARGE,
-};
 
 /// スケジューリング結果の状態を表すenum
 enum class TryScheduleResult {
@@ -98,6 +89,7 @@ public:
   void dump();
 };
 
+class MsResourceResult;
 
 /// \brief スケジューリング結果を保持するクラス
 /// \details transform mirへ渡す情報となる
@@ -114,7 +106,12 @@ class SwplPlan {
   size_t prolog_cycles;        ///< prolog部分の（MVE展開後の）サイクル数
   size_t kernel_cycles;        ///< kernal部分のサイクル数
   size_t epilog_cycles;        ///< epilog部分のサイクル数
-  SwplSchedPolicy policy;      ///< スケジューリングポリシー
+  unsigned num_necessary_ireg; ///< スケジューリング結果から算出した必要な整数レジスタ
+  unsigned num_necessary_freg; ///< スケジューリング結果から算出した必要な浮動小数点数レジスタ
+  unsigned num_necessary_preg; ///< スケジューリング結果から算出した必要なプレディケートレジスタ
+  unsigned num_max_ireg;       ///< 整数レジスタの最大数(ローカルオプションによる調整込み)
+  unsigned num_max_freg;       ///< 浮動小数点数レジスタの最大数(ローカルオプションによる調整込み)
+  unsigned num_max_preg;       ///< プレディケートレジスタの最大数(ローカルオプションによる調整込み)
 
 public:
   SwplPlan(const SwplLoop& loop) : loop(loop) {} ///< constructor
@@ -129,13 +126,18 @@ public:
   unsigned getIterationInterval() const { return iteration_interval; } ///< getter
   size_t getNIterationCopies() const { return n_iteration_copies; } ///< getter
   size_t getNRenamingVersions() const { return n_renaming_versions; } ///< getter
-  SwplSlot getBeginSlot() { return begin_slot; } ///< getter
-  SwplSlot getEndSlot() { return end_slot; } ///< getter
-  SwplSchedPolicy getPolicy() const { return policy; } ///< getter
-  size_t getEpilogCycles() { return epilog_cycles; } ///< getter
-  size_t getKernelCycles() { return kernel_cycles; } ///< getter
-  size_t getPrologCycles() { return prolog_cycles; } ///< getter
-  size_t getTotalCycles() { return total_cycles; } ///< getter
+  SwplSlot getBeginSlot() const { return begin_slot; } ///< getter
+  SwplSlot getEndSlot() const { return end_slot; } ///< getter
+  size_t getEpilogCycles() const { return epilog_cycles; } ///< getter
+  size_t getKernelCycles() const { return kernel_cycles; } ///< getter
+  size_t getPrologCycles() const { return prolog_cycles; } ///< getter
+  size_t getTotalCycles() const { return total_cycles; } ///< getter
+  unsigned getNecessaryIreg() const { return num_necessary_ireg; } ///< getter
+  unsigned getNecessaryFreg() const { return num_necessary_freg; } ///< getter
+  unsigned getNecessaryPreg() const { return num_necessary_preg; } ///< getter
+  unsigned getMaxIreg() const { return num_max_ireg; } ///< getter
+  unsigned getMaxFreg() const { return num_max_freg; } ///< getter
+  unsigned getMaxPreg() const { return num_max_preg; } ///< getter
 
   ////////////////////
   // setters
@@ -147,7 +149,6 @@ public:
   void setBeginSlot( unsigned arg ) { begin_slot = arg; } ///< setter
   void setEndSlot( SwplSlot arg ) { end_slot = arg; } ///< setter
   void setEndSlot( unsigned arg ) { end_slot = arg; } ///< setter
-  void setPolicy( SwplSchedPolicy arg ) { policy = arg; } ///< setter
   void setEpilogCycles( size_t arg ) { epilog_cycles = arg; } ///< setter
   void setKernelCycles( size_t arg ) { kernel_cycles = arg; } ///< setter
   void setPrologCycles( size_t arg ) { prolog_cycles = arg; } ///< setter
@@ -156,7 +157,6 @@ public:
   unsigned relativeInstSlot(const SwplInst& c_inst) const;
   int getTotalSlotCycles();
   void printInstTable();
-  std::string getPolicyString() const;
   void dump(raw_ostream &stream);
   void dumpInstTable(raw_ostream &stream);
 
@@ -168,29 +168,27 @@ public:
                              SwplInstSlotHashmap& inst_slot_map,
                              unsigned min_ii,
                              unsigned ii,
-                             SwplSchedPolicy policy);
+                             const MsResourceResult& resource);
   static void destroy(SwplPlan* plan);
   static SwplPlan* generatePlan(SwplDdg& ddg);
-  static std::string getPolicyString(SwplSchedPolicy policy);
 
 private:
   static unsigned calculateResourceII(const SwplLoop& c_loop);
   static unsigned calcResourceMinIterationInterval(const SwplLoop& c_loop);
   static TryScheduleResult trySchedule(const SwplDdg& c_ddg,
                                        unsigned res_mii,
-                                       SwplSchedPolicy policy,
                                        SwplInstSlotHashmap** inst_slot_map,
                                        unsigned* selected_ii,
                                        unsigned* calculated_min_ii,
-                                       unsigned* required_itr);
+                                       unsigned* required_itr,
+                                       MsResourceResult* resource);
   static TryScheduleResult selectPlan(const SwplDdg& c_ddg,
-                                      SwplSchedPolicy policy,
                                       SwplInstSlotHashmap& rslt_inst_slot_map,
                                       unsigned* selected_ii,
                                       unsigned* calculated_min_ii,
-                                      SwplSchedPolicy* selected_policy,
-                                      unsigned* required_itr);
+                                      unsigned* required_itr,
+                                      MsResourceResult& resource);
 };
 
 }
-#endif // LLVM_LIB_TARGET_AARCH64_AARCH64SWPLPLAN_H
+#endif

@@ -12,9 +12,9 @@
 
 #include "AArch64.h"
 
-#include "AArch64SWPipeliner.h"
 #include "AArch64SwplTargetMachine.h"
 #include "AArch64TargetTransformInfo.h"
+#include "SWPipeliner.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/raw_ostream.h"

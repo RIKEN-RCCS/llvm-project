@@ -2000,6 +2000,12 @@ public:
     return MI.getOperand(0);
   }
 
+  /// Split pre/post index instructions
+  virtual bool splitPrePostIndexInstr(
+      MachineBasicBlock &MBB, MachineInstr &MI, MachineInstr **ldst, MachineInstr **add ) const {
+    return false;
+  }
+
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;

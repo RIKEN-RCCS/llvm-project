@@ -1,4 +1,4 @@
-//=- AArch64SwplTransformMIR.cpp -  Transform MachineIR for SWP -*- C++ -*---=//
+//=- SwplTransformMIR.cpp -  Transform MachineIR for SWP -*- C++ -*----------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,13 +19,13 @@ namespace swpl {
   struct TransformedMIRInfo;
 }
 
-#include "AArch64SwplTransformMIR.h"
+#include "SwplTransformMIR.h"
 #include "AArch64.h"
-#include "AArch64SWPipeliner.h"
-#include "AArch64SwplPlan.h"
-#include "AArch64SwplScr.h"
 #include "AArch64SwplTargetMachine.h"
 #include "AArch64TargetTransformInfo.h"
+#include "SWPipeliner.h"
+#include "SwplPlan.h"
+#include "SwplScr.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -91,36 +91,28 @@ bool SwplTransformMIR::transformMIR() {
     }
 
     /// (2-7) outputLoopoptMessage() SWPL成功の最適化messageを出力する
-    outputLoopoptMessage(n_body_real_inst, Plan.getPolicy());
+    outputLoopoptMessage(n_body_real_inst);
   }
 
   if (swpl::DebugOutput) {
     /// (3) "-swpl-debug"が指定されている場合は、デバッグ情報を出力する
     if (TMI.isNecessaryTransformMIR()){
-      const char *p;
-      switch(Plan.getPolicy()) {
-      case swpl::SwplSchedPolicy::SWPL_SCHED_POLICY_SMALL:p="S";break;
-      case swpl::SwplSchedPolicy::SWPL_SCHED_POLICY_LARGE:p="L";break;
-      default:p="A";break;
-      }
       dbgs()  << formatv(
               "        :\n"
               "        : Loop is software pipelined. (ii={0}, kernel={1} cycles, prologue,epilogue ={2} cycles)\n"
-              "        :      {3}\n"
-              "        :      IPC (initial={4}, real={5}, rate={6:P})\n"
-              "        :      = Instructions({7})/II({8})\n"
-              "        :      Virtual inst:({9})\n"
+              "        :      IPC (initial={3}, real={4}, rate={5:P})\n"
+              "        :      = Instructions({6})/II({7})\n"
+              "        :      Virtual inst:({8})\n"
               "        :\n",
               /* 0 */ (int)TMI.iterationInterval,
               /* 1 */ (int)(TMI.iterationInterval * TMI.nVersions),
               /* 2 */ (int)(TMI.iterationInterval * (TMI.nCopies - TMI.nVersions)),
-              /* 3 */ p,
-              /* 4 */ (float)n_body_real_inst / (float)TMI.minimumIterationInterval,
-              /* 5 */ (float)n_body_real_inst / (float)TMI.iterationInterval,
-              /* 6 */ (float)TMI.minimumIterationInterval / (float)TMI.iterationInterval,
-              /* 7 */ (int)n_body_real_inst,
-              /* 8 */ (int)TMI.iterationInterval,
-              /* 0 */ (int)(n_body_inst - n_body_real_inst));
+              /* 3 */ (float)n_body_real_inst / (float)TMI.minimumIterationInterval,
+              /* 4 */ (float)n_body_real_inst / (float)TMI.iterationInterval,
+              /* 5 */ (float)TMI.minimumIterationInterval / (float)TMI.iterationInterval,
+              /* 6 */ (int)n_body_real_inst,
+              /* 7 */ (int)TMI.iterationInterval,
+              /* 8 */ (int)(n_body_inst - n_body_real_inst));
     } else {
       dbgs() <<
               "        :\n"
@@ -225,7 +217,7 @@ SwplTransformMIR::controlVReg2RegInLoop(const SwplInst **updateInst) {
   /// (1) レジスタ同士の変換はできないため、（誘導変数更新MIRである）UpdateDoVRegMIの変換後MIRを取得し、そのOP1を利用する
   TMI.nonSSAOriginalDoVReg =update->getOperand(1).getReg();
   const auto *copy=map[TMI.initDoVRegMI];
-  assert(copy->getOpcode()==AArch64::COPY);
+  assert(copy->getOpcode()==TargetOpcode::COPY);
   TMI.nonSSAOriginalDoInitVar=copy->getOperand(1).getReg();
 
   LLVM_DEBUG(dbgs() << "updateDoVRegMI:" << *(TMI.updateDoVRegMI));
@@ -635,7 +627,7 @@ void SwplTransformMIR::prepareMIs() {
       if (newReg == originalSReg.getReg()) {
         continue;
       }
-      llvm::MachineInstr *copy=BuildMI(MF,firstMI->getDebugLoc(),TII->get(AArch64::COPY), newReg)
+      llvm::MachineInstr *copy=BuildMI(MF,firstMI->getDebugLoc(),TII->get(TargetOpcode::COPY), newReg)
                                   .addReg(originalSReg.getReg());
       TMI.mis.push_back(copy);
     }
@@ -657,7 +649,7 @@ void SwplTransformMIR::setVReg(const swpl::SwplReg *orgReg, size_t version, llvm
   regs->at(version)=newReg;
 }
 
-void SwplTransformMIR::outputLoopoptMessage(int n_body_inst, SwplSchedPolicy policy) {
+void SwplTransformMIR::outputLoopoptMessage(int n_body_inst) {
 
   int ipc100=0;
   assert(TMI.iterationInterval != 0);
@@ -678,8 +670,20 @@ void SwplTransformMIR::outputLoopoptMessage(int n_body_inst, SwplSchedPolicy pol
   } else if (mve > 255) {
     mve = 255;
   }
-  std::string msg=formatv("software pipelining (IPC: {0}, ITR: {1}, MVE: {2}, POL: {3})",
-                          (ipc100/100.), TMI.nCopies, mve, (policy==SwplSchedPolicy::SWPL_SCHED_POLICY_SMALL?"S":"L"));
+  std::string msg=formatv("software pipelining ("
+                          "IPC: {0}, ITR: {1}, MVE: {2}, II: {3}, Stage: {4}, "
+                          "(VReg Fp: {5}/{6}, Int: {7}/{8}, Pred: {9}/{10})), "
+                          "SRA(PReg Fp: {11}/{12}, Int: {13}/{14}, Pred: {15}/{16})",
+                          (ipc100/100.), TMI.nCopies, mve,
+                          TMI.iterationInterval,
+                          (Plan.getPrologCycles()/TMI.iterationInterval),
+                          Plan.getNecessaryFreg(), Plan.getMaxFreg(),
+                          Plan.getNecessaryIreg(), Plan.getMaxIreg(),
+                          Plan.getNecessaryPreg(), Plan.getMaxPreg(),
+                          0, 0,
+                          0, 0,
+                          0, 0
+                          );
 
   swpl::ORE->emit([&]() {
     return MachineOptimizationRemark(DEBUG_TYPE, "SoftwarePipelined",
@@ -727,7 +731,7 @@ void SwplTransformMIR::postTransformKernel() {
     auto op0=cp->getOperand(0).getReg();
     auto op1=cp->getOperand(1).getReg();
     auto defPhi=MRI->cloneVirtualRegister(op0);
-    BuildMI(*(TMI.NewPreHeader), InsertPoint1, mi.getDebugLoc(), TII->get(AArch64::PHI), defPhi)
+    BuildMI(*(TMI.NewPreHeader), InsertPoint1, mi.getDebugLoc(), TII->get(TargetOpcode::PHI), defPhi)
             .addReg(op1).addMBB(TMI.Check1).addReg(op0).addMBB(TMI.Check2);
 
     /// (2-1) NP側のレジスタを新規生成するPHIで定義するレジスタに切り替える
@@ -748,7 +752,7 @@ void SwplTransformMIR::postTransformKernel() {
     // p.first: reg, p.second:vector<MO*>
     auto newreg=regmap[p.first];
     auto defPhi=MRI->cloneVirtualRegister(newreg);
-    BuildMI(*(TMI.NewExit), InsertPoint2, debugLoc, TII->get(AArch64::PHI), defPhi)
+    BuildMI(*(TMI.NewExit), InsertPoint2, debugLoc, TII->get(TargetOpcode::PHI), defPhi)
             .addReg(p.first).addMBB(TMI.NewBody).addReg(newreg).addMBB(TMI.Check2);
     for (auto *mo:p.second) {
       assert(mo->getReg()==p.first);
@@ -786,7 +790,7 @@ void SwplTransformMIR::replaceDefReg(MachineBasicBlock &mbb, std::map<Register,R
         if (useregs.count(def) != 0) {
           // 参照先行なのでリカレンスになっている--> PHIが必要
           auto defPhi = MRI->cloneVirtualRegister(def);
-          BuildMI(mbb, InsertPoint, debugLoc, TII->get(AArch64::PHI), defPhi)
+          BuildMI(mbb, InsertPoint, debugLoc, TII->get(TargetOpcode::PHI), defPhi)
                   .addReg(def).addMBB(TMI.Prolog).addReg(newDef).addMBB(TMI.OrgBody);
 
           // ここまでの参照レジスタをPHI定義のレジスタに書き換える。

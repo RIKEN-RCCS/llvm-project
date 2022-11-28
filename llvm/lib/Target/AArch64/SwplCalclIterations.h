@@ -1,4 +1,4 @@
-//=- AArch64SwplCalclIterations.h - check Iterations in SWPL -*- C++ -*------=//
+//=- SwplCalclIterations.h - check Iterations in SWPL -*- C++ -*-------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,14 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AARCH64_AARCH64SWPLCALSITERATIONS_H
-#define LLVM_LIB_TARGET_AARCH64_AARCH64SWPLCALSITERATIONS_H
+#ifndef LLVM_LIB_CODEGEN_SWPLCALSITERATIONS_H
+#define LLVM_LIB_CODEGEN_SWPLCALSITERATIONS_H
 
 #include "AArch64.h"
-#include "AArch64SWPipeliner.h"
-#include "AArch64SwplPlan.h"
-#include "AArch64SwplScheduling.h"
 #include "AArch64SwplTargetMachine.h"
+#include "SWPipeliner.h"
+#include "SwplPlan.h"
+#include "SwplScheduling.h"
 
 namespace swpl{
 extern  llvm::cl::opt<bool> DebugOutput;
@@ -35,4 +35,4 @@ public:
 };
 
 }
-#endif // LLVM_LIB_TARGET_AARCH64_AARCH64SWPLCALSITERATIONS_H
+#endif

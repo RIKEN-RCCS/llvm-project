@@ -1,4 +1,4 @@
-//=- AArch64SwplScheduling.h - Scheduling process in SWPL -*- C++ -*---------=//
+//=- SwplScheduling.h - Scheduling process in SWPL -*- C++ -*----------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AARCH64_AARCH64SWPLSCHEDULING_H
-#define LLVM_LIB_TARGET_AARCH64_AARCH64SWPLSCHEDULING_H
+#ifndef LLVM_LIB_CODEGEN_SWPLSCHEDULING_H
+#define LLVM_LIB_CODEGEN_SWPLSCHEDULING_H
 
 #include "AArch64.h"
-#include "AArch64SWPipeliner.h"
-#include "AArch64SwplPlan.h"
 #include "AArch64SwplTargetMachine.h"
+#include "SWPipeliner.h"
+#include "SwplPlan.h"
 #include <set>
 #include <unordered_set>
 
@@ -168,13 +168,12 @@ public:
   unsigned max_ii;             ///< initiative/iterative intervalの上限
   unsigned unable_max_ii;      ///< schedulingを失敗した最大のii
   unsigned n_fillable_float_invariants; ///< 浮動小数点のループ不変の仮想レジのうち、フィルしても ResII を増加させない最大数
-  SwplSchedPolicy policy;      ///< モジュロスケジューリングのアルゴリズム
   ImsBaseInfo ims_base_info;
   SmsBaseInfo sms_base_info;
 
   PlanSpec(const SwplDdg& c_ddg) : ddg(c_ddg),loop(c_ddg.getLoop()) {} ///< constructor
 
-  bool init(unsigned res_mii, SwplSchedPolicy policy);
+  bool init(unsigned res_mii);
   void countLoadStore(unsigned *num_load, unsigned *num_store, unsigned *num_float) const;
 
 private:
@@ -201,13 +200,13 @@ class MsResourceResult {
 public:
   void setSufficientWithArg(bool sufficient) { is_resource_sufficient = sufficient; return; } ///< setter
 
-  bool isSufficient() { return is_resource_sufficient; } ///< getter
-  unsigned getNecessaryIreg() { return num_necessary_ireg; } ///< getter
-  unsigned getNecessaryFreg() { return num_necessary_freg; } ///< getter
-  unsigned getNecessaryPreg() { return num_necessary_preg; } ///< getter
-  unsigned getMaxIreg() { return num_max_ireg; } ///< getter
-  unsigned getMaxFreg() { return num_max_freg; } ///< getter
-  unsigned getMaxPreg() { return num_max_preg; } ///< getter
+  bool isSufficient() const { return is_resource_sufficient; } ///< getter
+  unsigned getNecessaryIreg() const { return num_necessary_ireg; } ///< getter
+  unsigned getNecessaryFreg() const { return num_necessary_freg; } ///< getter
+  unsigned getNecessaryPreg() const { return num_necessary_preg; } ///< getter
+  unsigned getMaxIreg() const { return num_max_ireg; } ///< getter
+  unsigned getMaxFreg() const { return num_max_freg; } ///< getter
+  unsigned getMaxPreg() const { return num_max_preg; } ///< getter
 
   void init();
   bool isIregSufficient();
@@ -295,4 +294,4 @@ private:
   static MsResult* getModerateSchedule(std::unordered_set<MsResult*>& ms_result_candidate);
 };
 }
-#endif // LLVM_LIB_TARGET_AARCH64_AARCH64SWPLSCHEDULING_H
+#endif

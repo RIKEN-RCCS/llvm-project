@@ -1,4 +1,4 @@
-//=- AArch64SwplTransformMIR.h -  Transform MachineIR for SWP -*- C++ -*-----=//
+//=- SwplTransformMIR.h -  Transform MachineIR for SWP -*- C++ -*------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,10 +9,10 @@
 // Transform MachineIR for SWP.
 //
 //===----------------------------------------------------------------------===//
-#ifndef AARCH64TRANSFORMMIR_H
-#define AARCH64TRANSFORMMIR_H
-#include "AArch64SwplScr.h"
-#include "AArch64SwplPlan.h"
+#ifndef SWPLTRANSFORMMIR_H
+#define SWPLTRANSFORMMIR_H
+#include "SwplPlan.h"
+#include "SwplScr.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/Register.h"
@@ -128,8 +128,7 @@ private:
 
   /// Swpl成功メッセージ出力
   /// \param [in] n_body_inst
-  /// \param [in] policy
-  void outputLoopoptMessage(int n_body_inst, swpl::SwplSchedPolicy policy);
+  void outputLoopoptMessage(int n_body_inst);
 
   /// SWPL後の新しいKERNEL部分を構成する
   void transformKernel();
