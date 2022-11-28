@@ -41,7 +41,7 @@ typedef unsigned StmOpcodeId;
 ///  pipe4  [label = "{pipeline:}|{stage:|1|1}|{resource:|EAGB|EAGB}"];
 /// }
 // \enddot
-class StmPipeline {
+class AArch64StmPipeline {
   llvm::TargetSchedModel& SM;///< SchedModel
 public:
   // 命令に対して生成した順番に付加されるID
@@ -50,7 +50,7 @@ public:
   llvm::SmallVector<StmResourceId,4> resources;
 
   /// constructor
-  StmPipeline(llvm::TargetSchedModel&sm):SM(sm){}
+  AArch64StmPipeline(llvm::TargetSchedModel&sm):SM(sm){}
 
   /// StmPipelineをダンプする。
   /// \param ost 出力先
@@ -68,13 +68,13 @@ public:
 };
 
 /// StmPipelineリスト（引数など受け取り側で理帳する）
-using StmPipelinesImpl =std::vector<const StmPipeline *>;
+using StmPipelinesImpl =std::vector<const AArch64StmPipeline *>;
 
 /// StmPipelineリスト(変数として宣言する際に利用する)
-using StmPipelines =std::vector<const StmPipeline *>;
+using StmPipelines =std::vector<const AArch64StmPipeline *>;
 
 /// SWPL向けにRegisterの種別を判断する。
-class StmRegKind {
+class AArch64StmRegKind {
   unsigned registerClassId=0; ///< TargetRegisterClassのID
   bool allocated=false;
   const llvm::MachineRegisterInfo &MRI;    ///< RegisterInfo
@@ -83,7 +83,7 @@ public:
   /// constructor
   /// \param id register class id
   /// \param isPReg 割当済か
-  StmRegKind(unsigned id, bool isPReg, const llvm::MachineRegisterInfo&mri):registerClassId(id),allocated(isPReg),MRI(mri){}
+  AArch64StmRegKind(unsigned id, bool isPReg, const llvm::MachineRegisterInfo&mri):registerClassId(id),allocated(isPReg),MRI(mri){}
 
   /// Intergerレジスタかどうかを確認する
   /// \retval true Intergerレジスタ
@@ -168,7 +168,7 @@ public:
       r=&llvm::AArch64::CCRRegClass;
       break;
     }
-    os << "StmRegKind:" << MRI.getTargetRegisterInfo()->getRegClassName(r) << "\n";
+    os << "AArch64StmRegKind:" << MRI.getTargetRegisterInfo()->getRegClassName(r) << "\n";
   }
 
   /// 同一のレジスタ種別であるか
@@ -176,7 +176,7 @@ public:
   /// \param [in] kind2 比較対象2
   /// \retval true 同一
   /// \retval false　同一ではない
-  static bool isSameKind( const StmRegKind & kind1, const StmRegKind & kind2 ) {
+  static bool isSameKind( const AArch64StmRegKind & kind1, const AArch64StmRegKind & kind2 ) {
     return kind1.registerClassId == kind2.registerClassId;
   }
   /// 同一のレジスタ種別であるか
@@ -184,14 +184,14 @@ public:
   /// \param [in] regclassid 比較対象2のレジスタクラスID
   /// \retval true 同一
   /// \retval false 同一ではない
-  static bool isSameKind( const StmRegKind & kind1, unsigned regclassid ) {
+  static bool isSameKind( const AArch64StmRegKind & kind1, unsigned regclassid ) {
     return kind1.registerClassId == regclassid;
   }
 
 };
 
 /// SchedModelを利用してターゲット情報を取得し、SWPL機能に提供する
-class SwplTargetMachine {
+class AArch64SwplTargetMachine {
 protected:
   const llvm::MachineFunction *MF=nullptr; ///< Tmで必要な情報を取得するため、大元のMachineFunctionを記憶する。関数毎に再設定する。
   llvm::TargetSchedModel SM;         ///< SchedModel
@@ -214,13 +214,13 @@ protected:
 
 public:
   /// constructor
-  SwplTargetMachine() {}
+  AArch64SwplTargetMachine() {}
   /// destructor
-  virtual ~SwplTargetMachine() {
+  virtual ~AArch64SwplTargetMachine() {
     for (auto tms: stmPipelines) {
         if (tms.getSecond()) {
           for (auto *t:*(tms.getSecond())) {
-            delete const_cast<StmPipeline *>(t);
+            delete const_cast<AArch64StmPipeline *>(t);
           }
           delete tms.getSecond();
         }
@@ -289,7 +289,7 @@ public:
   /// \param [in] mi 対象命令
   /// \param [in] patternid 対象パターン
   /// \return StmPipelineを返す
-  const StmPipeline * getPipeline(const llvm::MachineInstr&mi,
+  const AArch64StmPipeline * getPipeline(const llvm::MachineInstr&mi,
                                 StmPatternId patternid);
 
   /// 指定命令が利用するリソースが一番少ない数を返す
@@ -314,7 +314,7 @@ public:
   /// 指定レジスタの種別を返す
   /// \param [in] reg
   /// \return レジスタの種別を表すオブジェクト
-  StmRegKind getRegKind(llvm::Register reg) const;
+  AArch64StmRegKind getRegKind(llvm::Register reg) const;
 
   /// 命令がPseudoかどうかを判断する
   /// \details 命令がSchedModelに定義されていない場合のみ、Pseudoと判断する
@@ -325,7 +325,7 @@ public:
 };
 #ifdef STMTEST
 /// StmTestからStmをテストするための派生クラス
-class StmX4StmTest : public SwplTargetMachine {
+class StmX4StmTest : public AArch64SwplTargetMachine {
 public:
   void init(llvm::MachineFunction&mf, bool first, int TestID);
   const llvm::TargetSchedModel& getSchedModel() {return SM;}

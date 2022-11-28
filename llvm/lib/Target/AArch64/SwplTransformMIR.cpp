@@ -522,7 +522,7 @@ void SwplTransformMIR::makeKernelIterationBranch(MachineBasicBlock &MBB) {
   if (regClass->hasSubClassEq(&AArch64::GPR64RegClass)) {
     /// 条件判定（SUBSXri）で利用できないレジスタクラスの場合、COPYを生成し、利用可能レジスタクラスを定義する
     ini=MRI->createVirtualRegister(&AArch64::GPR64spRegClass);
-    BuildMI(MBB, insertionPoint, debugLoc, TII->get(AArch64::COPY), ini)
+    BuildMI(MBB, insertionPoint, debugLoc, TII->get(TargetOpcode::COPY), ini)
             .addReg(TMI.doVReg);
   }
 

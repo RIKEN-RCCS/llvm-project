@@ -89,7 +89,7 @@ int SwplReg::getRegSize() const {
 
 bool SwplInst::isDefinePredicate() const {
   for (auto *reg:getDefRegs()) {
-    StmRegKind rk= STM.getRegKind(reg->getReg());
+    AArch64StmRegKind rk= STM.getRegKind(reg->getReg());
     if (rk.isPredicate()) return true;
   }
   return false;
@@ -97,7 +97,7 @@ bool SwplInst::isDefinePredicate() const {
 
 bool SwplInst::isFloatingPoint() const {
   for (auto *reg:getDefRegs()) {
-    StmRegKind rk= STM.getRegKind(reg->getReg());
+    AArch64StmRegKind rk= STM.getRegKind(reg->getReg());
     if (rk.isFloating()) return true;
   }
   return false;

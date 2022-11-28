@@ -83,7 +83,7 @@ struct work_node {
       ptn.push_back(id);
       cycle.push_back(startCycle);
       if (nodes.empty()) {
-        StmPipeline *t=new StmPipeline(SM);
+        AArch64StmPipeline *t=new AArch64StmPipeline(SM);
         stmPipelines.push_back(t);
         t->patternId=patternId++;
         for (auto resource:ptn) {
@@ -171,7 +171,7 @@ static work_node* makePrePatterns(llvm::TargetSchedModel& sm, const llvm::AArch6
   return root;
 }
 
-void SwplTargetMachine::initialize(const llvm::MachineFunction &mf) {
+void AArch64SwplTargetMachine::initialize(const llvm::MachineFunction &mf) {
   if (MF==nullptr) {
     const llvm::TargetSubtargetInfo &ST = mf.getSubtarget();
     SM.init(&ST);
@@ -190,21 +190,21 @@ void SwplTargetMachine::initialize(const llvm::MachineFunction &mf) {
   MRI=&(MF->getRegInfo());
 }
 
-unsigned int SwplTargetMachine::getFetchBandwidth(void) const {
+unsigned int AArch64SwplTargetMachine::getFetchBandwidth(void) const {
   return getRealFetchBandwidth()+OptionVirtualFetchWidth;
 }
 
-unsigned int SwplTargetMachine::getRealFetchBandwidth(void) const {
+unsigned int AArch64SwplTargetMachine::getRealFetchBandwidth(void) const {
   return OptionRealFetchWidth;
 }
 
-int SwplTargetMachine::getNumSameKindResources(StmResourceId resource) {
+int AArch64SwplTargetMachine::getNumSameKindResources(StmResourceId resource) {
   int num=tmNumSameKindResources[resource];
-  assert(num && "SwplTargetMachine::getNumSameKindResources: invalid resource");
+  assert(num && "AArch64SwplTargetMachine::getNumSameKindResources: invalid resource");
   return num;
 }
 
-int StmPipeline::getNResources(StmResourceId resource) const {
+int AArch64StmPipeline::getNResources(StmResourceId resource) const {
   int counter=0;
   for (StmResourceId r: resources) {
     if (r==resource) counter++;
@@ -212,8 +212,8 @@ int StmPipeline::getNResources(StmResourceId resource) const {
   return counter;
 }
 
-void StmPipeline::print(raw_ostream &ost) const {
-  ost << "DBG(StmPipeline::print) stage/resource("<< patternId << "): ";
+void AArch64StmPipeline::print(raw_ostream &ost) const {
+  ost << "DBG(AArch64StmPipeline::print) stage/resource("<< patternId << "): ";
   int last=stages.size();
   const char *sep="";
   for (int ix=0; ix<last; ix++) {
@@ -223,7 +223,7 @@ void StmPipeline::print(raw_ostream &ost) const {
   ost << "\n";
 }
 
-const char *StmPipeline::getResourceName(StmResourceId resource) {
+const char *AArch64StmPipeline::getResourceName(StmResourceId resource) {
   const char *name="";
   switch (resource) {
   case llvm::A64FXRes::PortKind::P_FLA:name="FLA";break;
@@ -240,18 +240,18 @@ const char *StmPipeline::getResourceName(StmResourceId resource) {
   return name;
 }
 
-int SwplTargetMachine::getNumSlot(void) const {
+int AArch64SwplTargetMachine::getNumSlot(void) const {
   return getFetchBandwidth();
 }
 
-int SwplTargetMachine::computeMemFlowDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
+int AArch64SwplTargetMachine::computeMemFlowDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
   if (OptionStoreLatency > 0) return OptionStoreLatency;
   if (OptionFlowDep > 0) return OptionFlowDep;
   return 1;
 }
 
 const StmPipelinesImpl *
-SwplTargetMachine::getPipelines(const MachineInstr &mi) {
+AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) {
   auto *tps= stmPipelines[mi.getOpcode()];
   if (tps==nullptr) {
     tps= generateStmPipelines(mi);
@@ -260,7 +260,8 @@ SwplTargetMachine::getPipelines(const MachineInstr &mi) {
   return tps;
 }
 
-const StmPipeline *SwplTargetMachine::getPipeline(const MachineInstr &mi,
+const AArch64StmPipeline *
+AArch64SwplTargetMachine::getPipeline(const MachineInstr &mi,
                                   StmPatternId patternid) {
   auto *tps= getPipelines(mi);
   if (tps==nullptr) return nullptr;
@@ -270,14 +271,14 @@ const StmPipeline *SwplTargetMachine::getPipeline(const MachineInstr &mi,
 }
 
 StmPipelinesImpl *
-SwplTargetMachine::generateStmPipelines(const MachineInstr &mi) {
+AArch64SwplTargetMachine::generateStmPipelines(const MachineInstr &mi) {
 
   work_node *t=nullptr;
   if (isImplimented(mi)) {
     t=makePrePatterns(SM, *ResInfo, mi);
     if (t==nullptr) {
       if (DebugStm)
-        dbgs() << "DBG(SwplTargetMachine::generateStmPipelines): makePrePatterns() is nullptr. MIR=" << mi;
+        dbgs() << "DBG(AArch64SwplTargetMachine::generateStmPipelines): makePrePatterns() is nullptr. MIR=" << mi;
       return nullptr;
     }
   }
@@ -286,7 +287,7 @@ SwplTargetMachine::generateStmPipelines(const MachineInstr &mi) {
     t->gen_patterns(SM, *pipelines);
     delete t;
   } else {
-    pipelines->push_back(new StmPipeline(SM));
+    pipelines->push_back(new AArch64StmPipeline(SM));
   }
   if (DebugStm) {
     for (auto*pipeline:*pipelines) {
@@ -295,21 +296,21 @@ SwplTargetMachine::generateStmPipelines(const MachineInstr &mi) {
   }
   return pipelines;
 }
-int SwplTargetMachine::computeRegFlowDependence(const llvm::MachineInstr* def, const llvm::MachineInstr* use) const {
+int AArch64SwplTargetMachine::computeRegFlowDependence(const llvm::MachineInstr* def, const llvm::MachineInstr* use) const {
   const auto *IResDesc=ResInfo->getInstResDesc(*def);
   if (IResDesc==nullptr) return 1;
   return IResDesc->getLatency();
 }
 
-int SwplTargetMachine::computeMemAntiDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
+int AArch64SwplTargetMachine::computeMemAntiDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
   return 1;
 }
 
-int SwplTargetMachine::computeMemOutputDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
+int AArch64SwplTargetMachine::computeMemOutputDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
   return 1;
 }
 
-int SwplTargetMachine::getMinNResources(StmOpcodeId opcode, StmResourceId resource) {
+int AArch64SwplTargetMachine::getMinNResources(StmOpcodeId opcode, StmResourceId resource) {
   auto *tps= stmPipelines[opcode];
   int min_n=INT_MAX;
   for (auto *t:*tps) {
@@ -322,11 +323,12 @@ int SwplTargetMachine::getMinNResources(StmOpcodeId opcode, StmResourceId resour
   return min_n;
 }
 
-unsigned int SwplTargetMachine::getNumResource(void) const {
+unsigned int AArch64SwplTargetMachine::getNumResource(void) const {
   return numResource;
 }
 
-StmRegKind SwplTargetMachine::getRegKind(llvm::Register reg) const {
+AArch64StmRegKind
+AArch64SwplTargetMachine::getRegKind(llvm::Register reg) const {
   unsigned regClassId=0;
   bool pReg=false;
   if (reg.isVirtual()) {
@@ -398,9 +400,9 @@ StmRegKind SwplTargetMachine::getRegKind(llvm::Register reg) const {
     }
   }
 
-  return StmRegKind(regClassId, pReg, *MRI);
+  return AArch64StmRegKind(regClassId, pReg, *MRI);
 }
-bool SwplTargetMachine::isImplimented(const llvm::MachineInstr&mi) const {
+bool AArch64SwplTargetMachine::isImplimented(const llvm::MachineInstr&mi) const {
   if (OptionCopyIsVirtual) {
     if (mi.isCopy()) return false;
   }
@@ -408,14 +410,14 @@ bool SwplTargetMachine::isImplimented(const llvm::MachineInstr&mi) const {
   return ResInfo->getInstResDesc(mi)!=nullptr;
 }
 
-bool SwplTargetMachine::isPseudo(const MachineInstr &mi) const {
+bool AArch64SwplTargetMachine::isPseudo(const MachineInstr &mi) const {
   return !isImplimented(mi);
 }
 
 #ifdef STMTEST
 
 void StmX4StmTest::init(llvm::MachineFunction&mf, bool first, int TestID) {
-  SwplTargetMachine::initialize(mf);
+  AArch64SwplTargetMachine::initialize(mf);
   if (TestID==1) {
 
     const char *result="OK";
@@ -424,7 +426,7 @@ void StmX4StmTest::init(llvm::MachineFunction&mf, bool first, int TestID) {
     if (MF!=&mf || MRI==nullptr || tmNumSameKindResources.empty()) {
       result="NG";
     }
-    dbgs() << "<<<TEST: 001 SwplTargetMachine>>>\n";
+    dbgs() << "<<<TEST: 001 AArch64SwplTargetMachine>>>\n";
     dbgs() << "DBG(StmX::init): " << firstcall << " is  " << result << "\n";
   }
 }
@@ -474,53 +476,53 @@ void StmTest::run(llvm::MachineFunction&MF) {
     int defaultStoreLatency = OptionStoreLatency;
     int defaultFlowDep = OptionFlowDep;
     dbgs() << "option:swpl-store-latency is default, swpl-flow-dep is default \n";
-    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is default, swpl-flow-dep is 0 \n";
     OptionFlowDep = 0;
-    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is default, swpl-flow-dep is 1 \n";
     OptionFlowDep = 1;
-    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
 
     OptionStoreLatency = 0;
     dbgs() << "option:swpl-store-latency is 0, swpl-flow-dep is default \n";
     OptionFlowDep = defaultFlowDep;
-    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is 0, swpl-flow-dep is 0 \n";
     OptionFlowDep = 0;
-    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is 0, swpl-flow-dep is 1 \n";
     OptionFlowDep = 1;
-    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
 
     OptionStoreLatency = 1;
     dbgs() << "option:swpl-store-latency is 1, swpl-flow-dep is default \n";
     OptionFlowDep = defaultFlowDep;
-    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is 1, swpl-flow-dep is 0 \n";
     OptionFlowDep = 0;
-    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     dbgs() << "option:swpl-store-latency is 1, swpl-flow-dep is 1 \n";
     OptionFlowDep = 1;
-    dbgs() << "SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
+    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
+    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
     OptionFlowDep = defaultFlowDep;
     OptionStoreLatency = defaultStoreLatency;
 
@@ -528,64 +530,64 @@ void StmTest::run(llvm::MachineFunction&MF) {
     int defaultRealFetchWidth = OptionRealFetchWidth;
     int defaultVirtualFetchWidth = OptionVirtualFetchWidth;
     dbgs() << "option:swpl-real-fetch-width is default, swpl-virtual-fetch-width is default\n";
-    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 0;
     dbgs() << "option:swpl-real-fetch-width is default, swpl-virtual-fetch-width is 0\n";
-    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 1;
     dbgs() << "option:swpl-real-fetch-width is default, swpl-virtual-fetch-width is 1\n";
-    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
 
     OptionRealFetchWidth = 0;
     OptionVirtualFetchWidth = defaultVirtualFetchWidth;
     dbgs() << "option:swpl-real-fetch-width is 0, swpl-virtual-fetch-width is default\n";
-    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 0;
     dbgs() << "option:swpl-real-fetch-width is 0, swpl-virtual-fetch-width is 0\n";
-    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 1;
     dbgs() << "option:swpl-real-fetch-width is 0, swpl-virtual-fetch-width is 1\n";
-    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
 
     OptionRealFetchWidth = 1;
     OptionVirtualFetchWidth = defaultVirtualFetchWidth;
     dbgs() << "option:swpl-real-fetch-width is 1, swpl-virtual-fetch-width is default\n";
-    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 0;
     dbgs() << "option:swpl-real-fetch-width is 1, swpl-virtual-fetch-width is 0\n";
-    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
     OptionVirtualFetchWidth = 1;
     dbgs() << "option:swpl-real-fetch-width is 1, swpl-virtual-fetch-width is 1\n";
-    dbgs() << "SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
+    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
+    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
 
     OptionRealFetchWidth = defaultRealFetchWidth;
     OptionVirtualFetchWidth = defaultVirtualFetchWidth;
 
 
     dbgs() << "<<<TEST: 001-03 getNumResource>>>\n";
-    dbgs() << "SwplTargetMachine::getNumResource():" << STM.getNumResource() << "\n";
+    dbgs() << "AArch64SwplTargetMachine::getNumResource():" << STM.getNumResource() << "\n";
     dbgs() << "<<<TEST: 001-04 getNumSameResource>>>\n";
     for (const auto &rc:resourceIds) {
       // 同じ資源数を出力
-      dbgs() << "SwplTargetMachine::getNumSameKindResources(" << resources.at(rc) << "):" << STM.getNumSameKindResources(rc) << "\n";
+      dbgs() << "AArch64SwplTargetMachine::getNumSameKindResources(" << resources.at(rc) << "):" << STM.getNumSameKindResources(rc) << "\n";
     }
 
     dbgs() << "<<<TEST: 001-05 by MachineInstr/>>>\n";
@@ -613,9 +615,9 @@ void StmTest::run(llvm::MachineFunction&MF) {
           bool isPseudo = STM.isPseudo(instr);
           dbgs() << "**\nmir:" << instr;
           if (!isPseudo)
-            dbgs() << "SwplTargetMachine::computeRegFlowDependence(): " << STM.computeRegFlowDependence(&instr, &instr) << ", ";
-          dbgs() << "SwplTargetMachine::isIssuedOneByOne(): " << STM.isIssuedOneByOne(instr) << ", ";
-          dbgs() << "SwplTargetMachine::isPseudo(): " << isPseudo << "\n";
+            dbgs() << "AArch64SwplTargetMachine::computeRegFlowDependence(): " << STM.computeRegFlowDependence(&instr, &instr) << ", ";
+          dbgs() << "AArch64SwplTargetMachine::isIssuedOneByOne(): " << STM.isIssuedOneByOne(instr) << ", ";
+          dbgs() << "AArch64SwplTargetMachine::isPseudo(): " << isPseudo << "\n";
         }
       }
     }
@@ -623,7 +625,7 @@ void StmTest::run(llvm::MachineFunction&MF) {
   } else if (TestID==2) {
     dbgs() << "<<<TEST: 002 StmRegKindNum>>>\n";
     dbgs() << "<<<TEST: 002-01 getKindNum>>>\n";
-    dbgs() << "StmRegKind::getKindNum():" << StmRegKind::getKindNum() << "\n";
+    dbgs() << "AArch64StmRegKind::getKindNum():" << AArch64StmRegKind::getKindNum() << "\n";
     dbgs() << "<<<TEST: 002-02 >>>\n";
     for (auto &bb:MF) {
       for (auto &instr:bb) {
@@ -638,7 +640,7 @@ void StmTest::run(llvm::MachineFunction&MF) {
           const auto usereg = op.getReg();
           auto regkind = STM.getRegKind(usereg);
           regkind.print(dbgs());
-          dbgs() << "StmRegKind::isInteger:" << regkind.isInteger() << " isFloating:" << regkind.isFloating()
+          dbgs() << "AArch64StmRegKind::isInteger:" << regkind.isInteger() << " isFloating:" << regkind.isFloating()
                  << " isPredicate:" << regkind.isPredicate() << " isisCCRegister:" << regkind.isCCRegister()
                  << " isIntegerCCRegister:" << regkind.isIntegerCCRegister()
                  << " isAllocated:" << regkind.isAllocalted() << " getNum:" << regkind.getNum() << "\n";
@@ -653,7 +655,7 @@ void StmTest::run(llvm::MachineFunction&MF) {
     bool alreadyADDVv4i32v = false;
     bool alreadyST2Twov4s_POST = false;
     bool alreadyBFMXri = false;
-    dbgs() << "<<<TEST: 003 StmPipeline>>>\n";
+    dbgs() << "<<<TEST: 003 AArch64StmPipeline>>>\n";
     for (auto &bb:MF) {
       for (auto &instr:bb) {
         bool target = false;
@@ -683,21 +685,21 @@ void StmTest::run(llvm::MachineFunction&MF) {
           dbgs() << "OPCODE: " << TII->getName(instr.getOpcode()) << "\n";
           const auto *pipes = STM.getPipelines(instr);
           assert(pipes && pipes->size() >= 1);
-          dbgs() << "StmPipeline::getPipeline(" << TII->getName(instr.getOpcode()) << ", 0): ";
-          const StmPipeline *p = STM.getPipeline(instr, 0);
+          dbgs() << "AArch64StmPipeline::getPipeline(" << TII->getName(instr.getOpcode()) << ", 0): ";
+          const AArch64StmPipeline *p = STM.getPipeline(instr, 0);
           p->print(dbgs());
           p = STM.getPipeline(instr, 1000);
-          dbgs() << "StmPipeline::getPipeline(" << TII->getName(instr.getOpcode()) << ", 1000): " << (p?"NG\n":"OK\n");
+          dbgs() << "AArch64StmPipeline::getPipeline(" << TII->getName(instr.getOpcode()) << ", 1000): " << (p?"NG\n":"OK\n");
           for (const auto &rc:resourceIds) {
             int ptn = 0;
-            dbgs() << "StmPipeline::getNResources(" << resources.at(rc) << "):";
+            dbgs() << "AArch64StmPipeline::getNResources(" << resources.at(rc) << "):";
             char sep = ' ';
             for (const auto *pipe:*pipes) {
               dbgs() << sep << " ptn=" << ptn++ << "/N=" << pipe->getNResources(rc);
               sep = ',';
             }
             dbgs() << "\n";
-            dbgs() << "SwplTargetMachine::getMinNResources(" << resources.at(rc) << "): "
+            dbgs() << "AArch64SwplTargetMachine::getMinNResources(" << resources.at(rc) << "): "
                    << STM.getMinNResources(instr.getOpcode(), rc) << "\n";
           }
         }

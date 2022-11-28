@@ -65,7 +65,7 @@ namespace swpl{
 /// \note 引数pipelineは、資源使用パターンに応じたTmPipeline情報
 void SwplMrt::reserveResourcesForInst(unsigned cycle,
                                       const SwplInst& inst,
-                                      const StmPipeline & pipeline ) {
+                                      const AArch64StmPipeline & pipeline ) {
   // cycle:1, stage:{ 1, 5, 9 }, resources:{ ID1, ID2, ID3 }
   //   ->     resource ID1  ID2  ID3  ID4
   //      cycle   :  1 予約
@@ -140,7 +140,7 @@ void SwplMrt::reserveResourcesForInst(unsigned cycle,
 ///       予約するのではなく、すでに予約されていれば、そのInstを記録していく。
 SwplInstSet* SwplMrt::findBlockingInsts(unsigned cycle,
                                         const SwplInst& inst,
-                                        const StmPipeline & pipeline)
+                                        const AArch64StmPipeline & pipeline)
 {
   SwplInstSet* blocking_insts = new SwplInstSet();
   assert( (pipeline.resources.size()==pipeline.stages.size()) && "Unexpected resource information.");
@@ -172,7 +172,7 @@ SwplInstSet* SwplMrt::findBlockingInsts(unsigned cycle,
 ///       （現在のところ使い道なし）
 bool SwplMrt::isOpenForInst(unsigned cycle,
                             const SwplInst& inst,
-                            const StmPipeline & pipeline) {
+                            const AArch64StmPipeline & pipeline) {
   SwplInstSet* blocking_insts;
   bool is_open;
 
@@ -237,7 +237,7 @@ void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream
   // １～STM.getNumResource()をリソースとして扱う 。
   // ０はP_NULLであり、リソースではない。
   for (resource_id = 1; (unsigned)resource_id <= numresource; ++resource_id) {
-    res_max_length = std::max( res_max_length, (unsigned)(strlen(StmPipeline::getResourceName(resource_id))) );
+    res_max_length = std::max( res_max_length, (unsigned)(strlen(AArch64StmPipeline::getResourceName(resource_id))) );
   }
 
   inst_gen_width = std::max( getMaxOpcodeNameLength()+1, res_max_length);  // 1 = 'p|f' の分
@@ -247,8 +247,8 @@ void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream
   // Resource名の出力
   stream << "\n       ";
   for (resource_id = 1; (unsigned)resource_id <= numresource; ++resource_id) {
-    stream << StmPipeline::getResourceName(resource_id);
-    for (unsigned l=strlen(StmPipeline::getResourceName(resource_id)); l<word_width; l++) {
+    stream << AArch64StmPipeline::getResourceName(resource_id);
+    for (unsigned l=strlen(AArch64StmPipeline::getResourceName(resource_id)); l<word_width; l++) {
       stream << " ";
     }
   }
@@ -700,7 +700,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
         // 資源競合がなければ配置可能
         for( auto pl : *(STM.getPipelines(mi)) ) {
           if( mrt->isOpenForInst(cycle, inst, *pl) ) {
-            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<StmPipeline *>(pl) );
+            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<AArch64StmPipeline *>(pl) );
           }
         }
       }
@@ -763,7 +763,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::latestValidSlot(const SwplInst&
             //
             // 現時点では、資源が予約できるcycleかつ、inst_slot_map上で競合しないslotを返している。
             // このため、この命令の配置時に、資源競合となる命令は存在しないこととなる。
-            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<StmPipeline *>(pl) );
+            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<AArch64StmPipeline *>(pl) );
           }
         }
       }
