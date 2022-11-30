@@ -128,21 +128,21 @@ bool SwplPlan::isSufficientWithRenamingVersions(const SwplLoop& c_loop,
   ///////////////////////////////////////////////////
   // case llvm::AArch64::GPR64RegClassID
   n_necessary_regs = SwplRegEstimate::calcNumRegs(c_loop, &c_inst_slot_map, iteration_interval,
-                                                  llvm::AArch64::GPR64RegClassID,
+                                                  llvm::StmRegKind::getIntRegID(),
                                                   n_renaming_versions);
   ms_resource_result.setNecessaryIreg(n_necessary_regs);
 
   ///////////////////////////////////////////////////
   // case llvm::AArch64::FPR64RegClassID
   n_necessary_regs = SwplRegEstimate::calcNumRegs(c_loop, &c_inst_slot_map, iteration_interval,
-                                                  llvm::AArch64::FPR64RegClassID,
+                                                  llvm::StmRegKind::getFloatRegID(),
                                                   n_renaming_versions);
   ms_resource_result.setNecessaryFreg(n_necessary_regs);
 
   ///////////////////////////////////////////////////
   // case llvm::AArch64::PPRRegClassID
   n_necessary_regs = SwplRegEstimate::calcNumRegs(c_loop, &c_inst_slot_map, iteration_interval,
-                                                  llvm::AArch64::PPRRegClassID,
+                                                  llvm::StmRegKind::getPredicateRegID(),
                                                   n_renaming_versions);
   ms_resource_result.setNecessaryPreg(n_necessary_regs);
 

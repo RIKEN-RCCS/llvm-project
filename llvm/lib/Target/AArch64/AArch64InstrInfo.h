@@ -15,6 +15,7 @@
 
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
+//#include "AArch64SwplTargetMachine.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -338,6 +339,16 @@ public:
                               MachineInstr &MI,
                               MachineInstr **ldst,
                               MachineInstr **add ) const override;
+
+  MachineInstr* makeKernelIterationBranch(MachineRegisterInfo &MRI,
+                                          MachineBasicBlock &MBB,
+                                          const DebugLoc &debugLoc,
+                                          Register doVReg,
+                                          int iterationCount,
+                                          int coefficient) const override;
+
+  bool isPrefetch(unsigned opcode) const override;
+
 
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"

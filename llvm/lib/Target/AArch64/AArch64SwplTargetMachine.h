@@ -14,6 +14,7 @@
 
 #include "AArch64TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/CodeGen/SwplTargetMachine.h"
 #include "AArch64A64FXResourceInfo.h"
 #define STMTEST
 

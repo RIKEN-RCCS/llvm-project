@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/SwplTargetMachine.h"
 #include "SwplRegEstimate.h"
 #include "AArch64.h"
 #include "AArch64SwplTargetMachine.h"
 #include "SWPipeliner.h"
 #include "SwplPlan.h"
-#include "SwplScheduling.h"
 
 using namespace llvm;
 
@@ -66,34 +66,22 @@ unsigned SwplRegEstimate::calcNumRegs(const SwplLoop& loop,
   max_regs = std::max(max_regs, n_immortal_regs + n_interfered_regs);
   max_regs = std::max(max_regs, n_immortal_regs + n_extended_regs);
   max_regs = std::max(max_regs, n_immortal_regs + n_patten_regs);
+  const char* regname="other";
 
-  if( (regclassid == llvm::AArch64::FPR64RegClassID) && n_renaming_versions >= 3 ) {
+  if (llvm::StmRegKind::isInteger(regclassid) && n_renaming_versions >= 3 ) {
+    regname = "I";
     margin = 1;
-  } else if( (regclassid == llvm::AArch64::GPR64RegClassID) && n_renaming_versions >= 3 ) {
+  } else if( llvm::StmRegKind::isFloating(regclassid) && n_renaming_versions >= 3 ) {
+    regname = "F";
     margin = 1;
-  } else if( regclassid == llvm::AArch64::PPRRegClassID ) { /* versionの制限は無し */
+  } else if( llvm::StmRegKind::isPredicate(regclassid) ) { /* versionの制限は無し */
+    regname = "P";
     margin = 1;
   }
 
   max_regs += margin;
 
   if (OptionDumpReg) {
-    const char* regname;
-    switch(regclassid) {
-    default:
-      regname = "other";
-      break;
-    case llvm::AArch64::GPR64RegClassID:
-      regname = "I";
-      break;
-    case llvm::AArch64::FPR64RegClassID:
-      regname = "F";
-      break;
-    case llvm::AArch64::PPRRegClassID:
-      regname = "P";
-      break;
-    }
-
     dbgs() << "Estimated number of "
            << regname << " registers (classid:" << regclassid << ") :";
     dbgs() << " immortal " << n_immortal_regs

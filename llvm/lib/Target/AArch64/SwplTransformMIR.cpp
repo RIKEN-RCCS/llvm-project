@@ -513,43 +513,18 @@ void SwplTransformMIR::insertMIs(llvm::MachineBasicBlock& ins,
 }
 
 void SwplTransformMIR::makeKernelIterationBranch(MachineBasicBlock &MBB) {
-  auto insertionPoint=MBB.getFirstInstrTerminator();
+
   assert(TMI.branchDoVRegMI->isBranch());
   const auto &debugLoc= TMI.branchDoVRegMI->getDebugLoc();
-
-  const auto*regClass=MRI->getRegClass(TMI.doVReg);
-  auto ini= TMI.doVReg;
-  if (regClass->hasSubClassEq(&AArch64::GPR64RegClass)) {
-    /// 条件判定（SUBSXri）で利用できないレジスタクラスの場合、COPYを生成し、利用可能レジスタクラスを定義する
-    ini=MRI->createVirtualRegister(&AArch64::GPR64spRegClass);
-    BuildMI(MBB, insertionPoint, debugLoc, TII->get(TargetOpcode::COPY), ini)
-            .addReg(TMI.doVReg);
-  }
-
-  /// compare(SUBSXri)生成
-  // $XZR(+CC)=SUBSXri %TMI.doVReg, TMI.expansion
-  BuildMI(MBB, insertionPoint, debugLoc, TII->get(AArch64::SUBSXri), AArch64::XZR)
-          .addReg(ini)
-          .addImm(TMI.expansion)
-          .addImm(0);
+  MachineInstr *br = TII->makeKernelIterationBranch(*MRI, MBB, debugLoc, TMI.doVReg, TMI.expansion, TMI.coefficient);
 
   /// すでに存在するCheck2(ModLoop迂回用チェック)の比較命令の対象レジスタをTMI.nonSSAOriginalDoVRegに書き換える
-  // c2 mbbの先頭命令を取得（SUBSXRiのはず）
+  // c2 mbbの先頭命令を取得
   auto *cmp=&*(TMI.Check2->begin());
-  assert(cmp->getOpcode()==AArch64::SUBSXri);
   auto &op=cmp->getOperand(1);
   assert(op.isReg());
   op.setReg(TMI.nonSSAOriginalDoVReg);
 
-  // branchの生成
-  auto CC=AArch64CC::LT;
-  if (TMI.coefficient > 0) {
-    CC=AArch64CC::GE;
-  }
-  /// Bcc命令を生成し、TMI.branchDoVRegMIKernelに記録しておく
-  auto br=BuildMI(MBB, insertionPoint, debugLoc, TII->get(AArch64::Bcc))
-          .addImm(CC)
-          .addMBB(&MBB);
   TMI.branchDoVRegMIKernel =&*br;
 }
 

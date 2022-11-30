@@ -2006,6 +2006,18 @@ public:
     return false;
   }
 
+  /// generate iteration branch
+  virtual MachineInstr* makeKernelIterationBranch(MachineRegisterInfo &MRI,
+      MachineBasicBlock &MBB, const DebugLoc &debugLoc, Register doVReg, int iterationCount, int coefficient) const {
+    return nullptr;
+  }
+
+  /// check prefetch
+  virtual bool isPrefetch(unsigned opcode) const {
+    return false;
+  }
+
+
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;

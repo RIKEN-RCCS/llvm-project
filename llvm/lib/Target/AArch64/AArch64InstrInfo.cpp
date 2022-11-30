@@ -50,6 +50,7 @@
 #include <cstdint>
 #include <iterator>
 #include <utility>
+//#include "AArch64SwplTargetMachine.h"
 
 using namespace llvm;
 
@@ -8143,8 +8144,8 @@ AArch64InstrInfo::getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
 
 bool AArch64InstrInfo::splitPrePostIndexInstr(
     MachineBasicBlock &MBB, MachineInstr &MI, MachineInstr **ldst, MachineInstr **add ) const {
-  MachineInstr *tadd=nullptr;
-  MachineInstr *tldst=nullptr;
+  MachineInstr *tadd = nullptr;
+  MachineInstr *tldst = nullptr;
   Register def_addr_reg;
   Register use_addr_reg;
   Register use_offset_reg;
@@ -8310,10 +8311,81 @@ bool AArch64InstrInfo::splitPrePostIndexInstr(
     return false;
   }
 
-  if (ldst!=nullptr) *ldst=tldst;
-  if (add!=nullptr) *add=tadd;
+  if (ldst != nullptr) *ldst = tldst;
+  if (add != nullptr) *add = tadd;
 
   return true;
+}
+
+MachineInstr* AArch64InstrInfo::makeKernelIterationBranch(MachineRegisterInfo &MRI,
+                                                          MachineBasicBlock &MBB,
+                                                          const DebugLoc &debugLoc,
+                                                          Register doVReg,
+                                                          int iterationCount,
+                                                          int coefficient) const {
+
+  auto insertionPoint=MBB.getFirstInstrTerminator();
+
+  const auto*regClass = MRI.getRegClass(doVReg);
+  auto ini = doVReg;
+  if (regClass->hasSubClassEq(&AArch64::GPR64RegClass)) {
+    /// 条件判定（SUBSXri）で利用できないレジスタクラスの場合、COPYを生成し、利用可能レジスタクラスを定義する
+    ini = MRI.createVirtualRegister(&AArch64::GPR64spRegClass);
+    BuildMI(MBB, insertionPoint, debugLoc, get(TargetOpcode::COPY), ini)
+        .addReg(doVReg);
+  }
+
+  /// compare(SUBSXri)生成
+  // $XZR(+CC)=SUBSXri %TMI.doVReg, TMI.expansion
+  BuildMI(MBB, insertionPoint, debugLoc, get(AArch64::SUBSXri), AArch64::XZR)
+      .addReg(ini)
+      .addImm(iterationCount)
+      .addImm(0);
+
+
+  // branchの生成
+  auto CC=AArch64CC::LT;
+  if (coefficient > 0) {
+    CC=AArch64CC::GE;
+  }
+  /// Bcc命令を生成し、TMI.branchDoVRegMIKernelに記録しておく
+  auto br=BuildMI(MBB, insertionPoint, debugLoc, get(AArch64::Bcc))
+                .addImm(CC)
+                .addMBB(&MBB);
+
+  return &*br;
+
+}
+
+bool AArch64InstrInfo::isPrefetch(unsigned opcode) const {
+  switch(opcode) {
+    /// AArch64 prefetch
+  case AArch64::PRFMui:
+    /// SVE prefetch
+  case AArch64::PRFB_PRI:
+  case AArch64::PRFH_PRI:
+  case AArch64::PRFW_PRI:
+  case AArch64::PRFD_PRI:
+  case AArch64::PRFB_PRR:
+  case AArch64::PRFH_PRR:
+  case AArch64::PRFW_PRR:
+  case AArch64::PRFD_PRR:
+  case AArch64::PRFB_D_SCALED:
+  case AArch64::PRFH_D_SCALED:
+  case AArch64::PRFW_D_SCALED:
+  case AArch64::PRFD_D_SCALED:
+  case AArch64::PRFB_S_PZI:
+  case AArch64::PRFH_S_PZI:
+  case AArch64::PRFW_S_PZI:
+  case AArch64::PRFD_S_PZI:
+  case AArch64::PRFB_D_PZI:
+  case AArch64::PRFH_D_PZI:
+  case AArch64::PRFW_D_PZI:
+  case AArch64::PRFD_D_PZI:
+    return true;
+  default:
+    return false;
+  }
 }
 
 

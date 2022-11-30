@@ -375,9 +375,6 @@ public:
   /// Copy命令かどうかの判定
   bool isCopy() const { return (isInLoop() && getMI() != nullptr && getMI()->isCopy()); }
 
-  /// ADDXrr命令かどうかの判定
-  bool isADDXrr() const { return (isInLoop() && getMI() != nullptr && getMI()->getOpcode()==AArch64::ADDXrr); }
-
   /// 指定PHIの SwplInst::UseReg のうち、Loop内で更新しているレジスタを持つ SwplReg を返す
   /// \return Loop内で更新しているレジスタ
   const SwplReg &getPhiUseRegFromIn(void) const;
@@ -402,34 +399,7 @@ public:
   bool isLoad() const { return getMI()->mayLoad(); }
   bool isStore() const { return getMI()->mayStore(); }
   bool isPrefetch() const {
-    switch(MI->getOpcode()) {
-      /// AArch64 prefetch
-    case AArch64::PRFMui:
-      /// SVE prefetch
-    case AArch64::PRFB_PRI:
-    case AArch64::PRFH_PRI:
-    case AArch64::PRFW_PRI:
-    case AArch64::PRFD_PRI:
-    case AArch64::PRFB_PRR:
-    case AArch64::PRFH_PRR:
-    case AArch64::PRFW_PRR:
-    case AArch64::PRFD_PRR:
-    case AArch64::PRFB_D_SCALED:
-    case AArch64::PRFH_D_SCALED:
-    case AArch64::PRFW_D_SCALED:
-    case AArch64::PRFD_D_SCALED:
-    case AArch64::PRFB_S_PZI:
-    case AArch64::PRFH_S_PZI:
-    case AArch64::PRFW_S_PZI:
-    case AArch64::PRFD_S_PZI:
-    case AArch64::PRFB_D_PZI:
-    case AArch64::PRFH_D_PZI:
-    case AArch64::PRFW_D_PZI:
-    case AArch64::PRFD_D_PZI:
-      return true;
-    default:
-      return false;
-    }
+    return TII->isPrefetch(MI->getOpcode());
   }
 
   llvm::StringRef getName() {
@@ -530,6 +500,7 @@ public:
   SwplInstList_iterator useinsts_end() { return UseInsts.end(); }
 
   void printDefInst(void);
+
 
   AArch64StmRegKind getRegKind() const {
     return STM.getRegKind(Reg);

@@ -725,7 +725,7 @@ int SwplReg::calcEachRegIncrement() {
   if (!def_inst->isInLoop()) {
     return 0;
   }
-  if (def_inst->isADDXrr()) {
+  if (def_inst->isInLoop() && def_inst->getMI() != nullptr && def_inst->getMI()->getOpcode()==AArch64::ADDXrr) {
     const auto &r1=def_inst->getUseRegs(0);
     const auto &r2=def_inst->getUseRegs(1);
     if (r1.DefInst->isPhi()) {

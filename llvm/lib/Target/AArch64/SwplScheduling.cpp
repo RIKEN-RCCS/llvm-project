@@ -1106,9 +1106,9 @@ void MsResourceResult::init() {
   num_necessary_freg = 0;
   num_necessary_preg = 0;
 
-  num_max_ireg = (OptionMaxIreg > 0) ? OptionMaxIreg : llvm::AArch64::GPR64RegClass.getNumRegs();
-  num_max_freg = (OptionMaxFreg > 0) ? OptionMaxFreg : llvm::AArch64::FPR64RegClass.getNumRegs();
-  num_max_preg = (OptionMaxPreg > 0) ? OptionMaxPreg : llvm::AArch64::PPR_3bRegClass.getNumRegs();
+  num_max_ireg = (OptionMaxIreg > 0) ? OptionMaxIreg : llvm::StmRegKind::getNumIntReg();
+  num_max_freg = (OptionMaxFreg > 0) ? OptionMaxFreg : llvm::StmRegKind::getNumFloatReg();
+  num_max_preg = (OptionMaxPreg > 0) ? OptionMaxPreg : llvm::StmRegKind::getNumPredicateReg();
 
   setSufficient();
   return;
@@ -1374,14 +1374,14 @@ MsResourceResult MsResult::isHardRegsSufficient(const PlanSpec& spec) {
   ///////////////////////////////////////////////////
   // case llvm::AArch64::GPR64RegClassID
   n_necessary_regs = SwplRegEstimate::calcNumRegs(spec.loop, inst_slot_map, ii,
-                                                  llvm::AArch64::GPR64RegClassID,
+                                                  llvm::StmRegKind::getIntRegID(),
                                                   n_renaming_versions);
   ms_resource_result.setNecessaryIreg(n_necessary_regs);
 
   ///////////////////////////////////////////////////
   // case llvm::AArch64::FPR64RegClassID
   n_necessary_regs = SwplRegEstimate::calcNumRegs(spec.loop, inst_slot_map, ii,
-                                                  llvm::AArch64::FPR64RegClassID,
+                                                  llvm::StmRegKind::getFloatRegID(),
                                                   n_renaming_versions);
   if(n_necessary_regs > spec.n_fillable_float_invariants) {
     // 必ず成立するはずだが念のため
@@ -1392,7 +1392,7 @@ MsResourceResult MsResult::isHardRegsSufficient(const PlanSpec& spec) {
   ///////////////////////////////////////////////////
   // case llvm::AArch64::PPRRegClassID
   n_necessary_regs = SwplRegEstimate::calcNumRegs(spec.loop, inst_slot_map, ii,
-                                                  llvm::AArch64::PPRRegClassID,
+                                                  llvm::StmRegKind::getPredicateRegID(),
                                                   n_renaming_versions);
   ms_resource_result.setNecessaryPreg(n_necessary_regs);
 
