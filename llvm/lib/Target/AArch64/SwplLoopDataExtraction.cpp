@@ -203,7 +203,8 @@ void SwplLoop::makeBodyInsts(Register2SwplRegMap &rmap) {
   MachineInstr*branch=nullptr;
   MachineInstr*cmp=nullptr;
   MachineInstr*addsub=nullptr;
-  (void)SwplScr(*(getML())).findMIsForLoop(&branch, &cmp, &addsub);
+  MachineBasicBlock *mbb=getML()->getTopBlock();
+  TII->findMIsForLoop(*mbb, &branch, &cmp, &addsub);
   for (auto &MI:getNewBodyMBB()->instrs()) {
     if (MI.isDebugInstr()) { continue; }
     if (&MI == branch) { continue; }

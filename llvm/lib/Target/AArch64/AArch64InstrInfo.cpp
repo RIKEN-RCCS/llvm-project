@@ -8388,6 +8388,94 @@ bool AArch64InstrInfo::isPrefetch(unsigned opcode) const {
   }
 }
 
+void AArch64InstrInfo::makeBypassKernel(MachineRegisterInfo &MRI,
+                                        Register doInitVar,
+                                        const DebugLoc& dbgloc,
+                                        MachineBasicBlock &from,
+                                        MachineBasicBlock &to,
+                                        int n) const {
+
+  Register ini=doInitVar;
+  const auto*regClass=MRI.getRegClass(doInitVar);
+  if (regClass->hasSubClassEq(&AArch64::GPR64RegClass)) {
+    // SUBSXriで利用できないレジスタクラスのため、COPYを生成する
+    ini=MRI.createVirtualRegister(&AArch64::GPR64spRegClass);
+    BuildMI(&from, dbgloc, get(AArch64::COPY), ini)
+        .addReg(doInitVar);
+  }
+  // c1に分岐命令を生成
+  BuildMI(&from, dbgloc, get(AArch64::SUBSXri), AArch64::XZR)
+      .addReg(ini)
+      .addImm(n)
+      .addImm(0);
+
+  BuildMI(&from, dbgloc, get(AArch64::Bcc))
+      .addImm(AArch64CC::LT)
+      .addMBB(&to);
+
+  from.addSuccessor(&to);
+}
+
+void AArch64InstrInfo::makeBypassMod(Register doUpdateVar,
+                            const DebugLoc &dbgloc,
+                            MachineOperand &CC,
+                            MachineBasicBlock &from,
+                            MachineBasicBlock &to) const {
+
+  BuildMI(&from, dbgloc, get(AArch64::SUBSXri), AArch64::XZR)
+      .addReg(doUpdateVar)
+      .addImm(0)
+      .addImm(0);
+
+  AArch64CC::CondCode newCC;
+
+  switch(CC.getImm()) {
+  case AArch64CC::NE:
+    newCC=AArch64CC::EQ;
+    break;
+  case AArch64CC::GE:
+    newCC=AArch64CC::LT;
+    break;
+  default:
+    llvm_unreachable("CC is not (NE or GE)");
+  }
+  BuildMI(&from, dbgloc, get(AArch64::Bcc))
+      .addImm(newCC)
+      .addMBB(&to);
+
+  from.addSuccessor(&to);
+}
+
+bool AArch64InstrInfo::isNE(unsigned imm) const {
+  return ((AArch64CC::CondCode)imm) == AArch64CC::NE;
+}
+
+bool AArch64InstrInfo::isGE(unsigned imm) const {
+  return ((AArch64CC::CondCode)imm) == AArch64CC::GE;
+}
+
+bool AArch64InstrInfo::findMIsForLoop(MachineBasicBlock &MBB,
+                                      MachineInstr **Branch,
+                                      MachineInstr **Cmp,
+                                      MachineInstr **Addsub) const {
+  *Addsub=*Cmp=*Branch=nullptr;
+  for (auto &mi:make_range(MBB.rbegin(), MBB.rend())) {
+    if (*Branch==nullptr) {
+      if (mi.getOpcode() == AArch64::Bcc)
+        *Branch = &mi;
+      continue;
+    }
+    if (mi.getOpcode()!=AArch64::SUBSXri) continue;
+    // CCを定義するか確認
+    for (const auto &mo:mi.operands()) {
+      if (mo.isReg() && mo.isDef() && mo.getReg() == AArch64::NZCV) {
+        *Cmp=*Addsub=&mi;
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {
   if (MF.getSubtarget<AArch64Subtarget>().hardenSlsBlr())

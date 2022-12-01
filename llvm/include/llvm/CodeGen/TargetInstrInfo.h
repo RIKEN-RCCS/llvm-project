@@ -2017,6 +2017,53 @@ public:
     return false;
   }
 
+  /// Create a branch before the kernel to pass the sequential route if the number of rotations is not enough.
+  /// \param [in] doInitVar
+  /// \param [in] dbgloc
+  /// \param [out] from
+  /// \param [out] to
+  /// \param [in] n
+  virtual void makeBypassKernel(MachineRegisterInfo &MRI,
+                                Register doInitVar,
+                                const DebugLoc &dbgloc,
+                                MachineBasicBlock &from,
+                                MachineBasicBlock &to,
+                                int n) const {
+    return;
+  }
+
+  /// Generate remainder loop avoidance branches.
+  /// \param [in] doUpdateVar
+  /// \param [in] dbgloc
+  /// \param [in] CC
+  /// \param [out] from
+  /// \param [out] to
+  virtual void makeBypassMod(
+      Register doUpdateVar, const DebugLoc &dbgloc, MachineOperand &CC, MachineBasicBlock &from, MachineBasicBlock &to
+      ) const {
+    return;
+  }
+
+  /// instruction controlling the loop
+  /// \param [in] MBB
+  /// \param [out] Branch
+  /// \param [out] Cmp
+  /// \param [out] AddSub
+  ///
+  /// \retval true found
+  /// \retval false
+  virtual bool findMIsForLoop(
+      MachineBasicBlock &MBB, MachineInstr **Branch, MachineInstr **Cmp, MachineInstr **Addsub) const {
+    return false;
+  }
+
+  virtual bool isNE(unsigned imm) const {
+    return false;
+  }
+  virtual bool isGE(unsigned imm) const {
+    return false;
+  }
+
 
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;

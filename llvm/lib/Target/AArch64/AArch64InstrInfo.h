@@ -348,6 +348,25 @@ public:
                                           int coefficient) const override;
 
   bool isPrefetch(unsigned opcode) const override;
+  void makeBypassKernel(MachineRegisterInfo &MRI,
+                        Register doInitVar,
+                        const DebugLoc &dbgloc,
+                        MachineBasicBlock &from,
+                        MachineBasicBlock &to,
+                        int n) const override;
+
+  void makeBypassMod(Register doUpdateVar,
+                     const DebugLoc &dbgloc,
+                     MachineOperand &CC,
+                     MachineBasicBlock &from,
+                     MachineBasicBlock &to) const override;
+
+  bool isNE(unsigned imm) const override;
+  bool isGE(unsigned imm) const override;
+  bool findMIsForLoop(MachineBasicBlock &MBB,
+                      MachineInstr **Branch,
+                      MachineInstr **Cmp,
+                      MachineInstr **Addsub) const override;
 
 
 #define GET_INSTRINFO_HELPER_DECLS

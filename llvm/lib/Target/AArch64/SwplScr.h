@@ -137,21 +137,6 @@ private:
                   llvm::MachineBasicBlock &skip_kernel_from, llvm::MachineBasicBlock &skip_kernel_to,
                   llvm::MachineBasicBlock &skip_mod_from, llvm::MachineBasicBlock &skip_mod_to);
 
-  /// 回転数が足りない場合に、逐次ルートを通すための分岐をkernelの前に作成する
-  /// \param [in] doInitVar
-  /// \param [in] dbgloc
-  /// \param [out] from
-  /// \param [out] to
-  /// \param [in] n
-  void makeBypassKernel(llvm::Register doInitVar,  const llvm::DebugLoc&dbgloc, llvm::MachineBasicBlock &from, llvm::MachineBasicBlock &to, int n) const;
-
-  /// Kernel通過後に余りループを通る必要が無い場合の回避分岐を生成する
-  /// \param [in] doUpdateVar
-  /// \param [in] dbgloc
-  /// \param [in] CC
-  /// \param [out] from
-  /// \param [out] to
-  void makeBypassMod(llvm::Register doUpdateVar, const llvm::DebugLoc&dbgloc, llvm::MachineOperand &CC, llvm::MachineBasicBlock &from, llvm::MachineBasicBlock &to) const;
 
   /// MBBを削除する（およびSuccessor、PHI、Brの更新）
   /// \param [in,out] target 削除対象
@@ -184,16 +169,6 @@ public:
   /// \retval true 誘導変数発見
   /// \retval false 誘導変数検出できず
   bool findBasicInductionVariable(TransformedMIRInfo &TMI) const;
-
-
-  /// loopの制御をおこなう言を探す。
-  /// \param [out] Branch
-  /// \param [out] Cmp
-  /// \param [out] AddSub
-  ///
-  /// \retval true loopを構成する各命令を特定できた
-  /// \retval false loopを構成する革命例を特定できず
-  bool findMIsForLoop(llvm::MachineInstr **Branch, llvm::MachineInstr **Cmp, llvm::MachineInstr **Addsub) const;
 
   /// SWPLの結果をMIRへ反映するために,MBBの構成を行なう.
   /// \param [in,out] tmi
