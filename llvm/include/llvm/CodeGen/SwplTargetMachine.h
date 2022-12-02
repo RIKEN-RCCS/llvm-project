@@ -17,14 +17,18 @@
 namespace llvm {
 
 class StmRegKind {
-public:
-private:
+protected:
   enum RegKindID {unknown=0, IntReg=1, FloatReg=2, PredicateReg=3, CCReg=4};
   unsigned registerClassId = RegKindID::unknown;
   bool allocated = false;
 
 public:
   /// constructor
+
+  StmRegKind():registerClassId(RegKindID::unknown),allocated(false)  {}
+  StmRegKind(const StmRegKind&s):registerClassId(s.registerClassId),allocated(s.allocated) {}
+  virtual ~StmRegKind() {}
+
   /// \param id register class id
   /// \param isAllocated  physical register
   StmRegKind(unsigned id, bool isAllocated)
@@ -33,7 +37,7 @@ public:
   /// check Interger
   /// \retval true Interger
   /// \retval false not Integer
-  bool isInteger(void) {
+  virtual bool isInteger(void) const {
     return registerClassId == RegKindID::IntReg;
   }
   static bool isInteger(unsigned regclass) {
@@ -46,7 +50,7 @@ public:
   /// check Floating
   /// \retval true Floating
   /// \retval false not Floating
-  bool isFloating(void) {
+  virtual bool isFloating(void) const {
     return registerClassId == RegKindID::FloatReg;
   }
   static bool isFloating(unsigned regclass) {
@@ -59,7 +63,7 @@ public:
   /// check Predicate
   /// \retval true Predicate
   /// \retval false not Predicate
-  bool isPredicate(void) {
+  virtual bool isPredicate(void) const {
     return registerClassId == RegKindID::PredicateReg;
   }
   static bool isPredicate(unsigned regclass) {
@@ -72,7 +76,7 @@ public:
   /// check CC
   /// \retval true CC
   /// \retval false not CC
-  bool isCCRegister(void) {
+  virtual bool isCCRegister(void) const {
     return registerClassId == RegKindID::CCReg;
   }
   static bool isCC(unsigned regclass) {
@@ -85,50 +89,46 @@ public:
   /// check CC(for compatible)
   /// \retval true CC
   /// \retval false not CC
-  bool isIntegerCCRegister(void) {
-    return registerClassId == RegKindID::CCReg;
+  virtual bool isIntegerCCRegister(void) const {
+    return isCCRegister();
   }
 
   /// check Allocated
   ///
   /// \retval true allocated
   /// \retval false not allocated
-  bool isAllocalted(void) { return allocated; }
+  virtual bool isAllocalted(void) const { return allocated; }
 
   /// number of regkind
   /// \return bunber of regkind
-  static int getKindNum(void) { return 4; }
+  virtual int getKindNum(void) const { return 4; }
 
-  static int getNumIntReg() {
-    return 31;
-  }
-  static int getNumFloatReg() {
+  virtual int getNumIntReg() const {
     return 32;
   }
-  static int getNumPredicateReg() {
-    return 3;
+  virtual int getNumFloatReg() const {
+    return 32;
+  }
+  virtual int getNumPredicateReg() const {
+    return 8;
+  }
+  virtual int getNumCCReg() const {
+    return 1;
   }
 
   /// num of reg
   /// \return num of reg
-  int getNum(void) {
-    switch (registerClassId) {
-    case RegKindID::IntReg:
-      return getNumIntReg();
-    case RegKindID::FloatReg:
-      return getNumFloatReg();
-    case RegKindID::PredicateReg:
-      return getNumPredicateReg();
-    case RegKindID::CCReg:
-      return 1;
-    default:
-      llvm_unreachable("registerClassId is unknown");
-    }
+  virtual int getNum(void) const {
+    if (isInteger()) return getNumIntReg();
+    if (isFloating()) return getNumFloatReg();
+    if (isPredicate()) return getNumPredicateReg();
+    if (isCCRegister()) return getNumCCReg();
+    llvm_unreachable("registerClassId is unknown");
   }
 
   /// print StmRegKind
   /// \param [out] os
-  void print(llvm::raw_ostream &os) {
+  virtual void print(llvm::raw_ostream &os) const {
     switch (registerClassId) {
     case RegKindID::IntReg:
       os << "StmRegKind:IntReg\n";
@@ -148,6 +148,13 @@ public:
     }
   }
 
+  /// same regkind?
+  /// \param [in] kind2 target
+  /// \retval true same
+  /// \retval false not same
+  virtual bool isSameKind(unsigned id) const {
+    return registerClassId == id;
+  }
   /// same regkind?
   /// \param [in] kind1 target1
   /// \param [in] kind2 target2

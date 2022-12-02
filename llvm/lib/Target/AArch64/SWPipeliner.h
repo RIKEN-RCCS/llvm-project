@@ -430,9 +430,19 @@ class SwplReg {
   SwplReg *Predecessor;      ///< 先任者
   SwplReg *Successor;        ///< 後任者
   bool EarlyClobber=false;   ///< early-clobber属性
+  llvm::StmRegKind *rk=nullptr;
 
 public:
   SwplReg() {};
+  SwplReg(const SwplReg &s) {
+    Reg = s.Reg;
+    DefInst = s.DefInst;
+    DefIndex = s.DefIndex;
+    Predecessor = s.Predecessor;
+    Successor = s.Successor;
+    EarlyClobber=s.EarlyClobber;
+    rk = TII->getRegKind(*MRI, s.Reg);
+  };
   SwplReg(llvm::Register r, SwplInst &i, size_t def_index, bool earlyclober=false) {
     Reg = r;
     DefInst = &i;
@@ -440,7 +450,10 @@ public:
     Predecessor = nullptr;
     Successor = nullptr;
     EarlyClobber=earlyclober;
+    rk = TII->getRegKind(*MRI, r);
   }
+  virtual ~SwplReg() {if (rk) delete rk;}
+
   // getter
   llvm::Register const getReg() { return Reg; }
   llvm::Register getReg() const { return Reg; }
@@ -502,8 +515,20 @@ public:
   void printDefInst(void);
 
 
-  AArch64StmRegKind getRegKind() const {
-    return STM.getRegKind(Reg);
+  bool isSameKind(unsigned id) const {
+    return rk->isSameKind(id);
+  }
+  bool isIntegerCCRegister() const {
+    return rk->isIntegerCCRegister();
+  }
+  bool isPredReg() const {
+    return rk->isPredicate();
+  }
+  bool isFloatReg() const {
+    return rk->isFloating();
+  }
+  bool isIntReg() const {
+    return rk->isInteger();
   }
 
   /// Stack-pointerを扱うレジスタかどうかを判定する

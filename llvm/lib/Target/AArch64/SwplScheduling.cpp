@@ -1105,10 +1105,12 @@ void MsResourceResult::init() {
   num_necessary_ireg = 0;
   num_necessary_freg = 0;
   num_necessary_preg = 0;
+  auto *rk=TII->getRegKind(*MRI);
 
-  num_max_ireg = (OptionMaxIreg > 0) ? OptionMaxIreg : llvm::StmRegKind::getNumIntReg();
-  num_max_freg = (OptionMaxFreg > 0) ? OptionMaxFreg : llvm::StmRegKind::getNumFloatReg();
-  num_max_preg = (OptionMaxPreg > 0) ? OptionMaxPreg : llvm::StmRegKind::getNumPredicateReg();
+  num_max_ireg = (OptionMaxIreg > 0) ? OptionMaxIreg : rk->getNumIntReg();
+  num_max_freg = (OptionMaxFreg > 0) ? OptionMaxFreg : rk->getNumFloatReg();
+  num_max_preg = (OptionMaxPreg > 0) ? OptionMaxPreg : rk->getNumPredicateReg();
+  delete rk;
 
   setSufficient();
   return;

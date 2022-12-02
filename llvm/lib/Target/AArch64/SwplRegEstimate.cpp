@@ -277,7 +277,7 @@ unsigned SwplRegEstimate::getNumImmortalRegs(const SwplLoop& loop, unsigned regc
       if ( reg->isRegNull() ) {
         continue;
       }
-      if( !(AArch64StmRegKind::isSameKind( reg->getRegKind(), regclassid)) ) {
+      if( !(reg->isSameKind(regclassid)) ) {
         continue;
       }
 
@@ -295,7 +295,7 @@ unsigned SwplRegEstimate::getNumImmortalRegs(const SwplLoop& loop, unsigned regc
     SwplReg *reg, *successor;
     reg = &(inst->getDefRegs(0));
     assert ( !(reg->isRegNull()) );
-    if( !(AArch64StmRegKind::isSameKind(reg->getRegKind(), regclassid)) ) {
+    if ( !reg->isSameKind(regclassid) ) {
       continue;
     }
   
@@ -919,7 +919,7 @@ bool SwplRegEstimate::isCountedReg(const SwplReg& reg, unsigned regclassid) {
   if ( reg.isRegNull() ) {
     return false;
   }
-  if( !(AArch64StmRegKind::isSameKind(reg.getRegKind(), regclassid)) ) {
+  if( !reg.isSameKind(regclassid) ) {
     return false;
   }
   if (reg.getPredecessor() != nullptr) {

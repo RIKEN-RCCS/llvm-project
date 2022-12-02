@@ -595,10 +595,10 @@ bool SwplInstSlotHashmap::isIccFreeAtBoundary(const SwplLoop& loop,
       if( reg->isRegNull() ) {
         continue;
       }
-      if( !((reg->getRegKind()).isIntegerCCRegister()) ) {
+      if( !reg->isIntegerCCRegister() ) {
         continue;
       }
-      if( !(reg->isUsed()) ) {
+      if( !reg->isUsed() ) {
         continue;
       }
       last_use_cycle = calcLastUseCycleInBody(*reg, iteration_interval);

@@ -368,6 +368,11 @@ public:
                       MachineInstr **Cmp,
                       MachineInstr **Addsub) const override;
 
+  StmRegKind* getRegKind(const MachineRegisterInfo &MRI, Register r) const override;
+  StmRegKind* getRegKind(const MachineRegisterInfo &MRI) const override;
+  unsigned getRegKindId(const MachineRegisterInfo &MRI, Register r) const override;
+
+
 
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"

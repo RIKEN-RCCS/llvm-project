@@ -59,6 +59,7 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class TargetSubtargetInfo;
+class StmRegKind;
 
 template <class T> class SmallVectorImpl;
 
@@ -2062,6 +2063,15 @@ public:
   }
   virtual bool isGE(unsigned imm) const {
     return false;
+  }
+  virtual StmRegKind* getRegKind(const MachineRegisterInfo &MRI, Register r) const {
+    return nullptr;
+  }
+  virtual unsigned getRegKindId(const MachineRegisterInfo &MRI, Register r) const {
+    return false;
+  }
+  virtual StmRegKind* getRegKind(const MachineRegisterInfo &MRI) const {
+    return nullptr;
   }
 
 

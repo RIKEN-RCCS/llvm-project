@@ -327,81 +327,6 @@ unsigned int AArch64SwplTargetMachine::getNumResource(void) const {
   return numResource;
 }
 
-AArch64StmRegKind
-AArch64SwplTargetMachine::getRegKind(llvm::Register reg) const {
-  unsigned regClassId=0;
-  bool pReg=false;
-  if (reg.isVirtual()) {
-    const auto * regClass=MRI->getRegClass(reg);
-    if (regClass->hasSuperClassEq(&AArch64::GPR64allRegClass) || regClass->hasSuperClassEq(&AArch64::GPR32allRegClass)) {
-      regClassId = AArch64::GPR64RegClassID;
-    } else if (regClass->hasSuperClassEq(&AArch64::FPR8RegClass) ||
-        regClass->hasSuperClassEq(&AArch64::FPR16RegClass) ||
-        regClass->hasSuperClassEq(&AArch64::FPR32RegClass) ||
-        regClass->hasSuperClassEq(&AArch64::FPR64RegClass) ||
-        regClass->hasSuperClassEq(&AArch64::FPR128RegClass) ||
-        regClass->hasSuperClassEq(&AArch64::DDRegClass) ||
-        regClass->hasSuperClassEq(&AArch64::DDDRegClass) ||
-        regClass->hasSuperClassEq(&AArch64::DDDDRegClass) ||
-        regClass->hasSuperClassEq(&AArch64::QQRegClass) ||
-        regClass->hasSuperClassEq(&AArch64::QQQRegClass) ||
-        regClass->hasSuperClassEq(&AArch64::QQQQRegClass) ||
-        regClass->hasSuperClassEq(&AArch64::FPR16_loRegClass) ||
-        regClass->hasSuperClassEq(&AArch64::FPR64_loRegClass) ||
-        regClass->hasSuperClassEq(&AArch64::FPR128_loRegClass) ||
-        regClass->hasSuperClassEq(&AArch64::ZPRRegClass) ||
-        regClass->hasSuperClassEq(&AArch64::ZPR_3bRegClass) ||
-        regClass->hasSuperClassEq(&AArch64::ZPR_4bRegClass) ||
-        regClass->hasSuperClassEq(&AArch64::ZPR2RegClass) ||
-        regClass->hasSuperClassEq(&AArch64::ZPR3RegClass) ||
-        regClass->hasSuperClassEq(&AArch64::ZPR4RegClass)) {
-      regClassId=AArch64::FPR64RegClassID;
-    }else if (regClass->hasSuperClassEq(&AArch64::PPRRegClass) ||
-        regClass->hasSuperClassEq(&AArch64::PPR_3bRegClass)) {
-      regClassId=AArch64::PPRRegClassID;
-    }else {
-      dbgs() << "unknown register class: " << MRI->getTargetRegisterInfo()->getRegClassName(regClass) << "\n";
-      llvm_unreachable("unknown register");
-    }
-
-  } else {
-#ifndef ALLOCATED_IS_CCR_ONLY
-    pReg=true;
-#endif
-    if (AArch64::GPR64allRegClass.contains(reg) ||
-        AArch64::GPR32allRegClass.contains(reg)) {
-      regClassId=AArch64::GPR64RegClassID;
-    } else if (AArch64::FPR128RegClass.contains(reg) ||
-        AArch64::FPR64RegClass.contains(reg) ||
-        AArch64::FPR32RegClass.contains(reg) ||
-        AArch64::FPR16RegClass.contains(reg) ||
-        AArch64::FPR8RegClass.contains(reg) ||
-        AArch64::DDRegClass.contains(reg) ||
-        AArch64::DDDRegClass.contains(reg) ||
-        AArch64::DDDDRegClass.contains(reg) ||
-        AArch64::QQRegClass.contains(reg) ||
-        AArch64::QQQRegClass.contains(reg) ||
-        AArch64::QQQQRegClass.contains(reg) ||
-        AArch64::FPR128_loRegClass.contains(reg) ||
-        AArch64::FPR64_loRegClass.contains(reg) ||
-        AArch64::FPR16_loRegClass.contains(reg) ||
-        AArch64::ZPRRegClass.contains(reg)) {
-      regClassId=AArch64::FPR64RegClassID;
-    } else if (AArch64::PPRRegClass.contains(reg) ||
-        AArch64::PPR_3bRegClass.contains(reg)) {
-      regClassId=AArch64::PPRRegClassID;
-    } else if (AArch64::CCRRegClass.contains(reg)) {
-#ifdef ALLOCATED_IS_CCR_ONLY
-      pReg=true;
-#endif
-      regClassId=AArch64::CCRRegClassID;
-    } else {
-      llvm_unreachable("unknown register");
-    }
-  }
-
-  return AArch64StmRegKind(regClassId, pReg, *MRI);
-}
 bool AArch64SwplTargetMachine::isImplimented(const llvm::MachineInstr&mi) const {
   if (OptionCopyIsVirtual) {
     if (mi.isCopy()) return false;
@@ -625,7 +550,7 @@ void StmTest::run(llvm::MachineFunction&MF) {
   } else if (TestID==2) {
     dbgs() << "<<<TEST: 002 StmRegKindNum>>>\n";
     dbgs() << "<<<TEST: 002-01 getKindNum>>>\n";
-    dbgs() << "AArch64StmRegKind::getKindNum():" << AArch64StmRegKind::getKindNum() << "\n";
+    dbgs() << "AArch64StmRegKind::getKindNum():" << AArch64StmRegKind(*MRI).getKindNum() << "\n";
     dbgs() << "<<<TEST: 002-02 >>>\n";
     for (auto &bb:MF) {
       for (auto &instr:bb) {
@@ -638,12 +563,13 @@ void StmTest::run(llvm::MachineFunction&MF) {
             continue;
           // register kind
           const auto usereg = op.getReg();
-          auto regkind = STM.getRegKind(usereg);
-          regkind.print(dbgs());
-          dbgs() << "AArch64StmRegKind::isInteger:" << regkind.isInteger() << " isFloating:" << regkind.isFloating()
-                 << " isPredicate:" << regkind.isPredicate() << " isisCCRegister:" << regkind.isCCRegister()
-                 << " isIntegerCCRegister:" << regkind.isIntegerCCRegister()
-                 << " isAllocated:" << regkind.isAllocalted() << " getNum:" << regkind.getNum() << "\n";
+          auto regkind = TII->getRegKind(*MRI, usereg);
+          regkind->print(dbgs());
+          dbgs() << "AArch64StmRegKind::isInteger:" << regkind->isInteger() << " isFloating:" << regkind->isFloating()
+                 << " isPredicate:" << regkind->isPredicate() << " isisCCRegister:" << regkind->isCCRegister()
+                 << " isIntegerCCRegister:" << regkind->isIntegerCCRegister()
+                 << " isAllocated:" << regkind->isAllocalted() << " getNum:" << regkind->getNum() << "\n";
+          delete regkind;
         }
       }
     }
