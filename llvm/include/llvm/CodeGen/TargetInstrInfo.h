@@ -2074,6 +2074,25 @@ public:
     return nullptr;
   }
 
+  /// Determination of non-target instructions
+  /// \param [in] inst
+  /// \retval true non-target instructions
+  /// \retval false target instructions
+  virtual bool isNonTargetMI4SWPL(MachineInstr &inst) const {
+    return false;
+  }
+
+  /**
+   * Determines whether the target loop is subject to Swpl optimization.
+   *
+   * \param[in] L MachineLoop
+   * \retval true  The loop is subject to Swpl optimization。
+   * \retval false The loop isnot subject to Swpl optimization
+   */
+  virtual bool canPipelineLoop(MachineLoop &L) const {
+    return false;
+  }
+
 
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;

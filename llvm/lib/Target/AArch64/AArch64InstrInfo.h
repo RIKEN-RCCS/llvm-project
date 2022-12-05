@@ -371,6 +371,8 @@ public:
   StmRegKind* getRegKind(const MachineRegisterInfo &MRI, Register r) const override;
   StmRegKind* getRegKind(const MachineRegisterInfo &MRI) const override;
   unsigned getRegKindId(const MachineRegisterInfo &MRI, Register r) const override;
+  bool isNonTargetMI4SWPL(MachineInstr &inst)const override;
+  bool canPipelineLoop(MachineLoop &L) const override;
 
 
 

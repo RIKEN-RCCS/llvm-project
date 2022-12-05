@@ -8495,6 +8495,17 @@ StmRegKind * AArch64InstrInfo::getRegKind(const MachineRegisterInfo &MRI, Regist
     return new swpl::AArch64StmRegKind(regClassId, pReg, MRI);
 }
 
+bool AArch64InstrInfo::isNonTargetMI4SWPL(MachineInstr &inst) const {
+    switch(inst.getOpcode()) {
+    case AArch64::DMB: /// fence相当
+    case AArch64::INLINEASM:
+    case AArch64::INLINEASM_BR:
+      return true;
+    default:
+      return false;
+    }
+}
+
 unsigned AArch64InstrInfo::getRegKindId(const MachineRegisterInfo &MRI, Register reg) const {
     if (reg.isVirtual()) {
       const auto * regClass=MRI.getRegClass(reg);
