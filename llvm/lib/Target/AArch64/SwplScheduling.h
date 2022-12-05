@@ -20,9 +20,8 @@
 #include <set>
 #include <unordered_set>
 
-using namespace llvm;
 
-namespace swpl{
+namespace llvm{
 #define ASSUMED_ITERATIONS_MAX (32767)
 extern  llvm::cl::opt<bool> DebugOutput;
 

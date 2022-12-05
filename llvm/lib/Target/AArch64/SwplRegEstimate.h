@@ -19,7 +19,7 @@
 #include "SwplPlan.h"
 #include "SwplScheduling.h"
 
-namespace swpl{
+namespace llvm{
 
 /// \brief 指定したレジスタがいくつ必要であるかを数える処理群
 class SwplRegEstimate {

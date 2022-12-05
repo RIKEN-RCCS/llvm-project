@@ -60,6 +60,7 @@ class TargetRegisterInfo;
 class TargetSchedModel;
 class TargetSubtargetInfo;
 class StmRegKind;
+class SwplInst;
 
 template <class T> class SmallVectorImpl;
 
@@ -2091,6 +2092,11 @@ public:
    */
   virtual bool canPipelineLoop(MachineLoop &L) const {
     return false;
+  }
+  /// Calculate incremental value
+  /// \return incremental value
+  virtual int calcEachRegIncrement(const SwplInst *def_inst) const {
+    return 0;
   }
 
 

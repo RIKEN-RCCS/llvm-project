@@ -17,7 +17,7 @@
 
 #include "SWPipeliner.h"
 
-namespace swpl{
+namespace llvm{
 extern  llvm::cl::opt<bool> DebugOutput;
 
 

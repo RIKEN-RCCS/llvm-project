@@ -23,10 +23,9 @@
 #include <iostream>
 
 using namespace llvm;
-using namespace swpl;
+
 #define DEBUG_TYPE "swp-loop"
 
-#define UNKNOWN_MEM_DIFF INT_MIN        /* 0 の正反対 */
 
 static cl::opt<bool> DebugLoop("swpl-debug-loop",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> NoUseAA("swpl-no-use-aa",cl::init(false), cl::ReallyHidden);
@@ -52,7 +51,7 @@ void SwplReg::inheritReg(SwplReg *former_reg, SwplReg *latter_reg) {
   return;
 }
 
-void SwplReg::getDefPort( SwplInst **p_def_inst, int *p_def_index) const {
+void SwplReg::getDefPort( const SwplInst **p_def_inst, int *p_def_index) const {
   *p_def_inst = DefInst;
   *p_def_index = (int)DefIndex;
 }
@@ -65,11 +64,30 @@ void SwplReg::getDefPort( SwplInst **p_def_inst, int *p_def_index) {
 void SwplReg::getDefPortInLoopBody( SwplInst **p_def_inst, int *p_def_index) {
   getDefPort(p_def_inst, p_def_index);
   while(*p_def_inst != nullptr && (*p_def_inst)->isPhi()) {
-    const SwplReg Reg = (*p_def_inst)->getPhiUseRegFromIn();
-    SwplInst *inst = *p_def_inst;
+    const SwplReg &Reg = (*p_def_inst)->getPhiUseRegFromIn();
+    const SwplInst *inst = *p_def_inst;
+    const SwplInst *p = nullptr;
+    Reg.getDefPort(&p, p_def_index);
+    if (p == inst) {
+      // Body内にdef_instが存在しない 
+      *p_def_inst = nullptr;
+      return;
+    }
+    *(const SwplInst**)(p_def_inst) = p;
+  }
+  if (!((*p_def_inst)->isInLoop())) {
+    *p_def_inst = nullptr;
+  }
+}
+
+void SwplReg::getDefPortInLoopBody( const SwplInst **p_def_inst, int *p_def_index) const {
+  getDefPort(p_def_inst, p_def_index);
+  while(*p_def_inst != nullptr && (*p_def_inst)->isPhi()) {
+    const SwplReg &Reg = (*p_def_inst)->getPhiUseRegFromIn();
+    const SwplInst *inst = *p_def_inst;
     Reg.getDefPort(p_def_inst, p_def_index);
     if (*p_def_inst == inst) {
-      // Body内にdef_instが存在しない 
+      // Body内にdef_instが存在しない
       *p_def_inst = nullptr;
       return;
     }
@@ -292,7 +310,7 @@ size_t SwplLoop::getSizeBodyRealInsts() const {
   size_t n = 0;
   for (auto *inst:getBodyInsts()) {
     const llvm::MachineInstr *MI = inst->getMI();
-    if (swpl::STM.isPseudo(*MI)) { continue; }
+    if (STM.isPseudo(*MI)) { continue; }
     n++;
   }
   return n;
@@ -712,79 +730,6 @@ void SwplLoop::deleteNewBodyMBB() {
   setNewBodyMBB(nullptr);
 }
 
-int SwplReg::calcEachRegIncrement() {
-  SwplInst *def_inst = nullptr;
-  SwplInst *induction_inst = nullptr;
-  int index_dummy = -1;
-  const auto *target=this;
-
-  getDefPort(&def_inst, &index_dummy);
-  if (!def_inst->isInLoop()) {
-    return 0;
-  }
-  if (def_inst->isInLoop() && def_inst->getMI() != nullptr && def_inst->getMI()->getOpcode()==AArch64::ADDXrr) {
-    const auto &r1=def_inst->getUseRegs(0);
-    const auto &r2=def_inst->getUseRegs(1);
-    if (r1.DefInst->isPhi()) {
-      if (r2.DefInst->isInLoop())
-        return UNKNOWN_MEM_DIFF;
-      def_inst=r1.DefInst;
-      target=&r1;
-    } else if (r2.DefInst->isPhi()) {
-      if (r1.DefInst->isInLoop())
-        return UNKNOWN_MEM_DIFF;
-      def_inst=r2.DefInst;
-      target=&r2;
-    } else {
-      return UNKNOWN_MEM_DIFF;
-    }
-  }
-
-  if (def_inst->isPhi()) {
-    const SwplReg& induction_reg = def_inst->getPhiUseRegFromIn();
-    induction_reg.getDefPort(&induction_inst, &index_dummy);
-    while (induction_inst->isCopy()) {
-      const auto &def_reg=induction_inst->getUseRegs(0);
-      induction_inst=def_reg.DefInst;
-    }
-
-    if (induction_inst->getSizeUseRegs() == 1) {
-      int sign = 0;
-      const auto *mi=induction_inst->getMI();
-      auto op=mi->getOpcode();
-      if (op == AArch64::ADDSXri || op == AArch64::ADDXri)
-        sign = 1;
-      else if (op == AArch64::SUBSXri || op == AArch64::SUBXri)
-        sign = -1;
-
-      if (sign == 0)
-        return UNKNOWN_MEM_DIFF;
-
-      if (&(induction_inst->getUseRegs(0)) == target) {
-        const auto& mo=mi->getOperand(2);
-        if (!mo.isImm()) return UNKNOWN_MEM_DIFF;
-        return mo.getImm();
-      }
-    } else {
-      return UNKNOWN_MEM_DIFF;
-    }
-  } else {
-    if (def_inst->isLoad())
-      return UNKNOWN_MEM_DIFF;
-
-    while (def_inst->getSizeUseRegs() == 1) {
-      def_inst->getUseRegs(0).getDefPort(&def_inst, &index_dummy);
-      if (!def_inst->isInLoop()) {
-        return 0;
-      }
-      if (def_inst->isPhi()) {
-        return UNKNOWN_MEM_DIFF;
-      }
-    }
-    return UNKNOWN_MEM_DIFF;
-  }
-  return UNKNOWN_MEM_DIFF;
-}
 
 int SwplMem::calcEachMemAddressIncrement() {
   int sum = 0;
@@ -796,7 +741,12 @@ int SwplMem::calcEachMemAddressIncrement() {
       dbgs() << "DBG(calcEachMemAddressIncrement): " << *(Inst->getMI());
   }
   for (auto *reg:getUseRegs()) {
-    int increment = reg->calcEachRegIncrement();
+    SwplInst *def_inst=nullptr;
+    int index_dummy=0;
+    reg->getDefPort(&def_inst, &index_dummy);
+
+
+    int increment = TII->calcEachRegIncrement(def_inst);
     if (DebugOutput) dbgs() << " calcEachRegIncrement(" << printReg(reg->getReg(), TRI)  << "): " << increment << "\n";
     if (increment == UNKNOWN_MEM_DIFF) {
       return increment;

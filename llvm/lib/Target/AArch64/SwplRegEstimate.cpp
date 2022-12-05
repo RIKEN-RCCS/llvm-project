@@ -17,11 +17,11 @@
 #include "SWPipeliner.h"
 #include "SwplPlan.h"
 
-using namespace llvm;
 
-static cl::opt<bool> OptionDumpReg("swpl-debug-dump-estimate-reg",cl::init(false), cl::ReallyHidden);
 
-namespace swpl{
+static llvm::cl::opt<bool> OptionDumpReg("swpl-debug-dump-estimate-reg",llvm::cl::init(false), llvm::cl::ReallyHidden);
+
+namespace llvm{
 
 /// \brief scheduling結果に対して指定したレジスタがいくつ必要であるかを数える処理
 /// \note 必要なレジスタ数を正確に計算する事は、RAでなければできないため、
@@ -349,7 +349,7 @@ unsigned SwplRegEstimate::getNumMortalRegs(const SwplLoop& loop,
   /* branch 用の icc をカウントする。
    * icc が iteration_interval のブロックを跨って使用されているかを、
    * チェックする場所が他にない。*/
-  if( regclassid == AArch64::CCRRegClassID ) {
+  if( llvm::StmRegKind::isCC( regclassid ) ) {
     incrementCounters (1, &reg_counters, iteration_interval,
                         0, 0);
   }
@@ -858,7 +858,7 @@ unsigned SwplRegEstimate::getNumPatternRegs (RenamedRegVector* vector_renamed_re
     }
 
     /* MVE==5の場合は、spillがおきやすい傾向にあるため多めに見積る */
-    if( regclassid == AArch64::PPRRegClassID ) {
+    if( llvm::StmRegKind::isPredicate(regclassid) ) {
       if (n_renaming_versions == 5) {
         pattern_max_counter = std::max(pattern_max_counter,
                                        3 * live_overlaps);

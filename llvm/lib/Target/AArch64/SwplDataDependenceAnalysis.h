@@ -13,5 +13,4 @@
 #define SwplDataDependenceAnalysis_h
 #include "SWPipeliner.h"
 
-bool isPrefetch(const swpl::SwplInst &inst);
 #endif

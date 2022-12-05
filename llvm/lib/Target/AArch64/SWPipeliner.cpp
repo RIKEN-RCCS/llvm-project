@@ -28,7 +28,7 @@
 #include "SwplTransformMIR.h"
 
 using namespace llvm;
-using namespace swpl;
+
 #define DEBUG_TYPE "aarch64-swpipeliner"
 
 static cl::opt<int> TestStm("swpl-test-tm",cl::init(0), cl::ReallyHidden);
@@ -41,7 +41,7 @@ static cl::opt<bool> DisableSwpl("swpl-disable",cl::init(false), cl::ReallyHidde
 static cl::opt<int> TargetLoop("swpl-choice-loop",cl::init(0), cl::ReallyHidden);
 
 
-namespace swpl {
+namespace llvm {
 cl::opt<bool> DebugOutput("swpl-debug",cl::init(false), cl::ReallyHidden);
 MachineOptimizationRemarkEmitter *ORE = nullptr;
 const TargetInstrInfo *TII = nullptr;
@@ -96,7 +96,7 @@ private:
   bool scheduleLoop(MachineLoop &L);
   void outputRemarkAnalysis(MachineLoop &L, int msg_id);
   bool shouldOptimize(MachineLoop &L);
-  swpl::StmTest *stmTest =nullptr; ///< Stmのテスト用領域
+  StmTest *stmTest =nullptr; ///< Stmのテスト用領域
 };
 
 struct SWPipelinerPre : public MachineFunctionPass {
@@ -188,7 +188,7 @@ bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
   if (TestStm) {
     // Tmの動作テスト(SchedModel確認のため、ここでテストを動作させている)
     if (stmTest ==nullptr) {
-      stmTest =new swpl::StmTest(TestStm);
+      stmTest =new StmTest(TestStm);
     }
     stmTest->run(mf);
     return false;
@@ -276,14 +276,14 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   swplScr.collectLiveOut(liveOutReg);
 
   // データ抽出
-  swpl::SwplLoop *loop = SwplLoop::Initialize(L, liveOutReg);
-  swpl::SwplDdg *ddg = SwplDdg::Initialize(*loop);
+  SwplLoop *loop = SwplLoop::Initialize(L, liveOutReg);
+  SwplDdg *ddg = SwplDdg::Initialize(*loop);
 
   // スケジューリング
-  swpl::SwplPlan* plan = SwplPlan::generatePlan(*ddg);
+  SwplPlan* plan = SwplPlan::generatePlan(*ddg);
   if (plan != NULL) {
     if (plan->getPrologCycles() == 0) {
-      swpl::ORE->emit([&]() {
+      ORE->emit([&]() {
         return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipleined",
                                                loop->getML()->getStartLoc(),
                                                loop->getML()->getHeader())
@@ -297,12 +297,12 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
       if ( OptionDumpPlan ) {
         plan->dump( dbgs() );
       }
-      swpl::SwplTransformMIR tran(*MF, *plan, liveOutReg);
+      SwplTransformMIR tran(*MF, *plan, liveOutReg);
       Changed = tran.transformMIR();
     }
     SwplPlan::destroy( plan );
   } else {
-    swpl::ORE->emit([&]() {
+    ORE->emit([&]() {
       return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipleined",
                                              loop->getML()->getStartLoc(),
                                              loop->getML()->getHeader())

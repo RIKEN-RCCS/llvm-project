@@ -17,9 +17,8 @@
 #include "SwplPlan.h"
 #include "SwplScheduling.h"
 
-using namespace llvm;
 
-namespace swpl{
+namespace llvm {
 
 /// \brief スケジューリング結果が要する回転数が、実際の回転数（可変）を満たすかをチェックする
 /// \note assumeに対応しないため、常にtrueを返却する

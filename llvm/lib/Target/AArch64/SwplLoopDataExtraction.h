@@ -14,6 +14,5 @@
 
 #include "SWPipeliner.h"
 using namespace llvm;
-using namespace swpl;
 
 #endif

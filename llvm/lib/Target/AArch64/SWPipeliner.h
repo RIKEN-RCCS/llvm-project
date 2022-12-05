@@ -21,9 +21,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 
-using namespace llvm;
-
-namespace swpl {
+namespace llvm {
 // 利用コンテナのエイリアス宣言
 using SwplInsts = std::vector<class SwplInst *>;
 using SwplRegs = std::vector<class SwplReg *>;
@@ -64,6 +62,9 @@ extern const llvm::TargetRegisterInfo *TRI;
 extern llvm::MachineRegisterInfo *MRI;
 extern AArch64SwplTargetMachine STM;
 extern AliasAnalysis *AA;
+
+#define UNKNOWN_MEM_DIFF INT_MIN        /* 0 の正反対 */
+
 
 /// \class SwplLoop
 /// \brief ループ内の命令情報を管理するclass
@@ -455,9 +456,9 @@ public:
   virtual ~SwplReg() {if (rk) delete rk;}
 
   // getter
-  llvm::Register const getReg() { return Reg; }
-  llvm::Register getReg() const { return Reg; }
   SwplInst *getDefInst() { return DefInst; }
+  Register const getReg() { return Reg; }
+  Register getReg() const { return Reg; }
   const SwplInst *getDefInst() const { return DefInst; }
   size_t getDefIndex() const { return DefIndex; }
   SwplInstList &getUseInsts() { return UseInsts; }
@@ -471,9 +472,10 @@ public:
   /// SwplReg::DefInst, SwplReg::DefIndex の取得
   void getDefPort( SwplInst **p_def_inst, int *p_def_index);
   /// SwplReg::DefInst, SwplReg::DefIndex の取得
-  void getDefPort( SwplInst **p_def_inst, int *p_def_index) const;
+  void getDefPort( const SwplInst **p_def_inst, int *p_def_index) const;
   /// ループ内の SwplReg::DefInst, SwplReg::DefIndex の取得
   void getDefPortInLoopBody( SwplInst **p_def_inst, int *p_def_index);
+  void getDefPortInLoopBody( const SwplInst **p_def_inst, int *p_def_index) const;
 
   /// SwplReg::Reg がNULLかどうかの判定
   bool isRegNull() { return (!Reg.isValid()); }
@@ -505,9 +507,6 @@ public:
   /// SwplReg をdumpする
   void print(void);
 
-  /// 増分値を求める
-  /// \return 増分値
-  int calcEachRegIncrement();
 
   SwplInstList_iterator useinsts_begin() { return UseInsts.begin(); }
   SwplInstList_iterator useinsts_end() { return UseInsts.end(); }
@@ -784,5 +783,5 @@ private:
 };
 //  extern SwplLoop loop;
   
-} // end namespace swpl
+} // end namespace llvm
 #endif

@@ -18,12 +18,12 @@
 #include "SwplRegEstimate.h"
 #include "SwplScheduling.h"
 
-using namespace llvm;
+using namespace llvm; // for NV
 using namespace ore; // for NV
 
 #define DEBUG_TYPE "aarch64-swpipeliner"
 
-namespace swpl{
+namespace llvm{
 
 #define ceil_div(x, y) (((x) - 1) / (y) + 1)
 
@@ -115,7 +115,7 @@ void SwplPlan::dumpInstTable(raw_ostream &stream) {
 /// \retval false 足りない
 ///
 /// \note 固定割付けでないレジスタが、整数、浮動小数点数、プレディケートであることが前提の処理である。
-/// \note llvm::AArch64::CCRRegClassIDは固定割付けのため処理しない。
+/// \note CCRegは固定割付けのため処理しない。
 bool SwplPlan::isSufficientWithRenamingVersions(const SwplLoop& c_loop,
                                                 const SwplInstSlotHashmap& c_inst_slot_map,
                                                 unsigned iteration_interval,
@@ -125,22 +125,16 @@ bool SwplPlan::isSufficientWithRenamingVersions(const SwplLoop& c_loop,
 
   ms_resource_result.init();
 
-  ///////////////////////////////////////////////////
-  // case llvm::AArch64::GPR64RegClassID
   n_necessary_regs = SwplRegEstimate::calcNumRegs(c_loop, &c_inst_slot_map, iteration_interval,
                                                   llvm::StmRegKind::getIntRegID(),
                                                   n_renaming_versions);
   ms_resource_result.setNecessaryIreg(n_necessary_regs);
 
-  ///////////////////////////////////////////////////
-  // case llvm::AArch64::FPR64RegClassID
   n_necessary_regs = SwplRegEstimate::calcNumRegs(c_loop, &c_inst_slot_map, iteration_interval,
                                                   llvm::StmRegKind::getFloatRegID(),
                                                   n_renaming_versions);
   ms_resource_result.setNecessaryFreg(n_necessary_regs);
 
-  ///////////////////////////////////////////////////
-  // case llvm::AArch64::PPRRegClassID
   n_necessary_regs = SwplRegEstimate::calcNumRegs(c_loop, &c_inst_slot_map, iteration_interval,
                                                   llvm::StmRegKind::getPredicateRegID(),
                                                   n_renaming_versions);
@@ -232,7 +226,7 @@ SwplPlan* SwplPlan::generatePlan(SwplDdg& ddg)
     return nullptr;
 
   case TryScheduleResult::TRY_SCHEDULE_FEW_ITER: {
-    swpl::ORE->emit([&]() {
+    ORE->emit([&]() {
                       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                ddg.getLoop()->getML()->getStartLoc(),
                                                                ddg.getLoop()->getML()->getHeader())

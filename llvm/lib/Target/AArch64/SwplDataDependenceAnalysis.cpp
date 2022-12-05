@@ -17,7 +17,6 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 using namespace llvm;
-using namespace swpl;
 
 #define DEBUG_TYPE "swp-ddg"
 
@@ -27,8 +26,8 @@ static cl::opt<bool> EnableCheckEarlyClobber("swpl-enable-check-early-clobber",c
 
 static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplInst &latter_inst, int distance, int delay);
 
-SwplDdg *SwplDdg::Initialize (swpl::SwplLoop &loop) {
-  swpl::SwplDdg *ddg = new swpl::SwplDdg(loop);
+SwplDdg *SwplDdg::Initialize (SwplLoop &loop) {
+  SwplDdg *ddg = new SwplDdg(loop);
 
   /// 1. generateInstGraph() を呼び出し、命令の依存グラフ情報 SwplInstGraph を初期化する。
   ddg->generateInstGraph();
@@ -239,7 +238,7 @@ void SwplDdg::analysisRegsFlowDependence() {
         // def-regがearly-clobberの場合は、命令のLatencyに関係なく１とする
         delay = 1;
       } else {
-        delay = swpl::STM.computeRegFlowDependence(def_inst->getMI(), use_inst->getMI());
+        delay = STM.computeRegFlowDependence(def_inst->getMI(), use_inst->getMI());
       }
       if (DebugOutput) {
         dbgs() << "DBG(SwplDdg::analysisRegsFlowDependence):\n"

@@ -17,11 +17,11 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/Register.h"
 #include <unordered_map>
-namespace swpl {
+namespace llvm {
 
-using Reg2Vreg=llvm::DenseMap<const swpl::SwplReg*, std::vector<llvm::Register>*>;
+using Reg2Vreg=llvm::DenseMap<const SwplReg*, std::vector<llvm::Register>*>;
 
-using MI2SwplInst=std::unordered_map<const llvm::MachineInstr*, swpl::SwplInst*>;
+using MI2SwplInst=std::unordered_map<const llvm::MachineInstr*, SwplInst*>;
 
 using SwplInst2Slot=std::unordered_map<const SwplInst*, unsigned>;
 
@@ -38,10 +38,10 @@ private:
   enum DumpMIRID {BEFORE=1, AFTER=2, AFTER_SSA=4, LAST=8};
 
 
-  swpl::SwplPlan &Plan; ///< 処理対象のスケジュールプラン
-  swpl::SwplInstSlotHashmap &InstSlotMap; ///< Planの命令配置
-  swpl::SwplLoop &Loop; ///< 処理対象のループ
-  swpl::TransformedMIRInfo TMI; ///< 変換に必要な回転数などの情報
+  SwplPlan &Plan; ///< 処理対象のスケジュールプラン
+  SwplInstSlotHashmap &InstSlotMap; ///< Planの命令配置
+  SwplLoop &Loop; ///< 処理対象のループ
+  TransformedMIRInfo TMI; ///< 変換に必要な回転数などの情報
   Reg2Vreg VRegMap;  ///< オリジナルRegisterと新Register＋Versionのマップ
   llvm::MachineFunction& MF; ///< llvm::MachineInstrを扱う際に必要なクラス
 
@@ -60,7 +60,7 @@ private:
   /// \param [in] orgReg オリジナルレジスタ
   /// \param [in] version 新レジスタが必要なVersion
   /// \return 新レジスタ 対応レジスタが登録されていない場合は!isValid()なレジスタを返す
-  llvm::Register getVRegFromMap(const swpl::SwplReg* orgReg, unsigned version) const;
+  llvm::Register getVRegFromMap(const SwplReg* orgReg, unsigned version) const;
 
   /// <reg, version> と vreg の対応表をつくり、SwplTransformMIR::VRegMapに設定する
   /// \param [in] n_versions
@@ -69,7 +69,7 @@ private:
   /// TMI::originalDoVRegを定義している命令をLoop内からさがし,対応するSwplRegを返す
   /// \param [out] update 更新している命令に対応したSwplInstを返す
   /// \return 定義SwplReg
-  const swpl::SwplReg*controlVReg2RegInLoop(const SwplInst**update);
+  const SwplReg*controlVReg2RegInLoop(const SwplInst**update);
 
   /// SwplPlanの情報からTransformMIRInfoを設定する
   void convertPlan2MIR();
@@ -92,13 +92,13 @@ private:
   /// \param [in] inst
   /// \param [in] version
   /// \return 生成したMachineInstr
-  llvm::MachineInstr*createMIFromInst(const swpl::SwplInst &inst, size_t version);
+  llvm::MachineInstr*createMIFromInst(const SwplInst &inst, size_t version);
 
   /// 指定したversionのSwplRegに対応するMIRVRegを取得する
   /// \param [in] org
   /// \param [in] version
   /// \return 取得したvreg
-  llvm::Register getVReg(const swpl::SwplReg& org, size_t version );
+  llvm::Register getVReg(const SwplReg& org, size_t version );
 
   /// TransformedMIRInfo::MIsに格納された命令を指定ブロック(KERNEL, PROLOGUE等)へ挿入する
   /// \param [in] ins
@@ -118,13 +118,13 @@ private:
   /// SwplRegとVRegをマップするための領域を用意する
   /// \param [in] reg
   /// \param [in] n_versions
-  void prepareVRegVectorForReg(const swpl::SwplReg *reg, size_t n_versions);
+  void prepareVRegVectorForReg(const SwplReg *reg, size_t n_versions);
 
   /// SwplRegとVRegをマップする
   /// \param [in] orgReg
   /// \param [in] version
   /// \param [in] newReg
-  void setVReg(const swpl::SwplReg* orgReg, size_t version, llvm::Register newReg);
+  void setVReg(const SwplReg* orgReg, size_t version, llvm::Register newReg);
 
   /// Swpl成功メッセージ出力
   /// \param [in] n_body_inst
@@ -172,7 +172,7 @@ public:
   /// \param [in] mf 対象MachineFunction
   /// \param [in] plan スケジューリング計画
   /// \param [in] liveOutReg 対象ループから出力Busyとなるレジスタ（スケジューリング結果反映時にレジスタ修正範囲を特定するために利用）
-  SwplTransformMIR(llvm::MachineFunction&mf, swpl::SwplPlan&plan, UseMap&liveOutReg)
+  SwplTransformMIR(llvm::MachineFunction&mf, SwplPlan&plan, UseMap&liveOutReg)
   :Plan(plan),InstSlotMap(plan.getInstSlotMap()),Loop(plan.getLoop()),MF(mf),LiveOutReg(liveOutReg) {}
 
   virtual ~SwplTransformMIR() {

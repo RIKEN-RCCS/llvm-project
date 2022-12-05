@@ -8478,7 +8478,7 @@ bool AArch64InstrInfo::findMIsForLoop(MachineBasicBlock &MBB,
 }
 StmRegKind * AArch64InstrInfo::getRegKind(const MachineRegisterInfo &MRI) const {
 
-  return new swpl::AArch64StmRegKind(MRI);
+  return new AArch64StmRegKind(MRI);
 }
 
 StmRegKind * AArch64InstrInfo::getRegKind(const MachineRegisterInfo &MRI, Register reg) const {
@@ -8492,7 +8492,7 @@ StmRegKind * AArch64InstrInfo::getRegKind(const MachineRegisterInfo &MRI, Regist
 #endif
     }
 
-    return new swpl::AArch64StmRegKind(regClassId, pReg, MRI);
+    return new AArch64StmRegKind(regClassId, pReg, MRI);
 }
 
 bool AArch64InstrInfo::isNonTargetMI4SWPL(MachineInstr &inst) const {
@@ -8510,7 +8510,7 @@ unsigned AArch64InstrInfo::getRegKindId(const MachineRegisterInfo &MRI, Register
     if (reg.isVirtual()) {
       const auto * regClass=MRI.getRegClass(reg);
       if (regClass->hasSuperClassEq(&AArch64::GPR64allRegClass) || regClass->hasSuperClassEq(&AArch64::GPR32allRegClass)) {
-        return  swpl::AArch64StmRegKind::getIntRegID();
+        return  AArch64StmRegKind::getIntRegID();
       }
       if (regClass->hasSuperClassEq(&AArch64::FPR8RegClass) ||
                  regClass->hasSuperClassEq(&AArch64::FPR16RegClass) ||
@@ -8532,11 +8532,11 @@ unsigned AArch64InstrInfo::getRegKindId(const MachineRegisterInfo &MRI, Register
                  regClass->hasSuperClassEq(&AArch64::ZPR2RegClass) ||
                  regClass->hasSuperClassEq(&AArch64::ZPR3RegClass) ||
                  regClass->hasSuperClassEq(&AArch64::ZPR4RegClass)) {
-        return  swpl::AArch64StmRegKind::getFloatRegID();
+        return  AArch64StmRegKind::getFloatRegID();
       }
       if (regClass->hasSuperClassEq(&AArch64::PPRRegClass) ||
                  regClass->hasSuperClassEq(&AArch64::PPR_3bRegClass)) {
-        return swpl::AArch64StmRegKind::getPredicateRegID();
+        return AArch64StmRegKind::getPredicateRegID();
       }
 
         dbgs() << "unknown register class: " << MRI.getTargetRegisterInfo()->getRegClassName(regClass) << "\n";
@@ -8545,7 +8545,7 @@ unsigned AArch64InstrInfo::getRegKindId(const MachineRegisterInfo &MRI, Register
     } else {
       if (AArch64::GPR64allRegClass.contains(reg) ||
           AArch64::GPR32allRegClass.contains(reg)) {
-        return  swpl::AArch64StmRegKind::getIntRegID();
+        return  AArch64StmRegKind::getIntRegID();
       }
       if (AArch64::FPR128RegClass.contains(reg) ||
                  AArch64::FPR64RegClass.contains(reg) ||
@@ -8562,14 +8562,14 @@ unsigned AArch64InstrInfo::getRegKindId(const MachineRegisterInfo &MRI, Register
                  AArch64::FPR64_loRegClass.contains(reg) ||
                  AArch64::FPR16_loRegClass.contains(reg) ||
                  AArch64::ZPRRegClass.contains(reg)) {
-        return  swpl::AArch64StmRegKind::getFloatRegID();
+        return  AArch64StmRegKind::getFloatRegID();
       }
       if (AArch64::PPRRegClass.contains(reg) ||
                  AArch64::PPR_3bRegClass.contains(reg)) {
-        return swpl::AArch64StmRegKind::getPredicateRegID();
+        return AArch64StmRegKind::getPredicateRegID();
       }
       if (AArch64::CCRRegClass.contains(reg)) {
-        return swpl::AArch64StmRegKind::getCCRegID();
+        return AArch64StmRegKind::getCCRegID();
       }
 
       llvm_unreachable("unknown register");

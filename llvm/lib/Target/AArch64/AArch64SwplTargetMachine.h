@@ -18,7 +18,7 @@
 #include "AArch64A64FXResourceInfo.h"
 #define STMTEST
 
-namespace swpl {
+namespace llvm {
 
 /// Reource識別ID
 typedef int StmResourceId;
@@ -314,7 +314,7 @@ public:
 
 /// Tmの動作テストをおこなうクラス
 class StmTest {
-  swpl::StmX4StmTest STM;
+  StmX4StmTest STM;
   int TestID;
 public:
   /// constructor

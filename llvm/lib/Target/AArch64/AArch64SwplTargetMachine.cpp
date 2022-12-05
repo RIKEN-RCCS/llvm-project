@@ -20,7 +20,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-using namespace swpl;
 
 #define DEBUG_TYPE "aarch64-swpipeliner"
 #undef ALLOCATED_IS_CCR_ONLY
@@ -448,10 +447,87 @@ bool AArch64InstrInfo::canPipelineLoop(MachineLoop &L) const {
 
   return true;
 }
+
+int AArch64InstrInfo::calcEachRegIncrement(const SwplInst *def_inst) const {
+//  SwplInst *def_inst = nullptr;
+  const SwplInst *induction_inst = nullptr;
+  int index_dummy = -1;
+  const SwplReg *target=nullptr;
+
+//  getDefPort(&def_inst, &index_dummy);
+  if (!def_inst->isInLoop()) {
+    return 0;
+  }
+  if (def_inst->isInLoop() && def_inst->getMI() != nullptr && def_inst->getMI()->getOpcode()==AArch64::ADDXrr) {
+    const auto &r1=def_inst->getUseRegs(0);
+    const auto &r2=def_inst->getUseRegs(1);
+    if (r1.getDefInst()->isPhi()) {
+      if (r2.getDefInst()->isInLoop())
+        return UNKNOWN_MEM_DIFF;
+      def_inst=r1.getDefInst();
+      target=&r1;
+    } else if (r2.getDefInst()->isPhi()) {
+      if (r1.getDefInst()->isInLoop())
+        return UNKNOWN_MEM_DIFF;
+      def_inst=r2.getDefInst();
+      target=&r2;
+    } else {
+      return UNKNOWN_MEM_DIFF;
+    }
+  }
+
+  if (def_inst->isPhi()) {
+    const SwplReg& induction_reg = def_inst->getPhiUseRegFromIn();
+    induction_reg.getDefPort(&induction_inst, &index_dummy);
+    while (induction_inst->isCopy()) {
+      const auto &def_reg=induction_inst->getUseRegs(0);
+      induction_inst=def_reg.getDefInst();
+    }
+
+    if (induction_inst->getSizeUseRegs() == 1) {
+      int sign = 0;
+      const auto *mi=induction_inst->getMI();
+      auto op=mi->getOpcode();
+      if (op == AArch64::ADDSXri || op == AArch64::ADDXri)
+        sign = 1;
+      else if (op == AArch64::SUBSXri || op == AArch64::SUBXri)
+        sign = -1;
+
+      if (sign == 0)
+        return UNKNOWN_MEM_DIFF;
+
+      if (&(induction_inst->getUseRegs(0)) == target) {
+        const auto& mo=mi->getOperand(2);
+        if (!mo.isImm()) return UNKNOWN_MEM_DIFF;
+        return mo.getImm();
+      }
+    } else {
+      return UNKNOWN_MEM_DIFF;
+    }
+  } else {
+    if (def_inst->isLoad())
+      return UNKNOWN_MEM_DIFF;
+
+    while (def_inst->getSizeUseRegs() == 1) {
+      def_inst->getUseRegs(0).getDefPort(&def_inst, &index_dummy);
+      if (!def_inst->isInLoop()) {
+        return 0;
+      }
+      if (def_inst->isPhi()) {
+        return UNKNOWN_MEM_DIFF;
+      }
+    }
+    return UNKNOWN_MEM_DIFF;
+  }
+  return UNKNOWN_MEM_DIFF;
 }
 
 
-namespace swpl {
+
+}
+
+
+namespace llvm {
 
 /// 利用資源パターンを生成するための生成過程で使われるデータ構造
 struct work_node {

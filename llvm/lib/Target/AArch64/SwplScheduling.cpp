@@ -47,7 +47,7 @@ static cl::opt<unsigned> OptionMaxPreg("swpl-max-preg",cl::init(0), cl::ReallyHi
 
 static cl::opt<bool> OptionDumpEveryInst("swpl-debug-dump-scheduling-every-inst",cl::init(false), cl::ReallyHidden);
 
-namespace swpl{
+namespace llvm{
 
 #define DEFAULT_MAXII_BASE 95;
 
@@ -1321,7 +1321,7 @@ void MsResult::checkHardResource(const PlanSpec& spec, bool limit_reg) {
     /* 整数より浮動小数点不足優先で出力. */
     if ( !resource.isFregSufficient() ) {
       // 浮動小数点数レジスタの場合
-      swpl::ORE->emit([&]() {
+      ORE->emit([&]() {
                         return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                  spec.loop.getML()->getStartLoc(),
                                                                  spec.loop.getML()->getHeader())
@@ -1331,7 +1331,7 @@ void MsResult::checkHardResource(const PlanSpec& spec, bool limit_reg) {
                       });
     } else if ( !resource.isIregSufficient() ) {
       // 整数レジスタの場合
-      swpl::ORE->emit([&]() {
+      ORE->emit([&]() {
                         return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                  spec.loop.getML()->getStartLoc(),
                                                                  spec.loop.getML()->getHeader())
@@ -1341,7 +1341,7 @@ void MsResult::checkHardResource(const PlanSpec& spec, bool limit_reg) {
                       });
     } else if ( !resource.isPregSufficient() ) {
       // predicateレジスタの場合
-      swpl::ORE->emit([&]() {
+      ORE->emit([&]() {
                         return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                  spec.loop.getML()->getStartLoc(),
                                                                  spec.loop.getML()->getHeader())
@@ -1373,15 +1373,11 @@ MsResourceResult MsResult::isHardRegsSufficient(const PlanSpec& spec) {
   ms_resource_result.init();
   n_renaming_versions = inst_slot_map->calcNRenamingVersions(spec.loop, ii);
 
-  ///////////////////////////////////////////////////
-  // case llvm::AArch64::GPR64RegClassID
   n_necessary_regs = SwplRegEstimate::calcNumRegs(spec.loop, inst_slot_map, ii,
                                                   llvm::StmRegKind::getIntRegID(),
                                                   n_renaming_versions);
   ms_resource_result.setNecessaryIreg(n_necessary_regs);
 
-  ///////////////////////////////////////////////////
-  // case llvm::AArch64::FPR64RegClassID
   n_necessary_regs = SwplRegEstimate::calcNumRegs(spec.loop, inst_slot_map, ii,
                                                   llvm::StmRegKind::getFloatRegID(),
                                                   n_renaming_versions);
@@ -1391,8 +1387,6 @@ MsResourceResult MsResult::isHardRegsSufficient(const PlanSpec& spec) {
   }
   ms_resource_result.setNecessaryFreg(n_necessary_regs);
 
-  ///////////////////////////////////////////////////
-  // case llvm::AArch64::PPRRegClassID
   n_necessary_regs = SwplRegEstimate::calcNumRegs(spec.loop, inst_slot_map, ii,
                                                   llvm::StmRegKind::getPredicateRegID(),
                                                   n_renaming_versions);
@@ -1432,7 +1426,7 @@ void MsResult::checkIterationCount(const PlanSpec& spec) {
   }
 
   if (is_itr_sufficient == false) {
-    swpl::ORE->emit([&]() {
+    ORE->emit([&]() {
                       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                spec.loop.getML()->getStartLoc(),
                                                                spec.loop.getML()->getHeader())
@@ -1637,7 +1631,7 @@ void MsResult::outputGiveupMessageForEstimate(PlanSpec& spec) {
     if( !is_itr_sufficient==false && !is_reg_sufficient==false && !is_mve_appropriate==false) {
       // int_slot_mapができない最終原因が、
       // レジスタ不足、回転数不足、MVE制限によるものでない場合
-      swpl::ORE->emit([&]() {
+      ORE->emit([&]() {
                         return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                  spec.loop.getML()->getStartLoc(),
                                                                  spec.loop.getML()->getHeader())

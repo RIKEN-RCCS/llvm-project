@@ -17,7 +17,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-using namespace swpl;
 
 // private
 
@@ -56,7 +55,7 @@ void SwplScr::makeBypass(const TransformedMIRInfo &tmi,
 }
 
 
-bool SwplScr::getDoInitialValue(swpl::TransformedMIRInfo &TMI) const {
+bool SwplScr::getDoInitialValue(TransformedMIRInfo &TMI) const {
   ///
   /// ```
   /// PH: %reg1=MOVi32imm imm OR %regs=MOVi64imm imm
