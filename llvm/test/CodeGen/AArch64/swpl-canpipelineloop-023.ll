@@ -1,4 +1,4 @@
-; RUN: llc < %s -O1 -mcpu=a64fx  -ffj-swp  -swpl-debug  --pass-remarks-filter=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -O1 -mcpu=a64fx  -ffj-swp  -swpl-debug  -o /dev/null 2>&1 | FileCheck %s
 ;CHECK:not found (BCC || SUBSXri)
 ; ModuleID = '2912_inf_loop.c'
 source_filename = "2912_inf_loop.c"

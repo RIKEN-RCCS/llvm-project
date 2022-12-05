@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=a64fx -swpl-debug -O1  -ffj-swp  --pass-remarks-filter=aarch64-swp --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -mcpu=a64fx -swpl-debug -O1  -ffj-swp   -o /dev/null 2>&1 | FileCheck %s
 ;CHECK: canPipelineLoop:OK
 
 ; ModuleID = '2912.c'

@@ -1,4 +1,4 @@
-; RUN: llc < %s -O1 -mcpu=a64fx  -ffj-swp  -swpl-debug  --pass-remarks-filter=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -O1 -mcpu=a64fx  -ffj-swp  -swpl-debug  -o /dev/null 2>&1 | FileCheck %s
 ;CHECK:canPipelineLoop:OK
 ; ModuleID = '2912.c'
 source_filename = "2912.c"

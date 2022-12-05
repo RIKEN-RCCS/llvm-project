@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=a64fx -O1 -ffj-swp -swpl-debug -debug-hardwareloops -debug-aarch64tti --pass-remarks-filter=aarch64-swp --pass-remarks-filter=.*  --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -mcpu=a64fx -O1 -ffj-swp  --pass-remarks-filter=hardware-loop  --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck %s
 ;CHECK: hardware-loop(reason=CALL
 
 ; ModuleID = '2912_10.c'
