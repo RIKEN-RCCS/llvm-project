@@ -17,7 +17,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-using namespace swpl;
 
 // private
 
@@ -47,71 +46,16 @@ void SwplScr::makeBypass(const TransformedMIRInfo &tmi,
                      MachineBasicBlock &skip_mod_from,
                      MachineBasicBlock &skip_mod_to) {
 
-  makeBypassKernel (
-      tmi.originalDoInitVar, dbgloc,
-                    skip_kernel_from, skip_kernel_to,
+  TII->makeBypassKernel (
+      *MRI,
+      tmi.originalDoInitVar, dbgloc, skip_kernel_from, skip_kernel_to,
       tmi.requiredKernelIteration * tmi.coefficient + tmi.minConstant);
-  makeBypassMod(tmi.updateDoVRegMI->getOperand(0).getReg(), dbgloc, tmi.branchDoVRegMI->getOperand(0), skip_mod_from, skip_mod_to);
+  TII->makeBypassMod(tmi.updateDoVRegMI->getOperand(0).getReg(),
+                     dbgloc, tmi.branchDoVRegMI->getOperand(0), skip_mod_from, skip_mod_to);
 }
 
-void SwplScr::makeBypassKernel(Register doInitVar,
-                           const DebugLoc& dbgloc,
-                           MachineBasicBlock &from,
-                           MachineBasicBlock &to,
-                           int n) const {
 
-  Register ini=doInitVar;
-  const auto*regClass=MRI->getRegClass(doInitVar);
-  if (regClass->hasSubClassEq(&AArch64::GPR64RegClass)) {
-    // SUBSXriで利用できないレジスタクラスのため、COPYを生成する
-    ini=MRI->createVirtualRegister(&AArch64::GPR64spRegClass);
-    BuildMI(&from, dbgloc, TII->get(AArch64::COPY), ini)
-            .addReg(doInitVar);
-  }
-  // c1に分岐命令を生成
-  BuildMI(&from, dbgloc, TII->get(AArch64::SUBSXri), AArch64::XZR)
-      .addReg(ini)
-      .addImm(n)
-      .addImm(0);
-
-  BuildMI(&from, dbgloc, TII->get(AArch64::Bcc))
-      .addImm(AArch64CC::LT)
-      .addMBB(&to);
-
-  from.addSuccessor(&to);
-}
-
-void SwplScr::makeBypassMod(Register doUpdateVar,
-                        const DebugLoc &dbgloc,
-                        llvm::MachineOperand &CC,
-                        MachineBasicBlock &from,
-                        MachineBasicBlock &to) const {
-
-  BuildMI(&from, dbgloc, TII->get(AArch64::SUBSXri), AArch64::XZR)
-      .addReg(doUpdateVar)
-      .addImm(0)
-      .addImm(0);
-
-  AArch64CC::CondCode newCC;
-
-  switch(CC.getImm()) {
-  case AArch64CC::NE:
-    newCC=AArch64CC::EQ;
-    break;
-  case AArch64CC::GE:
-    newCC=AArch64CC::LT;
-    break;
-  default:
-    llvm_unreachable("CC is not (NE or GE)");
-  }
-  BuildMI(&from, dbgloc, TII->get(AArch64::Bcc))
-      .addImm(newCC)
-      .addMBB(&to);
-
-  from.addSuccessor(&to);
-}
-
-bool SwplScr::getDoInitialValue(swpl::TransformedMIRInfo &TMI) const {
+bool SwplScr::getDoInitialValue(TransformedMIRInfo &TMI) const {
   ///
   /// ```
   /// PH: %reg1=MOVi32imm imm OR %regs=MOVi64imm imm
@@ -190,11 +134,11 @@ bool SwplScr::findBasicInductionVariable(TransformedMIRInfo &TMI) const {
   MachineInstr*addsub=nullptr;
 
   /// (1) findMIsForLoop() : loop制御に関わる言を探す(branch, cmp, addsub)
-  if (!findMIsForLoop(&branch, &cmp, &addsub)) return false;
+  if (!TII->findMIsForLoop(*ML.getTopBlock(), &branch, &cmp, &addsub)) return false;
 
-  AArch64CC::CondCode CC = (AArch64CC::CondCode)branch->getOperand(0).getImm();
+  unsigned imm = branch->getOperand(0).getImm();
 
-  if (CC  == AArch64CC::NE) {
+  if (TII->isNE(imm)) {
     /// (2) ラッチ言がbneccの場合
     /// (2-1)getCoefficient() : 制御変数の増減値を取得する
     if (!getCoefficient(addsub->getOperand(2), &(TMI.coefficient))) {
@@ -205,7 +149,7 @@ bool SwplScr::findBasicInductionVariable(TransformedMIRInfo &TMI) const {
     /// \note 対象ループ判定で、SUBWSXriで減算＋比較の場合のみ対象としている
     TMI.minConstant = 0;
 
-  } else if (CC == AArch64CC::GE ) {
+  } else if (TII->isGE(imm)) {
     /// (3) ラッチ言がbgeccの場合
     /// (3-1)getCoefficient() : 制御変数の増減値を取得する
     if (!getCoefficient(addsub->getOperand(2), &(TMI.coefficient))) {
@@ -227,28 +171,6 @@ bool SwplScr::findBasicInductionVariable(TransformedMIRInfo &TMI) const {
   return true;
 }
 
-bool SwplScr::findMIsForLoop(MachineInstr **Branch,
-                          MachineInstr **Cmp,
-                          MachineInstr **Addsub) const {
-  auto mbb=ML.getTopBlock();
-  *Addsub=*Cmp=*Branch=nullptr;
-  for (auto &mi:make_range(mbb->rbegin(), mbb->rend())) {
-    if (*Branch==nullptr) {
-      if (mi.getOpcode() == AArch64::Bcc)
-        *Branch = &mi;
-      continue;
-    }
-    if (mi.getOpcode()!=AArch64::SUBSXri) continue;
-    // CCを定義するか確認
-    for (const auto &mo:mi.operands()) {
-      if (mo.isReg() && mo.isDef() && mo.getReg() == AArch64::NZCV) {
-        *Cmp=*Addsub=&mi;
-        return true;
-      }
-    }
-  }
-  return false;
-}
 
 /// LOOPをSWPL用に変形する
 /// 1. original loop

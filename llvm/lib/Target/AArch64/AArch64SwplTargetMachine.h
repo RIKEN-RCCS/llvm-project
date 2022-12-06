@@ -14,10 +14,11 @@
 
 #include "AArch64TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/CodeGen/SwplTargetMachine.h"
 #include "AArch64A64FXResourceInfo.h"
 #define STMTEST
 
-namespace swpl {
+namespace llvm {
 
 /// Reource識別ID
 typedef int StmResourceId;
@@ -41,7 +42,7 @@ typedef unsigned StmOpcodeId;
 ///  pipe4  [label = "{pipeline:}|{stage:|1|1}|{resource:|EAGB|EAGB}"];
 /// }
 // \enddot
-class StmPipeline {
+class AArch64StmPipeline {
   llvm::TargetSchedModel& SM;///< SchedModel
 public:
   // 命令に対して生成した順番に付加されるID
@@ -50,7 +51,7 @@ public:
   llvm::SmallVector<StmResourceId,4> resources;
 
   /// constructor
-  StmPipeline(llvm::TargetSchedModel&sm):SM(sm){}
+  AArch64StmPipeline(llvm::TargetSchedModel&sm):SM(sm){}
 
   /// StmPipelineをダンプする。
   /// \param ost 出力先
@@ -68,91 +69,92 @@ public:
 };
 
 /// StmPipelineリスト（引数など受け取り側で理帳する）
-using StmPipelinesImpl =std::vector<const StmPipeline *>;
+using StmPipelinesImpl =std::vector<const AArch64StmPipeline *>;
 
 /// StmPipelineリスト(変数として宣言する際に利用する)
-using StmPipelines =std::vector<const StmPipeline *>;
+using StmPipelines =std::vector<const AArch64StmPipeline *>;
 
 /// SWPL向けにRegisterの種別を判断する。
-class StmRegKind {
-  unsigned registerClassId=0; ///< TargetRegisterClassのID
-  bool allocated=false;
+class AArch64StmRegKind: public llvm::StmRegKind {
   const llvm::MachineRegisterInfo &MRI;    ///< RegisterInfo
 
 public:
   /// constructor
+  AArch64StmRegKind(const llvm::MachineRegisterInfo&mri):llvm::StmRegKind(),MRI(mri){}
+
   /// \param id register class id
   /// \param isPReg 割当済か
-  StmRegKind(unsigned id, bool isPReg, const llvm::MachineRegisterInfo&mri):registerClassId(id),allocated(isPReg),MRI(mri){}
+  AArch64StmRegKind(unsigned id,
+                    bool isPReg,
+                    const llvm::MachineRegisterInfo&mri): llvm::StmRegKind(id, isPReg),MRI(mri){}
+
+  AArch64StmRegKind(const AArch64StmRegKind &s): AArch64StmRegKind(s.registerClassId, s.allocated, s.MRI) {}
+
+  virtual ~AArch64StmRegKind(){}
 
   /// Intergerレジスタかどうかを確認する
   /// \retval true Intergerレジスタ
   /// \retval false Integerレジスタ以外
-  bool isInteger(void) {
-    return registerClassId==llvm::AArch64::GPR64RegClassID;
+  bool isInteger(void) const override {
+    return registerClassId==llvm::StmRegKind::RegKindID::IntReg;
   }
 
   /// Floatingレジスタかどうかを確認する
   /// \retval true Floatingレジスタ
   /// \retval false Floatingレジスタ以外
-  bool isFloating(void) {
-    return registerClassId==llvm::AArch64::FPR64RegClassID;
+  bool isFloating(void) const  override {
+    return registerClassId==llvm::StmRegKind::RegKindID::FloatReg;
   }
 
   /// Predicateレジスタかどうかを確認する
   /// \retval true Predicateレジスタ
   /// \retval false Predicateレジスタ以外
-  bool isPredicate(void) {
-    return registerClassId==llvm::AArch64::PPRRegClassID;
+  bool isPredicate(void) const override {
+    return registerClassId==llvm::StmRegKind::RegKindID::PredicateReg;
   }
 
   /// CCレジスタかどうかを確認する
   /// \retval true CCレジスタ
   /// \retval false CCレジスタ以外
-  bool isCCRegister(void) {
-    return registerClassId==llvm::AArch64::CCRRegClassID;
-  }
-
-  /// CCレジスタかどうかを確認する(互換性を保つため用意している)
-  /// \retval true CCレジスタ
-  /// \retval false CCレジスタ以外
-  bool isIntegerCCRegister(void) {
-    return registerClassId==llvm::AArch64::CCRRegClassID;
+  bool isCCRegister(void) const override {
+    return registerClassId==llvm::StmRegKind::RegKindID::CCReg;
   }
 
   /// Allocate済レジスタかどうかを確認する
   ///
   /// \retval true 割当済
   /// \retval false 未割り当て
-  bool isAllocalted(void) {
+  bool isAllocalted(void) const override {
     return allocated;
   }
 
   /// レジスタの種類数を返す
   /// \return 種類数
-  static int getKindNum(void){
+  int getKindNum(void) const override {
     return 4;
   }
 
-  /// 同種のレジスタ数を返す
-  /// \return レジスタ数数
-  int getNum(void){
-    switch (registerClassId) {
-    case llvm::AArch64::GPR64RegClassID:
-      return llvm::AArch64::GPR64RegClass.getNumRegs();
-    case llvm::AArch64::FPR64RegClassID:
-      return llvm::AArch64::FPR64RegClass.getNumRegs();
-    case llvm::AArch64::PPRRegClassID:
-      return llvm::AArch64::PPR_3bRegClass.getNumRegs();
-    case llvm::AArch64::CCRRegClassID:
-      return llvm::AArch64::CCRRegClass.getNumRegs();
-    }
-    llvm_unreachable("registerClassId is 0");
+  int getNumIntReg() const override {
+    return llvm::AArch64::GPR64RegClass.getNumRegs();
   }
+  int getNumFloatReg() const override {
+    return llvm::AArch64::FPR64RegClass.getNumRegs();
+  }
+  int getNumPredicateReg() const override {
+    return llvm::AArch64::PPR_3bRegClass.getNumRegs();
+  }
+  int getNumCCReg() const override {
+    return llvm::AArch64::CCRRegClass.getNumRegs();
+  }
+
+  bool isSameKind(unsigned id) const override {
+    return registerClassId==id;
+  }
+
 
   /// StmRegKindの内容を出力する
   /// \param [out] os 出力先
-  void print(llvm::raw_ostream& os) {
+  void print(llvm::raw_ostream& os) const override {
     const llvm::TargetRegisterClass *r=nullptr;
     switch (registerClassId) {
     case llvm::AArch64::GPR64RegClassID:
@@ -168,30 +170,12 @@ public:
       r=&llvm::AArch64::CCRRegClass;
       break;
     }
-    os << "StmRegKind:" << MRI.getTargetRegisterInfo()->getRegClassName(r) << "\n";
+    os << "AArch64StmRegKind:" << MRI.getTargetRegisterInfo()->getRegClassName(r) << "\n";
   }
-
-  /// 同一のレジスタ種別であるか
-  /// \param [in] kind1 比較対象1
-  /// \param [in] kind2 比較対象2
-  /// \retval true 同一
-  /// \retval false　同一ではない
-  static bool isSameKind( const StmRegKind & kind1, const StmRegKind & kind2 ) {
-    return kind1.registerClassId == kind2.registerClassId;
-  }
-  /// 同一のレジスタ種別であるか
-  /// \param [in] kind1 比較対象1
-  /// \param [in] regclassid 比較対象2のレジスタクラスID
-  /// \retval true 同一
-  /// \retval false 同一ではない
-  static bool isSameKind( const StmRegKind & kind1, unsigned regclassid ) {
-    return kind1.registerClassId == regclassid;
-  }
-
 };
 
 /// SchedModelを利用してターゲット情報を取得し、SWPL機能に提供する
-class SwplTargetMachine {
+class AArch64SwplTargetMachine {
 protected:
   const llvm::MachineFunction *MF=nullptr; ///< Tmで必要な情報を取得するため、大元のMachineFunctionを記憶する。関数毎に再設定する。
   llvm::TargetSchedModel SM;         ///< SchedModel
@@ -214,13 +198,13 @@ protected:
 
 public:
   /// constructor
-  SwplTargetMachine() {}
+  AArch64SwplTargetMachine() {}
   /// destructor
-  virtual ~SwplTargetMachine() {
+  virtual ~AArch64SwplTargetMachine() {
     for (auto tms: stmPipelines) {
         if (tms.getSecond()) {
           for (auto *t:*(tms.getSecond())) {
-            delete const_cast<StmPipeline *>(t);
+            delete const_cast<AArch64StmPipeline *>(t);
           }
           delete tms.getSecond();
         }
@@ -289,7 +273,7 @@ public:
   /// \param [in] mi 対象命令
   /// \param [in] patternid 対象パターン
   /// \return StmPipelineを返す
-  const StmPipeline * getPipeline(const llvm::MachineInstr&mi,
+  const AArch64StmPipeline * getPipeline(const llvm::MachineInstr&mi,
                                 StmPatternId patternid);
 
   /// 指定命令が利用するリソースが一番少ない数を返す
@@ -311,10 +295,6 @@ public:
   /// \return リソース数
   int getNumSameKindResources(StmResourceId resource);
 
-  /// 指定レジスタの種別を返す
-  /// \param [in] reg
-  /// \return レジスタの種別を表すオブジェクト
-  StmRegKind getRegKind(llvm::Register reg) const;
 
   /// 命令がPseudoかどうかを判断する
   /// \details 命令がSchedModelに定義されていない場合のみ、Pseudoと判断する
@@ -325,7 +305,7 @@ public:
 };
 #ifdef STMTEST
 /// StmTestからStmをテストするための派生クラス
-class StmX4StmTest : public SwplTargetMachine {
+class StmX4StmTest : public AArch64SwplTargetMachine {
 public:
   void init(llvm::MachineFunction&mf, bool first, int TestID);
   const llvm::TargetSchedModel& getSchedModel() {return SM;}
@@ -334,7 +314,7 @@ public:
 
 /// Tmの動作テストをおこなうクラス
 class StmTest {
-  swpl::StmX4StmTest STM;
+  StmX4StmTest STM;
   int TestID;
 public:
   /// constructor

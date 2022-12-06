@@ -50,6 +50,7 @@
 #include <cstdint>
 #include <iterator>
 #include <utility>
+#include "AArch64SwplTargetMachine.h"
 
 using namespace llvm;
 
@@ -8143,8 +8144,8 @@ AArch64InstrInfo::getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
 
 bool AArch64InstrInfo::splitPrePostIndexInstr(
     MachineBasicBlock &MBB, MachineInstr &MI, MachineInstr **ldst, MachineInstr **add ) const {
-  MachineInstr *tadd=nullptr;
-  MachineInstr *tldst=nullptr;
+  MachineInstr *tadd = nullptr;
+  MachineInstr *tldst = nullptr;
   Register def_addr_reg;
   Register use_addr_reg;
   Register use_offset_reg;
@@ -8310,12 +8311,271 @@ bool AArch64InstrInfo::splitPrePostIndexInstr(
     return false;
   }
 
-  if (ldst!=nullptr) *ldst=tldst;
-  if (add!=nullptr) *add=tadd;
+  if (ldst != nullptr) *ldst = tldst;
+  if (add != nullptr) *add = tadd;
 
   return true;
 }
 
+MachineInstr* AArch64InstrInfo::makeKernelIterationBranch(MachineRegisterInfo &MRI,
+                                                          MachineBasicBlock &MBB,
+                                                          const DebugLoc &debugLoc,
+                                                          Register doVReg,
+                                                          int iterationCount,
+                                                          int coefficient) const {
+
+  auto insertionPoint=MBB.getFirstInstrTerminator();
+
+  const auto*regClass = MRI.getRegClass(doVReg);
+  auto ini = doVReg;
+  if (regClass->hasSubClassEq(&AArch64::GPR64RegClass)) {
+    /// 条件判定（SUBSXri）で利用できないレジスタクラスの場合、COPYを生成し、利用可能レジスタクラスを定義する
+    ini = MRI.createVirtualRegister(&AArch64::GPR64spRegClass);
+    BuildMI(MBB, insertionPoint, debugLoc, get(TargetOpcode::COPY), ini)
+        .addReg(doVReg);
+  }
+
+  /// compare(SUBSXri)生成
+  // $XZR(+CC)=SUBSXri %TMI.doVReg, TMI.expansion
+  BuildMI(MBB, insertionPoint, debugLoc, get(AArch64::SUBSXri), AArch64::XZR)
+      .addReg(ini)
+      .addImm(iterationCount)
+      .addImm(0);
+
+
+  // branchの生成
+  auto CC=AArch64CC::LT;
+  if (coefficient > 0) {
+    CC=AArch64CC::GE;
+  }
+  /// Bcc命令を生成し、TMI.branchDoVRegMIKernelに記録しておく
+  auto br=BuildMI(MBB, insertionPoint, debugLoc, get(AArch64::Bcc))
+                .addImm(CC)
+                .addMBB(&MBB);
+
+  return &*br;
+
+}
+
+bool AArch64InstrInfo::isPrefetch(unsigned opcode) const {
+  switch(opcode) {
+    /// AArch64 prefetch
+  case AArch64::PRFMui:
+    /// SVE prefetch
+  case AArch64::PRFB_PRI:
+  case AArch64::PRFH_PRI:
+  case AArch64::PRFW_PRI:
+  case AArch64::PRFD_PRI:
+  case AArch64::PRFB_PRR:
+  case AArch64::PRFH_PRR:
+  case AArch64::PRFW_PRR:
+  case AArch64::PRFD_PRR:
+  case AArch64::PRFB_D_SCALED:
+  case AArch64::PRFH_D_SCALED:
+  case AArch64::PRFW_D_SCALED:
+  case AArch64::PRFD_D_SCALED:
+  case AArch64::PRFB_S_PZI:
+  case AArch64::PRFH_S_PZI:
+  case AArch64::PRFW_S_PZI:
+  case AArch64::PRFD_S_PZI:
+  case AArch64::PRFB_D_PZI:
+  case AArch64::PRFH_D_PZI:
+  case AArch64::PRFW_D_PZI:
+  case AArch64::PRFD_D_PZI:
+    return true;
+  default:
+    return false;
+  }
+}
+
+void AArch64InstrInfo::makeBypassKernel(MachineRegisterInfo &MRI,
+                                        Register doInitVar,
+                                        const DebugLoc& dbgloc,
+                                        MachineBasicBlock &from,
+                                        MachineBasicBlock &to,
+                                        int n) const {
+
+  Register ini=doInitVar;
+  const auto*regClass=MRI.getRegClass(doInitVar);
+  if (regClass->hasSubClassEq(&AArch64::GPR64RegClass)) {
+    // SUBSXriで利用できないレジスタクラスのため、COPYを生成する
+    ini=MRI.createVirtualRegister(&AArch64::GPR64spRegClass);
+    BuildMI(&from, dbgloc, get(AArch64::COPY), ini)
+        .addReg(doInitVar);
+  }
+  // c1に分岐命令を生成
+  BuildMI(&from, dbgloc, get(AArch64::SUBSXri), AArch64::XZR)
+      .addReg(ini)
+      .addImm(n)
+      .addImm(0);
+
+  BuildMI(&from, dbgloc, get(AArch64::Bcc))
+      .addImm(AArch64CC::LT)
+      .addMBB(&to);
+
+  from.addSuccessor(&to);
+}
+
+void AArch64InstrInfo::makeBypassMod(Register doUpdateVar,
+                            const DebugLoc &dbgloc,
+                            MachineOperand &CC,
+                            MachineBasicBlock &from,
+                            MachineBasicBlock &to) const {
+
+  BuildMI(&from, dbgloc, get(AArch64::SUBSXri), AArch64::XZR)
+      .addReg(doUpdateVar)
+      .addImm(0)
+      .addImm(0);
+
+  AArch64CC::CondCode newCC;
+
+  switch(CC.getImm()) {
+  case AArch64CC::NE:
+    newCC=AArch64CC::EQ;
+    break;
+  case AArch64CC::GE:
+    newCC=AArch64CC::LT;
+    break;
+  default:
+    llvm_unreachable("CC is not (NE or GE)");
+  }
+  BuildMI(&from, dbgloc, get(AArch64::Bcc))
+      .addImm(newCC)
+      .addMBB(&to);
+
+  from.addSuccessor(&to);
+}
+
+bool AArch64InstrInfo::isNE(unsigned imm) const {
+  return ((AArch64CC::CondCode)imm) == AArch64CC::NE;
+}
+
+bool AArch64InstrInfo::isGE(unsigned imm) const {
+  return ((AArch64CC::CondCode)imm) == AArch64CC::GE;
+}
+
+bool AArch64InstrInfo::findMIsForLoop(MachineBasicBlock &MBB,
+                                      MachineInstr **Branch,
+                                      MachineInstr **Cmp,
+                                      MachineInstr **Addsub) const {
+  *Addsub=*Cmp=*Branch=nullptr;
+  for (auto &mi:make_range(MBB.rbegin(), MBB.rend())) {
+    if (*Branch==nullptr) {
+      if (mi.getOpcode() == AArch64::Bcc)
+        *Branch = &mi;
+      continue;
+    }
+    if (mi.getOpcode()!=AArch64::SUBSXri) continue;
+    // CCを定義するか確認
+    for (const auto &mo:mi.operands()) {
+      if (mo.isReg() && mo.isDef() && mo.getReg() == AArch64::NZCV) {
+        *Cmp=*Addsub=&mi;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+StmRegKind * AArch64InstrInfo::getRegKind(const MachineRegisterInfo &MRI) const {
+
+  return new AArch64StmRegKind(MRI);
+}
+
+StmRegKind * AArch64InstrInfo::getRegKind(const MachineRegisterInfo &MRI, Register reg) const {
+    unsigned regClassId=getRegKindId(MRI, reg);
+    bool pReg=false;
+    if (reg.isPhysical()) {
+#ifndef ALLOCATED_IS_CCR_ONLY
+      pReg = true;
+#else
+      if (regClassId==StmRegKind::getCCRegID()) pReg = true;
+#endif
+    }
+
+    return new AArch64StmRegKind(regClassId, pReg, MRI);
+}
+
+bool AArch64InstrInfo::isNonTargetMI4SWPL(MachineInstr &inst) const {
+    switch(inst.getOpcode()) {
+    case AArch64::DMB: /// fence相当
+    case AArch64::INLINEASM:
+    case AArch64::INLINEASM_BR:
+      return true;
+    default:
+      return false;
+    }
+}
+
+unsigned AArch64InstrInfo::getRegKindId(const MachineRegisterInfo &MRI, Register reg) const {
+    if (reg.isVirtual()) {
+      const auto * regClass=MRI.getRegClass(reg);
+      if (regClass->hasSuperClassEq(&AArch64::GPR64allRegClass) || regClass->hasSuperClassEq(&AArch64::GPR32allRegClass)) {
+        return  AArch64StmRegKind::getIntRegID();
+      }
+      if (regClass->hasSuperClassEq(&AArch64::FPR8RegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::FPR16RegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::FPR32RegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::FPR64RegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::FPR128RegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::DDRegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::DDDRegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::DDDDRegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::QQRegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::QQQRegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::QQQQRegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::FPR16_loRegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::FPR64_loRegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::FPR128_loRegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::ZPRRegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::ZPR_3bRegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::ZPR_4bRegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::ZPR2RegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::ZPR3RegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::ZPR4RegClass)) {
+        return  AArch64StmRegKind::getFloatRegID();
+      }
+      if (regClass->hasSuperClassEq(&AArch64::PPRRegClass) ||
+                 regClass->hasSuperClassEq(&AArch64::PPR_3bRegClass)) {
+        return AArch64StmRegKind::getPredicateRegID();
+      }
+
+        dbgs() << "unknown register class: " << MRI.getTargetRegisterInfo()->getRegClassName(regClass) << "\n";
+        llvm_unreachable("unknown register");
+
+    } else {
+      if (AArch64::GPR64allRegClass.contains(reg) ||
+          AArch64::GPR32allRegClass.contains(reg)) {
+        return  AArch64StmRegKind::getIntRegID();
+      }
+      if (AArch64::FPR128RegClass.contains(reg) ||
+                 AArch64::FPR64RegClass.contains(reg) ||
+                 AArch64::FPR32RegClass.contains(reg) ||
+                 AArch64::FPR16RegClass.contains(reg) ||
+                 AArch64::FPR8RegClass.contains(reg) ||
+                 AArch64::DDRegClass.contains(reg) ||
+                 AArch64::DDDRegClass.contains(reg) ||
+                 AArch64::DDDDRegClass.contains(reg) ||
+                 AArch64::QQRegClass.contains(reg) ||
+                 AArch64::QQQRegClass.contains(reg) ||
+                 AArch64::QQQQRegClass.contains(reg) ||
+                 AArch64::FPR128_loRegClass.contains(reg) ||
+                 AArch64::FPR64_loRegClass.contains(reg) ||
+                 AArch64::FPR16_loRegClass.contains(reg) ||
+                 AArch64::ZPRRegClass.contains(reg)) {
+        return  AArch64StmRegKind::getFloatRegID();
+      }
+      if (AArch64::PPRRegClass.contains(reg) ||
+                 AArch64::PPR_3bRegClass.contains(reg)) {
+        return AArch64StmRegKind::getPredicateRegID();
+      }
+      if (AArch64::CCRRegClass.contains(reg)) {
+        return AArch64StmRegKind::getCCRegID();
+      }
+
+      llvm_unreachable("unknown register");
+    }
+    return 0;
+}
 
 unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {
   if (MF.getSubtarget<AArch64Subtarget>().hardenSlsBlr())
