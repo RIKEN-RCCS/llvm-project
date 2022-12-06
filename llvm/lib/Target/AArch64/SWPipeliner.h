@@ -475,7 +475,6 @@ public:
   void getDefPort( const SwplInst **p_def_inst, int *p_def_index) const;
   /// ループ内の SwplReg::DefInst, SwplReg::DefIndex の取得
   void getDefPortInLoopBody( SwplInst **p_def_inst, int *p_def_index);
-  void getDefPortInLoopBody( const SwplInst **p_def_inst, int *p_def_index) const;
 
   /// SwplReg::Reg がNULLかどうかの判定
   bool isRegNull() { return (!Reg.isValid()); }

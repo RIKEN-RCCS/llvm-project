@@ -64,30 +64,11 @@ void SwplReg::getDefPort( SwplInst **p_def_inst, int *p_def_index) {
 void SwplReg::getDefPortInLoopBody( SwplInst **p_def_inst, int *p_def_index) {
   getDefPort(p_def_inst, p_def_index);
   while(*p_def_inst != nullptr && (*p_def_inst)->isPhi()) {
-    const SwplReg &Reg = (*p_def_inst)->getPhiUseRegFromIn();
-    const SwplInst *inst = *p_def_inst;
-    const SwplInst *p = nullptr;
-    Reg.getDefPort(&p, p_def_index);
-    if (p == inst) {
-      // Body内にdef_instが存在しない 
-      *p_def_inst = nullptr;
-      return;
-    }
-    *(const SwplInst**)(p_def_inst) = p;
-  }
-  if (!((*p_def_inst)->isInLoop())) {
-    *p_def_inst = nullptr;
-  }
-}
-
-void SwplReg::getDefPortInLoopBody( const SwplInst **p_def_inst, int *p_def_index) const {
-  getDefPort(p_def_inst, p_def_index);
-  while(*p_def_inst != nullptr && (*p_def_inst)->isPhi()) {
-    const SwplReg &Reg = (*p_def_inst)->getPhiUseRegFromIn();
+    SwplReg Reg = (*p_def_inst)->getPhiUseRegFromIn();
     const SwplInst *inst = *p_def_inst;
     Reg.getDefPort(p_def_inst, p_def_index);
     if (*p_def_inst == inst) {
-      // Body内にdef_instが存在しない
+      // Body内にdef_instが存在しない 
       *p_def_inst = nullptr;
       return;
     }
