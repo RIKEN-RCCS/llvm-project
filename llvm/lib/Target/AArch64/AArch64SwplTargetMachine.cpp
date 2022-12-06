@@ -448,13 +448,14 @@ bool AArch64InstrInfo::canPipelineLoop(MachineLoop &L) const {
   return true;
 }
 
-int AArch64InstrInfo::calcEachRegIncrement(const SwplInst *def_inst) const {
+int AArch64InstrInfo::calcEachRegIncrement(const SwplReg *r) const {
 //  SwplInst *def_inst = nullptr;
   const SwplInst *induction_inst = nullptr;
   int index_dummy = -1;
-  const SwplReg *target=nullptr;
+  const SwplReg *target=r;
+  const SwplInst *def_inst;
+  r->getDefPort(&def_inst, &index_dummy);
 
-//  getDefPort(&def_inst, &index_dummy);
   if (!def_inst->isInLoop()) {
     return 0;
   }

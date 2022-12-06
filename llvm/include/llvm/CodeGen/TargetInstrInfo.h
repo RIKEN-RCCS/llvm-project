@@ -60,7 +60,7 @@ class TargetRegisterInfo;
 class TargetSchedModel;
 class TargetSubtargetInfo;
 class StmRegKind;
-class SwplInst;
+class SwplReg;
 
 template <class T> class SmallVectorImpl;
 
@@ -2095,7 +2095,7 @@ public:
   }
   /// Calculate incremental value
   /// \return incremental value
-  virtual int calcEachRegIncrement(const SwplInst *def_inst) const {
+  virtual int calcEachRegIncrement(const SwplReg *r) const {
     return 0;
   }
 

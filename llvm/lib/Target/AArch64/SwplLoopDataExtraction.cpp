@@ -722,12 +722,8 @@ int SwplMem::calcEachMemAddressIncrement() {
       dbgs() << "DBG(calcEachMemAddressIncrement): " << *(Inst->getMI());
   }
   for (auto *reg:getUseRegs()) {
-    SwplInst *def_inst=nullptr;
-    int index_dummy=0;
-    reg->getDefPort(&def_inst, &index_dummy);
 
-
-    int increment = TII->calcEachRegIncrement(def_inst);
+    int increment = TII->calcEachRegIncrement(reg);
     if (DebugOutput) dbgs() << " calcEachRegIncrement(" << printReg(reg->getReg(), TRI)  << "): " << increment << "\n";
     if (increment == UNKNOWN_MEM_DIFF) {
       return increment;
