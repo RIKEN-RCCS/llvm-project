@@ -59,6 +59,8 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class TargetSubtargetInfo;
+class StmRegKind;
+class SwplReg;
 
 template <class T> class SmallVectorImpl;
 
@@ -2005,6 +2007,98 @@ public:
       MachineBasicBlock &MBB, MachineInstr &MI, MachineInstr **ldst, MachineInstr **add ) const {
     return false;
   }
+
+  /// generate iteration branch
+  virtual MachineInstr* makeKernelIterationBranch(MachineRegisterInfo &MRI,
+      MachineBasicBlock &MBB, const DebugLoc &debugLoc, Register doVReg, int iterationCount, int coefficient) const {
+    return nullptr;
+  }
+
+  /// check prefetch
+  virtual bool isPrefetch(unsigned opcode) const {
+    return false;
+  }
+
+  /// Create a branch before the kernel to pass the sequential route if the number of rotations is not enough.
+  /// \param [in] doInitVar
+  /// \param [in] dbgloc
+  /// \param [out] from
+  /// \param [out] to
+  /// \param [in] n
+  virtual void makeBypassKernel(MachineRegisterInfo &MRI,
+                                Register doInitVar,
+                                const DebugLoc &dbgloc,
+                                MachineBasicBlock &from,
+                                MachineBasicBlock &to,
+                                int n) const {
+    return;
+  }
+
+  /// Generate remainder loop avoidance branches.
+  /// \param [in] doUpdateVar
+  /// \param [in] dbgloc
+  /// \param [in] CC
+  /// \param [out] from
+  /// \param [out] to
+  virtual void makeBypassMod(
+      Register doUpdateVar, const DebugLoc &dbgloc, MachineOperand &CC, MachineBasicBlock &from, MachineBasicBlock &to
+      ) const {
+    return;
+  }
+
+  /// instruction controlling the loop
+  /// \param [in] MBB
+  /// \param [out] Branch
+  /// \param [out] Cmp
+  /// \param [out] AddSub
+  ///
+  /// \retval true found
+  /// \retval false
+  virtual bool findMIsForLoop(
+      MachineBasicBlock &MBB, MachineInstr **Branch, MachineInstr **Cmp, MachineInstr **Addsub) const {
+    return false;
+  }
+
+  virtual bool isNE(unsigned imm) const {
+    return false;
+  }
+  virtual bool isGE(unsigned imm) const {
+    return false;
+  }
+  virtual StmRegKind* getRegKind(const MachineRegisterInfo &MRI, Register r) const {
+    return nullptr;
+  }
+  virtual unsigned getRegKindId(const MachineRegisterInfo &MRI, Register r) const {
+    return false;
+  }
+  virtual StmRegKind* getRegKind(const MachineRegisterInfo &MRI) const {
+    return nullptr;
+  }
+
+  /// Determination of non-target instructions
+  /// \param [in] inst
+  /// \retval true non-target instructions
+  /// \retval false target instructions
+  virtual bool isNonTargetMI4SWPL(MachineInstr &inst) const {
+    return false;
+  }
+
+  /**
+   * Determines whether the target loop is subject to Swpl optimization.
+   *
+   * \param[in] L MachineLoop
+   * \retval true  The loop is subject to Swpl optimization。
+   * \retval false The loop isnot subject to Swpl optimization
+   */
+  virtual bool canPipelineLoop(MachineLoop &L) const {
+    return false;
+  }
+  /// Calculate incremental value
+  /// \return incremental value
+  virtual int calcEachRegIncrement(const SwplReg *r) const {
+    return 0;
+  }
+
 
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;

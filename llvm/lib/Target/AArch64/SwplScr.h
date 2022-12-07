@@ -16,20 +16,20 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/Register.h"
-namespace swpl {
+namespace llvm {
 class SwplLoop;
 
 /// 命令列変換情報
 struct TransformedMIRInfo {
-  llvm::Register originalDoVReg=0; ///<  オリジナルの制御変数（updateDoVRegMIのop1）
-  llvm::Register originalDoInitVar=0; ///< オリジナル制御変数の定義PHIの初期値
-  llvm::Register nonSSAOriginalDoVReg =0; ///< オリジナルの制御変数に対応した、データ抽出処理で非SSAに変換したMIR
-  llvm::Register nonSSAOriginalDoInitVar=0; ///< 定義PHIの初期値に対応した、データ抽出処理で非SSAに変換したMIR
-  llvm::Register doVReg=0; ///<  renaming後の制御変数
-  llvm::MachineInstr *updateDoVRegMI=nullptr; ///< オリジナルの制御変数の更新命令
-  llvm::MachineInstr *branchDoVRegMI=nullptr; ///< オリジナルの繰り返し分岐命令
-  llvm::MachineInstr *initDoVRegMI=nullptr; ///< オリジナルの制御変数の誘導変数(Phi)
-  llvm::MachineInstr *branchDoVRegMIKernel=nullptr; ///< kernel loopの繰り返し分岐命令
+  Register originalDoVReg=0; ///<  オリジナルの制御変数（updateDoVRegMIのop1）
+  Register originalDoInitVar=0; ///< オリジナル制御変数の定義PHIの初期値
+  Register nonSSAOriginalDoVReg =0; ///< オリジナルの制御変数に対応した、データ抽出処理で非SSAに変換したMIR
+  Register nonSSAOriginalDoInitVar=0; ///< 定義PHIの初期値に対応した、データ抽出処理で非SSAに変換したMIR
+  Register doVReg=0; ///<  renaming後の制御変数
+  MachineInstr *updateDoVRegMI=nullptr; ///< オリジナルの制御変数の更新命令
+  MachineInstr *branchDoVRegMI=nullptr; ///< オリジナルの繰り返し分岐命令
+  MachineInstr *initDoVRegMI=nullptr; ///< オリジナルの制御変数の誘導変数(Phi)
+  MachineInstr *branchDoVRegMIKernel=nullptr; ///< kernel loopの繰り返し分岐命令
   int iterationInterval=0; ///< ii
   int minimumIterationInterval=0; ///< min_ii
   int coefficient=0; ///< オリジナルの制御変数の更新言のop3
@@ -38,7 +38,7 @@ struct TransformedMIRInfo {
   size_t nVersions=0; ///< kernelに展開されるループの数を表す
   size_t nCopies=0; ///< kernel,prolog,epilogに必要なオリジナルループの回転数
   size_t requiredKernelIteration=0; ///< tune前の展開に必要な回転数
-  std::vector<llvm::MachineInstr*> mis; ///< prepareMIs() で使用するmi_tableの情報
+  std::vector<MachineInstr*> mis; ///< prepareMIs() で使用するmi_tableの情報
   size_t prologEndIndx=0; ///< prepareMIs() で使用するmi_tableの情報
   size_t kernelEndIndx=0; ///< prepareMIs() で使用するmi_tableの情報
   size_t epilogEndIndx=0; ///< prepareMIs() で使用するmi_tableの情報
@@ -47,16 +47,16 @@ struct TransformedMIRInfo {
   size_t originalKernelIteration=0; ///< 展開前のkernel部分の繰返し数 (if isIterationCountConstant == true)
   size_t transformedKernelIteration=0; ///< 展開後のkernel部分の繰返し数 (if isIterationCountConstant == true)
   size_t transformedModIteration=0; ///<展開後のmod部分の繰返し数 (if isIterationCountConstant == true)
-  llvm::MachineBasicBlock*OrgPreHeader=nullptr; ///< オリジナルループの入り口
-  llvm::MachineBasicBlock*Check1=nullptr; ///< 回転数チェック
-  llvm::MachineBasicBlock*Prolog=nullptr; ///< prolog
-  llvm::MachineBasicBlock*OrgBody=nullptr; ///< kernel
-  llvm::MachineBasicBlock*Epilog=nullptr; ///< epilog
-  llvm::MachineBasicBlock*Check2=nullptr; ///< 余りループ必要性チェック
-  llvm::MachineBasicBlock*NewPreHeader=nullptr; ///< 余りループの入り口
-  llvm::MachineBasicBlock*NewBody=nullptr; ///< 余りループ
-  llvm::MachineBasicBlock*NewExit=nullptr; ///< 余りループの出口
-  llvm::MachineBasicBlock*OrgExit=nullptr; ///< オリジナルの出口
+  MachineBasicBlock*OrgPreHeader=nullptr; ///< オリジナルループの入り口
+  MachineBasicBlock*Check1=nullptr; ///< 回転数チェック
+  MachineBasicBlock*Prolog=nullptr; ///< prolog
+  MachineBasicBlock*OrgBody=nullptr; ///< kernel
+  MachineBasicBlock*Epilog=nullptr; ///< epilog
+  MachineBasicBlock*Check2=nullptr; ///< 余りループ必要性チェック
+  MachineBasicBlock*NewPreHeader=nullptr; ///< 余りループの入り口
+  MachineBasicBlock*NewBody=nullptr; ///< 余りループ
+  MachineBasicBlock*NewExit=nullptr; ///< 余りループの出口
+  MachineBasicBlock*OrgExit=nullptr; ///< オリジナルの出口
 
   void print();
 
@@ -106,25 +106,25 @@ struct TransformedMIRInfo {
   }
 };
 
-using UseMap=std::map<llvm::Register, std::vector<llvm::MachineOperand*>>;
+using UseMap=std::map<Register, std::vector<MachineOperand*>>;
 
 /// Loop形状を変形したり、Loopから情報を探し出す機能を提供する
 class SwplScr {
 private:
-  llvm::MachineLoop& ML;
+  MachineLoop& ML;
 
   /// DO制御変数の初期値を取得する
   /// \param [out] TMI
   /// \retval true 取得成功
   /// \retval false 取得失敗
-  bool getDoInitialValue(swpl::TransformedMIRInfo &TMI) const;
+  bool getDoInitialValue(TransformedMIRInfo &TMI) const;
 
   /// 定数オペランドを３２ビット整数に変換する
   /// \param [in] op
   /// \param [out] coefficient
   /// \retval true 変換がうまくいった
   /// \retval false 変換できなかった
-  bool getCoefficient (const llvm::MachineOperand&op, int *coefficient) const;
+  bool getCoefficient (const MachineOperand&op, int *coefficient) const;
 
   /// SWPLで必要な回避分岐を生成する
   /// \param [in] tmi
@@ -133,50 +133,35 @@ private:
   /// \param [out] skip_kernel_to
   /// \param [out] skip_mod_from
   /// \param [out] skip_mod_to
-  void makeBypass(const TransformedMIRInfo &tmi, const llvm::DebugLoc&dbgloc,
-                  llvm::MachineBasicBlock &skip_kernel_from, llvm::MachineBasicBlock &skip_kernel_to,
-                  llvm::MachineBasicBlock &skip_mod_from, llvm::MachineBasicBlock &skip_mod_to);
+  void makeBypass(const TransformedMIRInfo &tmi, const DebugLoc&dbgloc,
+                  MachineBasicBlock &skip_kernel_from, MachineBasicBlock &skip_kernel_to,
+                  MachineBasicBlock &skip_mod_from, MachineBasicBlock &skip_mod_to);
 
-  /// 回転数が足りない場合に、逐次ルートを通すための分岐をkernelの前に作成する
-  /// \param [in] doInitVar
-  /// \param [in] dbgloc
-  /// \param [out] from
-  /// \param [out] to
-  /// \param [in] n
-  void makeBypassKernel(llvm::Register doInitVar,  const llvm::DebugLoc&dbgloc, llvm::MachineBasicBlock &from, llvm::MachineBasicBlock &to, int n) const;
-
-  /// Kernel通過後に余りループを通る必要が無い場合の回避分岐を生成する
-  /// \param [in] doUpdateVar
-  /// \param [in] dbgloc
-  /// \param [in] CC
-  /// \param [out] from
-  /// \param [out] to
-  void makeBypassMod(llvm::Register doUpdateVar, const llvm::DebugLoc&dbgloc, llvm::MachineOperand &CC, llvm::MachineBasicBlock &from, llvm::MachineBasicBlock &to) const;
 
   /// MBBを削除する（およびSuccessor、PHI、Brの更新）
   /// \param [in,out] target 削除対象
   /// \param [in,out] from 削除後のPRED
   /// \param [in,out] to 削除後のSUCC
   /// \param [in] unnecessaryMod 削除対象がCheck2の場合かつ余りループ削除の場合、真を指定する
-  void removeMBB(llvm::MachineBasicBlock *target, llvm::MachineBasicBlock *from, llvm::MachineBasicBlock *to, bool unnecessaryMod=false);
+  void removeMBB(MachineBasicBlock *target, MachineBasicBlock *from, MachineBasicBlock *to, bool unnecessaryMod=false);
 
   /// 回転数が１の場合、余りループの冗長な繰返し分岐を削除する
   /// \param [in] br
-  void removeIterationBranch(llvm::MachineInstr *br, llvm::MachineBasicBlock *body);
+  void removeIterationBranch(MachineInstr *br, MachineBasicBlock *body);
 
   /// oldBodyからnewBodyへ、MachineBasicBlock内の全命令を移動する
   /// \note Successor/Predecessorの変更はここではしない
   /// \param [out] newBody 移動先
   /// \param [out] oldBody 移動元
-  void moveBody(llvm::MachineBasicBlock*newBody, llvm::MachineBasicBlock*oldBody);
+  void moveBody(MachineBasicBlock*newBody, MachineBasicBlock*oldBody);
 
   /// fromMBBのphiからremoveMBBを取り去る
   /// \param [in,out] fromMBB
   /// \param [in] removeMBB
-  void removePredFromPhi(llvm::MachineBasicBlock *fromMBB, llvm::MachineBasicBlock *removeMBB);
+  void removePredFromPhi(MachineBasicBlock *fromMBB, MachineBasicBlock *removeMBB);
 
 public:
-  SwplScr(llvm::MachineLoop&ml):ML(ml){}
+  SwplScr(MachineLoop&ml):ML(ml){}
 
   /// scr に対し、イタレーションの最後で常に vreg == coefficient * nRemainedIterations + constant を満たすような vreg を探す。
   /// 見つかった場合は vreg の他に、係数や定義点を設定し、 true を返す。
@@ -184,16 +169,6 @@ public:
   /// \retval true 誘導変数発見
   /// \retval false 誘導変数検出できず
   bool findBasicInductionVariable(TransformedMIRInfo &TMI) const;
-
-
-  /// loopの制御をおこなう言を探す。
-  /// \param [out] Branch
-  /// \param [out] Cmp
-  /// \param [out] AddSub
-  ///
-  /// \retval true loopを構成する各命令を特定できた
-  /// \retval false loopを構成する革命例を特定できず
-  bool findMIsForLoop(llvm::MachineInstr **Branch, llvm::MachineInstr **Cmp, llvm::MachineInstr **Addsub) const;
 
   /// SWPLの結果をMIRへ反映するために,MBBの構成を行なう.
   /// \param [in,out] tmi

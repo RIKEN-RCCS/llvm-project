@@ -20,9 +20,8 @@
 #include <set>
 #include <unordered_set>
 
-using namespace llvm;
 
-namespace swpl{
+namespace llvm{
 #define ASSUMED_ITERATIONS_MAX (32767)
 extern  llvm::cl::opt<bool> DebugOutput;
 
@@ -50,9 +49,9 @@ class SwplMrt {
 public:
   SwplMrt(unsigned ii) : iteration_interval(ii) {} ///< constructor
 
-  void reserveResourcesForInst(unsigned cycle, const SwplInst& inst, const StmPipeline & pipeline );
-  SwplInstSet* findBlockingInsts(unsigned cycle, const SwplInst& inst, const StmPipeline & pipeline );
-  bool isOpenForInst(unsigned cycle, const SwplInst& inst, const StmPipeline & pipeline);
+  void reserveResourcesForInst(unsigned cycle, const SwplInst& inst, const AArch64StmPipeline & pipeline );
+  SwplInstSet* findBlockingInsts(unsigned cycle, const SwplInst& inst, const AArch64StmPipeline & pipeline );
+  bool isOpenForInst(unsigned cycle, const SwplInst& inst, const AArch64StmPipeline & pipeline);
   void cancelResourcesForInst(const SwplInst& inst);
   void dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream);
   void dump();
@@ -102,9 +101,9 @@ class SwplTrialState {
   public:
     SwplSlot slot;
     SwplInst *inst;
-    StmPipeline * pipeline;
+    AArch64StmPipeline * pipeline;
 
-    SlotInstPipeline(SwplSlot s, SwplInst* i, StmPipeline * p) : slot(s), inst(i), pipeline(p) {} ///< constructor
+    SlotInstPipeline(SwplSlot s, SwplInst* i, AArch64StmPipeline * p) : slot(s), inst(i), pipeline(p) {} ///< constructor
   };
   const SwplModuloDdg & modulo_ddg;        ///< モジュロスケジューリング用Ddg
   unsigned iteration_interval;             ///< Iteration Interval（Initiation Interval）

@@ -10,18 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/SwplTargetMachine.h"
 #include "SwplRegEstimate.h"
 #include "AArch64.h"
 #include "AArch64SwplTargetMachine.h"
 #include "SWPipeliner.h"
 #include "SwplPlan.h"
-#include "SwplScheduling.h"
 
-using namespace llvm;
 
-static cl::opt<bool> OptionDumpReg("swpl-debug-dump-estimate-reg",cl::init(false), cl::ReallyHidden);
 
-namespace swpl{
+static llvm::cl::opt<bool> OptionDumpReg("swpl-debug-dump-estimate-reg",llvm::cl::init(false), llvm::cl::ReallyHidden);
+
+namespace llvm{
 
 /// \brief scheduling結果に対して指定したレジスタがいくつ必要であるかを数える処理
 /// \note 必要なレジスタ数を正確に計算する事は、RAでなければできないため、
@@ -66,34 +66,22 @@ unsigned SwplRegEstimate::calcNumRegs(const SwplLoop& loop,
   max_regs = std::max(max_regs, n_immortal_regs + n_interfered_regs);
   max_regs = std::max(max_regs, n_immortal_regs + n_extended_regs);
   max_regs = std::max(max_regs, n_immortal_regs + n_patten_regs);
+  const char* regname="other";
 
-  if( (regclassid == llvm::AArch64::FPR64RegClassID) && n_renaming_versions >= 3 ) {
+  if (llvm::StmRegKind::isInteger(regclassid) && n_renaming_versions >= 3 ) {
+    regname = "I";
     margin = 1;
-  } else if( (regclassid == llvm::AArch64::GPR64RegClassID) && n_renaming_versions >= 3 ) {
+  } else if( llvm::StmRegKind::isFloating(regclassid) && n_renaming_versions >= 3 ) {
+    regname = "F";
     margin = 1;
-  } else if( regclassid == llvm::AArch64::PPRRegClassID ) { /* versionの制限は無し */
+  } else if( llvm::StmRegKind::isPredicate(regclassid) ) { /* versionの制限は無し */
+    regname = "P";
     margin = 1;
   }
 
   max_regs += margin;
 
   if (OptionDumpReg) {
-    const char* regname;
-    switch(regclassid) {
-    default:
-      regname = "other";
-      break;
-    case llvm::AArch64::GPR64RegClassID:
-      regname = "I";
-      break;
-    case llvm::AArch64::FPR64RegClassID:
-      regname = "F";
-      break;
-    case llvm::AArch64::PPRRegClassID:
-      regname = "P";
-      break;
-    }
-
     dbgs() << "Estimated number of "
            << regname << " registers (classid:" << regclassid << ") :";
     dbgs() << " immortal " << n_immortal_regs
@@ -289,7 +277,7 @@ unsigned SwplRegEstimate::getNumImmortalRegs(const SwplLoop& loop, unsigned regc
       if ( reg->isRegNull() ) {
         continue;
       }
-      if( !(StmRegKind::isSameKind( reg->getRegKind(), regclassid)) ) {
+      if( !(reg->isSameKind(regclassid)) ) {
         continue;
       }
 
@@ -307,7 +295,7 @@ unsigned SwplRegEstimate::getNumImmortalRegs(const SwplLoop& loop, unsigned regc
     SwplReg *reg, *successor;
     reg = &(inst->getDefRegs(0));
     assert ( !(reg->isRegNull()) );
-    if( !(StmRegKind::isSameKind(reg->getRegKind(), regclassid)) ) {
+    if ( !reg->isSameKind(regclassid) ) {
       continue;
     }
   
@@ -361,7 +349,7 @@ unsigned SwplRegEstimate::getNumMortalRegs(const SwplLoop& loop,
   /* branch 用の icc をカウントする。
    * icc が iteration_interval のブロックを跨って使用されているかを、
    * チェックする場所が他にない。*/
-  if( regclassid == AArch64::CCRRegClassID ) {
+  if( llvm::StmRegKind::isCC( regclassid ) ) {
     incrementCounters (1, &reg_counters, iteration_interval,
                         0, 0);
   }
@@ -870,7 +858,7 @@ unsigned SwplRegEstimate::getNumPatternRegs (RenamedRegVector* vector_renamed_re
     }
 
     /* MVE==5の場合は、spillがおきやすい傾向にあるため多めに見積る */
-    if( regclassid == AArch64::PPRRegClassID ) {
+    if( llvm::StmRegKind::isPredicate(regclassid) ) {
       if (n_renaming_versions == 5) {
         pattern_max_counter = std::max(pattern_max_counter,
                                        3 * live_overlaps);
@@ -931,7 +919,7 @@ bool SwplRegEstimate::isCountedReg(const SwplReg& reg, unsigned regclassid) {
   if ( reg.isRegNull() ) {
     return false;
   }
-  if( !(StmRegKind::isSameKind(reg.getRegKind(), regclassid)) ) {
+  if( !reg.isSameKind(regclassid) ) {
     return false;
   }
   if (reg.getPredecessor() != nullptr) {

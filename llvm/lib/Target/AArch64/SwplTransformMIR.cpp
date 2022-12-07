@@ -9,7 +9,7 @@
 // Transform MachineIR for SWP.
 //
 //===----------------------------------------------------------------------===//
-namespace swpl {
+namespace llvm {
   class SwplScr;
   class SwplPlan;
   class SwplReg;
@@ -35,7 +35,6 @@ namespace swpl {
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-using namespace swpl;
 
 #define DEBUG_TYPE "aarch64-swpipeliner"
 
@@ -94,7 +93,7 @@ bool SwplTransformMIR::transformMIR() {
     outputLoopoptMessage(n_body_real_inst);
   }
 
-  if (swpl::DebugOutput) {
+  if (DebugOutput) {
     /// (3) "-swpl-debug"が指定されている場合は、デバッグ情報を出力する
     if (TMI.isNecessaryTransformMIR()){
       dbgs()  << formatv(
@@ -379,7 +378,7 @@ llvm::MachineInstr *SwplTransformMIR::createMIFromInst(const SwplInst &inst, siz
   return new_MI;
 }
 
-llvm::Register SwplTransformMIR::getVRegFromMap(const swpl::SwplReg *org, unsigned version)  const {
+llvm::Register SwplTransformMIR::getVRegFromMap(const SwplReg *org, unsigned version)  const {
   // llvm::Register割当がない場合はInValidなRegisterを返す
   auto it_vregs = VRegMap.find(org);
   if (it_vregs == VRegMap.end()) return llvm::Register();
@@ -389,7 +388,7 @@ llvm::Register SwplTransformMIR::getVRegFromMap(const swpl::SwplReg *org, unsign
   return reg;
 }
 
-llvm::Register SwplTransformMIR::getVReg(const swpl::SwplReg& org, size_t version)  {
+llvm::Register SwplTransformMIR::getVReg(const SwplReg& org, size_t version)  {
 
   auto orgReg=org.getReg();
 
@@ -513,49 +512,24 @@ void SwplTransformMIR::insertMIs(llvm::MachineBasicBlock& ins,
 }
 
 void SwplTransformMIR::makeKernelIterationBranch(MachineBasicBlock &MBB) {
-  auto insertionPoint=MBB.getFirstInstrTerminator();
+
   assert(TMI.branchDoVRegMI->isBranch());
   const auto &debugLoc= TMI.branchDoVRegMI->getDebugLoc();
-
-  const auto*regClass=MRI->getRegClass(TMI.doVReg);
-  auto ini= TMI.doVReg;
-  if (regClass->hasSubClassEq(&AArch64::GPR64RegClass)) {
-    /// 条件判定（SUBSXri）で利用できないレジスタクラスの場合、COPYを生成し、利用可能レジスタクラスを定義する
-    ini=MRI->createVirtualRegister(&AArch64::GPR64spRegClass);
-    BuildMI(MBB, insertionPoint, debugLoc, TII->get(AArch64::COPY), ini)
-            .addReg(TMI.doVReg);
-  }
-
-  /// compare(SUBSXri)生成
-  // $XZR(+CC)=SUBSXri %TMI.doVReg, TMI.expansion
-  BuildMI(MBB, insertionPoint, debugLoc, TII->get(AArch64::SUBSXri), AArch64::XZR)
-          .addReg(ini)
-          .addImm(TMI.expansion)
-          .addImm(0);
+  MachineInstr *br = TII->makeKernelIterationBranch(*MRI, MBB, debugLoc, TMI.doVReg, TMI.expansion, TMI.coefficient);
 
   /// すでに存在するCheck2(ModLoop迂回用チェック)の比較命令の対象レジスタをTMI.nonSSAOriginalDoVRegに書き換える
-  // c2 mbbの先頭命令を取得（SUBSXRiのはず）
+  // c2 mbbの先頭命令を取得
   auto *cmp=&*(TMI.Check2->begin());
-  assert(cmp->getOpcode()==AArch64::SUBSXri);
   auto &op=cmp->getOperand(1);
   assert(op.isReg());
   op.setReg(TMI.nonSSAOriginalDoVReg);
 
-  // branchの生成
-  auto CC=AArch64CC::LT;
-  if (TMI.coefficient > 0) {
-    CC=AArch64CC::GE;
-  }
-  /// Bcc命令を生成し、TMI.branchDoVRegMIKernelに記録しておく
-  auto br=BuildMI(MBB, insertionPoint, debugLoc, TII->get(AArch64::Bcc))
-          .addImm(CC)
-          .addMBB(&MBB);
   TMI.branchDoVRegMIKernel =&*br;
 }
 
 void SwplTransformMIR::outputNontunedMessage() {
 
-  if (swpl::DebugOutput) {
+  if (DebugOutput) {
     ///  内部開発者向け：情報を出力 (-swpl-debugが指定されていた場合)
     dbgs()  << formatv(
             "        : Required iteration count in MIR input is        :   {0}"
@@ -636,13 +610,13 @@ void SwplTransformMIR::prepareMIs() {
   return ;
 }
 
-void SwplTransformMIR::prepareVRegVectorForReg(const swpl::SwplReg *reg, size_t n_versions) {
+void SwplTransformMIR::prepareVRegVectorForReg(const SwplReg *reg, size_t n_versions) {
   auto *regs=new std::vector<llvm::Register>;
   regs->resize(n_versions);
   VRegMap[reg]=regs;
 }
 
-void SwplTransformMIR::setVReg(const swpl::SwplReg *orgReg, size_t version, llvm::Register newReg) {
+void SwplTransformMIR::setVReg(const SwplReg *orgReg, size_t version, llvm::Register newReg) {
   auto *regs= VRegMap[orgReg];
   assert(regs!=nullptr);
   assert(regs->size()>version);
@@ -685,7 +659,7 @@ void SwplTransformMIR::outputLoopoptMessage(int n_body_inst) {
                           0, 0
                           );
 
-  swpl::ORE->emit([&]() {
+  ORE->emit([&]() {
     return MachineOptimizationRemark(DEBUG_TYPE, "SoftwarePipelined",
                                      Loop.getML()->getStartLoc(), Loop.getML()->getHeader())
             << msg;
@@ -897,7 +871,7 @@ void SwplTransformMIR::convert2SSA() {
 }
 
 
-namespace swpl {
+namespace llvm {
 
 /// 命令の並びを表現するためのクラス
 struct IOSlot {
@@ -917,17 +891,17 @@ struct IOPlan {
 }
 
 template <>
-struct llvm::yaml::MappingTraits<swpl::IOSlot> {
+struct llvm::yaml::MappingTraits<IOSlot> {
   static void mapping(IO &io, IOSlot &info) {
     io.mapRequired("id", info.id);
     io.mapRequired("slot", info.slot);
   }
 };
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(swpl::IOSlot)
+LLVM_YAML_IS_SEQUENCE_VECTOR(IOSlot)
 
 template <>
-struct llvm::yaml::MappingTraits<swpl::IOPlan> {
+struct llvm::yaml::MappingTraits<IOPlan> {
   static void mapping(IO &io, IOPlan &info) {
     io.mapRequired("minimum_iteration_interval", info.minimum_iteration_interval);
     io.mapRequired("iteration_interval", info.iteration_interval);
@@ -976,7 +950,7 @@ void SwplTransformMIR::importPlan() {
     return;
   }
   /// YAMLファイルからIOPlanに入力する
-  swpl::IOPlan ioplan;
+  IOPlan ioplan;
   llvm::yaml::Input yin(Buffer.get()->getMemBufferRef());
   yin >> ioplan;
   /// IOPlanからSwplPlanに情報を移し替える

@@ -47,7 +47,7 @@ static cl::opt<unsigned> OptionMaxPreg("swpl-max-preg",cl::init(0), cl::ReallyHi
 
 static cl::opt<bool> OptionDumpEveryInst("swpl-debug-dump-scheduling-every-inst",cl::init(false), cl::ReallyHidden);
 
-namespace swpl{
+namespace llvm{
 
 #define DEFAULT_MAXII_BASE 95;
 
@@ -65,7 +65,7 @@ namespace swpl{
 /// \note 引数pipelineは、資源使用パターンに応じたTmPipeline情報
 void SwplMrt::reserveResourcesForInst(unsigned cycle,
                                       const SwplInst& inst,
-                                      const StmPipeline & pipeline ) {
+                                      const AArch64StmPipeline & pipeline ) {
   // cycle:1, stage:{ 1, 5, 9 }, resources:{ ID1, ID2, ID3 }
   //   ->     resource ID1  ID2  ID3  ID4
   //      cycle   :  1 予約
@@ -140,7 +140,7 @@ void SwplMrt::reserveResourcesForInst(unsigned cycle,
 ///       予約するのではなく、すでに予約されていれば、そのInstを記録していく。
 SwplInstSet* SwplMrt::findBlockingInsts(unsigned cycle,
                                         const SwplInst& inst,
-                                        const StmPipeline & pipeline)
+                                        const AArch64StmPipeline & pipeline)
 {
   SwplInstSet* blocking_insts = new SwplInstSet();
   assert( (pipeline.resources.size()==pipeline.stages.size()) && "Unexpected resource information.");
@@ -172,7 +172,7 @@ SwplInstSet* SwplMrt::findBlockingInsts(unsigned cycle,
 ///       （現在のところ使い道なし）
 bool SwplMrt::isOpenForInst(unsigned cycle,
                             const SwplInst& inst,
-                            const StmPipeline & pipeline) {
+                            const AArch64StmPipeline & pipeline) {
   SwplInstSet* blocking_insts;
   bool is_open;
 
@@ -237,7 +237,7 @@ void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream
   // １～STM.getNumResource()をリソースとして扱う 。
   // ０はP_NULLであり、リソースではない。
   for (resource_id = 1; (unsigned)resource_id <= numresource; ++resource_id) {
-    res_max_length = std::max( res_max_length, (unsigned)(strlen(StmPipeline::getResourceName(resource_id))) );
+    res_max_length = std::max( res_max_length, (unsigned)(strlen(AArch64StmPipeline::getResourceName(resource_id))) );
   }
 
   inst_gen_width = std::max( getMaxOpcodeNameLength()+1, res_max_length);  // 1 = 'p|f' の分
@@ -247,8 +247,8 @@ void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream
   // Resource名の出力
   stream << "\n       ";
   for (resource_id = 1; (unsigned)resource_id <= numresource; ++resource_id) {
-    stream << StmPipeline::getResourceName(resource_id);
-    for (unsigned l=strlen(StmPipeline::getResourceName(resource_id)); l<word_width; l++) {
+    stream << AArch64StmPipeline::getResourceName(resource_id);
+    for (unsigned l=strlen(AArch64StmPipeline::getResourceName(resource_id)); l<word_width; l++) {
       stream << " ";
     }
   }
@@ -700,7 +700,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
         // 資源競合がなければ配置可能
         for( auto pl : *(STM.getPipelines(mi)) ) {
           if( mrt->isOpenForInst(cycle, inst, *pl) ) {
-            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<StmPipeline *>(pl) );
+            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<AArch64StmPipeline *>(pl) );
           }
         }
       }
@@ -763,7 +763,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::latestValidSlot(const SwplInst&
             //
             // 現時点では、資源が予約できるcycleかつ、inst_slot_map上で競合しないslotを返している。
             // このため、この命令の配置時に、資源競合となる命令は存在しないこととなる。
-            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<StmPipeline *>(pl) );
+            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<AArch64StmPipeline *>(pl) );
           }
         }
       }
@@ -1105,10 +1105,12 @@ void MsResourceResult::init() {
   num_necessary_ireg = 0;
   num_necessary_freg = 0;
   num_necessary_preg = 0;
+  auto *rk=TII->getRegKind(*MRI);
 
-  num_max_ireg = (OptionMaxIreg > 0) ? OptionMaxIreg : llvm::AArch64::GPR64RegClass.getNumRegs();
-  num_max_freg = (OptionMaxFreg > 0) ? OptionMaxFreg : llvm::AArch64::FPR64RegClass.getNumRegs();
-  num_max_preg = (OptionMaxPreg > 0) ? OptionMaxPreg : llvm::AArch64::PPR_3bRegClass.getNumRegs();
+  num_max_ireg = (OptionMaxIreg > 0) ? OptionMaxIreg : rk->getNumIntReg();
+  num_max_freg = (OptionMaxFreg > 0) ? OptionMaxFreg : rk->getNumFloatReg();
+  num_max_preg = (OptionMaxPreg > 0) ? OptionMaxPreg : rk->getNumPredicateReg();
+  delete rk;
 
   setSufficient();
   return;
@@ -1319,7 +1321,7 @@ void MsResult::checkHardResource(const PlanSpec& spec, bool limit_reg) {
     /* 整数より浮動小数点不足優先で出力. */
     if ( !resource.isFregSufficient() ) {
       // 浮動小数点数レジスタの場合
-      swpl::ORE->emit([&]() {
+      ORE->emit([&]() {
                         return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                  spec.loop.getML()->getStartLoc(),
                                                                  spec.loop.getML()->getHeader())
@@ -1329,7 +1331,7 @@ void MsResult::checkHardResource(const PlanSpec& spec, bool limit_reg) {
                       });
     } else if ( !resource.isIregSufficient() ) {
       // 整数レジスタの場合
-      swpl::ORE->emit([&]() {
+      ORE->emit([&]() {
                         return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                  spec.loop.getML()->getStartLoc(),
                                                                  spec.loop.getML()->getHeader())
@@ -1339,7 +1341,7 @@ void MsResult::checkHardResource(const PlanSpec& spec, bool limit_reg) {
                       });
     } else if ( !resource.isPregSufficient() ) {
       // predicateレジスタの場合
-      swpl::ORE->emit([&]() {
+      ORE->emit([&]() {
                         return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                  spec.loop.getML()->getStartLoc(),
                                                                  spec.loop.getML()->getHeader())
@@ -1371,17 +1373,13 @@ MsResourceResult MsResult::isHardRegsSufficient(const PlanSpec& spec) {
   ms_resource_result.init();
   n_renaming_versions = inst_slot_map->calcNRenamingVersions(spec.loop, ii);
 
-  ///////////////////////////////////////////////////
-  // case llvm::AArch64::GPR64RegClassID
   n_necessary_regs = SwplRegEstimate::calcNumRegs(spec.loop, inst_slot_map, ii,
-                                                  llvm::AArch64::GPR64RegClassID,
+                                                  llvm::StmRegKind::getIntRegID(),
                                                   n_renaming_versions);
   ms_resource_result.setNecessaryIreg(n_necessary_regs);
 
-  ///////////////////////////////////////////////////
-  // case llvm::AArch64::FPR64RegClassID
   n_necessary_regs = SwplRegEstimate::calcNumRegs(spec.loop, inst_slot_map, ii,
-                                                  llvm::AArch64::FPR64RegClassID,
+                                                  llvm::StmRegKind::getFloatRegID(),
                                                   n_renaming_versions);
   if(n_necessary_regs > spec.n_fillable_float_invariants) {
     // 必ず成立するはずだが念のため
@@ -1389,10 +1387,8 @@ MsResourceResult MsResult::isHardRegsSufficient(const PlanSpec& spec) {
   }
   ms_resource_result.setNecessaryFreg(n_necessary_regs);
 
-  ///////////////////////////////////////////////////
-  // case llvm::AArch64::PPRRegClassID
   n_necessary_regs = SwplRegEstimate::calcNumRegs(spec.loop, inst_slot_map, ii,
-                                                  llvm::AArch64::PPRRegClassID,
+                                                  llvm::StmRegKind::getPredicateRegID(),
                                                   n_renaming_versions);
   ms_resource_result.setNecessaryPreg(n_necessary_regs);
 
@@ -1430,7 +1426,7 @@ void MsResult::checkIterationCount(const PlanSpec& spec) {
   }
 
   if (is_itr_sufficient == false) {
-    swpl::ORE->emit([&]() {
+    ORE->emit([&]() {
                       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                spec.loop.getML()->getStartLoc(),
                                                                spec.loop.getML()->getHeader())
@@ -1635,7 +1631,7 @@ void MsResult::outputGiveupMessageForEstimate(PlanSpec& spec) {
     if( !is_itr_sufficient==false && !is_reg_sufficient==false && !is_mve_appropriate==false) {
       // int_slot_mapができない最終原因が、
       // レジスタ不足、回転数不足、MVE制限によるものでない場合
-      swpl::ORE->emit([&]() {
+      ORE->emit([&]() {
                         return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                  spec.loop.getML()->getStartLoc(),
                                                                  spec.loop.getML()->getHeader())

@@ -15,6 +15,7 @@
 
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
+//#include "AArch64SwplTargetMachine.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -338,6 +339,42 @@ public:
                               MachineInstr &MI,
                               MachineInstr **ldst,
                               MachineInstr **add ) const override;
+
+  MachineInstr* makeKernelIterationBranch(MachineRegisterInfo &MRI,
+                                          MachineBasicBlock &MBB,
+                                          const DebugLoc &debugLoc,
+                                          Register doVReg,
+                                          int iterationCount,
+                                          int coefficient) const override;
+
+  bool isPrefetch(unsigned opcode) const override;
+  void makeBypassKernel(MachineRegisterInfo &MRI,
+                        Register doInitVar,
+                        const DebugLoc &dbgloc,
+                        MachineBasicBlock &from,
+                        MachineBasicBlock &to,
+                        int n) const override;
+
+  void makeBypassMod(Register doUpdateVar,
+                     const DebugLoc &dbgloc,
+                     MachineOperand &CC,
+                     MachineBasicBlock &from,
+                     MachineBasicBlock &to) const override;
+
+  bool isNE(unsigned imm) const override;
+  bool isGE(unsigned imm) const override;
+  bool findMIsForLoop(MachineBasicBlock &MBB,
+                      MachineInstr **Branch,
+                      MachineInstr **Cmp,
+                      MachineInstr **Addsub) const override;
+
+  StmRegKind* getRegKind(const MachineRegisterInfo &MRI, Register r) const override;
+  StmRegKind* getRegKind(const MachineRegisterInfo &MRI) const override;
+  unsigned getRegKindId(const MachineRegisterInfo &MRI, Register r) const override;
+  bool isNonTargetMI4SWPL(MachineInstr &inst)const override;
+  bool canPipelineLoop(MachineLoop &L) const override;
+  int calcEachRegIncrement(const SwplReg *r) const override;
+
 
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"

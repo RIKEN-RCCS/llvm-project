@@ -23,10 +23,9 @@
 #include <iostream>
 
 using namespace llvm;
-using namespace swpl;
+
 #define DEBUG_TYPE "swp-loop"
 
-#define UNKNOWN_MEM_DIFF INT_MIN        /* 0 の正反対 */
 
 static cl::opt<bool> DebugLoop("swpl-debug-loop",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> NoUseAA("swpl-no-use-aa",cl::init(false), cl::ReallyHidden);
@@ -41,8 +40,6 @@ static void construct_mem_use(Register2SwplRegMap &rmap, SwplInst &inst, const M
                               SwplMems *mems, SwplMems *memsOtherBody);
 static void construct_def(Register2SwplRegMap &rmap, SwplInst &inst, MachineOperand &MO);
 
-// todo: ステップ２でTIIに移動する
-bool isNonTargetMI4SWPL(MachineInstr &inst);
 
 void SwplReg::inheritReg(SwplReg *former_reg, SwplReg *latter_reg) {
   assert (former_reg->Successor == NULL);
@@ -54,7 +51,7 @@ void SwplReg::inheritReg(SwplReg *former_reg, SwplReg *latter_reg) {
   return;
 }
 
-void SwplReg::getDefPort( SwplInst **p_def_inst, int *p_def_index) const {
+void SwplReg::getDefPort( const SwplInst **p_def_inst, int *p_def_index) const {
   *p_def_inst = DefInst;
   *p_def_index = (int)DefIndex;
 }
@@ -67,8 +64,8 @@ void SwplReg::getDefPort( SwplInst **p_def_inst, int *p_def_index) {
 void SwplReg::getDefPortInLoopBody( SwplInst **p_def_inst, int *p_def_index) {
   getDefPort(p_def_inst, p_def_index);
   while(*p_def_inst != nullptr && (*p_def_inst)->isPhi()) {
-    const SwplReg Reg = (*p_def_inst)->getPhiUseRegFromIn();
-    SwplInst *inst = *p_def_inst;
+    SwplReg Reg = (*p_def_inst)->getPhiUseRegFromIn();
+    const SwplInst *inst = *p_def_inst;
     Reg.getDefPort(p_def_inst, p_def_index);
     if (*p_def_inst == inst) {
       // Body内にdef_instが存在しない 
@@ -89,16 +86,14 @@ int SwplReg::getRegSize() const {
 
 bool SwplInst::isDefinePredicate() const {
   for (auto *reg:getDefRegs()) {
-    StmRegKind rk= STM.getRegKind(reg->getReg());
-    if (rk.isPredicate()) return true;
+    if (reg->isPredReg()) return true;
   }
   return false;
 }
 
 bool SwplInst::isFloatingPoint() const {
   for (auto *reg:getDefRegs()) {
-    StmRegKind rk= STM.getRegKind(reg->getReg());
-    if (rk.isFloating()) return true;
+    if (reg->isFloatReg()) return true;
   }
   return false;
 }
@@ -203,7 +198,8 @@ void SwplLoop::makeBodyInsts(Register2SwplRegMap &rmap) {
   MachineInstr*branch=nullptr;
   MachineInstr*cmp=nullptr;
   MachineInstr*addsub=nullptr;
-  (void)SwplScr(*(getML())).findMIsForLoop(&branch, &cmp, &addsub);
+  MachineBasicBlock *mbb=getML()->getTopBlock();
+  TII->findMIsForLoop(*mbb, &branch, &cmp, &addsub);
   for (auto &MI:getNewBodyMBB()->instrs()) {
     if (MI.isDebugInstr()) { continue; }
     if (&MI == branch) { continue; }
@@ -295,7 +291,7 @@ size_t SwplLoop::getSizeBodyRealInsts() const {
   size_t n = 0;
   for (auto *inst:getBodyInsts()) {
     const llvm::MachineInstr *MI = inst->getMI();
-    if (swpl::STM.isPseudo(*MI)) { continue; }
+    if (STM.isPseudo(*MI)) { continue; }
     n++;
   }
   return n;
@@ -715,79 +711,6 @@ void SwplLoop::deleteNewBodyMBB() {
   setNewBodyMBB(nullptr);
 }
 
-int SwplReg::calcEachRegIncrement() {
-  SwplInst *def_inst = nullptr;
-  SwplInst *induction_inst = nullptr;
-  int index_dummy = -1;
-  const auto *target=this;
-
-  getDefPort(&def_inst, &index_dummy);
-  if (!def_inst->isInLoop()) {
-    return 0;
-  }
-  if (def_inst->isADDXrr()) {
-    const auto &r1=def_inst->getUseRegs(0);
-    const auto &r2=def_inst->getUseRegs(1);
-    if (r1.DefInst->isPhi()) {
-      if (r2.DefInst->isInLoop())
-        return UNKNOWN_MEM_DIFF;
-      def_inst=r1.DefInst;
-      target=&r1;
-    } else if (r2.DefInst->isPhi()) {
-      if (r1.DefInst->isInLoop())
-        return UNKNOWN_MEM_DIFF;
-      def_inst=r2.DefInst;
-      target=&r2;
-    } else {
-      return UNKNOWN_MEM_DIFF;
-    }
-  }
-
-  if (def_inst->isPhi()) {
-    const SwplReg& induction_reg = def_inst->getPhiUseRegFromIn();
-    induction_reg.getDefPort(&induction_inst, &index_dummy);
-    while (induction_inst->isCopy()) {
-      const auto &def_reg=induction_inst->getUseRegs(0);
-      induction_inst=def_reg.DefInst;
-    }
-
-    if (induction_inst->getSizeUseRegs() == 1) {
-      int sign = 0;
-      const auto *mi=induction_inst->getMI();
-      auto op=mi->getOpcode();
-      if (op == AArch64::ADDSXri || op == AArch64::ADDXri)
-        sign = 1;
-      else if (op == AArch64::SUBSXri || op == AArch64::SUBXri)
-        sign = -1;
-
-      if (sign == 0)
-        return UNKNOWN_MEM_DIFF;
-
-      if (&(induction_inst->getUseRegs(0)) == target) {
-        const auto& mo=mi->getOperand(2);
-        if (!mo.isImm()) return UNKNOWN_MEM_DIFF;
-        return mo.getImm();
-      }
-    } else {
-      return UNKNOWN_MEM_DIFF;
-    }
-  } else {
-    if (def_inst->isLoad())
-      return UNKNOWN_MEM_DIFF;
-
-    while (def_inst->getSizeUseRegs() == 1) {
-      def_inst->getUseRegs(0).getDefPort(&def_inst, &index_dummy);
-      if (!def_inst->isInLoop()) {
-        return 0;
-      }
-      if (def_inst->isPhi()) {
-        return UNKNOWN_MEM_DIFF;
-      }
-    }
-    return UNKNOWN_MEM_DIFF;
-  }
-  return UNKNOWN_MEM_DIFF;
-}
 
 int SwplMem::calcEachMemAddressIncrement() {
   int sum = 0;
@@ -799,7 +722,8 @@ int SwplMem::calcEachMemAddressIncrement() {
       dbgs() << "DBG(calcEachMemAddressIncrement): " << *(Inst->getMI());
   }
   for (auto *reg:getUseRegs()) {
-    int increment = reg->calcEachRegIncrement();
+
+    int increment = TII->calcEachRegIncrement(reg);
     if (DebugOutput) dbgs() << " calcEachRegIncrement(" << printReg(reg->getReg(), TRI)  << "): " << increment << "\n";
     if (increment == UNKNOWN_MEM_DIFF) {
       return increment;
@@ -926,7 +850,7 @@ static void follow_single_predecessor_MBBs(MachineLoop *L, BasicBlocks *BBs) {
   MachineBasicBlock *BB = pred_BB;
   while(BB) {
     for (auto &MI:BB->instrs()) {
-      if (isNonTargetMI4SWPL(MI)) { return; }
+      if (TII->isNonTargetMI4SWPL(MI)) { return; }
     }
     BBs->push_back(BB);
     BB = getPredecessorBB(*BB);
@@ -1010,21 +934,6 @@ static void construct_def(Register2SwplRegMap &rmap, SwplInst &inst, MachineOper
   SwplReg *reg = new SwplReg(r, inst, indx, MO.isEarlyClobber());
   inst.addDefRegs(reg);
   rmap[r] = reg;
-}
-
-/// 対象命令でないかどうかの判定
-/// \param [in] inst
-/// \retval true 対象命令でない
-/// \retval false 対象命令である
-bool isNonTargetMI4SWPL(MachineInstr &inst) {
-  switch(inst.getOpcode()) {
-  case AArch64::DMB: /// fence相当
-  case AArch64::INLINEASM:
-  case AArch64::INLINEASM_BR:
-    return true;
-  default:
-    return false;
-  }
 }
 
 void SwplLoop::destroy() {

@@ -21,9 +21,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 
-using namespace llvm;
-
-namespace swpl {
+namespace llvm {
 // 利用コンテナのエイリアス宣言
 using SwplInsts = std::vector<class SwplInst *>;
 using SwplRegs = std::vector<class SwplReg *>;
@@ -62,8 +60,11 @@ extern  llvm::MachineOptimizationRemarkEmitter *ORE;
 extern const llvm::TargetInstrInfo *TII;
 extern const llvm::TargetRegisterInfo *TRI;
 extern llvm::MachineRegisterInfo *MRI;
-extern SwplTargetMachine STM;
+extern AArch64SwplTargetMachine STM;
 extern AliasAnalysis *AA;
+
+#define UNKNOWN_MEM_DIFF INT_MIN        /* 0 の正反対 */
+
 
 /// \class SwplLoop
 /// \brief ループ内の命令情報を管理するclass
@@ -375,9 +376,6 @@ public:
   /// Copy命令かどうかの判定
   bool isCopy() const { return (isInLoop() && getMI() != nullptr && getMI()->isCopy()); }
 
-  /// ADDXrr命令かどうかの判定
-  bool isADDXrr() const { return (isInLoop() && getMI() != nullptr && getMI()->getOpcode()==AArch64::ADDXrr); }
-
   /// 指定PHIの SwplInst::UseReg のうち、Loop内で更新しているレジスタを持つ SwplReg を返す
   /// \return Loop内で更新しているレジスタ
   const SwplReg &getPhiUseRegFromIn(void) const;
@@ -402,34 +400,7 @@ public:
   bool isLoad() const { return getMI()->mayLoad(); }
   bool isStore() const { return getMI()->mayStore(); }
   bool isPrefetch() const {
-    switch(MI->getOpcode()) {
-      /// AArch64 prefetch
-    case AArch64::PRFMui:
-      /// SVE prefetch
-    case AArch64::PRFB_PRI:
-    case AArch64::PRFH_PRI:
-    case AArch64::PRFW_PRI:
-    case AArch64::PRFD_PRI:
-    case AArch64::PRFB_PRR:
-    case AArch64::PRFH_PRR:
-    case AArch64::PRFW_PRR:
-    case AArch64::PRFD_PRR:
-    case AArch64::PRFB_D_SCALED:
-    case AArch64::PRFH_D_SCALED:
-    case AArch64::PRFW_D_SCALED:
-    case AArch64::PRFD_D_SCALED:
-    case AArch64::PRFB_S_PZI:
-    case AArch64::PRFH_S_PZI:
-    case AArch64::PRFW_S_PZI:
-    case AArch64::PRFD_S_PZI:
-    case AArch64::PRFB_D_PZI:
-    case AArch64::PRFH_D_PZI:
-    case AArch64::PRFW_D_PZI:
-    case AArch64::PRFD_D_PZI:
-      return true;
-    default:
-      return false;
-    }
+    return TII->isPrefetch(MI->getOpcode());
   }
 
   llvm::StringRef getName() {
@@ -460,9 +431,19 @@ class SwplReg {
   SwplReg *Predecessor;      ///< 先任者
   SwplReg *Successor;        ///< 後任者
   bool EarlyClobber=false;   ///< early-clobber属性
+  llvm::StmRegKind *rk=nullptr;
 
 public:
   SwplReg() {};
+  SwplReg(const SwplReg &s) {
+    Reg = s.Reg;
+    DefInst = s.DefInst;
+    DefIndex = s.DefIndex;
+    Predecessor = s.Predecessor;
+    Successor = s.Successor;
+    EarlyClobber=s.EarlyClobber;
+    rk = TII->getRegKind(*MRI, s.Reg);
+  };
   SwplReg(llvm::Register r, SwplInst &i, size_t def_index, bool earlyclober=false) {
     Reg = r;
     DefInst = &i;
@@ -470,11 +451,14 @@ public:
     Predecessor = nullptr;
     Successor = nullptr;
     EarlyClobber=earlyclober;
+    rk = TII->getRegKind(*MRI, r);
   }
+  virtual ~SwplReg() {if (rk) delete rk;}
+
   // getter
-  llvm::Register const getReg() { return Reg; }
-  llvm::Register getReg() const { return Reg; }
   SwplInst *getDefInst() { return DefInst; }
+  Register const getReg() { return Reg; }
+  Register getReg() const { return Reg; }
   const SwplInst *getDefInst() const { return DefInst; }
   size_t getDefIndex() const { return DefIndex; }
   SwplInstList &getUseInsts() { return UseInsts; }
@@ -488,7 +472,7 @@ public:
   /// SwplReg::DefInst, SwplReg::DefIndex の取得
   void getDefPort( SwplInst **p_def_inst, int *p_def_index);
   /// SwplReg::DefInst, SwplReg::DefIndex の取得
-  void getDefPort( SwplInst **p_def_inst, int *p_def_index) const;
+  void getDefPort( const SwplInst **p_def_inst, int *p_def_index) const;
   /// ループ内の SwplReg::DefInst, SwplReg::DefIndex の取得
   void getDefPortInLoopBody( SwplInst **p_def_inst, int *p_def_index);
 
@@ -522,17 +506,27 @@ public:
   /// SwplReg をdumpする
   void print(void);
 
-  /// 増分値を求める
-  /// \return 増分値
-  int calcEachRegIncrement();
 
   SwplInstList_iterator useinsts_begin() { return UseInsts.begin(); }
   SwplInstList_iterator useinsts_end() { return UseInsts.end(); }
 
   void printDefInst(void);
 
-  StmRegKind getRegKind() const {
-    return STM.getRegKind(Reg);
+
+  bool isSameKind(unsigned id) const {
+    return rk->isSameKind(id);
+  }
+  bool isIntegerCCRegister() const {
+    return rk->isIntegerCCRegister();
+  }
+  bool isPredReg() const {
+    return rk->isPredicate();
+  }
+  bool isFloatReg() const {
+    return rk->isFloating();
+  }
+  bool isIntReg() const {
+    return rk->isInteger();
   }
 
   /// Stack-pointerを扱うレジスタかどうかを判定する
@@ -788,5 +782,5 @@ private:
 };
 //  extern SwplLoop loop;
   
-} // end namespace swpl
+} // end namespace llvm
 #endif
