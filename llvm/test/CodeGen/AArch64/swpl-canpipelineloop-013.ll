@@ -1,5 +1,8 @@
-; RUN: llc < %s -O1 -mcpu=a64fx  -ffj-swp  -swpl-debug  --pass-remarks-filter=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
-;CHECK:canPipelineLoop:NG    
+; RUN: llc < %s -O1 -mcpu=a64fx  -ffj-swp  -swpl-debug  --pass-remarks-filter=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck %s
+;CHECK:canPipelineLoop:NG
+;CHECK:Not a single basic block.
+;CHECK:This loop cannot be software pipelined because the shape of the loop is not covered by software pipelining
+  
 ; ModuleID = '2912_3.c'
 source_filename = "2912_3.c"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
