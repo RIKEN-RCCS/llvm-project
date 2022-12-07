@@ -534,7 +534,7 @@ namespace llvm {
 struct work_node {
   StmResourceId id; ///< 利用資源
   int startCycle=0; ///< 開始サイクル
-  llvm::SmallVector<work_node*, 8> nodes; ///< 次の利用資源
+  SmallVector<work_node*, 8> nodes; ///< 次の利用資源
 
   /// constructor
   explicit work_node(StmResourceId id):id(id){}
@@ -557,7 +557,7 @@ struct work_node {
   ///
   /// \param [in] SM SchedModel
   /// \param [out] stmPipelines 生成結果
-  void gen_patterns(llvm::TargetSchedModel&SM, StmPipelinesImpl &stmPipelines) {
+  void gen_patterns(TargetSchedModel&SM, StmPipelinesImpl &stmPipelines) {
     std::vector<StmResourceId> ptn;
     std::vector<int> cycle;
     StmPatternId patternId=0;
@@ -571,14 +571,14 @@ struct work_node {
   /// \param [in] ptn 利用資源パターン
   /// \param [in] cycle 開始サイクル
   /// \param [out] stmPipelines 生成結果
-  void gen_pattern(llvm::TargetSchedModel&SM, StmPatternId &patternId, std::vector<StmResourceId> ptn, std::vector<int> cycle,
+  void gen_pattern(TargetSchedModel&SM, StmPatternId &patternId, std::vector<StmResourceId> ptn, std::vector<int> cycle,
                    StmPipelinesImpl &stmPipelines) {
     // 引数：ptnはコピーコンストラクタで複製させている。
-    if (id!=llvm::A64FXRes::PortKind::P_NULL) {
+    if (id!=A64FXRes::PortKind::P_NULL) {
       ptn.push_back(id);
       cycle.push_back(startCycle);
       if (nodes.empty()) {
-        AArch64StmPipeline *t=new AArch64StmPipeline(SM);
+        AArch64StmPipeline *t=new AArch64StmPipeline();
         stmPipelines.push_back(t);
         t->patternId=patternId++;
         for (auto resource:ptn) {
@@ -607,7 +607,7 @@ using nodelist=std::vector<work_node*>;
 /// \param [in] target
 /// \param [in] portKindList
 /// \param [in] cycle 開始サイクル
-static void makePrePattern(llvm::TargetSchedModel sm, nodelist&next_target, nodelist&target, const llvm::SmallVectorImpl<A64FXRes::PortKind> &portKindList, int cycle) {
+static void makePrePattern(TargetSchedModel sm, nodelist&next_target, nodelist&target, const SmallVectorImpl<A64FXRes::PortKind> &portKindList, int cycle) {
   for (const auto portKind: portKindList) {
     for (auto *t:target) {
       work_node *p=new work_node(portKind);
@@ -630,7 +630,7 @@ static void makePrePattern(llvm::TargetSchedModel sm, nodelist&next_target, node
 /// 例：FMAXNMPv2i64pという命令では、以下のようにstage値が0,1,7と歯抜けになる。<br>
 /// (パターン=0) stage/resource: 0/FLA, 1/FLA, 7/FLA<br>
 /// (パターン=1) stage/resource: 0/FLA, 1/FLA, 7/FLB
-static work_node* makePrePatterns(llvm::TargetSchedModel& sm, const llvm::AArch64A64FXResInfo& resInfo,  const llvm::MachineInstr& mi) {
+static work_node* makePrePatterns(TargetSchedModel& sm, const AArch64A64FXResInfo& resInfo,  const MachineInstr& mi) {
   work_node *root=nullptr;
   nodelist *target=nullptr;
   nodelist *next_target=nullptr;
@@ -644,7 +644,7 @@ static work_node* makePrePatterns(llvm::TargetSchedModel& sm, const llvm::AArch6
   for (const auto &PRE : IResDesc->getResList()) {
 
     if (root==nullptr) {
-      root=new work_node(llvm::A64FXRes::PortKind::P_NULL);
+      root=new work_node(A64FXRes::PortKind::P_NULL);
       target=new nodelist;
       next_target=new nodelist;
       target->push_back(root);
@@ -666,19 +666,19 @@ static work_node* makePrePatterns(llvm::TargetSchedModel& sm, const llvm::AArch6
   return root;
 }
 
-void AArch64SwplTargetMachine::initialize(const llvm::MachineFunction &mf) {
+void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
   if (MF==nullptr) {
-    const llvm::TargetSubtargetInfo &ST = mf.getSubtarget();
+    const TargetSubtargetInfo &ST = mf.getSubtarget();
     SM.init(&ST);
     ResInfo=new AArch64A64FXResInfo(ST);
-    tmNumSameKindResources[llvm::A64FXRes::PortKind::P_FLA]=2;
-    tmNumSameKindResources[llvm::A64FXRes::PortKind::P_FLB]=2;
-    tmNumSameKindResources[llvm::A64FXRes::PortKind::P_EXA]=2;
-    tmNumSameKindResources[llvm::A64FXRes::PortKind::P_EXB]=2;
-    tmNumSameKindResources[llvm::A64FXRes::PortKind::P_EAGA]=2;
-    tmNumSameKindResources[llvm::A64FXRes::PortKind::P_EAGB]=2;
-    tmNumSameKindResources[llvm::A64FXRes::PortKind::P_PRX]=1;
-    tmNumSameKindResources[llvm::A64FXRes::PortKind::P_BR]=1;
+    tmNumSameKindResources[A64FXRes::PortKind::P_FLA]=2;
+    tmNumSameKindResources[A64FXRes::PortKind::P_FLB]=2;
+    tmNumSameKindResources[A64FXRes::PortKind::P_EXA]=2;
+    tmNumSameKindResources[A64FXRes::PortKind::P_EXB]=2;
+    tmNumSameKindResources[A64FXRes::PortKind::P_EAGA]=2;
+    tmNumSameKindResources[A64FXRes::PortKind::P_EAGB]=2;
+    tmNumSameKindResources[A64FXRes::PortKind::P_PRX]=1;
+    tmNumSameKindResources[A64FXRes::PortKind::P_BR]=1;
     numResource=8; // 資源管理がSchedModelとは別になったので、ハードコードする
   }
   MF=&mf;
@@ -691,12 +691,6 @@ unsigned int AArch64SwplTargetMachine::getFetchBandwidth(void) const {
 
 unsigned int AArch64SwplTargetMachine::getRealFetchBandwidth(void) const {
   return OptionRealFetchWidth;
-}
-
-int AArch64SwplTargetMachine::getNumSameKindResources(StmResourceId resource) {
-  int num=tmNumSameKindResources[resource];
-  assert(num && "AArch64SwplTargetMachine::getNumSameKindResources: invalid resource");
-  return num;
 }
 
 int AArch64StmPipeline::getNResources(StmResourceId resource) const {
@@ -718,28 +712,42 @@ void AArch64StmPipeline::print(raw_ostream &ost) const {
   ost << "\n";
 }
 
-const char *AArch64StmPipeline::getResourceName(StmResourceId resource) {
+const char *AArch64StmPipeline::getResourceName(StmResourceId resource) const {
+  // @todo AArch64SwplTargetMachine::getResourceName()を呼び出すようにすべきor本メソッド削除
   const char *name="";
   switch (resource) {
-  case llvm::A64FXRes::PortKind::P_FLA:name="FLA";break;
-  case llvm::A64FXRes::PortKind::P_FLB:name="FLB";break;
-  case llvm::A64FXRes::PortKind::P_EXA:name="EXA";break;
-  case llvm::A64FXRes::PortKind::P_EXB:name="EXB";break;
-  case llvm::A64FXRes::PortKind::P_EAGA:name="EAGA";break;
-  case llvm::A64FXRes::PortKind::P_EAGB:name="EAGB";break;
-  case llvm::A64FXRes::PortKind::P_PRX:name="PRX";break;
-  case llvm::A64FXRes::PortKind::P_BR:name="BR";break;
+  case A64FXRes::PortKind::P_FLA:name="FLA";break;
+  case A64FXRes::PortKind::P_FLB:name="FLB";break;
+  case A64FXRes::PortKind::P_EXA:name="EXA";break;
+  case A64FXRes::PortKind::P_EXB:name="EXB";break;
+  case A64FXRes::PortKind::P_EAGA:name="EAGA";break;
+  case A64FXRes::PortKind::P_EAGB:name="EAGB";break;
+  case A64FXRes::PortKind::P_PRX:name="PRX";break;
+  case A64FXRes::PortKind::P_BR:name="BR";break;
   default:
     llvm_unreachable("unknown resourceid");
   }
   return name;
 }
 
-int AArch64SwplTargetMachine::getNumSlot(void) const {
-  return getFetchBandwidth();
+const char *AArch64SwplTargetMachine::getResourceName(StmResourceId resource) const {
+  const char *name="";
+  switch (resource) {
+  case A64FXRes::PortKind::P_FLA:name="FLA";break;
+  case A64FXRes::PortKind::P_FLB:name="FLB";break;
+  case A64FXRes::PortKind::P_EXA:name="EXA";break;
+  case A64FXRes::PortKind::P_EXB:name="EXB";break;
+  case A64FXRes::PortKind::P_EAGA:name="EAGA";break;
+  case A64FXRes::PortKind::P_EAGB:name="EAGB";break;
+  case A64FXRes::PortKind::P_PRX:name="PRX";break;
+  case A64FXRes::PortKind::P_BR:name="BR";break;
+  default:
+    llvm_unreachable("unknown resourceid");
+  }
+  return name;
 }
 
-int AArch64SwplTargetMachine::computeMemFlowDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
+int AArch64SwplTargetMachine::computeMemFlowDependence(const MachineInstr *, const MachineInstr *) const {
   if (OptionStoreLatency > 0) return OptionStoreLatency;
   if (OptionFlowDep > 0) return OptionFlowDep;
   return 1;
@@ -755,7 +763,7 @@ AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) {
   return tps;
 }
 
-const AArch64StmPipeline *
+const StmPipeline *
 AArch64SwplTargetMachine::getPipeline(const MachineInstr &mi,
                                   StmPatternId patternid) {
   auto *tps= getPipelines(mi);
@@ -782,7 +790,7 @@ AArch64SwplTargetMachine::generateStmPipelines(const MachineInstr &mi) {
     t->gen_patterns(SM, *pipelines);
     delete t;
   } else {
-    pipelines->push_back(new AArch64StmPipeline(SM));
+    pipelines->push_back(new AArch64StmPipeline());
   }
   if (DebugStm) {
     for (auto*pipeline:*pipelines) {
@@ -791,17 +799,17 @@ AArch64SwplTargetMachine::generateStmPipelines(const MachineInstr &mi) {
   }
   return pipelines;
 }
-int AArch64SwplTargetMachine::computeRegFlowDependence(const llvm::MachineInstr* def, const llvm::MachineInstr* use) const {
+int AArch64SwplTargetMachine::computeRegFlowDependence(const MachineInstr* def, const MachineInstr* use) const {
   const auto *IResDesc=ResInfo->getInstResDesc(*def);
   if (IResDesc==nullptr) return 1;
   return IResDesc->getLatency();
 }
 
-int AArch64SwplTargetMachine::computeMemAntiDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
+int AArch64SwplTargetMachine::computeMemAntiDependence(const MachineInstr *, const MachineInstr *) const {
   return 1;
 }
 
-int AArch64SwplTargetMachine::computeMemOutputDependence(const llvm::MachineInstr *, const llvm::MachineInstr *) const {
+int AArch64SwplTargetMachine::computeMemOutputDependence(const MachineInstr *, const MachineInstr *) const {
   return 1;
 }
 
@@ -822,7 +830,7 @@ unsigned int AArch64SwplTargetMachine::getNumResource(void) const {
   return numResource;
 }
 
-bool AArch64SwplTargetMachine::isImplimented(const llvm::MachineInstr&mi) const {
+bool AArch64SwplTargetMachine::isImplimented(const MachineInstr&mi) const {
   if (OptionCopyIsVirtual) {
     if (mi.isCopy()) return false;
   }
@@ -834,298 +842,3 @@ bool AArch64SwplTargetMachine::isPseudo(const MachineInstr &mi) const {
   return !isImplimented(mi);
 }
 
-#ifdef STMTEST
-
-void StmX4StmTest::init(llvm::MachineFunction&mf, bool first, int TestID) {
-  AArch64SwplTargetMachine::initialize(mf);
-  if (TestID==1) {
-
-    const char *result="OK";
-    const char *firstcall=first?"first-call":"not first-call";
-
-    if (MF!=&mf || MRI==nullptr || tmNumSameKindResources.empty()) {
-      result="NG";
-    }
-    dbgs() << "<<<TEST: 001 AArch64SwplTargetMachine>>>\n";
-    dbgs() << "DBG(StmX::init): " << firstcall << " is  " << result << "\n";
-  }
-}
-
-#define DEF_RESOURCE(N) {llvm::A64FXRes::PortKind::P_##N, #N}
-
-void StmTest::run(llvm::MachineFunction&MF) {
-  bool firstCall= STM.getMachineRegisterInfo()==nullptr;
-  DebugStm = true;
-  STM.init(MF, firstCall, TestID);
-  const std::map<StmResourceId, const char *> resources={
-          DEF_RESOURCE(FLA),
-          DEF_RESOURCE(FLB),
-          DEF_RESOURCE(EXA),
-          DEF_RESOURCE(EXB),
-          DEF_RESOURCE(EAGA),
-          DEF_RESOURCE(EAGB),
-          DEF_RESOURCE(PRX),
-          DEF_RESOURCE(BR)
-  };
-  const std::vector<StmResourceId> resourceIds= {
-          llvm::A64FXRes::PortKind::P_FLA,
-          llvm::A64FXRes::PortKind::P_FLB,
-          llvm::A64FXRes::PortKind::P_EXA,
-          llvm::A64FXRes::PortKind::P_EXB,
-          llvm::A64FXRes::PortKind::P_EAGA,
-          llvm::A64FXRes::PortKind::P_EAGB,
-          llvm::A64FXRes::PortKind::P_PRX,
-          llvm::A64FXRes::PortKind::P_BR
-  };
-  if (TestID==100) {
-    // MIRに対応した資源情報が揃っているか確認する
-    dbgs() << "<<<TEST: 100>>>\n";
-    for (auto &bb:MF) {
-      for (auto &instr:bb) {
-        dbgs() << "*************************\nmir:" << instr;
-        if (STM.isPseudo(instr)) {
-          dbgs() << "Pseudo\n";
-        }
-        (void)STM.getPipelines(instr);
-        dbgs() << "latency:" << STM.computeRegFlowDependence(&instr, nullptr) << "\n";
-      }
-    }
-  } else if (TestID==1) {
-    if (!firstCall) return;
-    dbgs() << "<<<TEST: 001-01 latency>>>\n";
-    int defaultStoreLatency = OptionStoreLatency;
-    int defaultFlowDep = OptionFlowDep;
-    dbgs() << "option:swpl-store-latency is default, swpl-flow-dep is default \n";
-    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
-    dbgs() << "option:swpl-store-latency is default, swpl-flow-dep is 0 \n";
-    OptionFlowDep = 0;
-    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
-    dbgs() << "option:swpl-store-latency is default, swpl-flow-dep is 1 \n";
-    OptionFlowDep = 1;
-    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
-
-    OptionStoreLatency = 0;
-    dbgs() << "option:swpl-store-latency is 0, swpl-flow-dep is default \n";
-    OptionFlowDep = defaultFlowDep;
-    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
-    dbgs() << "option:swpl-store-latency is 0, swpl-flow-dep is 0 \n";
-    OptionFlowDep = 0;
-    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
-    dbgs() << "option:swpl-store-latency is 0, swpl-flow-dep is 1 \n";
-    OptionFlowDep = 1;
-    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
-
-    OptionStoreLatency = 1;
-    dbgs() << "option:swpl-store-latency is 1, swpl-flow-dep is default \n";
-    OptionFlowDep = defaultFlowDep;
-    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
-    dbgs() << "option:swpl-store-latency is 1, swpl-flow-dep is 0 \n";
-    OptionFlowDep = 0;
-    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
-    dbgs() << "option:swpl-store-latency is 1, swpl-flow-dep is 1 \n";
-    OptionFlowDep = 1;
-    dbgs() << "AArch64SwplTargetMachine::computeMemFlowDependence():" << STM.computeMemFlowDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemAntiDependence():" << STM.computeMemAntiDependence(nullptr, nullptr) << ", ";
-    dbgs() << "AArch64SwplTargetMachine::computeMemOutputDependence():" << STM.computeMemOutputDependence(nullptr, nullptr) << "\n";
-    OptionFlowDep = defaultFlowDep;
-    OptionStoreLatency = defaultStoreLatency;
-
-    dbgs() << "<<<TEST: 001-02 Bandwidth>>>\n";
-    int defaultRealFetchWidth = OptionRealFetchWidth;
-    int defaultVirtualFetchWidth = OptionVirtualFetchWidth;
-    dbgs() << "option:swpl-real-fetch-width is default, swpl-virtual-fetch-width is default\n";
-    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
-    OptionVirtualFetchWidth = 0;
-    dbgs() << "option:swpl-real-fetch-width is default, swpl-virtual-fetch-width is 0\n";
-    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
-    OptionVirtualFetchWidth = 1;
-    dbgs() << "option:swpl-real-fetch-width is default, swpl-virtual-fetch-width is 1\n";
-    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
-
-    OptionRealFetchWidth = 0;
-    OptionVirtualFetchWidth = defaultVirtualFetchWidth;
-    dbgs() << "option:swpl-real-fetch-width is 0, swpl-virtual-fetch-width is default\n";
-    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
-    OptionVirtualFetchWidth = 0;
-    dbgs() << "option:swpl-real-fetch-width is 0, swpl-virtual-fetch-width is 0\n";
-    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
-    OptionVirtualFetchWidth = 1;
-    dbgs() << "option:swpl-real-fetch-width is 0, swpl-virtual-fetch-width is 1\n";
-    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
-
-    OptionRealFetchWidth = 1;
-    OptionVirtualFetchWidth = defaultVirtualFetchWidth;
-    dbgs() << "option:swpl-real-fetch-width is 1, swpl-virtual-fetch-width is default\n";
-    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
-    OptionVirtualFetchWidth = 0;
-    dbgs() << "option:swpl-real-fetch-width is 1, swpl-virtual-fetch-width is 0\n";
-    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
-    OptionVirtualFetchWidth = 1;
-    dbgs() << "option:swpl-real-fetch-width is 1, swpl-virtual-fetch-width is 1\n";
-    dbgs() << "AArch64SwplTargetMachine::getFetchBandwidth():" << STM.getFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getRealFetchBandwidth():" << STM.getRealFetchBandwidth() << ", ";
-    dbgs() << "AArch64SwplTargetMachine::getNumSlot():" << STM.getNumSlot() << "\n";
-
-    OptionRealFetchWidth = defaultRealFetchWidth;
-    OptionVirtualFetchWidth = defaultVirtualFetchWidth;
-
-
-    dbgs() << "<<<TEST: 001-03 getNumResource>>>\n";
-    dbgs() << "AArch64SwplTargetMachine::getNumResource():" << STM.getNumResource() << "\n";
-    dbgs() << "<<<TEST: 001-04 getNumSameResource>>>\n";
-    for (const auto &rc:resourceIds) {
-      // 同じ資源数を出力
-      dbgs() << "AArch64SwplTargetMachine::getNumSameKindResources(" << resources.at(rc) << "):" << STM.getNumSameKindResources(rc) << "\n";
-    }
-
-    dbgs() << "<<<TEST: 001-05 by MachineInstr/>>>\n";
-    bool alreadyLD1W=false;
-    bool alreadyST1W=false;
-    bool alreadySUBSXri=false;
-    bool alreadyPHI=false;
-    for (auto &bb:MF) {
-      for (auto &instr:bb) {
-        bool target=false;
-        if (instr.getOpcode()==AArch64::LD1W && !alreadyLD1W) {
-          alreadyLD1W = true;
-          target = true;
-        } else if (instr.getOpcode()==AArch64::ST1W && !alreadyST1W) {
-          alreadyST1W = true;
-          target = true;
-        } else if (instr.getOpcode()==AArch64::SUBSXri && !alreadySUBSXri) {
-          alreadySUBSXri = true;
-          target = true;
-        } else if (instr.getOpcode()==AArch64::PHI && !alreadyPHI) {
-          alreadyPHI = true;
-          target = true;
-        }
-        if (target) {
-          bool isPseudo = STM.isPseudo(instr);
-          dbgs() << "**\nmir:" << instr;
-          if (!isPseudo)
-            dbgs() << "AArch64SwplTargetMachine::computeRegFlowDependence(): " << STM.computeRegFlowDependence(&instr, &instr) << ", ";
-          dbgs() << "AArch64SwplTargetMachine::isIssuedOneByOne(): " << STM.isIssuedOneByOne(instr) << ", ";
-          dbgs() << "AArch64SwplTargetMachine::isPseudo(): " << isPseudo << "\n";
-        }
-      }
-    }
-
-  } else if (TestID==2) {
-    dbgs() << "<<<TEST: 002 StmRegKindNum>>>\n";
-    dbgs() << "<<<TEST: 002-01 getKindNum>>>\n";
-    dbgs() << "AArch64StmRegKind::getKindNum():" << AArch64StmRegKind(*MRI).getKindNum() << "\n";
-    dbgs() << "<<<TEST: 002-02 >>>\n";
-    for (auto &bb:MF) {
-      for (auto &instr:bb) {
-        dbgs() << "**\nmir:" << instr;
-        int opix = 0;
-        for (const auto &op:instr.operands()) {
-          opix++;
-          dbgs() << "operator(ix=" << opix << "): " << op << "\n";
-          if (!op.isReg())
-            continue;
-          // register kind
-          const auto usereg = op.getReg();
-          auto regkind = TII->getRegKind(*MRI, usereg);
-          regkind->print(dbgs());
-          dbgs() << "AArch64StmRegKind::isInteger:" << regkind->isInteger() << " isFloating:" << regkind->isFloating()
-                 << " isPredicate:" << regkind->isPredicate() << " isisCCRegister:" << regkind->isCCRegister()
-                 << " isIntegerCCRegister:" << regkind->isIntegerCCRegister()
-                 << " isAllocated:" << regkind->isAllocalted() << " getNum:" << regkind->getNum() << "\n";
-          delete regkind;
-        }
-      }
-    }
-  } else if (TestID==3) {
-    bool alreadyLD1W = false;
-    bool alreadyST1W = false;
-    bool alreadySUBSXri = false;
-    bool alreadyFMAXNMPv2i64p = false;
-    bool alreadyADDVv4i32v = false;
-    bool alreadyST2Twov4s_POST = false;
-    bool alreadyBFMXri = false;
-    dbgs() << "<<<TEST: 003 AArch64StmPipeline>>>\n";
-    for (auto &bb:MF) {
-      for (auto &instr:bb) {
-        bool target = false;
-        if (instr.getOpcode() == AArch64::LD1W && !alreadyLD1W) {
-          alreadyLD1W = true;
-          target = true;
-        } else if (instr.getOpcode() == AArch64::ST1W && !alreadyST1W) {
-          alreadyST1W = true;
-          target = true;
-        } else if (instr.getOpcode() == AArch64::SUBSXri && !alreadySUBSXri) {
-          alreadySUBSXri = true;
-          target = true;
-        } else if (instr.getOpcode() == AArch64::FMAXNMPv2i64p && !alreadyFMAXNMPv2i64p) {
-          alreadyFMAXNMPv2i64p = true;
-          target = true;
-        } else if (instr.getOpcode() == AArch64::ADDVv4i32v && !alreadyADDVv4i32v) {
-          alreadyADDVv4i32v = true;
-          target = true;
-        } else if (instr.getOpcode() == AArch64::ST2Twov4s_POST && !alreadyST2Twov4s_POST) {
-          alreadyST2Twov4s_POST = true;
-          target = true;
-        } else if (instr.getOpcode() == AArch64::BFMXri && !alreadyBFMXri) {
-          alreadyBFMXri = true;
-          target = true;
-        }
-        if (target) {
-          dbgs() << "OPCODE: " << TII->getName(instr.getOpcode()) << "\n";
-          const auto *pipes = STM.getPipelines(instr);
-          assert(pipes && pipes->size() >= 1);
-          dbgs() << "AArch64StmPipeline::getPipeline(" << TII->getName(instr.getOpcode()) << ", 0): ";
-          const AArch64StmPipeline *p = STM.getPipeline(instr, 0);
-          p->print(dbgs());
-          p = STM.getPipeline(instr, 1000);
-          dbgs() << "AArch64StmPipeline::getPipeline(" << TII->getName(instr.getOpcode()) << ", 1000): " << (p?"NG\n":"OK\n");
-          for (const auto &rc:resourceIds) {
-            int ptn = 0;
-            dbgs() << "AArch64StmPipeline::getNResources(" << resources.at(rc) << "):";
-            char sep = ' ';
-            for (const auto *pipe:*pipes) {
-              dbgs() << sep << " ptn=" << ptn++ << "/N=" << pipe->getNResources(rc);
-              sep = ',';
-            }
-            dbgs() << "\n";
-            dbgs() << "AArch64SwplTargetMachine::getMinNResources(" << resources.at(rc) << "): "
-                   << STM.getMinNResources(instr.getOpcode(), rc) << "\n";
-          }
-        }
-      }
-    }
-  }
-}
-#endif

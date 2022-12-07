@@ -96,7 +96,6 @@ private:
   bool scheduleLoop(MachineLoop &L);
   void outputRemarkAnalysis(MachineLoop &L, int msg_id);
   bool shouldOptimize(MachineLoop &L);
-  StmTest *stmTest =nullptr; ///< Stmのテスト用領域
 };
 
 struct SWPipelinerPre : public MachineFunctionPass {
