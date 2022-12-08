@@ -34,8 +34,11 @@ namespace llvm {
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace llvm;
+namespace llvm {
+extern SwplTargetMachine *STM;
 
+}
+using namespace llvm;
 #define DEBUG_TYPE "aarch64-swpipeliner"
 
 static cl::opt<std::string> ImportPlan("swpl-plan-import", cl::init(""), cl::ReallyHidden);
@@ -129,7 +132,7 @@ bool SwplTransformMIR::transformMIR() {
 /// - 上から数えて一つ目のsubを0番目としてあつかう.
 size_t SwplTransformMIR::chooseCmpIteration(size_t bandwidth, size_t slot) {
   size_t i, initial_cycle, cycle, iteration;
-  initial_cycle = slot / STM.getFetchBandwidth();
+  initial_cycle = slot / STM->getFetchBandwidth();
   /* EPILOGUEから逆向きに探索を始め,最初にKERNELのcycleの範囲に入るものを返却する*/
   for (i = 0; i <= TMI.nCopies - 1; ++i) {
     iteration = TMI.nCopies - 1 - i;
@@ -251,7 +254,7 @@ void SwplTransformMIR::convertPlan2MIR() {
   size_t cmp_iteration;
 
   SwplScr SCR(*Loop.getML());
-  size_t bandwidth = STM.getFetchBandwidth();
+  size_t bandwidth = STM->getFetchBandwidth();
 
   /// (1) SwplScr::findBasicInductionVariable():元のループの制御変数に関する情報の取得
   ///  制御変数の初期値を見つける
@@ -561,7 +564,7 @@ void SwplTransformMIR::prepareMIs() {
   unsigned iteration_interval_slot;
 
   TMI.mis.resize(TMI.epilogEndIndx);
-  iteration_interval_slot = TMI.iterationInterval * STM.getFetchBandwidth();
+  iteration_interval_slot = TMI.iterationInterval * STM->getFetchBandwidth();
   /// (1) shiftConvertIteration2Version() :命令挿入位置（コピー毎の移動値）を計算する
   int n_shift = shiftConvertIteration2Version(TMI.nVersions, TMI.nCopies);
 

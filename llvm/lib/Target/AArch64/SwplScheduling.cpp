@@ -21,9 +21,12 @@
 #include "SwplScheduling.h"
 #include "SwplScr.h"
 
+namespace llvm {
+extern SwplTargetMachine *STM;
+
+}
 using namespace llvm;
 using namespace ore; // for NV
-
 #define DEBUG_TYPE "aarch64-swpipeliner"
 
 static cl::opt<bool> OptionDumpMrt("swpl-debug-dump-mrt",cl::init(false), cl::ReallyHidden);
@@ -228,16 +231,16 @@ void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream
   unsigned res_max_length = 0;
   unsigned word_width, inst_gen_width, inst_rotation_width;
   unsigned ii = iteration_interval;
-  unsigned numresource = STM.getNumResource();
+  unsigned numresource = STM->getNumResource();
 
   assert(ii==table.size());
 
   // Resource名の最大長の取得
   // resource_idはA64FXRes::PortKindのenum値に対応する。
-  // １～STM.getNumResource()をリソースとして扱う 。
+  // １～STM->getNumResource()をリソースとして扱う 。
   // ０はP_NULLであり、リソースではない。
   for (resource_id = 1; (unsigned)resource_id <= numresource; ++resource_id) {
-    res_max_length = std::max( res_max_length, (unsigned)(strlen(STM.getResourceName(resource_id))) );
+    res_max_length = std::max( res_max_length, (unsigned)(strlen(STM->getResourceName(resource_id))) );
   }
 
   inst_gen_width = std::max( getMaxOpcodeNameLength()+1, res_max_length);  // 1 = 'p|f' の分
@@ -247,8 +250,8 @@ void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream
   // Resource名の出力
   stream << "\n       ";
   for (resource_id = 1; (unsigned)resource_id <= numresource; ++resource_id) {
-    stream << STM.getResourceName(resource_id);
-    for (unsigned l=strlen(STM.getResourceName(resource_id)); l<word_width; l++) {
+    stream << STM->getResourceName(resource_id);
+    for (unsigned l=strlen(STM->getResourceName(resource_id)); l<word_width; l++) {
       stream << " ";
     }
   }
@@ -262,7 +265,7 @@ void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream
   for (modulo_cycle = 0; modulo_cycle < ii; ++modulo_cycle) {
     stream << "       ";
     // resource_idはA64FXRes::PortKindのenum値に対応する。
-    // １～STM.getNumResource()をリソースとして扱う 。
+    // １～STM->getNumResource()をリソースとして扱う 。
     // ０はP_NULLであり、リソースではない。
     for (resource_id = 1; (unsigned)resource_id <= numresource; ++resource_id) {
       auto pr = table[modulo_cycle]->find(resource_id);
@@ -385,7 +388,7 @@ void SwplMrt::printInstRotation(raw_ostream &stream,
     if( max_slot < pair.second ) max_slot = pair.second;
   }
 
-  unsigned max_cycle = max_slot / STM.getFetchBandwidth();
+  unsigned max_cycle = max_slot / STM->getFetchBandwidth();
   rotation = (max_cycle - slot.calcCycle())/ii + 1;
 
   // 対応する回転数を表示
@@ -492,11 +495,11 @@ void SwplModuloDdg::dump() {
     inst->getMI()->print( dbgs() );
 
     dbgs() << "\tPipelines\n";
-    if(STM.isPseudo( *(inst->getMI()) ) ) {
+    if(STM->isPseudo( *(inst->getMI()) ) ) {
       dbgs() << "\t\tNothing...(pseudo instruction)\n";
     }
     else {
-      for( auto pl : *(STM.getPipelines( *(inst->getMI()) ) ) ){
+      for( auto pl : *(STM->getPipelines( *(inst->getMI()) ) ) ){
         dbgs() << "\t\t";
         pl->print( dbgs() );
       }
@@ -553,7 +556,7 @@ bool SwplTrialState::tryNext() {
 
   // 20回転以上またいだ命令が候補になった場合、
   // まともな結果にならないためやめる.
-  if ((SwplSlot::baseSlot(ii) - SIP.slot)/(STM.getFetchBandwidth() * ii) > 20) {
+  if ((SwplSlot::baseSlot(ii) - SIP.slot)/(STM->getFetchBandwidth() * ii) > 20) {
     return false;
   }
 
@@ -675,8 +678,8 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
   //SwplSlot new_schedule_slot; // cycle基準とする前
   unsigned new_schedule_cycle;
 
-  begin_slot = SwplSlot::construct(begin_cycle, STM.getFetchBandwidth () - 1);
-  end_slot = SwplSlot::construct(end_cycle, STM.getFetchBandwidth () - 1);
+  begin_slot = SwplSlot::construct(begin_cycle, STM->getFetchBandwidth () - 1);
+  end_slot = SwplSlot::construct(end_cycle, STM->getFetchBandwidth () - 1);
   if (begin_slot == SWPL_ILLEGAL_SLOT || end_slot == SWPL_ILLEGAL_SLOT ){
     return SlotInstPipeline(SWPL_ILLEGAL_SLOT, &(const_cast<SwplInst&>(inst)), nullptr);
   }
@@ -686,7 +689,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
     const MachineInstr& mi = *(inst.getMI());
 
     // cycleに空きSlotがあるかを確認
-    bool isvirtual = STM.isPseudo(mi);
+    bool isvirtual = STM->isPseudo(mi);
     SwplSlot slot = inst_slot_map->getEmptySlotInCycle( cycle, iteration_interval, isvirtual );
     if( slot != SWPL_ILLEGAL_SLOT) {
       // 空きslotあり
@@ -698,7 +701,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
       else {
         // 資源情報を取得し、MRTに資源競合を問い合わせる。
         // 資源競合がなければ配置可能
-        for( auto pl : *(STM.getPipelines(mi)) ) {
+        for( auto pl : *(STM->getPipelines(mi)) ) {
           if( mrt->isOpenForInst(cycle, inst, *pl) ) {
             return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<StmPipeline *>(pl) );
           }
@@ -728,7 +731,7 @@ unsigned SwplTrialState::getNewScheduleCycle(const SwplInst& inst) {
   if( inst_last_slot_map->find(&inst) != inst_last_slot_map->end() ){
     slot = inst_last_slot_map->find(&inst)->second;
     slot = slot -
-        STM.getFetchBandwidth(); // FetchBandwidthを引けば、1cycle前のいずれかのslotとなる
+        STM->getFetchBandwidth(); // FetchBandwidthを引けば、1cycle前のいずれかのslotとなる
   }
   else {
     slot = SwplSlot::baseSlot(iteration_interval);
@@ -747,7 +750,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::latestValidSlot(const SwplInst&
   unsigned begin_cycle = cycle;
 
   const MachineInstr& mi = *(inst.getMI());
-  bool isvirtual = STM.isPseudo(mi);
+  bool isvirtual = STM->isPseudo(mi);
 
   // cycle単位に資源の空きを確認する。
   for (; begin_cycle != end_cycle; begin_cycle-- ) {
@@ -757,7 +760,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::latestValidSlot(const SwplInst&
         return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), nullptr );
       }
       else {
-        for( auto pl : *(STM.getPipelines(mi)) ) {
+        for( auto pl : *(STM->getPipelines(mi)) ) {
           if( mrt->isOpenForInst(begin_cycle, inst, *pl) ) {
             // slotと資源は結び付いていない。
             //
@@ -796,9 +799,9 @@ void SwplTrialState::unsetResourceConstrainedInsts(SlotInstPipeline& SIP) {
   SwplInstSet* blocking_insts;
 
   if( SIP.pipeline == nullptr ) {
-    assert(STM.isPseudo(*(SIP.inst->getMI())) ); // 資源情報無し＝仮想命令である
+    assert(STM->isPseudo(*(SIP.inst->getMI())) ); // 資源情報無し＝仮想命令である
     assert( SIP.slot.calcFetchSlot() <
-           STM.getRealFetchBandwidth() ); // 資源情報無し＝slotは仮想命令用である
+           STM->getRealFetchBandwidth() ); // 資源情報無し＝slotは仮想命令用である
     // 仮想命令の場合は、競合する資源は無いため、
     // 資源競合によりunsetする命令は無い。
     return;
@@ -858,9 +861,9 @@ void SwplTrialState::setInst(SlotInstPipeline& SIP) {
   inst_last_slot_map->insert( std::make_pair( SIP.inst, SIP.slot ) );
 
   if( SIP.pipeline == nullptr ) {
-    assert(STM.isPseudo(*(SIP.inst->getMI())) ); // 資源情報無し＝仮想命令である
+    assert(STM->isPseudo(*(SIP.inst->getMI())) ); // 資源情報無し＝仮想命令である
     assert( SIP.slot.calcFetchSlot() <
-           STM.getRealFetchBandwidth() ); // 資源情報無し＝slotは仮想命令用である
+           STM->getRealFetchBandwidth() ); // 資源情報無し＝slotは仮想命令用である
     return;
   }
 

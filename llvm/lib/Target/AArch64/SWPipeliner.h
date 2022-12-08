@@ -13,13 +13,13 @@
 #ifndef LLVM_LIB_CODEGEN_SWPIPELINER_H
 #define LLVM_LIB_CODEGEN_SWPIPELINER_H
 
-#include "AArch64.h"
-#include "AArch64SwplTargetMachine.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "SwplScr.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/SwplTargetMachine.h"
 
 namespace llvm {
 // 利用コンテナのエイリアス宣言
@@ -30,7 +30,7 @@ using SwplInstList = std::list<class SwplInst *>; //vectorではダメなのか
 using SwplInstEdges = std::vector<class SwplInstEdge *>;
 using SwplInst2InstsMap = std::map<class SwplInst *, SwplInsts>;
 using SwplInst2InstEdgesMap = std::map<class SwplInst *, SwplInstEdges>;
-using Register2SwplRegMap = std::map<llvm::Register, class SwplReg *>;
+using Register2SwplRegMap = std::map<Register, class SwplReg *>;
 using SwplInstEdge2Distances = std::map<SwplInstEdge *, std::vector<unsigned>>;
 using SwplInstEdge2Delays = std::map<SwplInstEdge *, std::vector<int>>;
 using SwplInstEdge2ModuloDelay = std::map<SwplInstEdge *, int>;
@@ -40,10 +40,10 @@ using SwplRegs_iterator = SwplRegs::iterator;
 using SwplMems_iterator = SwplMems::iterator;
 using SwplInstList_iterator = SwplInstList::iterator;
 
-using MIMap = std::map<const llvm::MachineInstr *, llvm::MachineInstr *>;
-using MICMap = std::map<const llvm::MachineInstr *, const llvm::MachineInstr *>;
-using RegMap = std::map<llvm::Register, llvm::Register>;
-using MIs = std::vector<llvm::MachineInstr *>;
+using MIMap = std::map<const MachineInstr *, MachineInstr *>;
+using MICMap = std::map<const MachineInstr *, const MachineInstr *>;
+using RegMap = std::map<Register, Register>;
+using MIs = std::vector<MachineInstr *>;
 
 /// classの前方宣言
 class SwplLoop;
@@ -55,27 +55,34 @@ class SwplInstGraph;
 class SwplDdg;
 
 /// swpl機能のデバッグ出力
-extern  llvm::cl::opt<bool> DebugOutput;
-extern  llvm::MachineOptimizationRemarkEmitter *ORE;
-extern const llvm::TargetInstrInfo *TII;
-extern const llvm::TargetRegisterInfo *TRI;
-extern llvm::MachineRegisterInfo *MRI;
-extern AArch64SwplTargetMachine STM;
+extern  cl::opt<bool> DebugOutput;
+extern  MachineOptimizationRemarkEmitter *ORE;
+extern const TargetInstrInfo *TII;
+extern const TargetRegisterInfo *TRI;
+extern MachineRegisterInfo *MRI;
 extern AliasAnalysis *AA;
 
 #define UNKNOWN_MEM_DIFF INT_MIN        /* 0 の正反対 */
 
 
+/**
+ * オプションとPragmaから、指定ループがSWP適用候補かどうか返す
+ * @param L 対象のLoop情報を指定する
+ * @retval true SWP適用候補
+ * @retval false SWP適用しない
+ */
+bool enableSWP(const Loop*);
+
 /// \class SwplLoop
 /// \brief ループ内の命令情報を管理するclass
 class SwplLoop {
-  llvm::MachineLoop *ML;               ///< ループを示す中間表現
+  MachineLoop *ML;               ///< ループを示す中間表現
   SwplInsts PreviousInsts;             ///< preheaderの命令の集合
   SwplInsts PhiInsts;                  ///< Phi命令の集合
   SwplInsts BodyInsts;                 ///< ループボディの命令の集合
   SwplMems Mems;                       ///< ループボディ内の SwplMem の集合
   std::map<SwplMem *, int> MemIncrementMap;  ///< SwplMem と増分値のマップ
-  llvm::MachineBasicBlock *NewBodyMBB; ///< 対象ループのbodyのMBBを複製し非SSA化したMBB
+  MachineBasicBlock *NewBodyMBB; ///< 対象ループのbodyのMBBを複製し非SSA化したMBB
   MIMap OrgMI2NewMI;                   ///< 対象ループのbodyのオリジナルのMIと複製先のMIのMap
   MICMap NewMI2OrgMI;                   ///< 対象ループのbodyの複製先のMIとオリジナルのMIのMap
   RegMap OrgReg2NewReg;                ///< 対象ループのbodyのオリジナルのRegisterと複製先のRegisterのMap
@@ -86,7 +93,7 @@ class SwplLoop {
 
 public:
   SwplLoop(){}
-  SwplLoop(llvm::MachineLoop &l) {
+  SwplLoop(MachineLoop &l) {
     ML = &l;
   }
 
@@ -96,8 +103,8 @@ public:
   };
 
   // getter
-  const llvm::MachineLoop *getML() const { return ML; }
-  llvm::MachineLoop *getML() { return ML; }
+  const MachineLoop *getML() const { return ML; }
+  MachineLoop *getML() { return ML; }
   SwplInsts &getPreviousInsts() { return PreviousInsts; }
   const SwplInsts &getPreviousInsts() const { return PreviousInsts; }
   SwplInsts &getPhiInsts() { return PhiInsts; }
@@ -107,13 +114,13 @@ public:
   SwplMems &getMems() { return Mems; }
   std::map<class SwplMem *, int> &getMemIncrementMap() { return MemIncrementMap; };
   /// SwplLoop::NewBodyMBB を返す
-  llvm::MachineBasicBlock *getNewBodyMBB() { return NewBodyMBB; }
+  MachineBasicBlock *getNewBodyMBB() { return NewBodyMBB; }
   /// SwplLoop::NewBodyMBB を設定する
-  void setNewBodyMBB(llvm::MachineBasicBlock *MBB) { NewBodyMBB = MBB; }
+  void setNewBodyMBB(MachineBasicBlock *MBB) { NewBodyMBB = MBB; }
   /// SwplLoop::NewBodyMBB のpreMBBを返す
-  llvm::MachineBasicBlock *getNewBodyPreMBB(MachineBasicBlock *bodyMBB) {
+  MachineBasicBlock *getNewBodyPreMBB(MachineBasicBlock *bodyMBB) {
     assert(bodyMBB->pred_size() == 1);
-    llvm::MachineBasicBlock *preMBB;
+    MachineBasicBlock *preMBB;
     for (auto *MBB:bodyMBB->predecessors()) {
       preMBB = MBB;
     }
@@ -124,7 +131,7 @@ public:
   /// SwplLoop::OrgMI2NewMI を返す
   MIMap &getOrgMI2NewMI() { return OrgMI2NewMI; };
   /// SwplLoop::NewMI2OrgMI を返す
-  const llvm::MachineInstr *getOrgMI(const MachineInstr *newMI) { return NewMI2OrgMI.at(newMI); };
+  const MachineInstr *getOrgMI(const MachineInstr *newMI) { return NewMI2OrgMI.at(newMI); };
   /// SwplLoop::OrgReg2NewReg を返す
   RegMap &getOrgReg2NewReg() { return OrgReg2NewReg; };
   /// SwplLoop::Copies を返す
@@ -211,18 +218,18 @@ public:
   unsigned getMemsMinOverlapDistance(SwplMem *former_mem, SwplMem *latter_mem);
 
   bool findBasicInductionVariable(TransformedMIRInfo &TMI) const;
-  
+
   /// SwplLoop::OrgMI2NewMI および SwplLoop::NewMI2OrgMI に要素を追加する
   /// \param [in] orgMI オリジナルMI
   /// \param [in] newMI 新しいMI
-  void addOrgMI2NewMI(const MachineInstr *orgMI, MachineInstr *newMI) { 
+  void addOrgMI2NewMI(const MachineInstr *orgMI, MachineInstr *newMI) {
     OrgMI2NewMI[orgMI] = newMI;
     NewMI2OrgMI[newMI]=orgMI;
   }
   /// SwplLoop::OrgReg2NewReg に要素を追加する
   /// \param [in] orgReg オリジナルRegister
   /// \param [in] newReg 追加するRegister
-  void addOrgReg2NewReg(llvm::Register orgReg, llvm::Register newReg) { OrgReg2NewReg[orgReg] = newReg; };
+  void addOrgReg2NewReg(Register orgReg, Register newReg) { OrgReg2NewReg[orgReg] = newReg; };
   /// SwplLoop::Copies に要素を追加する
   void addCopies(MachineInstr *copy) { getCopies().push_back(copy); }
   /// SwplLoop::Regs に要素を追加する
@@ -237,19 +244,19 @@ public:
 
   /// メモリ開放するときのためのRegの情報 SwplReg を収集する
   void collectRegs();
-  
+
 private:
   /// SwplLoop::PreviousInsts の作成
-  /// \param [in,out] rmap llvm::Register と SwplReg のマップ
+  /// \param [in,out] rmap Register と SwplReg のマップ
   void makePreviousInsts(Register2SwplRegMap &rmap);
   /// SwplLoop::PhiInsts の作成
-  /// \param [in,out] rmap llvm::Register と SwplReg のマップ
+  /// \param [in,out] rmap Register と SwplReg のマップ
   void makePhiInsts(Register2SwplRegMap &rmap);
   /// SwplLoop::BodyInsts の作成
-  /// \param [in,out] rmap llvm::Register と SwplReg のマップ
+  /// \param [in,out] rmap Register と SwplReg のマップ
   void makeBodyInsts(Register2SwplRegMap &rmap);
   /// SwplLoop::PhiInsts の作成
-  /// \param [in,out] rmap llvm::Register と SwplReg のマップ
+  /// \param [in,out] rmap Register と SwplReg のマップ
   void reconstructPhi(Register2SwplRegMap &rmap);
   /// SwplLoop::MemIncrementMap を生成する
   void makeMemIncrementMap();
@@ -265,39 +272,39 @@ private:
   /// \param[in]  L MachineLoop
   /// \param[in]  LiveOutReg UseReg
   void convertSSAtoNonSSA(MachineLoop &L, const UseMap &LiveOutReg);
-  /// llvm::MachineBasicBlock の複製を行う
+  /// MachineBasicBlock の複製を行う
   /// \param[in]  newBody 複製先のMachineBasicBlock
   /// \param[in]  oldBody 複製元のMachineBasicBlock
-  void cloneBody(llvm::MachineBasicBlock*newBody, llvm::MachineBasicBlock*oldBody);
+  void cloneBody(MachineBasicBlock*newBody, MachineBasicBlock*oldBody);
   /// Phi命令を検索し、非SSA形式に命令例を変換する
-  /// \param[in,out]  body ループボディの llvm::MachineBasicBlock
-  /// \param[in,out]  pre preheaderの llvm::MachineBasicBlock
+  /// \param[in,out]  body ループボディの MachineBasicBlock
+  /// \param[in,out]  pre preheaderの MachineBasicBlock
   /// \param[in]  dbglod DebugLoc
-  /// \param[in]  org オリジナルの llvm::MachineBasicBlock
+  /// \param[in]  org オリジナルの MachineBasicBlock
   /// \param[in]  LiveOutReg UseMap
-  void convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBlock *pre, const DebugLoc &dbgloc,
-                     llvm::MachineBasicBlock *org, const UseMap &LiveOutReg);
+  void convertNonSSA(MachineBasicBlock *body, MachineBasicBlock *pre, const DebugLoc &dbgloc,
+                     MachineBasicBlock *org, const UseMap &LiveOutReg);
 
   /// pre/post index命令を検索し演算命令＋load/store命令に変換する
   /// @todo 本メソッドTIIに移動する必要がある
-  /// \param[in,out]  body ループボディの llvm::MachineBasicBlock
-  void convertPrePostIndexInstr(llvm::MachineBasicBlock *body);
+  /// \param[in,out]  body ループボディの MachineBasicBlock
+  void convertPrePostIndexInstr(MachineBasicBlock *body);
 
   /// SwplLoop::OrgMI2NewMI の命令列を走査し、SwplLoop::OrgReg2NewReg に登録されているレジスタへのリネーミングを行う
   void renameReg(void);
-  /// llvm::Register クラスからレジスタIDを表示する
-  void printRegID(llvm::Register r);
+  /// Register クラスからレジスタIDを表示する
+  void printRegID(Register r);
 
   /// SwplLoop の解放
   void destroy();
-  
+
 };
 
 /// \class SwplInst
 /// \brief 命令情報を管理するclass
-/// \note SwplReg の解放は SwplLoop で一括して行う  
+/// \note SwplReg の解放は SwplLoop で一括して行う
 class SwplInst {
-  llvm::MachineInstr *MI;     ///< 命令を示す中間表現
+  MachineInstr *MI;     ///< 命令を示す中間表現
   SwplLoop *Loop;             ///< 本命令が属するループのSwplLoop
   SwplRegs UseRegs;           ///< 本命令が参照するレジスタのVector
   SwplRegs DefRegs;           ///< 本命令が定義するレジスタのVector
@@ -307,13 +314,13 @@ class SwplInst {
 public:
   SwplInst() {};
   /// MI や SwplLoop はnullがあり得るのでアドレス渡し
-  SwplInst(llvm::MachineInstr *i, class SwplLoop *l) {
+  SwplInst(MachineInstr *i, class SwplLoop *l) {
     MI = i;
     Loop = l;
   }
 
   // getter
-  const llvm::MachineInstr *getMI() const { return MI; }
+  const MachineInstr *getMI() const { return MI; }
   SwplLoop *getLoop() { return Loop; }
   // 以下のメンバは、持ちまわる必要がないかもしれない
   const SwplRegs &getUseRegs() const { return UseRegs; }
@@ -327,13 +334,13 @@ public:
   SwplRegs_iterator defregs_end() { return DefRegs.end(); }
 
   /// SwplInst の初期化
-  /// \param [in]  MI llvm::MachineInstr
+  /// \param [in]  MI MachineInstr
   /// \param [in]  loop 対象Loop
-  /// \param [in,out]  rmap llvm::Register と SwplReg の対応マップ
+  /// \param [in,out]  rmap Register と SwplReg の対応マップ
   /// \param [in,out]  insts MIより前に出現した命令の SwplInst を格納したvector
   /// \param [in,out]  mems MIより前に出現した SwplMem を格納したvector
   /// \param [in,out]  memsOtherBody SwplMems
-  void InitializeWithDefUse(llvm::MachineInstr *MI, SwplLoop *loop, Register2SwplRegMap &rmap,
+  void InitializeWithDefUse(MachineInstr *MI, SwplLoop *loop, Register2SwplRegMap &rmap,
                             SwplInsts &insts, SwplMems *mems, SwplMems *memsOtherBody);
 
   /// ループ内の命令かどうかの判定
@@ -388,10 +395,10 @@ public:
   /// 当該 SwplInst が使用するレジスタを SwplLoop::Regs にpushする
   /// \param[in] 対象の SwplLoop
   void pushAllRegs(SwplLoop *loop);
-  
+
   /// SwplInst の解放
   void destroy();
-  
+
 public:
   /// Predicateレジスタかどうかの判定
   bool isDefinePredicate() const;
@@ -403,10 +410,10 @@ public:
     return TII->isPrefetch(MI->getOpcode());
   }
 
-  llvm::StringRef getName() {
+  StringRef getName() {
     return (isPhi()) ? "PHI" : TII->getName( MI->getOpcode() );
   }
-  llvm::StringRef getName() const {
+  StringRef getName() const {
     return (isPhi()) ? "PHI" : TII->getName( MI->getOpcode() );
   }
   int getDefOperandIx(int id) const {
@@ -424,14 +431,14 @@ public:
 /// \class SwplReg
 /// \brief レジスタ情報を管理するclass
 class SwplReg {
-  llvm::Register Reg=0;      ///< レジスタ
+  Register Reg=0;      ///< レジスタ
   SwplInst *DefInst;         ///< 本レジスタを定義(Def)している命令
   size_t DefIndex;           ///< 定義している命令のインデックス
   SwplInstList UseInsts;     ///< レジスタを参照(Use)している命令群 \note SwplInstのSet
   SwplReg *Predecessor;      ///< 先任者
   SwplReg *Successor;        ///< 後任者
   bool EarlyClobber=false;   ///< early-clobber属性
-  llvm::StmRegKind *rk=nullptr;
+  StmRegKind *rk=nullptr;
 
 public:
   SwplReg() {};
@@ -444,7 +451,7 @@ public:
     EarlyClobber=s.EarlyClobber;
     rk = TII->getRegKind(*MRI, s.Reg);
   };
-  SwplReg(llvm::Register r, SwplInst &i, size_t def_index, bool earlyclober=false) {
+  SwplReg(Register r, SwplInst &i, size_t def_index, bool earlyclober=false) {
     Reg = r;
     DefInst = &i;
     DefIndex = def_index;
@@ -497,7 +504,7 @@ public:
   /// \param [in,out] latter_reg
   void inheritReg( SwplReg *former_reg, SwplReg *latter_reg);
   /// SwplReg の比較
-  /// \attention 内包している llvm::Register が同じかどうかは見ていない。
+  /// \attention 内包している Register が同じかどうかは見ていない。
   bool isEqual(SwplReg *reg) { return (this == reg) ? true : false; }
 
   /// SwplReg::UseInsts の追加
@@ -530,7 +537,7 @@ public:
   }
 
   /// Stack-pointerを扱うレジスタかどうかを判定する
-  bool isStack() const { return (llvm::Register::isStackSlot(Reg)); }
+  bool isStack() const { return (Register::isStackSlot(Reg)); }
 
   /// レジスタの数を返す
   int getRegSize() const;
@@ -539,21 +546,21 @@ public:
 /// \class SwplMem
 /// \brief メモリアクセスを表現するclass
 class SwplMem {
-  const llvm::MachineMemOperand *MO;   ///< メモリアクセスを示すオペランド情報
+  const MachineMemOperand *MO;   ///< メモリアクセスを示すオペランド情報
   SwplInst *Inst;                ///< 本メモリアクセスする命令を示す SwplInst
   SwplRegs UseRegs;              ///< 本メモリアクセスを構成する SwplReg のVector
   size_t Size;                   ///< メモリアクセスするサイズ
 
 public:
   SwplMem() {};
-  SwplMem(const llvm::MachineMemOperand *op, SwplInst &i, size_t s) {
+  SwplMem(const MachineMemOperand *op, SwplInst &i, size_t s) {
     MO = op;
     Inst = &i;
     Size = s;
   }
 
   // getter
-  const llvm::MachineMemOperand *getMO() const { return MO; }
+  const MachineMemOperand *getMO() const { return MO; }
   const SwplInst *getInst() const { return Inst; }
   SwplInst *getInst() { return Inst; }
   SwplRegs &getUseRegs() { return UseRegs; }
@@ -568,7 +575,7 @@ public:
   /// SwplMem::UseReg の要素取得
   SwplReg &getUseReg(size_t index) { return *UseRegs[index]; }
   /// SwplMem::UseRegs への追加
-  void addUseReg(llvm::Register reg, Register2SwplRegMap rmap) { UseRegs.push_back(rmap[reg]);}
+  void addUseReg(Register reg, Register2SwplRegMap rmap) { UseRegs.push_back(rmap[reg]);}
   /// メモリアクセスの増分値を求める
   int calcEachMemAddressIncrement();
 

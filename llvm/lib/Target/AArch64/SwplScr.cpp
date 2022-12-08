@@ -10,11 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SwplScr.h"
-#include "SWPipeliner.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/raw_ostream.h"
+#include "SwplScr.h"
+#include "SWPipeliner.h"
 
 using namespace llvm;
 

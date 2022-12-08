@@ -22,8 +22,11 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include <iostream>
 
-using namespace llvm;
+namespace llvm {
+extern SwplTargetMachine *STM;
+}
 
+using namespace llvm;
 #define DEBUG_TYPE "swp-loop"
 
 
@@ -291,7 +294,7 @@ size_t SwplLoop::getSizeBodyRealInsts() const {
   size_t n = 0;
   for (auto *inst:getBodyInsts()) {
     const llvm::MachineInstr *MI = inst->getMI();
-    if (STM.isPseudo(*MI)) { continue; }
+    if (STM->isPseudo(*MI)) { continue; }
     n++;
   }
   return n;

@@ -18,6 +18,10 @@
 #include "SwplRegEstimate.h"
 #include "SwplScheduling.h"
 
+namespace llvm {
+extern SwplTargetMachine *STM;
+}
+
 using namespace llvm; // for NV
 using namespace ore; // for NV
 
@@ -39,7 +43,7 @@ unsigned SwplPlan::relativeInstSlot(const SwplInst& c_inst) const {
 /// \brief 命令が配置された範囲のCycle数を返す
 /// \return 命令が配置された範囲のCycle数
 int SwplPlan::getTotalSlotCycles() {
-  return (end_slot - begin_slot) / STM.getFetchBandwidth();
+  return (end_slot - begin_slot) / STM->getFetchBandwidth();
 }
 
 /// \brief SwplPlanをダンプする
@@ -56,7 +60,7 @@ void SwplPlan::dump(raw_ostream &stream) {
   stream << "  prolog_cycles = " << prolog_cycles << "\n";
   stream << "  kernel_cycles = " << kernel_cycles << "\n";
   stream << "  epilog_cycles = " << epilog_cycles << "\n";
-  
+
   dumpInstTable(stream);
   stream << ")\n";
   return;
@@ -85,7 +89,7 @@ void SwplPlan::dumpInstTable(raw_ostream &stream) {
     if(slot.calcFetchSlot() == 0) {
       stream << "\n";
     }
-    if(i!=0 && i%(STM.getFetchBandwidth() * iteration_interval) == 0 ) { // IIごとに改行
+    if(i!=0 && i%(STM->getFetchBandwidth() * iteration_interval) == 0 ) { // IIごとに改行
       stream << "\n";
     }
 
@@ -101,7 +105,7 @@ void SwplPlan::dumpInstTable(raw_ostream &stream) {
     }
   }
   stream << "\n";
-  
+
   return;
 }
 
@@ -163,7 +167,7 @@ SwplPlan* SwplPlan::construct(const SwplLoop& c_loop,
                               const MsResourceResult& resource) {
   SwplPlan* plan = new SwplPlan(c_loop); //plan->loop =loop;
   size_t prolog_blocks, kernel_blocks;
-  
+
   plan->minimum_iteration_interval = min_ii;
   plan->iteration_interval = ii;
   plan->inst_slot_map = inst_slot_map;
@@ -183,7 +187,7 @@ SwplPlan* SwplPlan::construct(const SwplLoop& c_loop,
   plan->total_cycles = (plan->prolog_cycles
                         + plan->kernel_cycles
                         + plan->epilog_cycles);
-  
+
   plan->num_necessary_freg = resource.getNecessaryFreg();
   plan->num_max_freg = resource.getMaxFreg();
   plan->num_necessary_ireg = resource.getNecessaryIreg();
@@ -262,15 +266,15 @@ unsigned SwplPlan::calculateResourceII(const SwplLoop& c_loop) {
   unsigned numresource;
 
   // 資源ごとの利用カウントをresource_appearsで保持する。
-  // resource_appearsは、STM.getNumResource()+1分確保し、
+  // resource_appearsは、STM->getNumResource()+1分確保し、
   // resource_appears[A64FXRes::PortKind]が資源ごとの利用カウントとなる。
   // 要素[0]はA64FXRes::PortKind::P_NULLに該当する要素とし、使用しない。
-  numresource = STM.getNumResource();
+  numresource = STM->getNumResource();
   std::vector<float> resource_appears(numresource+1, 0.0);
 
   for (auto inst : c_loop.getBodyInsts()) {
     // 資源情報の生成と資源パターン数の取得
-    const auto *pipes = STM.getPipelines( *(inst->getMI()) );
+    const auto *pipes = STM->getPipelines( *(inst->getMI()) );
     unsigned num_pattern = pipes->size();
 
     for(auto pipeline : *pipes ) {
@@ -307,7 +311,7 @@ unsigned SwplPlan::calcResourceMinIterationInterval(const SwplLoop& c_loop) {
   assert (n_body_insts != 0);
 
   /* 1cycleにつきfetch slot数しか命令は発行できない事による制約 */
-  fetch_constrained_ii = ceil_div(n_body_insts, STM.getRealFetchBandwidth() );
+  fetch_constrained_ii = ceil_div(n_body_insts, STM->getRealFetchBandwidth() );
 
   // メモリポート数による制約は、
   // calculateResorceIIで計算されるmemory unitの制約の方が厳しい為、
@@ -361,7 +365,7 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
   } else {
     return TryScheduleResult::TRY_SCHEDULE_FAIL;
   }
-  
+
 }
 
 /// \brief IMSでスケジューリングを行う
@@ -718,11 +722,11 @@ SwplSlot SwplInstSlotHashmap::getEmptySlotInCycle( unsigned cycle,
   // cycle 2  slot  slot  slot  slot  slot  slot  slot  slot
   //       :  slot  slot  slot  slot  slot  slot  slot  slot
   // cycle n  slot  slot  slot  slot  slot  slot  slot  slot
-  //         |<-------------------------------------------->| STM.getFetchBandwidth()
-  //                                 |<-------------------->| STM.getRealFetchBandwidth()
+  //         |<-------------------------------------------->| STM->getFetchBandwidth()
+  //                                 |<-------------------->| STM->getRealFetchBandwidth()
 
-  unsigned bandwidth = STM.getFetchBandwidth();
-  unsigned realbandwidth = STM.getRealFetchBandwidth();
+  unsigned bandwidth = STM->getFetchBandwidth();
+  unsigned realbandwidth = STM->getRealFetchBandwidth();
 
   std::vector<bool> openslot(bandwidth);
   for(unsigned i=0; i<bandwidth; i++) {
@@ -763,7 +767,7 @@ void SwplInstSlotHashmap::dump() {
   max_cycle = max_slot.calcCycle();
   min_cycle = min_slot.calcCycle();
 
-  max_slot = SwplSlot::construct(max_cycle, 0) + STM.getFetchBandwidth();
+  max_slot = SwplSlot::construct(max_cycle, 0) + STM->getFetchBandwidth();
   min_slot = SwplSlot::construct(min_cycle, 0);
 
   size_t table_size = (size_t)max_slot - (size_t)min_slot;
@@ -801,14 +805,14 @@ void SwplInstSlotHashmap::dump() {
 /// \details cycleに換算した値を返す
 /// \return cycle
 unsigned SwplSlot::calcCycle() {
-  return slot_index / STM.getFetchBandwidth();
+  return slot_index / STM->getFetchBandwidth();
 }
 
 /// \brief slotのFetchSlotを返す
 /// \details FetchSlot = 各cycleの何番目のslotか
 /// \return FetchSlot
 unsigned SwplSlot::calcFetchSlot() {
-  return slot_index % STM.getFetchBandwidth();
+  return slot_index % STM->getFetchBandwidth();
 }
 
 /// \brief slotが何番目のblockであるかを返す
@@ -838,14 +842,14 @@ SwplSlot SwplSlot::baseSlot(unsigned iteration_interval) {
 SwplSlot SwplSlot::construct(unsigned cycle, unsigned fetch_slot) {
   if( ( SwplSlot::slotMin().calcCycle() > cycle ) ||
       ( cycle > SwplSlot::slotMax().calcCycle() ) ||
-      ( fetch_slot >= STM.getFetchBandwidth() )
+      ( fetch_slot >= STM->getFetchBandwidth() )
        ) {
     if (DebugOutput) {
       dbgs() << "!swp-msg: Used cycle for scheduling is out of the range.\n";
     }
     return SWPL_ILLEGAL_SLOT;
   }
-  return cycle * STM.getFetchBandwidth() + fetch_slot;
+  return cycle * STM->getFetchBandwidth() + fetch_slot;
 }
 
 /// \brief block番号からSwplSlotを生成する

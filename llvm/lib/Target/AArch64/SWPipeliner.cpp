@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64.h"
 
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -18,10 +17,9 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/SwplTargetMachine.h"
 #include "llvm/InitializePasses.h"
-#include "AArch64TargetTransformInfo.h"
 
-#include "AArch64SwplTargetMachine.h"
 #include "SWPipeliner.h"
 #include "SwplPlan.h"
 #include "SwplScr.h"
@@ -47,7 +45,7 @@ MachineOptimizationRemarkEmitter *ORE = nullptr;
 const TargetInstrInfo *TII = nullptr;
 const TargetRegisterInfo *TRI = nullptr;
 MachineRegisterInfo *MRI = nullptr;
-AArch64SwplTargetMachine STM;
+SwplTargetMachine *STM;
 AliasAnalysis *AA;
 
 /// swpl-choice-loopで対象Loop特定に利用する
@@ -151,13 +149,16 @@ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(SWPipeliner, DEBUG_TYPE,
                     "Software Pipeliner", false, false)
 
+namespace llvm {
+
 /**
  * \brief SWPipelinerを生成する
  *
  * \retval FunctionPass 生成されたSWPipeliner
  */
-FunctionPass *llvm::createSWPipelinerPass() {
+FunctionPass *createSWPipelinerPass() {
   return new SWPipeliner();
+}
 }
 
 /**
@@ -182,19 +183,9 @@ bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
   TRI = MF->getSubtarget().getRegisterInfo();
   MRI = &(MF->getRegInfo());
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  STM = TII->getSwplTargetMachine();
 
-#ifdef STMTEST
-  if (TestStm) {
-    // Tmの動作テスト(SchedModel確認のため、ここでテストを動作させている)
-    if (stmTest ==nullptr) {
-      stmTest =new StmTest(TestStm);
-    }
-    stmTest->run(mf);
-    return false;
-  }
-#endif
-
-  STM.initialize(*MF);
+  STM->initialize(*MF);
 
   for (auto &L : *MLI)
     scheduleLoop(*L);
@@ -203,13 +194,6 @@ bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
 }
 
 bool SWPipeliner::doFinalization(Module &) {
-#ifdef STMTEST
-  if (TestStm && stmTest !=nullptr) {
-    // testで利用する領域の解放
-    delete stmTest;
-    stmTest =nullptr;
-  }
-#endif
   return false;
 }
 
@@ -227,7 +211,7 @@ static void printDebug(const char *f, const StringRef &msg, const MachineLoop &L
  *        ・データ抽出
  *        ・スケジューリング
  *        ・スケジューリング結果反映
- *       
+ *
  * \param[in] L 対象のMachineLoop
  * \retval true  Swpl最適化を適用した。
  * \retval false Swpl最適化を適用しなかった。
@@ -333,14 +317,11 @@ bool SWPipeliner::shouldOptimize(MachineLoop &L) {
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   const Loop *BBLoop = LI->getLoopFor(BB);
 
-  if (!llvm::enableSWP(BBLoop)) {
+  if (!enableSWP(BBLoop)) {
     return false;
   }
   return true;
 }
-
-
-
 
 char SWPipelinerPre::ID = 0;
 
@@ -351,13 +332,16 @@ INITIALIZE_PASS_BEGIN(SWPipelinerPre, "swpipelinerpre",
 INITIALIZE_PASS_END(SWPipelinerPre, "swpipelinerpre",
                     "Software Pipeliner Pre", false, false)
 
+namespace llvm {
+
 /**
  * \brief SWPipelinerPreを生成する
  *
  * \retval FunctionPass 生成されたSWPipelinerPre
  */
-FunctionPass *llvm::createSWPipelinerPrePass() {
+FunctionPass *createSWPipelinerPrePass() {
   return new SWPipelinerPre();
+}
 }
 
 /**
@@ -417,13 +401,13 @@ bool SWPipelinerPre::check(MachineLoop &L) {
   const BasicBlock *BB = body->getBasicBlock();
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   const Loop *BBLoop = LI->getLoopFor(BB);
-  if (!llvm::enableSWP(BBLoop)) return Changed;
+  if (!enableSWP(BBLoop)) return Changed;
 
   if (!hasPreHeader(L)) Changed|=createPreHeader(L);
   if (!hasExit(L)) Changed|=createExit(L);
 
   if (EnablesplitInst_swp_pre) {
-    llvm::SmallVector<MachineInstr *, 2> delete_mi;
+    SmallVector<MachineInstr *, 2> delete_mi;
     for (auto &mi:*body) {
       if (TII->splitPrePostIndexInstr(*body, mi, nullptr, nullptr)) {
         Changed=true;

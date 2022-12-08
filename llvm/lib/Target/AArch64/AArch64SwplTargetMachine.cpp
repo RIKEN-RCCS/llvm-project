@@ -523,7 +523,10 @@ int AArch64InstrInfo::calcEachRegIncrement(const SwplReg *r) const {
   return UNKNOWN_MEM_DIFF;
 }
 
-
+SwplTargetMachine *AArch64InstrInfo::getSwplTargetMachine() const {
+  SwplTargetMachine *p=new AArch64SwplTargetMachine();
+  return p;
+}
 
 }
 

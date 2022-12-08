@@ -16,6 +16,11 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
+
+namespace llvm {
+
+extern SwplTargetMachine *STM;
+}
 using namespace llvm;
 
 #define DEBUG_TYPE "swp-ddg"
@@ -238,7 +243,7 @@ void SwplDdg::analysisRegsFlowDependence() {
         // def-regがearly-clobberの場合は、命令のLatencyに関係なく１とする
         delay = 1;
       } else {
-        delay = STM.computeRegFlowDependence(def_inst->getMI(), use_inst->getMI());
+        delay = STM->computeRegFlowDependence(def_inst->getMI(), use_inst->getMI());
       }
       if (DebugOutput) {
         dbgs() << "DBG(SwplDdg::analysisRegsFlowDependence):\n"
@@ -281,7 +286,7 @@ void SwplDdg::analysisRegsAntiDependence() {
                  << " delay:" << delay << "\n";
         }
         update_distance_and_delay(*this, *use_inst, *def_inst, distance, delay);
-      }      
+      }
     }
   }
 }
@@ -330,22 +335,22 @@ void SwplDdg::analysisMemDependence() {
            (latter_mem->getInst())->isPrefetch())  {
         continue;
       }
-      
+
       int distance, delay;
       enum class DepKind {init, flow, anti, output};
       DepKind depKind = DepKind::init;
 
       if (former_mem->isMemDef()) {
         if (latter_mem->isMemDef()) {
-          delay = STM.computeMemOutputDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
+          delay = STM->computeMemOutputDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
           depKind = DepKind::output;
         } else {
-          delay = STM.computeMemFlowDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
+          delay = STM->computeMemFlowDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
           depKind = DepKind::flow;
         }
       } else {
         if (latter_mem->isMemDef()) {
-          delay = STM.computeMemAntiDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
+          delay = STM->computeMemAntiDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
           depKind = DepKind::anti;
         } else {
           // Not dependence (input-dependence)
