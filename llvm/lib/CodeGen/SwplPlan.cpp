@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "SwplPlan.h"
 #include "SWPipeliner.h"
 #include "SwplCalclIterations.h"
 #include "SwplRegEstimate.h"
 #include "SwplScheduling.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 
 using namespace llvm; // for NV
 using namespace ore; // for NV

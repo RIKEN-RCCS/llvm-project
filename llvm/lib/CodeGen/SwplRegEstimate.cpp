@@ -10,12 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/SwplTargetMachine.h"
 #include "SwplRegEstimate.h"
 #include "SWPipeliner.h"
 #include "SwplPlan.h"
-
-
+#include "llvm/CodeGen/SwplTargetMachine.h"
 
 static llvm::cl::opt<bool> OptionDumpReg("swpl-debug-dump-estimate-reg",llvm::cl::init(false), llvm::cl::ReallyHidden);
 
