@@ -19,7 +19,6 @@
 #include "SwplScheduling.h"
 
 namespace llvm {
-extern  llvm::cl::opt<bool> DebugOutput;
 
 #define ASSUMED_ITERATIONS_MAX (32767)
 #define ASSUMED_ITERATIONS_NONE (-1)

@@ -31,10 +31,6 @@ namespace llvm {
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 
-namespace llvm {
-extern SwplTargetMachine *STM;
-
-}
 using namespace llvm;
 #define DEBUG_TYPE "aarch64-swpipeliner"
 

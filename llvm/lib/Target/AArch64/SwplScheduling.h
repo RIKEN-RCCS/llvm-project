@@ -21,7 +21,7 @@
 
 namespace llvm{
 #define ASSUMED_ITERATIONS_MAX (32767)
-extern  llvm::cl::opt<bool> DebugOutput;
+
 
 using SwplInstIntMap = llvm::DenseMap<const SwplInst*, int>;
 using SwplInstVectorVector = std::vector<std::vector<const SwplInst*>>;

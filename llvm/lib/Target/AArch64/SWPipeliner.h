@@ -51,14 +51,6 @@ class SwplInstEdge;
 class SwplInstGraph;
 class SwplDdg;
 
-/// swpl機能のデバッグ出力
-extern  cl::opt<bool> DebugOutput;
-extern  MachineOptimizationRemarkEmitter *ORE;
-extern const TargetInstrInfo *TII;
-extern const TargetRegisterInfo *TRI;
-extern MachineRegisterInfo *MRI;
-extern AliasAnalysis *AA;
-
 #define UNKNOWN_MEM_DIFF INT_MIN        /* 0 の正反対 */
 
 
