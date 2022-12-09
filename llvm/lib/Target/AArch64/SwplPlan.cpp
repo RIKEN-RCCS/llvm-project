@@ -42,7 +42,7 @@ unsigned SwplPlan::relativeInstSlot(const SwplInst& c_inst) const {
 /// \brief 命令が配置された範囲のCycle数を返す
 /// \return 命令が配置された範囲のCycle数
 int SwplPlan::getTotalSlotCycles() {
-  return (end_slot - begin_slot) / STM->getFetchBandwidth();
+  return (end_slot - begin_slot) / SWPipeliner::STM->getFetchBandwidth();
 }
 
 /// \brief SwplPlanをダンプする
@@ -88,7 +88,7 @@ void SwplPlan::dumpInstTable(raw_ostream &stream) {
     if(slot.calcFetchSlot() == 0) {
       stream << "\n";
     }
-    if(i!=0 && i%(STM->getFetchBandwidth() * iteration_interval) == 0 ) { // IIごとに改行
+    if(i!=0 && i%(SWPipeliner::STM->getFetchBandwidth() * iteration_interval) == 0 ) { // IIごとに改行
       stream << "\n";
     }
 
@@ -229,7 +229,7 @@ SwplPlan* SwplPlan::generatePlan(SwplDdg& ddg)
     return nullptr;
 
   case TryScheduleResult::TRY_SCHEDULE_FEW_ITER: {
-    ORE->emit([&]() {
+    SWPipeliner::ORE->emit([&]() {
                       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                ddg.getLoop()->getML()->getStartLoc(),
                                                                ddg.getLoop()->getML()->getHeader())
@@ -268,12 +268,12 @@ unsigned SwplPlan::calculateResourceII(const SwplLoop& c_loop) {
   // resource_appearsは、STM->getNumResource()+1分確保し、
   // resource_appears[A64FXRes::PortKind]が資源ごとの利用カウントとなる。
   // 要素[0]はA64FXRes::PortKind::P_NULLに該当する要素とし、使用しない。
-  numresource = STM->getNumResource();
+  numresource = SWPipeliner::STM->getNumResource();
   std::vector<float> resource_appears(numresource+1, 0.0);
 
   for (auto inst : c_loop.getBodyInsts()) {
     // 資源情報の生成と資源パターン数の取得
-    const auto *pipes = STM->getPipelines( *(inst->getMI()) );
+    const auto *pipes = SWPipeliner::STM->getPipelines( *(inst->getMI()) );
     unsigned num_pattern = pipes->size();
 
     for(auto pipeline : *pipes ) {
@@ -310,7 +310,7 @@ unsigned SwplPlan::calcResourceMinIterationInterval(const SwplLoop& c_loop) {
   assert (n_body_insts != 0);
 
   /* 1cycleにつきfetch slot数しか命令は発行できない事による制約 */
-  fetch_constrained_ii = ceil_div(n_body_insts, STM->getRealFetchBandwidth() );
+  fetch_constrained_ii = ceil_div(n_body_insts, SWPipeliner::STM->getRealFetchBandwidth() );
 
   // メモリポート数による制約は、
   // calculateResorceIIで計算されるmemory unitの制約の方が厳しい為、
@@ -724,8 +724,8 @@ SwplSlot SwplInstSlotHashmap::getEmptySlotInCycle( unsigned cycle,
   //         |<-------------------------------------------->| STM->getFetchBandwidth()
   //                                 |<-------------------->| STM->getRealFetchBandwidth()
 
-  unsigned bandwidth = STM->getFetchBandwidth();
-  unsigned realbandwidth = STM->getRealFetchBandwidth();
+  unsigned bandwidth = SWPipeliner::STM->getFetchBandwidth();
+  unsigned realbandwidth = SWPipeliner::STM->getRealFetchBandwidth();
 
   std::vector<bool> openslot(bandwidth);
   for(unsigned i=0; i<bandwidth; i++) {
@@ -766,7 +766,7 @@ void SwplInstSlotHashmap::dump() {
   max_cycle = max_slot.calcCycle();
   min_cycle = min_slot.calcCycle();
 
-  max_slot = SwplSlot::construct(max_cycle, 0) + STM->getFetchBandwidth();
+  max_slot = SwplSlot::construct(max_cycle, 0) + SWPipeliner::STM->getFetchBandwidth();
   min_slot = SwplSlot::construct(min_cycle, 0);
 
   size_t table_size = (size_t)max_slot - (size_t)min_slot;
@@ -804,14 +804,14 @@ void SwplInstSlotHashmap::dump() {
 /// \details cycleに換算した値を返す
 /// \return cycle
 unsigned SwplSlot::calcCycle() {
-  return slot_index / STM->getFetchBandwidth();
+  return slot_index / SWPipeliner::STM->getFetchBandwidth();
 }
 
 /// \brief slotのFetchSlotを返す
 /// \details FetchSlot = 各cycleの何番目のslotか
 /// \return FetchSlot
 unsigned SwplSlot::calcFetchSlot() {
-  return slot_index % STM->getFetchBandwidth();
+  return slot_index % SWPipeliner::STM->getFetchBandwidth();
 }
 
 /// \brief slotが何番目のblockであるかを返す
@@ -841,14 +841,14 @@ SwplSlot SwplSlot::baseSlot(unsigned iteration_interval) {
 SwplSlot SwplSlot::construct(unsigned cycle, unsigned fetch_slot) {
   if( ( SwplSlot::slotMin().calcCycle() > cycle ) ||
       ( cycle > SwplSlot::slotMax().calcCycle() ) ||
-      ( fetch_slot >= STM->getFetchBandwidth() )
+      ( fetch_slot >= SWPipeliner::STM->getFetchBandwidth() )
        ) {
-    if (DebugOutput) {
+    if (SWPipeliner::isDebugOutput()) {
       dbgs() << "!swp-msg: Used cycle for scheduling is out of the range.\n";
     }
     return SWPL_ILLEGAL_SLOT;
   }
-  return cycle * STM->getFetchBandwidth() + fetch_slot;
+  return cycle * SWPipeliner::STM->getFetchBandwidth() + fetch_slot;
 }
 
 /// \brief block番号からSwplSlotを生成する

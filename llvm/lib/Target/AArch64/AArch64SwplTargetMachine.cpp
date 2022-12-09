@@ -40,7 +40,7 @@ static cl::opt<bool> OptionDumpTargetLoopOnly("swpl-debug-dump-targetloop-only",
 static cl::opt<bool> OptionDumpTargetLoop("swpl-debug-dump-targetloop",cl::init(false), cl::ReallyHidden);
 
 static void printDebug(const char *f, const StringRef &msg, const MachineLoop &L) {
-  if (!DebugOutput) return;
+  if (!SWPipeliner::isDebugOutput()) return;
   errs() << "DBG(" << f << ") " << msg << ":";
   L.getStartLoc().print(errs());
   errs() <<"\n";
@@ -63,35 +63,35 @@ enum MsgID {
 static void outputRemarkAnalysis(MachineLoop &L, int msg_id) {
   switch (msg_id) {
   case MsgID_swpl_branch_not_for_loop:
-    ORE->emit([&]() {
+    SWPipeliner::ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                L.getStartLoc(), L.getHeader())
              << "This loop cannot be software pipelined because the loop contains a branch instruction.";
     });
     break;
   case MsgID_swpl_many_insts:
-    ORE->emit([&]() {
+    SWPipeliner::ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                L.getStartLoc(), L.getHeader())
              << "This loop is not software pipelined because the loop contains too many instructions.";
     });
     break;
   case MsgID_swpl_many_memory_insts:
-    ORE->emit([&]() {
+    SWPipeliner::ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                L.getStartLoc(), L.getHeader())
              << "This loop is not software pipelined because the loop contains too many instructions accessing memory.";
     });
     break;
   case MsgID_swpl_not_covered_inst:
-    ORE->emit([&]() {
+    SWPipeliner::ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                L.getStartLoc(), L.getHeader())
              << "This loop cannot be software pipelined because the loop contains an instruction, such as function call,which is not supported by software pipelining.";
     });
     break;
   case MsgID_swpl_not_covered_loop_shape:
-    ORE->emit([&]() {
+    SWPipeliner::ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                L.getStartLoc(), L.getHeader())
              << "This loop cannot be software pipelined because the shape of the loop is not covered by software pipelining.";
@@ -226,7 +226,7 @@ static bool isNonTargetLoop(MachineLoop &L) {
       return true;
     }
     // fenceもしくはgnuasm命令である
-    if (TII->isNonTargetMI4SWPL(*I)) {
+    if (SWPipeliner::TII->isNonTargetMI4SWPL(*I)) {
       printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
       outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
       return true;
@@ -270,7 +270,7 @@ static bool isNonTargetLoop(MachineLoop &L) {
         outputRemarkAnalysis(L, MsgID_swpl_branch_not_for_loop);
         return true;
       }
-      const auto phiIter=MRI->def_instr_begin(I->getOperand(1).getReg());
+      const auto phiIter=SWPipeliner::MRI->def_instr_begin(I->getOperand(1).getReg());
       if (!phiIter->isPHI()) {
         /* 正規化されたループ制御変数がない（PHIとSUBの間に命令が存在する）。 */
         printDebug(__func__, "pipeliner info:not found induction var", L);
@@ -332,7 +332,7 @@ static bool isNonTargetLoopForInstDump(MachineLoop &L) {
       return true; // 対象でない
     }
     // fenceもしくはgnuasm命令である
-    if (TII->isNonTargetMI4SWPL(*I)) {
+    if (SWPipeliner::TII->isNonTargetMI4SWPL(*I)) {
       printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
       outputRemarkAnalysis(L, MsgID_swpl_not_covered_inst);
       return true; // 対象でない
@@ -386,8 +386,8 @@ static void dumpLoopInst(MachineLoop &L) {
     dbgs() << "\t";
 
     // opcode名を出力
-    if (TII) {
-      dbgs() << TII->getName(I->getOpcode());
+    if (SWPipeliner::TII) {
+      dbgs() << SWPipeliner::TII->getName(I->getOpcode());
     }
     else {
       dbgs() << "UNKNOWN";

@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/SwplTargetMachine.h"
+#include "llvm/InitializePasses.h"
 
 namespace llvm {
 // 利用コンテナのエイリアス宣言
@@ -406,16 +407,10 @@ public:
   bool isFloatingPoint() const;
   bool isLoad() const { return getMI()->mayLoad(); }
   bool isStore() const { return getMI()->mayStore(); }
-  bool isPrefetch() const {
-    return TII->isPrefetch(MI->getOpcode());
-  }
+  bool isPrefetch() const;
 
-  StringRef getName() {
-    return (isPhi()) ? "PHI" : TII->getName( MI->getOpcode() );
-  }
-  StringRef getName() const {
-    return (isPhi()) ? "PHI" : TII->getName( MI->getOpcode() );
-  }
+  StringRef getName();
+  StringRef getName() const;
   int getDefOperandIx(int id) const {
     int ix=DefOpMap.at(id)-1;
     assert(ix>=0);
@@ -442,24 +437,8 @@ class SwplReg {
 
 public:
   SwplReg() {};
-  SwplReg(const SwplReg &s) {
-    Reg = s.Reg;
-    DefInst = s.DefInst;
-    DefIndex = s.DefIndex;
-    Predecessor = s.Predecessor;
-    Successor = s.Successor;
-    EarlyClobber=s.EarlyClobber;
-    rk = TII->getRegKind(*MRI, s.Reg);
-  };
-  SwplReg(Register r, SwplInst &i, size_t def_index, bool earlyclober=false) {
-    Reg = r;
-    DefInst = &i;
-    DefIndex = def_index;
-    Predecessor = nullptr;
-    Successor = nullptr;
-    EarlyClobber=earlyclober;
-    rk = TII->getRegKind(*MRI, r);
-  }
+  SwplReg(const SwplReg &s);
+  SwplReg(Register r, SwplInst &i, size_t def_index, bool earlyclober=false);
   virtual ~SwplReg() {if (rk) delete rk;}
 
   // getter
@@ -788,6 +767,59 @@ private:
 
 };
 //  extern SwplLoop loop;
-  
+
+struct SWPipeliner : public MachineFunctionPass {
+  /// swpl-choice-loopで対象Loop特定に利用する
+  int loopCountForDebug=0;
+public:
+  static char ID;               ///< PassのID
+  static MachineOptimizationRemarkEmitter *ORE;
+  static const TargetInstrInfo *TII;
+  static const TargetRegisterInfo *TRI;
+  static MachineRegisterInfo *MRI;
+  static SwplTargetMachine *STM;
+  static AliasAnalysis *AA;
+
+  MachineFunction *MF = nullptr;
+  const MachineLoopInfo *MLI = nullptr;
+
+  static bool isDebugOutput();
+
+
+  /**
+   * \brief SWPipelinerのコンストラクタ
+   */
+  SWPipeliner() : MachineFunctionPass(ID) {
+    initializeSWPipelinerPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnMachineFunction(MachineFunction &mf) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool doFinalization (Module &) override;
+
+  /**
+   * \brief Pass名を取得する
+   *
+   * -debug-passオプションを使用した際などに表示されるPassの
+   * 名前を指定する。
+   */
+  StringRef getPassName() const override {
+    return "Software Pipeliner";
+  }
+private:
+  bool scheduleLoop(MachineLoop &L);
+  void outputRemarkAnalysis(MachineLoop &L, int msg_id);
+  bool shouldOptimize(MachineLoop &L);
+};
+
+
 } // end namespace llvm
 #endif

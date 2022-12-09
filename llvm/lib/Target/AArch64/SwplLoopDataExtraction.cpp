@@ -105,6 +105,18 @@ const SwplReg &SwplInst::getPhiUseRegFromIn() const {
   return getUseRegs(1);
 }
 
+bool SwplInst::isPrefetch() const {
+  return SWPipeliner::TII->isPrefetch(MI->getOpcode());
+}
+StringRef SwplInst::getName() {
+  return (isPhi()) ? "PHI" : SWPipeliner::TII->getName( MI->getOpcode() );
+}
+
+StringRef SwplInst::getName() const {
+  return (isPhi()) ? "PHI" : SWPipeliner::TII->getName( MI->getOpcode() );
+}
+
+
 SwplLoop *SwplLoop::Initialize(MachineLoop &L, const UseMap& LiveOutReg) {
   SwplLoop *loop = new SwplLoop(L);
   Register2SwplRegMap rmap;
@@ -192,13 +204,14 @@ void SwplLoop::makePhiInsts(Register2SwplRegMap &rmap) {
   }
 }
 
+
 /// ループボディ内の命令一覧 SwplLoop::BodyInsts を作成する。
 void SwplLoop::makeBodyInsts(Register2SwplRegMap &rmap) {
   MachineInstr*branch=nullptr;
   MachineInstr*cmp=nullptr;
   MachineInstr*addsub=nullptr;
   MachineBasicBlock *mbb=getML()->getTopBlock();
-  TII->findMIsForLoop(*mbb, &branch, &cmp, &addsub);
+  SWPipeliner::TII->findMIsForLoop(*mbb, &branch, &cmp, &addsub);
   for (auto &MI:getNewBodyMBB()->instrs()) {
     if (MI.isDebugInstr()) { continue; }
     if (&MI == branch) { continue; }
@@ -248,7 +261,7 @@ void SwplInst::InitializeWithDefUse(llvm::MachineInstr *MI, SwplLoop *loop, Regi
 
   if ((MI->mayLoad() || MI->mayStore() || MI->mayLoadOrStore()) && MI->memoperands_empty()) {
     // load/store命令でMI->memoperands_empty()の場合、MayAliasとして動作する必要がある
-    if (DebugOutput) {
+    if (SWPipeliner::isDebugOutput()) {
       dbgs() << "DBG(SwplInst::InitializeWithDefUse): memoperands_empty mi=" << *MI;
     }
     construct_mem_use(rmap, *this, nullptr, insts, mems, memsOtherBody);
@@ -290,7 +303,7 @@ size_t SwplLoop::getSizeBodyRealInsts() const {
   size_t n = 0;
   for (auto *inst:getBodyInsts()) {
     const llvm::MachineInstr *MI = inst->getMI();
-    if (STM->isPseudo(*MI)) { continue; }
+    if (SWPipeliner::STM->isPseudo(*MI)) { continue; }
     n++;
   }
   return n;
@@ -337,7 +350,7 @@ static int mems_initial_diff(const MachineInstr* former_mi, const MachineInstr *
   const MachineOperand *formerBaseOp;
   int64_t formerOffset;
   bool formerOffsetIsScalable;
-  if (!TII->getMemOperandWithOffset(*former_mi, formerBaseOp, formerOffset, formerOffsetIsScalable, TRI))
+  if (!SWPipeliner::TII->getMemOperandWithOffset(*former_mi, formerBaseOp, formerOffset, formerOffsetIsScalable, SWPipeliner::TRI))
     return UNKNOWN_MEM_DIFF;
   if (formerOffsetIsScalable)
     return UNKNOWN_MEM_DIFF;
@@ -347,7 +360,7 @@ static int mems_initial_diff(const MachineInstr* former_mi, const MachineInstr *
   const MachineOperand *latterBaseOp;
   int64_t latterOffset;
   bool latterOffsetIsScalable;
-  if (!TII->getMemOperandWithOffset(*latter_mi, latterBaseOp, latterOffset, latterOffsetIsScalable, TRI))
+  if (!SWPipeliner::TII->getMemOperandWithOffset(*latter_mi, latterBaseOp, latterOffset, latterOffsetIsScalable, SWPipeliner::TRI))
     return UNKNOWN_MEM_DIFF;
   if (latterOffsetIsScalable)
     return UNKNOWN_MEM_DIFF;
@@ -370,15 +383,15 @@ unsigned SwplLoop::getMemsMinOverlapDistance(SwplMem *former_mem, SwplMem *latte
   const auto * former_mi=NewMI2OrgMI.at(former_mem->getInst()->getMI());
   const auto * latter_mi=NewMI2OrgMI.at(latter_mem->getInst()->getMI());
 
-  if (!NoUseAA && !former_mi->mayAlias(AA, *latter_mi, false)) {
+  if (!NoUseAA && !former_mi->mayAlias(SWPipeliner::AA, *latter_mi, false)) {
     const auto *memop1=former_mem->getMO();
     const auto *memop2=latter_mem->getMO();
     // MachineInstr::mayAlias の結果は信頼性が低いため、さらに、メモリ間で重なる可能性があるか確認する
     if (memop1!=nullptr && memop2!=nullptr && memop1->getValue()!=nullptr && memop2->getValue()!=nullptr) {
-      if (AA->isNoAlias(
+      if (SWPipeliner::AA->isNoAlias(
               MemoryLocation::getAfter(memop1->getValue(), memop1->getAAInfo()),
               MemoryLocation::getAfter(memop2->getValue(), memop2->getAAInfo()))) {
-         if (DebugOutput) { dbgs() << " aliasAnalysis is NoAlias\n"; }
+         if (SWPipeliner::isDebugOutput()) { dbgs() << " aliasAnalysis is NoAlias\n"; }
          return SwplMem::MAX_LOOP_DISTANCE;
       }
     }
@@ -389,7 +402,7 @@ unsigned SwplLoop::getMemsMinOverlapDistance(SwplMem *former_mem, SwplMem *latte
 
   former_increment = getMemIncrement(former_mem);
   latter_increment = getMemIncrement(latter_mem);
-  if (DebugOutput)
+  if (SWPipeliner::isDebugOutput())
     dbgs() << "DBG(getMemIncrement): former_increment=" << former_increment << " , latter_increment=" << latter_increment << "\n";
 
   if (former_increment == UNKNOWN_MEM_DIFF
@@ -415,7 +428,7 @@ unsigned SwplLoop::getMemsMinOverlapDistance(SwplMem *former_mem, SwplMem *latte
 
   int distance;
   int initial_diff = mems_initial_diff (former_mi, latter_mi);
-  if (DebugOutput)
+  if (SWPipeliner::isDebugOutput())
     dbgs() << "DBG(mems_initial_diff): initial_diff=" << initial_diff
      << ", former_size=" << former_mem->getSize()
      << ", latter_size=" << latter_mem->getSize() << "\n";
@@ -511,8 +524,8 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     auto org_def_r=org_phi->getOperand(0).getReg();
     if (LiveOutReg.count(org_def_r)!=0) {
       auto backup_def_r=def_r;
-      def_r=MRI->cloneVirtualRegister(def_r);
-      MachineInstr *Copy = BuildMI(*body, body->getFirstNonPHI(), dbgloc,TII->get(TargetOpcode::COPY), backup_def_r)
+      def_r=SWPipeliner::MRI->cloneVirtualRegister(def_r);
+      MachineInstr *Copy = BuildMI(*body, body->getFirstNonPHI(), dbgloc,SWPipeliner::TII->get(TargetOpcode::COPY), backup_def_r)
               .addReg(def_r);
       NewMI2OrgMI[Copy]=org_phi;
     }
@@ -538,12 +551,12 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     ///````
 
     ///   (1)-3. preにin_rからown_rへのCopy命令を挿入する(def_r = Copy in_r)。
-    MachineInstr *Copy = BuildMI(*pre, pre->getFirstTerminator(), dbgloc,TII->get(TargetOpcode::COPY), def_r)
+    MachineInstr *Copy = BuildMI(*pre, pre->getFirstTerminator(), dbgloc,SWPipeliner::TII->get(TargetOpcode::COPY), def_r)
                                 .addReg(in_r);
     addCopies(Copy);
 
     ///   (1)-4. preにin_rからown_rへのCopy命令を挿入する(def_r = Copy own_r)。
-    MachineInstr *c=BuildMI(*body, body->getFirstTerminator(), dbgloc,TII->get(TargetOpcode::COPY), def_r)
+    MachineInstr *c=BuildMI(*body, body->getFirstTerminator(), dbgloc,SWPipeliner::TII->get(TargetOpcode::COPY), def_r)
             .addReg(own_r);
     NewMI2OrgMI[c]=org_phi;
 
@@ -572,7 +585,7 @@ static void collectDefReg(llvm::MachineInstr &orgMI, RegMap &org2new) {
     llvm::Register orgReg = MO.getReg();
     if (!(orgReg.isVirtual())) { continue; }
     if (MO.isDef()) {
-      llvm::Register newReg = MRI->cloneVirtualRegister(orgReg);
+      llvm::Register newReg = SWPipeliner::MRI->cloneVirtualRegister(orgReg);
       // 多重定義はないはず。
       assert(org2new.find(orgReg) == org2new.end());
       org2new[orgReg] = newReg;
@@ -604,7 +617,7 @@ void SwplLoop::cloneBody(llvm::MachineBasicBlock*newBody, llvm::MachineBasicBloc
     MachineInstr *org=&*J++;
     const MachineInstr *mi = const_cast<MachineInstr *>(org);
     // orgMIをベースにnewMIをduplicate
-    MachineInstr &newMI = TII->duplicate(*newBody, newBody->getFirstTerminator(), *mi);
+    MachineInstr &newMI = SWPipeliner::TII->duplicate(*newBody, newBody->getFirstTerminator(), *mi);
     // レジスタリネーミング向けに定義レジスタを複製し、orgとnewのレジスタをmapにため込む
     collectDefReg(*org, getOrgReg2NewReg());
     addOrgMI2NewMI(mi, &newMI);
@@ -647,14 +660,14 @@ void SwplLoop::convertPrePostIndexInstr(llvm::MachineBasicBlock *body) {
   for (auto &mi:*body) {
     MachineInstr *ldst=nullptr;
     MachineInstr *add=nullptr;
-    if (TII->splitPrePostIndexInstr(*body, mi, &ldst, &add)){
+    if (SWPipeliner::TII->splitPrePostIndexInstr(*body, mi, &ldst, &add)){
       // クローン前命令とクローン後命令の再紐づけ
       auto *org = NewMI2OrgMI.at(&mi);
       NewMI2OrgMI.erase(&mi);
       OrgMI2NewMI[org] = ldst;
       NewMI2OrgMI[ldst] = org;
       NewMI2OrgMI[add] = org;
-      if (DebugOutput) {
+      if (SWPipeliner::isDebugOutput()) {
         dbgs() << "DBG(SwplLoop::convertPrePostIndexInstr)\n";
         dbgs() << " before:" << mi;
         dbgs() << " after 1:" << *ldst;
@@ -714,7 +727,7 @@ void SwplLoop::deleteNewBodyMBB() {
 int SwplMem::calcEachMemAddressIncrement() {
   int sum = 0;
   int old_sum = 0;
-  if (DebugOutput) {
+  if (SWPipeliner::isDebugOutput()) {
     if (Inst->getMI()==nullptr)
       dbgs() << "DBG(calcEachMemAddressIncrement): \n";
     else
@@ -722,8 +735,11 @@ int SwplMem::calcEachMemAddressIncrement() {
   }
   for (auto *reg:getUseRegs()) {
 
-    int increment = TII->calcEachRegIncrement(reg);
-    if (DebugOutput) dbgs() << " calcEachRegIncrement(" << printReg(reg->getReg(), TRI)  << "): " << increment << "\n";
+    int increment = SWPipeliner::TII->calcEachRegIncrement(reg);
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << " calcEachRegIncrement(" << printReg(reg->getReg(), SWPipeliner::TRI)  << "): "
+             << increment << "\n";
+    }
     if (increment == UNKNOWN_MEM_DIFF) {
       return increment;
     }
@@ -800,7 +816,8 @@ void SwplLoop::dumpOrgMI2NewMI() {
 
 void SwplLoop::dumpOrgReg2NewReg() {
   for (auto itr: getOrgReg2NewReg()) {
-    dbgs() << "OldReg=" << printReg(itr.first, TRI) << "NewReg=" << printReg(itr.second, TRI) << "\n";
+    dbgs() << "OldReg=" << printReg(itr.first, SWPipeliner::TRI)
+           << "NewReg=" << printReg(itr.second, SWPipeliner::TRI) << "\n";
   }
 }
 
@@ -811,12 +828,32 @@ void SwplLoop::dumpCopies() {
 }
 
 void SwplLoop::printRegID(llvm::Register r) {
-  dbgs() << "RegID=" << printReg(r, TRI) << "\n";
+  dbgs() << "RegID=" << printReg(r, SWPipeliner::TRI) << "\n";
+}
+
+SwplReg::SwplReg(const SwplReg &s) {
+  Reg = s.Reg;
+  DefInst = s.DefInst;
+  DefIndex = s.DefIndex;
+  Predecessor = s.Predecessor;
+  Successor = s.Successor;
+  EarlyClobber=s.EarlyClobber;
+  rk = SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, s.Reg);
+}
+
+SwplReg::SwplReg(Register r, SwplInst &i, size_t def_index, bool earlyclober) {
+  Reg = r;
+  DefInst = &i;
+  DefIndex = def_index;
+  Predecessor = nullptr;
+  Successor = nullptr;
+  EarlyClobber=earlyclober;
+  rk = SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, r);
 }
 
 void SwplReg::print() {
   dbgs() << "DBG(SwplReg::print) SwplReg. : ";
-  dbgs() << "SwplReg=" << this << ": RegID=" << printReg(getReg(), TRI) << "\n";
+  dbgs() << "SwplReg=" << this << ": RegID=" << printReg(getReg(), SWPipeliner::TRI) << "\n";
 }
 
 void SwplReg::printDefInst() {
@@ -849,7 +886,7 @@ static void follow_single_predecessor_MBBs(MachineLoop *L, BasicBlocks *BBs) {
   MachineBasicBlock *BB = pred_BB;
   while(BB) {
     for (auto &MI:BB->instrs()) {
-      if (TII->isNonTargetMI4SWPL(MI)) { return; }
+      if (SWPipeliner::TII->isNonTargetMI4SWPL(MI)) { return; }
     }
     BBs->push_back(BB);
     BB = getPredecessorBB(*BB);
@@ -909,7 +946,8 @@ static void construct_mem_use(Register2SwplRegMap &rmap, SwplInst &inst, const M
   const MachineOperand *BaseOp=nullptr;
   int64_t Offset=0;
   bool OffsetIsScalable=false;
-  if (TII->getMemOperandWithOffset(*(inst.getMI()), BaseOp, Offset, OffsetIsScalable, TRI) && BaseOp->isReg()) {
+  if (SWPipeliner::TII->getMemOperandWithOffset(*(inst.getMI()), BaseOp, Offset, OffsetIsScalable, SWPipeliner::TRI)
+      && BaseOp->isReg()) {
     mem->addUseReg(BaseOp->getReg(), rmap);
   }
 

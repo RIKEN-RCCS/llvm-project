@@ -50,7 +50,7 @@ bool SwplCalclIterations::preCheckIterationCount(const PlanSpec& spec, unsigned 
   /* 定数の場合、Pragma 指定よりも、実際のMIR上の数を優先する */
   if(spec.is_itr_count_constant) {
     if (spec.itr_count <= 2) {
-      if (DebugOutput) {
+      if (SWPipeliner::isDebugOutput()) {
         dbgs() << "        : SWPL is canceled for this loop whose iteration count < 3. \n";
       }
       return false;
@@ -64,7 +64,7 @@ bool SwplCalclIterations::preCheckIterationCount(const PlanSpec& spec, unsigned 
     }
 
     if( assumed_iterations >= 0 && *required_itr > (unsigned)assumed_iterations ) {
-      if (DebugOutput) {
+      if (SWPipeliner::isDebugOutput()) {
         dbgs() << "        : SWPL is canceled for this loop whose assumed iteration count < 3. \n";
       }
       return false;
