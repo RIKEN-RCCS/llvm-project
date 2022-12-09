@@ -10,9 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "SwplPlan.h"
-#include "AArch64.h"
-#include "AArch64SwplTargetMachine.h"
 #include "SWPipeliner.h"
 #include "SwplCalclIterations.h"
 #include "SwplRegEstimate.h"

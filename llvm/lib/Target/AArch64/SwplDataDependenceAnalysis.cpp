@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64.h"
-
 #include "SWPipeliner.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"

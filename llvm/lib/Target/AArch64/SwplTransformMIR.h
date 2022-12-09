@@ -13,7 +13,6 @@
 #define SWPLTRANSFORMMIR_H
 #include "SwplPlan.h"
 #include "SwplScr.h"
-#include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/Register.h"
 #include <unordered_map>

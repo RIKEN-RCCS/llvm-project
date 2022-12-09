@@ -11,10 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SwplCalclIterations.h"
-#include "AArch64.h"
-#include "AArch64SwplTargetMachine.h"
-#include "SWPipeliner.h"
-#include "SwplPlan.h"
 #include "SwplScheduling.h"
 
 

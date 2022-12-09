@@ -13,8 +13,7 @@
 #ifndef LLVM_LIB_CODEGEN_SWPLCALSITERATIONS_H
 #define LLVM_LIB_CODEGEN_SWPLCALSITERATIONS_H
 
-#include "AArch64.h"
-#include "AArch64SwplTargetMachine.h"
+
 #include "SWPipeliner.h"
 #include "SwplPlan.h"
 #include "SwplScheduling.h"

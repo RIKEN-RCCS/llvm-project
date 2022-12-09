@@ -10,13 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64.h"
-
-#include "AArch64TargetTransformInfo.h"
 #include "SWPipeliner.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"

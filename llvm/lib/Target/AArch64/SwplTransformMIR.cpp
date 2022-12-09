@@ -20,9 +20,6 @@ namespace llvm {
 }
 
 #include "SwplTransformMIR.h"
-#include "AArch64.h"
-#include "AArch64SwplTargetMachine.h"
-#include "AArch64TargetTransformInfo.h"
 #include "SWPipeliner.h"
 #include "SwplPlan.h"
 #include "SwplScr.h"

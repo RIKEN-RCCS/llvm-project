@@ -10,10 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64.h"
-#include "AArch64TargetTransformInfo.h"
-
-#include "AArch64SwplTargetMachine.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "SWPipeliner.h"
 #include "SwplCalclIterations.h"
 #include "SwplPlan.h"
@@ -23,6 +20,7 @@
 
 namespace llvm {
 extern SwplTargetMachine *STM;
+extern MachineOptimizationRemarkEmitter *ORE;
 
 }
 using namespace llvm;

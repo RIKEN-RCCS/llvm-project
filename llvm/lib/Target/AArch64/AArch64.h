@@ -106,8 +106,7 @@ void initializeSVEIntrinsicOptsPass(PassRegistry&);
 void initializeAArch64StackTaggingPass(PassRegistry&);
 void initializeAArch64StackTaggingPreRAPass(PassRegistry&);
 
-void initializeSWPipelinerPass(PassRegistry&);
-void initializeSWPipelinerPrePass(PassRegistry&);
+
 
 } // end namespace llvm
 

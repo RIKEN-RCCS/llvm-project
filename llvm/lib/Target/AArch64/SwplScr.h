@@ -12,7 +12,6 @@
 #ifndef SWPLSCR_H
 #define SWPLSCR_H
 
-#include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/Register.h"

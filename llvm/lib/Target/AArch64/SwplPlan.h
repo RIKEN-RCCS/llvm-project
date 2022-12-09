@@ -13,8 +13,6 @@
 #ifndef LLVM_LIB_CODEGEN_SWPLPLAN_H
 #define LLVM_LIB_CODEGEN_SWPLPLAN_H
 
-#include "AArch64.h"
-
 #include "SWPipeliner.h"
 
 namespace llvm{

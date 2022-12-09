@@ -29,7 +29,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-swpipeliner"
 
-static cl::opt<int> TestStm("swpl-test-tm",cl::init(0), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpPlan("swpl-debug-dump-plan",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnablesplitInst_swp_pre("swpl-splitinst-swppre",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableSwpl("swpl-disable",cl::init(false), cl::ReallyHidden);
@@ -53,7 +52,7 @@ int loopCountForDebug=0;
 }
 
 
-namespace {
+namespace llvm {
 
 struct SWPipeliner : public MachineFunctionPass {
 public:
@@ -138,6 +137,7 @@ private:
   const TargetInstrInfo *TII = nullptr;
   MachineFunction *MF = nullptr;
 };
+
 } // end of anonymous namespace
 
 char SWPipeliner::ID = 0;
