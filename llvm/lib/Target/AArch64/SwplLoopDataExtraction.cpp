@@ -18,9 +18,6 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include <iostream>
 
-namespace llvm {
-extern SwplTargetMachine *STM;
-}
 
 using namespace llvm;
 #define DEBUG_TYPE "swp-loop"
@@ -578,7 +575,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
 /// \note この時点ではまだrenamingせずにorg2newへの登録のみをおこなう。
 /// \param[in]  &orgMI コピー元のMI
 /// \param[inout]  org2new 定義するレジスタをKeyに複製したレジスタをValueに持つMap.
-static void collectDefReg(llvm::MachineInstr &orgMI, RegMap &org2new) {
+static void collectDefReg(llvm::MachineInstr &orgMI, std::map<Register, Register> &org2new) {
   for (unsigned i = 0, e = orgMI.getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = orgMI.getOperand(i);
     if (!(MO.isReg())) { continue; }

@@ -18,11 +18,6 @@
 #include "SwplScheduling.h"
 #include "SwplScr.h"
 
-namespace llvm {
-extern SwplTargetMachine *STM;
-extern MachineOptimizationRemarkEmitter *ORE;
-
-}
 using namespace llvm;
 using namespace ore; // for NV
 #define DEBUG_TYPE "aarch64-swpipeliner"

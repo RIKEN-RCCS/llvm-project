@@ -41,10 +41,6 @@ using SwplRegs_iterator = SwplRegs::iterator;
 using SwplMems_iterator = SwplMems::iterator;
 using SwplInstList_iterator = SwplInstList::iterator;
 
-using MIMap = std::map<const MachineInstr *, MachineInstr *>;
-using MICMap = std::map<const MachineInstr *, const MachineInstr *>;
-using RegMap = std::map<Register, Register>;
-using MIs = std::vector<MachineInstr *>;
 
 /// classの前方宣言
 class SwplLoop;
@@ -84,10 +80,10 @@ class SwplLoop {
   SwplMems Mems;                       ///< ループボディ内の SwplMem の集合
   std::map<SwplMem *, int> MemIncrementMap;  ///< SwplMem と増分値のマップ
   MachineBasicBlock *NewBodyMBB; ///< 対象ループのbodyのMBBを複製し非SSA化したMBB
-  MIMap OrgMI2NewMI;                   ///< 対象ループのbodyのオリジナルのMIと複製先のMIのMap
-  MICMap NewMI2OrgMI;                   ///< 対象ループのbodyの複製先のMIとオリジナルのMIのMap
-  RegMap OrgReg2NewReg;                ///< 対象ループのbodyのオリジナルのRegisterと複製先のRegisterのMap
-  MIs    Copies;                       ///< 非SSA化の際に、PhiのLiveinレジスタをLoop内で使用するレジスタへCopyする命令をPreHeaderに生成している \n
+  std::map<const MachineInstr *, MachineInstr *> OrgMI2NewMI;                   ///< 対象ループのbodyのオリジナルのMIと複製先のMIのMap
+  std::map<const MachineInstr *, const MachineInstr *> NewMI2OrgMI;                   ///< 対象ループのbodyの複製先のMIとオリジナルのMIのMap
+  std::map<Register, Register> OrgReg2NewReg;                ///< 対象ループのbodyのオリジナルのRegisterと複製先のRegisterのMap
+  std::vector<MachineInstr *>    Copies;                       ///< 非SSA化の際に、PhiのLiveinレジスタをLoop内で使用するレジスタへCopyする命令をPreHeaderに生成している \n
                                        ///このCopy命令の集合
   SwplRegs Regs;                       ///< 対象ループ内で生成した SwplReg を管理する \note メモリ解放時に利用する
   SwplMems MemsOtherBody;              ///< Body以外で生成された SwplMem を管理する \note メモリ解放時に利用する
@@ -130,13 +126,13 @@ public:
   /// SwplLoop::NewBodyMBB を削除する
   void deleteNewBodyMBB();
   /// SwplLoop::OrgMI2NewMI を返す
-  MIMap &getOrgMI2NewMI() { return OrgMI2NewMI; };
+  std::map<const MachineInstr *, MachineInstr *> &getOrgMI2NewMI() { return OrgMI2NewMI; };
   /// SwplLoop::NewMI2OrgMI を返す
   const MachineInstr *getOrgMI(const MachineInstr *newMI) { return NewMI2OrgMI.at(newMI); };
   /// SwplLoop::OrgReg2NewReg を返す
-  RegMap &getOrgReg2NewReg() { return OrgReg2NewReg; };
+  std::map<Register, Register> &getOrgReg2NewReg() { return OrgReg2NewReg; };
   /// SwplLoop::Copies を返す
-  MIs &getCopies() { return Copies; };
+  std::vector<MachineInstr *> &getCopies() { return Copies; };
   /// SwplLoop::Regs を返す
   SwplRegs &getRegs() { return Regs; };
   /// MemsOtherBody を返す

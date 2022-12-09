@@ -17,10 +17,6 @@
 #include "SwplRegEstimate.h"
 #include "SwplScheduling.h"
 
-namespace llvm {
-extern SwplTargetMachine *STM;
-}
-
 using namespace llvm; // for NV
 using namespace ore; // for NV
 

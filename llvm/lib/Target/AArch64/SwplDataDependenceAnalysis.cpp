@@ -15,10 +15,6 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 
-namespace llvm {
-
-extern SwplTargetMachine *STM;
-}
 using namespace llvm;
 
 #define DEBUG_TYPE "swp-ddg"
