@@ -14,6 +14,7 @@
 #include "SWPipeliner.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -26,7 +27,7 @@ bool SwplScr::getCoefficient(const MachineOperand &op, int *coefficient) const {
   } else if (op.isCImm()) {
     const auto *cimm= op.getCImm();
     if (cimm->getBitWidth()>31) {
-      if (DebugOutput) {
+      if (SWPipeliner::isDebugOutput()) {
         dbgs() << "DBG(SwplScr::getCoefficient): size(constant)>31\n";
       }
       *coefficient=0;
@@ -46,11 +47,11 @@ void SwplScr::makeBypass(const TransformedMIRInfo &tmi,
                      MachineBasicBlock &skip_mod_from,
                      MachineBasicBlock &skip_mod_to) {
 
-  TII->makeBypassKernel (
-      *MRI,
+  SWPipeliner::TII->makeBypassKernel (
+      *SWPipeliner::MRI,
       tmi.originalDoInitVar, dbgloc, skip_kernel_from, skip_kernel_to,
       tmi.requiredKernelIteration * tmi.coefficient + tmi.minConstant);
-  TII->makeBypassMod(tmi.updateDoVRegMI->getOperand(0).getReg(),
+  SWPipeliner::TII->makeBypassMod(tmi.updateDoVRegMI->getOperand(0).getReg(),
                      dbgloc, tmi.branchDoVRegMI->getOperand(0), skip_mod_from, skip_mod_to);
 }
 
@@ -63,7 +64,7 @@ bool SwplScr::getDoInitialValue(TransformedMIRInfo &TMI) const {
   /// L:  %reg3=PHI %reg2, PH, %reg5, L
   /// ```
   ///
-  const auto phiIter=MRI->def_instr_begin(TMI.originalDoVReg);
+  const auto phiIter=SWPipeliner::MRI->def_instr_begin(TMI.originalDoVReg);
   TMI.initDoVRegMI =&*phiIter;
   const MachineOperand *t;
   assert(TMI.initDoVRegMI->isPHI());
@@ -78,7 +79,7 @@ bool SwplScr::getDoInitialValue(TransformedMIRInfo &TMI) const {
 
   // 物理レジスタは仮引数のため、探索を中断する
   while(t->getReg().isVirtual())  {
-    const auto defIter=MRI->def_instr_begin(t->getReg());
+    const auto defIter= SWPipeliner::MRI->def_instr_begin(t->getReg());
     const MachineInstr*mi=&*defIter;
     t=&(mi->getOperand(1));
     if (mi->isMoveImmediate()) break;
@@ -134,11 +135,11 @@ bool SwplScr::findBasicInductionVariable(TransformedMIRInfo &TMI) const {
   MachineInstr*addsub=nullptr;
 
   /// (1) findMIsForLoop() : loop制御に関わる言を探す(branch, cmp, addsub)
-  if (!TII->findMIsForLoop(*ML.getTopBlock(), &branch, &cmp, &addsub)) return false;
+  if (!SWPipeliner::TII->findMIsForLoop(*ML.getTopBlock(), &branch, &cmp, &addsub)) return false;
 
   unsigned imm = branch->getOperand(0).getImm();
 
-  if (TII->isNE(imm)) {
+  if (SWPipeliner::TII->isNE(imm)) {
     /// (2) ラッチ言がbneccの場合
     /// (2-1)getCoefficient() : 制御変数の増減値を取得する
     if (!getCoefficient(addsub->getOperand(2), &(TMI.coefficient))) {
@@ -149,7 +150,7 @@ bool SwplScr::findBasicInductionVariable(TransformedMIRInfo &TMI) const {
     /// \note 対象ループ判定で、SUBWSXriで減算＋比較の場合のみ対象としている
     TMI.minConstant = 0;
 
-  } else if (TII->isGE(imm)) {
+  } else if (SWPipeliner::TII->isGE(imm)) {
     /// (3) ラッチ言がbgeccの場合
     /// (3-1)getCoefficient() : 制御変数の増減値を取得する
     if (!getCoefficient(addsub->getOperand(2), &(TMI.coefficient))) {
@@ -254,7 +255,7 @@ void SwplScr::prepareCompensationLoop(TransformedMIRInfo &tmi) {
 
   // neとoeは直列に並んでいない場合があるため、Branch命令で明にSuccessorを指定する
   const auto &debugLoc=ob->getFirstTerminator()->getDebugLoc();
-  TII->insertUnconditionalBranch(*ne, oe, debugLoc);
+  SWPipeliner::TII->insertUnconditionalBranch(*ne, oe, debugLoc);
 
   tmi.Prolog=prolog;
   tmi.Epilog=epilog;
@@ -428,9 +429,9 @@ void SwplScr::removePredFromPhi(MachineBasicBlock *fromMBB,
     llvm::dbgs() << llvm::printMBBReference(*name) << "\n";
 
 void TransformedMIRInfo::print() {
-  llvm::dbgs() << "originalDoVReg:" << printReg(originalDoVReg, TRI) << "\n"
-               << "originalDoInitVar:" << printReg(originalDoInitVar, TRI) << "\n"
-               << "doVReg:" << printReg(doVReg, TRI) << "\n"
+  llvm::dbgs() << "originalDoVReg:" << printReg(originalDoVReg, SWPipeliner::TRI) << "\n"
+               << "originalDoInitVar:" << printReg(originalDoInitVar, SWPipeliner::TRI) << "\n"
+               << "doVReg:" << printReg(doVReg, SWPipeliner::TRI) << "\n"
                << "iterationInterval:" << iterationInterval << "\n"
                << "minimumIterationInterval:" << minimumIterationInterval << "\n"
                << "coefficient: " << coefficient << "\n"
@@ -483,7 +484,7 @@ void SwplScr::collectLiveOut(UseMap &usemap) {
       if (!op.isReg() || !op.isDef()) continue;
       auto r=op.getReg();
       if (r.isPhysical()) continue;
-      for (auto &u:MRI->use_operands(r)) {
+      for (auto &u:SWPipeliner::MRI->use_operands(r)) {
         auto *umi=u.getParent();
         if (umi->getParent()==mbb) continue;
         usemap[r].push_back(&u);

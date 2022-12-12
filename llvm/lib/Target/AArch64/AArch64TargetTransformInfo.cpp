@@ -29,13 +29,11 @@ using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "aarch64tti"
 
-// Start Metro
 static cl::opt<bool> EnableSaveCmp("enable-savecmp",cl::init(false), cl::ReallyHidden);
 static cl::opt<unsigned> MaxSize("hwloop-max-size",cl::init(500), cl::ReallyHidden);
 static cl::opt<bool> EnableSWP("ffj-swp",cl::init(false), cl::Hidden);
 static cl::opt<bool> DisableSWP("ffj-no-swp",cl::init(false), cl::Hidden);
 static cl::opt<bool> DebugOutput("debug-aarch64tti",cl::init(false), cl::ReallyHidden);
-// End Metro
 
 static cl::opt<bool> EnableFalkorHWPFUnrollFix("enable-falkor-hwpf-unroll-fix",
                                                cl::init(true), cl::Hidden);
@@ -3033,7 +3031,6 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   return BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
 }
 
-// Start Metro
 static void printDebug(const char *f, const StringRef &msg, const Loop *L) {
   if (!DebugOutput) return;
   const auto &start=L->getLocRange().getStart();
@@ -3215,7 +3212,6 @@ bool llvm::enableSWP(const Loop *L) {
   if (EnableSWP) return true;
   return false;
 }
-// End Metro
 
 bool AArch64TTIImpl::preferPredicateOverEpilogue(
     Loop *L, LoopInfo *LI, ScalarEvolution &SE, AssumptionCache &AC,

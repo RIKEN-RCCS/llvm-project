@@ -10,11 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64.h"
-
 #include "SWPipeliner.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+
 
 using namespace llvm;
 
@@ -92,7 +91,7 @@ static bool computeDelta(const MachineInstr &MI, unsigned &Delta) {
   const MachineOperand *BaseOp;
   int64_t Offset;
   bool OffsetIsScalable;
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, TRI))
+  if (!SWPipeliner::TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, SWPipeliner::TRI))
     return false;
 
   // FIXME: This algorithm assumes instructions have fixed-size offsets.
@@ -105,16 +104,16 @@ static bool computeDelta(const MachineInstr &MI, unsigned &Delta) {
   Register BaseReg = BaseOp->getReg();
 
   // Check if there is a Phi. If so, get the definition in the loop.
-  MachineInstr *BaseDef = MRI->getVRegDef(BaseReg);
+  MachineInstr *BaseDef = SWPipeliner::MRI->getVRegDef(BaseReg);
   if (BaseDef && BaseDef->isPHI()) {
     BaseReg = getLoopPhiReg(*BaseDef, MI.getParent());
-    BaseDef = MRI->getVRegDef(BaseReg);
+    BaseDef = SWPipeliner::MRI->getVRegDef(BaseReg);
   }
   if (!BaseDef)
     return false;
 
   int D = 0;
-  if (!TII->getIncrementValue(*BaseDef, D) && D >= 0)
+  if (!SWPipeliner::TII->getIncrementValue(*BaseDef, D) && D >= 0)
     return false;
 
   Delta = D;
@@ -143,10 +142,10 @@ static bool isDependence(const MachineInstr *p, const MachineInstr *q) {
 
   int64_t OffsetS, OffsetD;
   bool OffsetSIsScalable, OffsetDIsScalable;
-  if (!TII->getMemOperandWithOffset(*p, BaseOpS, OffsetS, OffsetSIsScalable,
-                                    TRI) ||
-      !TII->getMemOperandWithOffset(*q, BaseOpD, OffsetD, OffsetDIsScalable,
-                                    TRI))
+  if (!SWPipeliner::TII->getMemOperandWithOffset(*p, BaseOpS, OffsetS, OffsetSIsScalable,
+                                                 SWPipeliner::TRI) ||
+      !SWPipeliner::TII->getMemOperandWithOffset(*q, BaseOpD, OffsetD, OffsetDIsScalable,
+                                    SWPipeliner::TRI))
     return true;
 
   assert(!OffsetSIsScalable && !OffsetDIsScalable &&
@@ -157,7 +156,7 @@ static bool isDependence(const MachineInstr *p, const MachineInstr *q) {
 
   // Check that the base register is incremented by a constant value for each
   // iteration.
-  MachineInstr *Def = MRI->getVRegDef(BaseOpS->getReg());
+  MachineInstr *Def = SWPipeliner::MRI->getVRegDef(BaseOpS->getReg());
   if (!Def || !Def->isPHI())
     return true;
   unsigned InitVal = 0;
@@ -165,9 +164,9 @@ static bool isDependence(const MachineInstr *p, const MachineInstr *q) {
 
   getPhiRegs(*Def, p->getParent(), InitVal, LoopVal);
 
-  MachineInstr *LoopDef = MRI->getVRegDef(LoopVal);
+  MachineInstr *LoopDef = SWPipeliner::MRI->getVRegDef(LoopVal);
   int D = 0;
-  if (!LoopDef || !TII->getIncrementValue(*LoopDef, D))
+  if (!LoopDef || !SWPipeliner::TII->getIncrementValue(*LoopDef, D))
     return true;
 
   uint64_t AccessSizeS = (*p->memoperands_begin())->getSize();
@@ -198,7 +197,7 @@ void SwplDdg::analysisInstDependence() {
       const auto *qmi=Loop->getOrgMI(q->getMI());
       if (qmi->isPHI()) continue;
       if (isDependence(pmi, qmi)) {
-        if (DebugOutput) {
+        if (SWPipeliner::isDebugOutput()) {
           dbgs() << "DBG(SwplDdg::analysisInstDependence):\n"
                  << " former_inst:" << *(p->getMI())
                  << " latter_inst:" << *(q->getMI())
@@ -238,13 +237,13 @@ void SwplDdg::analysisRegsFlowDependence() {
         // def-regがearly-clobberの場合は、命令のLatencyに関係なく１とする
         delay = 1;
       } else {
-        delay = STM.computeRegFlowDependence(def_inst->getMI(), use_inst->getMI());
+        delay = SWPipeliner::STM->computeRegFlowDependence(def_inst->getMI(), use_inst->getMI());
       }
-      if (DebugOutput) {
+      if (SWPipeliner::isDebugOutput()) {
         dbgs() << "DBG(SwplDdg::analysisRegsFlowDependence):\n"
                << " former_inst:" << *(def_inst->getMI())
                << " latter_inst:" << *(use_inst->getMI())
-               << " use reg:" << printReg(reg->getReg(), TRI) << "\n"
+               << " use reg:" << printReg(reg->getReg(), SWPipeliner::TRI) << "\n"
                << " distance:" << distance << "\n"
                << " delay:" << delay << "\n";
       }
@@ -272,16 +271,16 @@ void SwplDdg::analysisRegsAntiDependence() {
         }
         int distance = (getLoop()->areBodyInstsOrder(use_inst, def_inst) ? 0 : 1);
         int delay = 1;
-        if (DebugOutput) {
+        if (SWPipeliner::isDebugOutput()) {
           dbgs() << "DBG(SwplDdg::analysisRegsAntiDependence):\n"
                  << " former_inst:" << *(use_inst->getMI())
                  << " latter_inst:" << *(def_inst->getMI())
-                 << " use reg:" << printReg(reg->getReg(), TRI) << "\n"
+                 << " use reg:" << printReg(reg->getReg(), SWPipeliner::TRI) << "\n"
                  << " distance:" << distance << "\n"
                  << " delay:" << delay << "\n";
         }
         update_distance_and_delay(*this, *use_inst, *def_inst, distance, delay);
-      }      
+      }
     }
   }
 }
@@ -304,11 +303,11 @@ void SwplDdg::analysisRegsOutputDependence() {
       assert(def_indx >= 0);
       int distance = (getLoop()->areBodyInstsOrder(pred_def_inst, def_inst) ? 0 : 1);
       int delay = 1;
-      if (DebugOutput) {
+      if (SWPipeliner::isDebugOutput()) {
         dbgs() << "DBG(SwplDdg::analysisRegsOutputDependence):\n"
                << " former_inst:" << *(pred_def_inst->getMI())
                << " latter_inst:" << *(def_inst->getMI())
-               << " use reg:" << printReg(reg->getReg(), TRI) << "\n"
+               << " use reg:" << printReg(reg->getReg(), SWPipeliner::TRI) << "\n"
                << " distance:" << distance << "\n"
                << " delay:" << delay << "\n";
       }
@@ -330,22 +329,22 @@ void SwplDdg::analysisMemDependence() {
            (latter_mem->getInst())->isPrefetch())  {
         continue;
       }
-      
+
       int distance, delay;
       enum class DepKind {init, flow, anti, output};
       DepKind depKind = DepKind::init;
 
       if (former_mem->isMemDef()) {
         if (latter_mem->isMemDef()) {
-          delay = STM.computeMemOutputDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
+          delay = SWPipeliner::STM->computeMemOutputDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
           depKind = DepKind::output;
         } else {
-          delay = STM.computeMemFlowDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
+          delay = SWPipeliner::STM->computeMemFlowDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
           depKind = DepKind::flow;
         }
       } else {
         if (latter_mem->isMemDef()) {
-          delay = STM.computeMemAntiDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
+          delay = SWPipeliner::STM->computeMemAntiDependence(former_mem->getInst()->getMI(), latter_mem->getInst()->getMI());
           depKind = DepKind::anti;
         } else {
           // Not dependence (input-dependence)
@@ -353,7 +352,7 @@ void SwplDdg::analysisMemDependence() {
         }
       }
       distance = getLoop()->getMemsMinOverlapDistance(former_mem, latter_mem);
-      if (DebugOutput) {
+      if (SWPipeliner::isDebugOutput()) {
         auto *p="";
         switch (depKind) {
         case DepKind::flow: p="flow"; break;

@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64.h"
 
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -18,10 +17,9 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/SwplTargetMachine.h"
 #include "llvm/InitializePasses.h"
-#include "AArch64TargetTransformInfo.h"
 
-#include "AArch64SwplTargetMachine.h"
 #include "SWPipeliner.h"
 #include "SwplPlan.h"
 #include "SwplScr.h"
@@ -31,7 +29,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-swpipeliner"
 
-static cl::opt<int> TestStm("swpl-test-tm",cl::init(0), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpPlan("swpl-debug-dump-plan",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnablesplitInst_swp_pre("swpl-splitinst-swppre",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableSwpl("swpl-disable",cl::init(false), cl::ReallyHidden);
@@ -39,65 +36,23 @@ static cl::opt<bool> DisableSwpl("swpl-disable",cl::init(false), cl::ReallyHidde
 
 /// Pragmaによるswpのon/offの代わりにSWPL化Loopを絞り込む
 static cl::opt<int> TargetLoop("swpl-choice-loop",cl::init(0), cl::ReallyHidden);
+static cl::opt<bool> DebugOutput("swpl-debug",cl::init(false), cl::ReallyHidden);
+
+
 
 
 namespace llvm {
-cl::opt<bool> DebugOutput("swpl-debug",cl::init(false), cl::ReallyHidden);
-MachineOptimizationRemarkEmitter *ORE = nullptr;
-const TargetInstrInfo *TII = nullptr;
-const TargetRegisterInfo *TRI = nullptr;
-MachineRegisterInfo *MRI = nullptr;
-AArch64SwplTargetMachine STM;
-AliasAnalysis *AA;
 
-/// swpl-choice-loopで対象Loop特定に利用する
-int loopCountForDebug=0;
+bool SWPipeliner::isDebugOutput() {
+  return ::DebugOutput;
 }
 
-
-namespace {
-
-struct SWPipeliner : public MachineFunctionPass {
-public:
-  static char ID;               ///< PassのID
-
-  MachineFunction *MF = nullptr;
-  const MachineLoopInfo *MLI = nullptr;
-
-  /**
-   * \brief SWPipelinerのコンストラクタ
-   */
-  SWPipeliner() : MachineFunctionPass(ID) {
-    initializeSWPipelinerPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnMachineFunction(MachineFunction &mf) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<MachineLoopInfo>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addRequired<MachineOptimizationRemarkEmitterPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  bool doFinalization (Module &) override;
-
-  /**
-   * \brief Pass名を取得する
-   *
-   * -debug-passオプションを使用した際などに表示されるPassの
-   * 名前を指定する。
-   */
-  StringRef getPassName() const override {
-    return "Software Pipeliner";
-  }
-private:
-  bool scheduleLoop(MachineLoop &L);
-  void outputRemarkAnalysis(MachineLoop &L, int msg_id);
-  bool shouldOptimize(MachineLoop &L);
-  StmTest *stmTest =nullptr; ///< Stmのテスト用領域
-};
+MachineOptimizationRemarkEmitter *SWPipeliner::ORE = nullptr;
+const TargetInstrInfo *SWPipeliner::TII = nullptr;
+const TargetRegisterInfo *SWPipeliner::TRI = nullptr;
+MachineRegisterInfo *SWPipeliner::MRI = nullptr;
+SwplTargetMachine *SWPipeliner::STM = nullptr;
+AliasAnalysis *SWPipeliner::AA = nullptr;
 
 struct SWPipelinerPre : public MachineFunctionPass {
 public:
@@ -141,6 +96,7 @@ private:
   const TargetInstrInfo *TII = nullptr;
   MachineFunction *MF = nullptr;
 };
+
 } // end of anonymous namespace
 
 char SWPipeliner::ID = 0;
@@ -152,13 +108,16 @@ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(SWPipeliner, DEBUG_TYPE,
                     "Software Pipeliner", false, false)
 
+namespace llvm {
+
 /**
  * \brief SWPipelinerを生成する
  *
  * \retval FunctionPass 生成されたSWPipeliner
  */
-FunctionPass *llvm::createSWPipelinerPass() {
+FunctionPass *createSWPipelinerPass() {
   return new SWPipeliner();
+}
 }
 
 /**
@@ -183,19 +142,9 @@ bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
   TRI = MF->getSubtarget().getRegisterInfo();
   MRI = &(MF->getRegInfo());
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  STM = TII->getSwplTargetMachine();
 
-#ifdef STMTEST
-  if (TestStm) {
-    // Tmの動作テスト(SchedModel確認のため、ここでテストを動作させている)
-    if (stmTest ==nullptr) {
-      stmTest =new StmTest(TestStm);
-    }
-    stmTest->run(mf);
-    return false;
-  }
-#endif
-
-  STM.initialize(*MF);
+  STM->initialize(*MF);
 
   for (auto &L : *MLI)
     scheduleLoop(*L);
@@ -204,18 +153,11 @@ bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
 }
 
 bool SWPipeliner::doFinalization(Module &) {
-#ifdef STMTEST
-  if (TestStm && stmTest !=nullptr) {
-    // testで利用する領域の解放
-    delete stmTest;
-    stmTest =nullptr;
-  }
-#endif
   return false;
 }
 
 static void printDebug(const char *f, const StringRef &msg, const MachineLoop &L) {
-  if (!DebugOutput) return;
+  if (!SWPipeliner::isDebugOutput()) return;
   errs() << "DBG(" << f << ") " << msg << ":";
   L.getStartLoc().print(errs());
   errs() <<"\n";
@@ -228,7 +170,7 @@ static void printDebug(const char *f, const StringRef &msg, const MachineLoop &L
  *        ・データ抽出
  *        ・スケジューリング
  *        ・スケジューリング結果反映
- *       
+ *
  * \param[in] L 対象のMachineLoop
  * \retval true  Swpl最適化を適用した。
  * \retval false Swpl最適化を適用しなかった。
@@ -289,7 +231,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
                                                loop->getML()->getHeader())
                 << "This loop is not software pipelined because the software pipelining does not improve the performance.";
       });
-      if (DebugOutput) {
+      if (SWPipeliner::isDebugOutput()) {
         dbgs() << "        : Loop isn't software pipelined because prologue is 0 cycle.\n";
       }
 
@@ -308,7 +250,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
                                              loop->getML()->getHeader())
               << "This loop is not software pipelined because no schedule is obtained.";
     });
-    if (DebugOutput) {
+    if (SWPipeliner::isDebugOutput()) {
       dbgs() << "        : Loop isn't software pipelined because plan is NULL.\n";
     }
   }
@@ -334,14 +276,11 @@ bool SWPipeliner::shouldOptimize(MachineLoop &L) {
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   const Loop *BBLoop = LI->getLoopFor(BB);
 
-  if (!llvm::enableSWP(BBLoop)) {
+  if (!enableSWP(BBLoop)) {
     return false;
   }
   return true;
 }
-
-
-
 
 char SWPipelinerPre::ID = 0;
 
@@ -352,13 +291,16 @@ INITIALIZE_PASS_BEGIN(SWPipelinerPre, "swpipelinerpre",
 INITIALIZE_PASS_END(SWPipelinerPre, "swpipelinerpre",
                     "Software Pipeliner Pre", false, false)
 
+namespace llvm {
+
 /**
  * \brief SWPipelinerPreを生成する
  *
  * \retval FunctionPass 生成されたSWPipelinerPre
  */
-FunctionPass *llvm::createSWPipelinerPrePass() {
+FunctionPass *createSWPipelinerPrePass() {
   return new SWPipelinerPre();
+}
 }
 
 /**
@@ -418,13 +360,13 @@ bool SWPipelinerPre::check(MachineLoop &L) {
   const BasicBlock *BB = body->getBasicBlock();
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   const Loop *BBLoop = LI->getLoopFor(BB);
-  if (!llvm::enableSWP(BBLoop)) return Changed;
+  if (!enableSWP(BBLoop)) return Changed;
 
   if (!hasPreHeader(L)) Changed|=createPreHeader(L);
   if (!hasExit(L)) Changed|=createExit(L);
 
   if (EnablesplitInst_swp_pre) {
-    llvm::SmallVector<MachineInstr *, 2> delete_mi;
+    SmallVector<MachineInstr *, 2> delete_mi;
     for (auto &mi:*body) {
       if (TII->splitPrePostIndexInstr(*body, mi, nullptr, nullptr)) {
         Changed=true;
@@ -444,7 +386,7 @@ bool SWPipelinerPre::doFinalization(Module &) {
   return false;
 }
 bool SWPipelinerPre::hasPreHeader(MachineLoop &L) {
-  if (DebugOutput) {
+  if (SWPipeliner::isDebugOutput()) {
     dbgs() << "DBG(SWPipelinerPre::hasPreHeader: " << L;
   }
   auto *body=L.getTopBlock();
@@ -455,7 +397,7 @@ bool SWPipelinerPre::hasExit(MachineLoop &L) {
   return body->succ_size()==2;
 }
 bool SWPipelinerPre::createPreHeader(MachineLoop &L) {
-  if (DebugOutput) {
+  if (SWPipeliner::isDebugOutput()) {
     dbgs() << "DBG(SWPipelinerPre::createPreHeader: loop-body mir(before)\n";
     dbgs() << *(L.getTopBlock());
   }
@@ -516,7 +458,7 @@ bool SWPipelinerPre::createPreHeader(MachineLoop &L) {
   }
   // 最後にPHのSuccをBodyに変更する
   ph->addSuccessor(body);
-  if (DebugOutput) {
+  if (SWPipeliner::isDebugOutput()) {
     dbgs() << "DBG(SWPipelinerPre::createPreHeader: loop-body-mir(after)\n";
     dbgs() << *(L.getTopBlock());
   }
@@ -525,7 +467,7 @@ bool SWPipelinerPre::createPreHeader(MachineLoop &L) {
 }
 
 bool SWPipelinerPre::createExit(MachineLoop &L) {
-  if (DebugOutput) {
+  if (SWPipeliner::isDebugOutput()) {
     dbgs() << "DBG(SWPipelinerPre::createExit\n";
     dbgs() << *(L.getTopBlock());
   }

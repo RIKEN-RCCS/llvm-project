@@ -10,20 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64.h"
-#include "AArch64TargetTransformInfo.h"
-
-#include "AArch64SwplTargetMachine.h"
+#include "SwplScheduling.h"
 #include "SWPipeliner.h"
 #include "SwplCalclIterations.h"
 #include "SwplPlan.h"
 #include "SwplRegEstimate.h"
-#include "SwplScheduling.h"
 #include "SwplScr.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 
 using namespace llvm;
 using namespace ore; // for NV
-
 #define DEBUG_TYPE "aarch64-swpipeliner"
 
 static cl::opt<bool> OptionDumpMrt("swpl-debug-dump-mrt",cl::init(false), cl::ReallyHidden);
@@ -65,7 +61,7 @@ namespace llvm{
 /// \note 引数pipelineは、資源使用パターンに応じたTmPipeline情報
 void SwplMrt::reserveResourcesForInst(unsigned cycle,
                                       const SwplInst& inst,
-                                      const AArch64StmPipeline & pipeline ) {
+                                      const StmPipeline & pipeline ) {
   // cycle:1, stage:{ 1, 5, 9 }, resources:{ ID1, ID2, ID3 }
   //   ->     resource ID1  ID2  ID3  ID4
   //      cycle   :  1 予約
@@ -140,7 +136,7 @@ void SwplMrt::reserveResourcesForInst(unsigned cycle,
 ///       予約するのではなく、すでに予約されていれば、そのInstを記録していく。
 SwplInstSet* SwplMrt::findBlockingInsts(unsigned cycle,
                                         const SwplInst& inst,
-                                        const AArch64StmPipeline & pipeline)
+                                        const StmPipeline & pipeline)
 {
   SwplInstSet* blocking_insts = new SwplInstSet();
   assert( (pipeline.resources.size()==pipeline.stages.size()) && "Unexpected resource information.");
@@ -172,7 +168,7 @@ SwplInstSet* SwplMrt::findBlockingInsts(unsigned cycle,
 ///       （現在のところ使い道なし）
 bool SwplMrt::isOpenForInst(unsigned cycle,
                             const SwplInst& inst,
-                            const AArch64StmPipeline & pipeline) {
+                            const StmPipeline & pipeline) {
   SwplInstSet* blocking_insts;
   bool is_open;
 
@@ -228,16 +224,16 @@ void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream
   unsigned res_max_length = 0;
   unsigned word_width, inst_gen_width, inst_rotation_width;
   unsigned ii = iteration_interval;
-  unsigned numresource = STM.getNumResource();
+  unsigned numresource = SWPipeliner::STM->getNumResource();
 
   assert(ii==table.size());
 
   // Resource名の最大長の取得
   // resource_idはA64FXRes::PortKindのenum値に対応する。
-  // １～STM.getNumResource()をリソースとして扱う 。
+  // １～STM->getNumResource()をリソースとして扱う 。
   // ０はP_NULLであり、リソースではない。
   for (resource_id = 1; (unsigned)resource_id <= numresource; ++resource_id) {
-    res_max_length = std::max( res_max_length, (unsigned)(strlen(AArch64StmPipeline::getResourceName(resource_id))) );
+    res_max_length = std::max( res_max_length, (unsigned)(strlen(SWPipeliner::STM->getResourceName(resource_id))) );
   }
 
   inst_gen_width = std::max( getMaxOpcodeNameLength()+1, res_max_length);  // 1 = 'p|f' の分
@@ -247,8 +243,8 @@ void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream
   // Resource名の出力
   stream << "\n       ";
   for (resource_id = 1; (unsigned)resource_id <= numresource; ++resource_id) {
-    stream << AArch64StmPipeline::getResourceName(resource_id);
-    for (unsigned l=strlen(AArch64StmPipeline::getResourceName(resource_id)); l<word_width; l++) {
+    stream << SWPipeliner::STM->getResourceName(resource_id);
+    for (unsigned l=strlen(SWPipeliner::STM->getResourceName(resource_id)); l<word_width; l++) {
       stream << " ";
     }
   }
@@ -262,7 +258,7 @@ void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream
   for (modulo_cycle = 0; modulo_cycle < ii; ++modulo_cycle) {
     stream << "       ";
     // resource_idはA64FXRes::PortKindのenum値に対応する。
-    // １～STM.getNumResource()をリソースとして扱う 。
+    // １～STM->getNumResource()をリソースとして扱う 。
     // ０はP_NULLであり、リソースではない。
     for (resource_id = 1; (unsigned)resource_id <= numresource; ++resource_id) {
       auto pr = table[modulo_cycle]->find(resource_id);
@@ -385,7 +381,7 @@ void SwplMrt::printInstRotation(raw_ostream &stream,
     if( max_slot < pair.second ) max_slot = pair.second;
   }
 
-  unsigned max_cycle = max_slot / STM.getFetchBandwidth();
+  unsigned max_cycle = max_slot / SWPipeliner::STM->getFetchBandwidth();
   rotation = (max_cycle - slot.calcCycle())/ii + 1;
 
   // 対応する回転数を表示
@@ -492,11 +488,11 @@ void SwplModuloDdg::dump() {
     inst->getMI()->print( dbgs() );
 
     dbgs() << "\tPipelines\n";
-    if(STM.isPseudo( *(inst->getMI()) ) ) {
+    if(SWPipeliner::STM->isPseudo( *(inst->getMI()) ) ) {
       dbgs() << "\t\tNothing...(pseudo instruction)\n";
     }
     else {
-      for( auto pl : *(STM.getPipelines( *(inst->getMI()) ) ) ){
+      for( auto pl : *(SWPipeliner::STM->getPipelines( *(inst->getMI()) ) ) ){
         dbgs() << "\t\t";
         pl->print( dbgs() );
       }
@@ -553,7 +549,7 @@ bool SwplTrialState::tryNext() {
 
   // 20回転以上またいだ命令が候補になった場合、
   // まともな結果にならないためやめる.
-  if ((SwplSlot::baseSlot(ii) - SIP.slot)/(STM.getFetchBandwidth() * ii) > 20) {
+  if ((SwplSlot::baseSlot(ii) - SIP.slot)/(SWPipeliner::STM->getFetchBandwidth() * ii) > 20) {
     return false;
   }
 
@@ -675,8 +671,8 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
   //SwplSlot new_schedule_slot; // cycle基準とする前
   unsigned new_schedule_cycle;
 
-  begin_slot = SwplSlot::construct(begin_cycle, STM.getFetchBandwidth () - 1);
-  end_slot = SwplSlot::construct(end_cycle, STM.getFetchBandwidth () - 1);
+  begin_slot = SwplSlot::construct(begin_cycle, SWPipeliner::STM->getFetchBandwidth () - 1);
+  end_slot = SwplSlot::construct(end_cycle, SWPipeliner::STM->getFetchBandwidth () - 1);
   if (begin_slot == SWPL_ILLEGAL_SLOT || end_slot == SWPL_ILLEGAL_SLOT ){
     return SlotInstPipeline(SWPL_ILLEGAL_SLOT, &(const_cast<SwplInst&>(inst)), nullptr);
   }
@@ -686,7 +682,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
     const MachineInstr& mi = *(inst.getMI());
 
     // cycleに空きSlotがあるかを確認
-    bool isvirtual = STM.isPseudo(mi);
+    bool isvirtual = SWPipeliner::STM->isPseudo(mi);
     SwplSlot slot = inst_slot_map->getEmptySlotInCycle( cycle, iteration_interval, isvirtual );
     if( slot != SWPL_ILLEGAL_SLOT) {
       // 空きslotあり
@@ -698,9 +694,9 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
       else {
         // 資源情報を取得し、MRTに資源競合を問い合わせる。
         // 資源競合がなければ配置可能
-        for( auto pl : *(STM.getPipelines(mi)) ) {
+        for( auto pl : *(SWPipeliner::STM->getPipelines(mi)) ) {
           if( mrt->isOpenForInst(cycle, inst, *pl) ) {
-            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<AArch64StmPipeline *>(pl) );
+            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<StmPipeline *>(pl) );
           }
         }
       }
@@ -728,7 +724,7 @@ unsigned SwplTrialState::getNewScheduleCycle(const SwplInst& inst) {
   if( inst_last_slot_map->find(&inst) != inst_last_slot_map->end() ){
     slot = inst_last_slot_map->find(&inst)->second;
     slot = slot -
-        STM.getFetchBandwidth(); // FetchBandwidthを引けば、1cycle前のいずれかのslotとなる
+           SWPipeliner::STM->getFetchBandwidth(); // FetchBandwidthを引けば、1cycle前のいずれかのslotとなる
   }
   else {
     slot = SwplSlot::baseSlot(iteration_interval);
@@ -747,7 +743,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::latestValidSlot(const SwplInst&
   unsigned begin_cycle = cycle;
 
   const MachineInstr& mi = *(inst.getMI());
-  bool isvirtual = STM.isPseudo(mi);
+  bool isvirtual = SWPipeliner::STM->isPseudo(mi);
 
   // cycle単位に資源の空きを確認する。
   for (; begin_cycle != end_cycle; begin_cycle-- ) {
@@ -757,13 +753,13 @@ SwplTrialState::SlotInstPipeline SwplTrialState::latestValidSlot(const SwplInst&
         return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), nullptr );
       }
       else {
-        for( auto pl : *(STM.getPipelines(mi)) ) {
+        for( auto pl : *(SWPipeliner::STM->getPipelines(mi)) ) {
           if( mrt->isOpenForInst(begin_cycle, inst, *pl) ) {
             // slotと資源は結び付いていない。
             //
             // 現時点では、資源が予約できるcycleかつ、inst_slot_map上で競合しないslotを返している。
             // このため、この命令の配置時に、資源競合となる命令は存在しないこととなる。
-            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<AArch64StmPipeline *>(pl) );
+            return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<StmPipeline *>(pl) );
           }
         }
       }
@@ -796,9 +792,9 @@ void SwplTrialState::unsetResourceConstrainedInsts(SlotInstPipeline& SIP) {
   SwplInstSet* blocking_insts;
 
   if( SIP.pipeline == nullptr ) {
-    assert(STM.isPseudo(*(SIP.inst->getMI())) ); // 資源情報無し＝仮想命令である
+    assert(SWPipeliner::STM->isPseudo(*(SIP.inst->getMI())) ); // 資源情報無し＝仮想命令である
     assert( SIP.slot.calcFetchSlot() <
-           STM.getRealFetchBandwidth() ); // 資源情報無し＝slotは仮想命令用である
+           SWPipeliner::STM->getRealFetchBandwidth() ); // 資源情報無し＝slotは仮想命令用である
     // 仮想命令の場合は、競合する資源は無いため、
     // 資源競合によりunsetする命令は無い。
     return;
@@ -858,9 +854,9 @@ void SwplTrialState::setInst(SlotInstPipeline& SIP) {
   inst_last_slot_map->insert( std::make_pair( SIP.inst, SIP.slot ) );
 
   if( SIP.pipeline == nullptr ) {
-    assert(STM.isPseudo(*(SIP.inst->getMI())) ); // 資源情報無し＝仮想命令である
+    assert(SWPipeliner::STM->isPseudo(*(SIP.inst->getMI())) ); // 資源情報無し＝仮想命令である
     assert( SIP.slot.calcFetchSlot() <
-           STM.getRealFetchBandwidth() ); // 資源情報無し＝slotは仮想命令用である
+           SWPipeliner::STM->getRealFetchBandwidth() ); // 資源情報無し＝slotは仮想命令用である
     return;
   }
 
@@ -958,13 +954,13 @@ void SwplTrialState::destroy(SwplTrialState* state) {
 /// \note 現在、PlanSpec.assumed_iterationは常にASSUMED_ITERATIONS_NONE (-1)
 /// \note 現在、PlanSpec.pre_expand_numは常に1
 bool PlanSpec::init(unsigned arg_res_mii) {
-  if (DebugOutput) {
+  if (SWPipeliner::isDebugOutput()) {
     dbgs() << "        : (Iterative Modulo Scheduling"
            << ". ResMII " << arg_res_mii << ". ";
   }
 
   n_insts = ddg.getLoopBody_ninsts();
-  if (DebugOutput) {
+  if (SWPipeliner::isDebugOutput()) {
     dbgs() << "NumOfBodyInsts " << n_insts << ". ";
   }
   res_mii = arg_res_mii;
@@ -977,7 +973,7 @@ bool PlanSpec::init(unsigned arg_res_mii) {
   n_fillable_float_invariants = 0; /* IMS＝fillを許容しないポリシー であるため0 */
 
   ims_base_info.budget  = getBudget(n_insts);
-  if (DebugOutput) {
+  if (SWPipeliner::isDebugOutput()) {
     dbgs() << "Budget " << ims_base_info.budget << ". ";
   }
   min_ii = res_mii;
@@ -990,7 +986,7 @@ bool PlanSpec::init(unsigned arg_res_mii) {
   unable_max_ii = min_ii - 1;
   assert(min_ii <= max_ii);
 
-  if (DebugOutput) {
+  if (SWPipeliner::isDebugOutput()) {
     dbgs() << "Minimum II = " << res_mii << ".)\n";
   }
   return true;
@@ -1105,7 +1101,7 @@ void MsResourceResult::init() {
   num_necessary_ireg = 0;
   num_necessary_freg = 0;
   num_necessary_preg = 0;
-  auto *rk=TII->getRegKind(*MRI);
+  auto *rk=SWPipeliner::TII->getRegKind(*SWPipeliner::MRI);
 
   num_max_ireg = (OptionMaxIreg > 0) ? OptionMaxIreg : rk->getNumIntReg();
   num_max_freg = (OptionMaxFreg > 0) ? OptionMaxFreg : rk->getNumFloatReg();
@@ -1321,7 +1317,7 @@ void MsResult::checkHardResource(const PlanSpec& spec, bool limit_reg) {
     /* 整数より浮動小数点不足優先で出力. */
     if ( !resource.isFregSufficient() ) {
       // 浮動小数点数レジスタの場合
-      ORE->emit([&]() {
+      SWPipeliner::ORE->emit([&]() {
                         return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                  spec.loop.getML()->getStartLoc(),
                                                                  spec.loop.getML()->getHeader())
@@ -1331,7 +1327,7 @@ void MsResult::checkHardResource(const PlanSpec& spec, bool limit_reg) {
                       });
     } else if ( !resource.isIregSufficient() ) {
       // 整数レジスタの場合
-      ORE->emit([&]() {
+      SWPipeliner::ORE->emit([&]() {
                         return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                  spec.loop.getML()->getStartLoc(),
                                                                  spec.loop.getML()->getHeader())
@@ -1341,7 +1337,7 @@ void MsResult::checkHardResource(const PlanSpec& spec, bool limit_reg) {
                       });
     } else if ( !resource.isPregSufficient() ) {
       // predicateレジスタの場合
-      ORE->emit([&]() {
+      SWPipeliner::ORE->emit([&]() {
                         return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                  spec.loop.getML()->getStartLoc(),
                                                                  spec.loop.getML()->getHeader())
@@ -1426,7 +1422,7 @@ void MsResult::checkIterationCount(const PlanSpec& spec) {
   }
 
   if (is_itr_sufficient == false) {
-    ORE->emit([&]() {
+    SWPipeliner::ORE->emit([&]() {
                       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                spec.loop.getML()->getStartLoc(),
                                                                spec.loop.getML()->getHeader())
@@ -1466,7 +1462,7 @@ void MsResult::checkMve(const PlanSpec& spec) {
 /// \note MsResult.proc_stateによって出力メッセージが一部変わる。
 void MsResult::outputDebugMessageForSchedulingResult(PlanSpec spec) {
   unsigned max_freg, max_ireg, max_preg, req_freg, req_ireg, req_preg;
-  if (!DebugOutput) { return ;}
+  if (!SWPipeliner::isDebugOutput()) { return ;}
   /* registerの内容詳細をチェック */
   max_freg = 0; max_ireg = 0; max_preg = 0;
   req_freg = 0; req_ireg = 0; req_preg = 0;
@@ -1617,7 +1613,7 @@ void MsResult::outputGiveupMessageForEstimate(PlanSpec& spec) {
      * giveupした時点のmessageIDで不足レジスタの種類が判別できる。
      */
   } else {
-    if (DebugOutput) {
+    if (SWPipeliner::isDebugOutput()) {
       if( !is_itr_sufficient) {
         dbgs() << "        : Rotation shortage.[giveup]\n (ii:" << ii << ")\n";
       } else if (!is_reg_sufficient) {
@@ -1631,7 +1627,7 @@ void MsResult::outputGiveupMessageForEstimate(PlanSpec& spec) {
     if( !is_itr_sufficient==false && !is_reg_sufficient==false && !is_mve_appropriate==false) {
       // int_slot_mapができない最終原因が、
       // レジスタ不足、回転数不足、MVE制限によるものでない場合
-      ORE->emit([&]() {
+      SWPipeliner::ORE->emit([&]() {
                         return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
                                                                  spec.loop.getML()->getStartLoc(),
                                                                  spec.loop.getML()->getHeader())
@@ -1829,7 +1825,7 @@ MsResult* MsResult::calculateMsResult(PlanSpec spec) {
         /* [step 2-2-1] */
         if (!isAnyScheduleItrSufficient(ms_result_candidate)) {
           /* 拡張したiiでも回転数が足りていないscheduleしかない場合はあきらめる. */
-          if (DebugOutput) {
+          if (SWPipeliner::isDebugOutput()) {
             dbgs() << "!swp-msg :Swpl is not applied because of iteration shortage.\n";
           }
         }
@@ -2231,7 +2227,7 @@ bool MsResult::collectCandidate(PlanSpec& spec,
         break;
       }
       if (watch_regs && !isRegReducible(spec, ms_result_candidate)) {
-        if (DebugOutput) {
+        if (SWPipeliner::isDebugOutput()) {
           dbgs() << "        : Quit estimation because required regs are not reducible.[giveup]\n";
         }
         break;
@@ -2314,7 +2310,7 @@ bool MsResult::recollectModerateCandidateWithExII(PlanSpec& spec,
   /* unableはmoderateではないという意味 */
   spec.unable_max_ii = ms_result.ii;
 
-  if (DebugOutput) {
+  if (SWPipeliner::isDebugOutput()) {
     dbgs() << "        : Change ii range for moderate schedule search:"
            << "[ " << old_minii   <<", " << old_maxii << " ] -> "
            << "[ " << spec.min_ii << ", " << spec.max_ii <<" ]\n";
@@ -2339,7 +2335,7 @@ bool MsResult::recollectCandidateWithExII(PlanSpec& spec,
   spec.max_ii = spec.max_ii * 2;
   assert (spec.min_ii <= spec.max_ii);
 
-  if (DebugOutput) {
+  if (SWPipeliner::isDebugOutput()) {
     dbgs() << "        : Extend ii range for iteration shortage:"
            << "[ " << old_minii   << ", " << old_maxii << " ] -> "
            << "[ " << spec.min_ii << ", " << spec.max_ii << " ]\n";

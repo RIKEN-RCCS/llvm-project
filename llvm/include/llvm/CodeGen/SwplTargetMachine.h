@@ -13,8 +13,56 @@
 #define LLVM_CODEGEN_SWPLTARGETMACHINE_H
 
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetSchedule.h"
 
 namespace llvm {
+/// ReourceID
+typedef int StmResourceId;
+
+/// StmPipeline patternID
+typedef unsigned StmPatternId;
+
+/// MachineInstr::Opcode
+typedef unsigned StmOpcodeId;
+
+/// Represents the resources used by the instruction.
+/// ex.：LDNP EAG* / EAG*
+/// \dot "Simplified diagram"
+/// digraph g {
+///  graph [ rankdir = "LR" fontsize=10];
+///  node [ fontsize = "10" shape = "record" ];
+///  edge [];
+///  pipe1  [label = "{pipeline:}|{stage:|1|1}|{resource:|EAGA|EAGA}"];
+///  pipe2  [label = "{pipeline:}|{stage:|1|1}|{resource:|EAGA|EAGB}"];
+///  pipe3  [label = "{pipeline:}|{stage:|1|1}|{resource:|EAGB|EAGA}"];
+///  pipe4  [label = "{pipeline:}|{stage:|1|1}|{resource:|EAGB|EAGB}"];
+/// }
+// \enddot
+class StmPipeline {
+//  TargetSchedModel& SM;///< SchedModel
+public:
+  StmPatternId patternId=0;
+  SmallVector<unsigned,4> stages;
+  SmallVector<StmResourceId,4> resources;
+
+  /// constructor
+  StmPipeline(){}
+  virtual ~StmPipeline() {}
+
+  /// Output StmPipeline in display format。
+  /// \param ost output steam
+  virtual void print(llvm::raw_ostream& ost) const = 0;
+
+  /// count the resources present in resources
+  /// \param [in] resource Resources to be counted
+  /// \return number of resource
+  virtual int getNResources(StmResourceId resource) const = 0;
+
+  /// return the resource name
+  /// \param [in] resource ResourceId
+  /// \return Resource name
+  virtual const char* getResourceName(StmResourceId resource) const = 0;
+};
 
 class StmRegKind {
 protected:
@@ -173,6 +221,90 @@ public:
     return kind1.registerClassId == regclassid;
   }
 };
+
+/// list of StmPipeline(for argument)
+using StmPipelinesImpl =std::vector<const StmPipeline *>;
+
+/// list of StmPipeline(for var)
+using StmPipelines =std::vector<const StmPipeline *>;
+
+class SwplTargetMachine {
+protected:
+  const MachineFunction *MF=nullptr; ///< Remember the MachineFunction to get the information needed by SwplTargetMachine
+  TargetSchedModel SM;         ///< SchedModel
+
+public:
+  /// constructor
+  SwplTargetMachine() {}
+  /// destructor
+  virtual ~SwplTargetMachine() {
+  }
+
+  /// Initialize the SwpltargetMachine object.
+  /// \details
+  /// Each time runOnFunction is called, it is necessary to execute initialize() and
+  /// pass MachineFunction information to be processed.
+  /// \param mf Target MachineFunction
+  virtual void initialize(const MachineFunction &mf) = 0;
+
+
+  /// Returns the number of concurrent read instructions in the instruction fetch stage.
+  /// \details
+  /// Returns the return value of getRealFetchBandwidth() + the number of virtual slots (for Pseudo).
+  /// \return number of slot
+  virtual unsigned int getFetchBandwidth(void) const = 0;
+
+  /// Returns the number of concurrent read instructions in the decode stage.
+  /// \return number of slot
+  virtual unsigned int getRealFetchBandwidth(void) const = 0;
+
+  /// Calculate flow-dependent latency.
+  /// \param [in] def
+  /// \param [in] use
+  /// \return latency
+  virtual int computeRegFlowDependence(const MachineInstr* def, const MachineInstr* use) const = 0;
+
+  /// Calculate store->load latency.
+  /// \param [in] def store inst.
+  /// \param [in] use load inst.
+  /// \return latency
+  virtual int computeMemFlowDependence(const MachineInstr* def, const MachineInstr* use) const = 0;
+
+  /// Calculate load->store latency.
+  /// \param [in] use load inst.
+  /// \param [in] def store inst.
+  /// \return latency
+  virtual int computeMemAntiDependence(const MachineInstr* use, const MachineInstr* def) const = 0;
+
+  /// Calculate store->store latency.
+  /// \param [in] def1 store inst.
+  /// \param [in] def2 store inst.
+  /// \return latency
+  virtual int computeMemOutputDependence(const MachineInstr* def1, const MachineInstr* def2) const = 0;
+
+  /// Returns all resource usage patterns used by the specified instruction.
+  /// \param [in] mi Target instruction
+  /// \return StmPipelines
+  virtual const StmPipelinesImpl * getPipelines(const MachineInstr& mi) = 0;
+
+  /// returns the number of resources available
+  /// \return number of resources
+  virtual unsigned int getNumResource(void) const = 0;
+
+  /// return the name of the ResourceId
+  /// \param [in] resource
+  /// \return name
+  virtual const char* getResourceName(StmResourceId resource) const = 0;
+
+  /// Determine if an instruction is Pseudo
+  /// \details Judge as Pseudo only if instruction is not defined in SchedModel
+  /// \param [in] mi instruction
+  /// \retval true Psedo
+  /// \retval false not Pseudo
+  virtual bool isPseudo(const llvm::MachineInstr& mi) const = 0;
+};
+
+
 
 }
 

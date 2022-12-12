@@ -374,6 +374,7 @@ public:
   bool isNonTargetMI4SWPL(MachineInstr &inst)const override;
   bool canPipelineLoop(MachineLoop &L) const override;
   int calcEachRegIncrement(const SwplReg *r) const override;
+  SwplTargetMachine *getSwplTargetMachine() const override;
 
 
 #define GET_INSTRINFO_HELPER_DECLS

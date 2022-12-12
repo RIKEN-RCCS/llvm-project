@@ -747,12 +747,10 @@ void AArch64PassConfig::addPreRegAlloc() {
     addPass(&PeepholeOptimizerID);
   }
 
-// Start Metro
   if (TM->getTargetCPU().equals_insensitive("a64fx") && TM->getOptLevel() != CodeGenOpt::None) {
     addPass(createSWPipelinerPrePass());
     addPass(createSWPipelinerPass());
   }
-// End Metro
 }
 
 void AArch64PassConfig::addPostRegAlloc() {
