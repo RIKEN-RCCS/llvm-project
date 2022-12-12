@@ -223,30 +223,11 @@ public:
   /// \return レイテンシ
   int computeMemOutputDependence(const llvm::MachineInstr* def1, const llvm::MachineInstr* def2) const override;
 
-  /// (1命令しか実行できない)Store命令であれば真を返す。
-  /// \param [in] mi 判断対象の命令
-  /// \return Storeであれば真となる
-  bool isIssuedOneByOne(const llvm::MachineInstr &mi) const override {
-    return mi.mayStore();
-  }
-
   /// 指定命令が利用するリソースの利用パターンをすべて返す。
   /// \param [in] mi 対象命令
   /// \return StmPipelinesを返す
   const StmPipelinesImpl * getPipelines(const llvm::MachineInstr& mi) override;
 
-  /// 指定した命令のリソース利用パターンの中から、指定した利用パターンを返す。
-  /// \param [in] mi 対象命令
-  /// \param [in] patternid 対象パターン
-  /// \return StmPipelineを返す
-  const StmPipeline * getPipeline(const llvm::MachineInstr&mi,
-                                StmPatternId patternid) override;
-
-  /// 指定命令が利用するリソースが一番少ない数を返す
-  /// \param [in] opcode 対象命令
-  /// \param [in] resource 数えたいリソース
-  /// \return 一番少ない数
-  int getMinNResources(StmOpcodeId opcode, StmResourceId resource) override;
 
   /// 利用可能な資源の数を返す
   /// \return 資源数

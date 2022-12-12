@@ -16,18 +16,18 @@
 #include "llvm/CodeGen/TargetSchedule.h"
 
 namespace llvm {
-/// Reource識別ID
+/// ReourceID
 typedef int StmResourceId;
 
-/// StmPipelineのパターンを識別するID
+/// StmPipeline patternID
 typedef unsigned StmPatternId;
 
-/// MachineInstr::Opcodeを示すID
+/// MachineInstr::Opcode
 typedef unsigned StmOpcodeId;
 
-/// 命令が使う資源を表現する。
-/// 例：LDNP EAG* / EAG*
-/// \dot "簡略図"
+/// Represents the resources used by the instruction.
+/// ex.：LDNP EAG* / EAG*
+/// \dot "Simplified diagram"
 /// digraph g {
 ///  graph [ rankdir = "LR" fontsize=10];
 ///  node [ fontsize = "10" shape = "record" ];
@@ -222,20 +222,16 @@ public:
   }
 };
 
-/// StmPipelineリスト（引数など受け取り側で理帳する）
+/// list of StmPipeline(for argument)
 using StmPipelinesImpl =std::vector<const StmPipeline *>;
 
-/// StmPipelineリスト(変数として宣言する際に利用する)
+/// list of StmPipeline(for var)
 using StmPipelines =std::vector<const StmPipeline *>;
 
 class SwplTargetMachine {
 protected:
-  // @todo 以下4つのポインタは、要・不要を見直す
-  const MachineFunction *MF=nullptr; ///< Tmで必要な情報を取得するため、大元のMachineFunctionを記憶する。関数毎に再設定する。
+  const MachineFunction *MF=nullptr; ///< Remember the MachineFunction to get the information needed by SwplTargetMachine
   TargetSchedModel SM;         ///< SchedModel
-  const MachineRegisterInfo *MRI=nullptr;    ///< RegisterInfo
-  const TargetInstrInfo* TII=nullptr;
-
 
 public:
   /// constructor
@@ -244,84 +240,67 @@ public:
   virtual ~SwplTargetMachine() {
   }
 
-  /// Tmの初期化を行う。
+  /// Initialize the SwpltargetMachine object.
   /// \details
-  /// runOnFunctionが呼び出される毎にinitialize()を実行し、処理対象となるMachineFunction情報を受け渡す必要がある。
-  /// \param mf 処理対象のMachineFunction
+  /// Each time runOnFunction is called, it is necessary to execute initialize() and
+  /// pass MachineFunction information to be processed.
+  /// \param mf Target MachineFunction
   virtual void initialize(const MachineFunction &mf) = 0;
 
 
-  /// 命令フェッチステージの同時読み込み命令数を返す。
+  /// Returns the number of concurrent read instructions in the instruction fetch stage.
   /// \details
-  /// getRealFetchBandwidth()の復帰値＋仮想Slot数(Pseudo用)を返す。
-  /// \return 命令数(Slot数)
+  /// Returns the return value of getRealFetchBandwidth() + the number of virtual slots (for Pseudo).
+  /// \return number of slot
   virtual unsigned int getFetchBandwidth(void) const = 0;
 
-  /// デコードステージの同時読み込み命令数を返す。
-  /// \return 命令数(Slot数)
+  /// Returns the number of concurrent read instructions in the decode stage.
+  /// \return number of slot
   virtual unsigned int getRealFetchBandwidth(void) const = 0;
 
-  /// レジスタdef/use間のレイテンシを計算する。
-  /// \param [in] def 定義命令
-  /// \param [in] use 利用命令
-  /// \return 定義から参照までのレイテンシ
+  /// Calculate flow-dependent latency.
+  /// \param [in] def
+  /// \param [in] use
+  /// \return latency
   virtual int computeRegFlowDependence(const MachineInstr* def, const MachineInstr* use) const = 0;
 
-  /// メモリのdef/use間のレイテンシを計算する。
-  /// \param [in] def 定義命令（Store）
-  /// \param [in] use 参照命令（Load）
-  /// \return レイテンシ
+  /// Calculate store->load latency.
+  /// \param [in] def store inst.
+  /// \param [in] use load inst.
+  /// \return latency
   virtual int computeMemFlowDependence(const MachineInstr* def, const MachineInstr* use) const = 0;
 
-  /// メモリのuse/def間のレイテンシを計算する。
-  /// \param [in] def 参照命令（Load）
-  /// \param [in] use 定義命令（Store）
-  /// \return レイテンシ
+  /// Calculate load->store latency.
+  /// \param [in] use load inst.
+  /// \param [in] def store inst.
+  /// \return latency
   virtual int computeMemAntiDependence(const MachineInstr* use, const MachineInstr* def) const = 0;
 
-  /// メモリのdef/def間のレイテンシを計算する。
-  /// \param [in] def1 定義命令（Store）
-  /// \param [in] def2 定義命令（Store）
-  /// \return レイテンシ
+  /// Calculate store->store latency.
+  /// \param [in] def1 store inst.
+  /// \param [in] def2 store inst.
+  /// \return latency
   virtual int computeMemOutputDependence(const MachineInstr* def1, const MachineInstr* def2) const = 0;
 
-  /// (1命令しか実行できない)Store命令であれば真を返す。
-  /// \param [in] mi 判断対象の命令
-  /// \return Storeであれば真となる
-  virtual bool isIssuedOneByOne(const llvm::MachineInstr &mi) const = 0;
-
-  /// 指定命令が利用するリソースの利用パターンをすべて返す。
-  /// \param [in] mi 対象命令
-  /// \return StmPipelinesを返す
+  /// Returns all resource usage patterns used by the specified instruction.
+  /// \param [in] mi Target instruction
+  /// \return StmPipelines
   virtual const StmPipelinesImpl * getPipelines(const MachineInstr& mi) = 0;
 
-  /// 指定した命令のリソース利用パターンの中から、指定した利用パターンを返す。
-  /// \param [in] mi 対象命令
-  /// \param [in] patternid 対象パターン
-  /// \return StmPipelineを返す
-  virtual const StmPipeline * getPipeline(const MachineInstr&mi,
-                                        StmPatternId patternid) = 0;
-
-  /// 指定命令が利用するリソースが一番少ない数を返す
-  /// \param [in] opcode 対象命令
-  /// \param [in] resource 数えたいリソース
-  /// \return 一番少ない数
-  virtual int getMinNResources(StmOpcodeId opcode, StmResourceId resource) = 0;
-
-  /// 利用可能な資源の数を返す
-  /// \return 資源数
+  /// returns the number of resources available
+  /// \return number of resources
   virtual unsigned int getNumResource(void) const = 0;
 
-  /// ResourceIdに応じた名前を返す
-  /// \param [in] resource 名前を取得したい資源
-  /// \return ResourceIdに応じた名前
+  /// return the name of the ResourceId
+  /// \param [in] resource
+  /// \return name
   virtual const char* getResourceName(StmResourceId resource) const = 0;
 
-  /// 命令がPseudoかどうかを判断する
-  /// \details 命令がSchedModelに定義されていない場合のみ、Pseudoと判断する
-  /// \param [in] mi 対象命令
-  /// \retval truer Psedo命令
-  /// \retval false Pseudo命令ではない
+  /// Determine if an instruction is Pseudo
+  /// \details Judge as Pseudo only if instruction is not defined in SchedModel
+  /// \param [in] mi instruction
+  /// \retval true Psedo
+  /// \retval false not Pseudo
   virtual bool isPseudo(const llvm::MachineInstr& mi) const = 0;
 };
 

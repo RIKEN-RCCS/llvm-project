@@ -685,7 +685,6 @@ void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
     numResource=8; // 資源管理がSchedModelとは別になったので、ハードコードする
   }
   MF=&mf;
-  MRI=&(MF->getRegInfo());
 }
 
 unsigned int AArch64SwplTargetMachine::getFetchBandwidth(void) const {
@@ -766,16 +765,6 @@ AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) {
   return tps;
 }
 
-const StmPipeline *
-AArch64SwplTargetMachine::getPipeline(const MachineInstr &mi,
-                                  StmPatternId patternid) {
-  auto *tps= getPipelines(mi);
-  if (tps==nullptr) return nullptr;
-  if (patternid >= tps->size()) return nullptr;
-  auto *t=(*tps)[patternid];
-  return t;
-}
-
 StmPipelinesImpl *
 AArch64SwplTargetMachine::generateStmPipelines(const MachineInstr &mi) {
 
@@ -814,19 +803,6 @@ int AArch64SwplTargetMachine::computeMemAntiDependence(const MachineInstr *, con
 
 int AArch64SwplTargetMachine::computeMemOutputDependence(const MachineInstr *, const MachineInstr *) const {
   return 1;
-}
-
-int AArch64SwplTargetMachine::getMinNResources(StmOpcodeId opcode, StmResourceId resource) {
-  auto *tps= stmPipelines[opcode];
-  int min_n=INT_MAX;
-  for (auto *t:*tps) {
-    int n=t->getNResources(resource);
-    if (n)
-      min_n=std::min(min_n, n);
-  }
-  if (min_n==INT_MAX)
-    return 0;
-  return min_n;
 }
 
 unsigned int AArch64SwplTargetMachine::getNumResource(void) const {
