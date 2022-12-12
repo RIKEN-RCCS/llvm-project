@@ -1,4 +1,4 @@
-; RUN: llc < %s -O1 -mcpu=a64fx  -ffj-swp  -swpl-debug  --pass-remarks-filter=.*  --pass-remarks-output=-  -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -O1 -mcpu=a64fx  -ffj-swp --pass-remarks-filter=.*  --pass-remarks-output=-  -o /dev/null 2>&1 | FileCheck %s
 ;CHECK:hardware-loop(reason=CALL
 ; ModuleID = '2912_8.c'
 source_filename = "2912_8.c"
