@@ -303,7 +303,8 @@ unsigned SwplPlan::calcResourceMinIterationInterval(const SwplLoop& c_loop) {
   unsigned res_ii;
 
   n_body_insts = c_loop.getSizeBodyRealInsts();
-  assert (n_body_insts != 0);
+// @todo 新schedmodelが
+  //  assert (n_body_insts != 0);
 
   /* 1cycleにつきfetch slot数しか命令は発行できない事による制約 */
   fetch_constrained_ii = ceil_div(n_body_insts, SWPipeliner::STM->getRealFetchBandwidth() );

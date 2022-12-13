@@ -15,7 +15,7 @@
 #include "AArch64TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/SwplTargetMachine.h"
-#include "AArch64A64FXResourceInfo.h"
+
 
 namespace llvm {
 
@@ -141,6 +141,21 @@ public:
     }
     os << "AArch64StmRegKind:" << MRI.getTargetRegisterInfo()->getRegClassName(r) << "\n";
   }
+};
+
+// @todo 書き換える必要あります
+class AArch64A64FXResInfo {
+public:
+  AArch64A64FXResInfo() {}
+  AArch64A64FXResInfo(const TargetSubtargetInfo &ST) {}
+  virtual ~AArch64A64FXResInfo() {}
+
+
+};
+
+class A64FXRes {
+public:
+  enum PortKind {P_FLA, P_FLB, P_EXA, P_EXB, P_EAGA, P_EAGB, P_PRX, P_BR};
 };
 
 /// SchedModelを利用してターゲット情報を取得し、SWPL機能に提供する

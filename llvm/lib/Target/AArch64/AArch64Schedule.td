@@ -32,7 +32,6 @@ def ReadExtrHi     : SchedRead;  // Read the high reg of the EXTR pair
 def WriteIS        : SchedWrite; // Shift/Scale
 def WriteID32      : SchedWrite; // 32-bit Divide
 def WriteID64      : SchedWrite; // 64-bit Divide
-def WriteID512     : SchedWrite; // 512-bit Divide
 def ReadID         : SchedRead;  // 32/64-bit Divide
 def WriteIM32      : SchedWrite; // 32-bit Multiply
 def WriteIM64      : SchedWrite; // 64-bit Multiply
