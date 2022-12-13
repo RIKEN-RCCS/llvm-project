@@ -17,6 +17,15 @@
 
 namespace llvm {
 
+/// ReourceID
+using StmResourceId=int ;
+
+/// StmPipeline patternID
+using StmPatternId=unsigned ;
+
+/// MachineInstr::Opcode
+using StmOpcodeId=unsigned ;
+
 /// Represents the resources used by the instruction.
 /// ex.：LDNP EAG* / EAG*
 /// \dot "Simplified diagram"
@@ -29,19 +38,10 @@ namespace llvm {
 ///  pipe3  [label = "{pipeline:}|{stage:|1|1}|{resource:|EAGB|EAGA}"];
 ///  pipe4  [label = "{pipeline:}|{stage:|1|1}|{resource:|EAGB|EAGB}"];
 /// }
-// \enddot
+/// \enddot
 class StmPipeline {
 //  TargetSchedModel& SM;///< SchedModel
 public:
-  /// ReourceID
-  using StmResourceId=int ;
-
-  /// StmPipeline patternID
-  using StmPatternId=unsigned ;
-
-  /// MachineInstr::Opcode
-  using StmOpcodeId=unsigned ;
-
   StmPatternId patternId=0;
   SmallVector<unsigned,4> stages;
   SmallVector<StmResourceId,4> resources;
@@ -295,7 +295,7 @@ public:
   /// return the name of the ResourceId
   /// \param [in] resource
   /// \return name
-  virtual const char* getResourceName(StmPipeline::StmResourceId resource) const = 0;
+  virtual const char* getResourceName(StmResourceId resource) const = 0;
 
   /// Determine if an instruction is Pseudo
   /// \details Judge as Pseudo only if instruction is not defined in SchedModel

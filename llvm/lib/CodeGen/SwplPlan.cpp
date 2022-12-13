@@ -274,7 +274,7 @@ unsigned SwplPlan::calculateResourceII(const SwplLoop& c_loop) {
 
     for(auto pipeline : *pipes ) {
       for(unsigned i=0; i<pipeline->resources.size(); i++) {
-        StmPipeline::StmResourceId resource = pipeline->resources[i];
+        StmResourceId resource = pipeline->resources[i];
 
         // どの資源パターンが使用されるかはわからないため、
         // n_appearsには"1.0/資源利用のパターン数"の値を足しこむ

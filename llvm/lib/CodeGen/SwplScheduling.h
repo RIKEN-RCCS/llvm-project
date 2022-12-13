@@ -39,7 +39,7 @@ using SwplInstSet = std::set<const SwplInst*>;
 ///
 class SwplMrt {
   unsigned iteration_interval; ///< II
-  std::vector<std::map<StmPipeline::StmResourceId, const SwplInst*>*> table; //< Mrt
+  std::vector<std::map<StmResourceId, const SwplInst*>*> table; //< Mrt
 
 public:
   SwplMrt(unsigned ii) : iteration_interval(ii) {} ///< constructor

@@ -220,7 +220,7 @@ void SwplMrt::cancelResourcesForInst(const SwplInst& inst) {
 /// \return なし
 void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream) {
   unsigned modulo_cycle;
-  StmPipeline::StmResourceId resource_id;
+  StmResourceId resource_id;
   unsigned res_max_length = 0;
   unsigned word_width, inst_gen_width, inst_rotation_width;
   unsigned ii = iteration_interval;
@@ -311,7 +311,7 @@ SwplMrt* SwplMrt::construct (unsigned iteration_interval) {
   SwplMrt*  mrt = new SwplMrt(iteration_interval);
   unsigned ii = mrt->iteration_interval;
   for(unsigned i=0; i<ii; i++) {
-    mrt->table.push_back( (new std::map<StmPipeline::StmResourceId, const SwplInst*>()) );
+    mrt->table.push_back( (new std::map<StmResourceId, const SwplInst*>()) );
   }
   return mrt;
 }
