@@ -114,7 +114,7 @@ StringRef SwplInst::getName() const {
 }
 
 
-SwplLoop *SwplLoop::Initialize(MachineLoop &L, const UseMap& LiveOutReg) {
+SwplLoop *SwplLoop::Initialize(MachineLoop &L, const SwplScr::UseMap& LiveOutReg) {
   SwplLoop *loop = new SwplLoop(L);
   Register2SwplRegMap rmap;
 
@@ -348,27 +348,27 @@ static int mems_initial_diff(const MachineInstr* former_mi, const MachineInstr *
   int64_t formerOffset;
   bool formerOffsetIsScalable;
   if (!SWPipeliner::TII->getMemOperandWithOffset(*former_mi, formerBaseOp, formerOffset, formerOffsetIsScalable, SWPipeliner::TRI))
-    return UNKNOWN_MEM_DIFF;
+    return SwplDdg::UNKNOWN_MEM_DIFF;
   if (formerOffsetIsScalable)
-    return UNKNOWN_MEM_DIFF;
+    return SwplDdg::UNKNOWN_MEM_DIFF;
   if (!formerBaseOp->isReg())
-    return UNKNOWN_MEM_DIFF;
+    return SwplDdg::UNKNOWN_MEM_DIFF;
 
   const MachineOperand *latterBaseOp;
   int64_t latterOffset;
   bool latterOffsetIsScalable;
   if (!SWPipeliner::TII->getMemOperandWithOffset(*latter_mi, latterBaseOp, latterOffset, latterOffsetIsScalable, SWPipeliner::TRI))
-    return UNKNOWN_MEM_DIFF;
+    return SwplDdg::UNKNOWN_MEM_DIFF;
   if (latterOffsetIsScalable)
-    return UNKNOWN_MEM_DIFF;
+    return SwplDdg::UNKNOWN_MEM_DIFF;
   if (!latterBaseOp->isReg())
-    return UNKNOWN_MEM_DIFF;
+    return SwplDdg::UNKNOWN_MEM_DIFF;
 
   if (formerBaseOp->getReg() != latterBaseOp->getReg())
-    return UNKNOWN_MEM_DIFF;
+    return SwplDdg::UNKNOWN_MEM_DIFF;
   int64_t offset=formerOffset-latterOffset;
   int64_t absoffset=labs(offset);
-  return (absoffset > INT_MAX)? UNKNOWN_MEM_DIFF:offset;
+  return (absoffset > INT_MAX)? SwplDdg::UNKNOWN_MEM_DIFF:offset;
 }
 
 /// former_memとＮ回後のlatter_memが重なる可能性の否定できない最小のＮを返す。 \n
@@ -402,8 +402,8 @@ unsigned SwplLoop::getMemsMinOverlapDistance(SwplMem *former_mem, SwplMem *latte
   if (SWPipeliner::isDebugOutput())
     dbgs() << "DBG(getMemIncrement): former_increment=" << former_increment << " , latter_increment=" << latter_increment << "\n";
 
-  if (former_increment == UNKNOWN_MEM_DIFF
-      || latter_increment == UNKNOWN_MEM_DIFF
+  if (former_increment == SwplDdg::UNKNOWN_MEM_DIFF
+      || latter_increment == SwplDdg::UNKNOWN_MEM_DIFF
       || former_increment != latter_increment) {
     return smallest_distance;
   }
@@ -430,7 +430,7 @@ unsigned SwplLoop::getMemsMinOverlapDistance(SwplMem *former_mem, SwplMem *latte
      << ", former_size=" << former_mem->getSize()
      << ", latter_size=" << latter_mem->getSize() << "\n";
 
-  if (initial_diff == UNKNOWN_MEM_DIFF) {
+  if (initial_diff == SwplDdg::UNKNOWN_MEM_DIFF) {
     return smallest_distance;
   }
 
@@ -488,7 +488,7 @@ void SwplLoop::recollectPhiInsts() {
 }
 
 void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBlock *pre, const DebugLoc &dbgloc,
-                             llvm::MachineBasicBlock *org, const UseMap &LiveOutReg) {
+                             llvm::MachineBasicBlock *org, const SwplScr::UseMap &LiveOutReg) {
   std::vector<MachineInstr*> phis;
 
   for (auto &phi:body->phis()) {
@@ -623,7 +623,7 @@ void SwplLoop::cloneBody(llvm::MachineBasicBlock*newBody, llvm::MachineBasicBloc
   renameReg();
 }
 
-void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const UseMap &LiveOutReg) {
+void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOutReg) {
   MachineBasicBlock *ob=L.getTopBlock();
   const BasicBlock *ob_bb=ob->getBasicBlock();
   MachineFunction *MF=ob->getParent();
@@ -737,7 +737,7 @@ int SwplMem::calcEachMemAddressIncrement() {
       dbgs() << " calcEachRegIncrement(" << printReg(reg->getReg(), SWPipeliner::TRI)  << "): "
              << increment << "\n";
     }
-    if (increment == UNKNOWN_MEM_DIFF) {
+    if (increment == SwplDdg::UNKNOWN_MEM_DIFF) {
       return increment;
     }
     old_sum = sum;
@@ -746,11 +746,11 @@ int SwplMem::calcEachMemAddressIncrement() {
     // 計算結果の溢れチェック
     if (increment > 0) {
       if (sum < old_sum) {
-        return UNKNOWN_MEM_DIFF;
+        return SwplDdg::UNKNOWN_MEM_DIFF;
       }
     } else if (increment < 0) {
       if (sum > old_sum) {
-        return UNKNOWN_MEM_DIFF;
+        return SwplDdg::UNKNOWN_MEM_DIFF;
       }
     }
   }

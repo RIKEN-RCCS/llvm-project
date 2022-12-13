@@ -44,18 +44,18 @@ public:
 
 
 /// SWPL向けにRegisterの種別を判断する。
-class AArch64StmRegKind: public llvm::StmRegKind {
-  const llvm::MachineRegisterInfo &MRI;    ///< RegisterInfo
+class AArch64StmRegKind: public StmRegKind {
+  const MachineRegisterInfo &MRI;    ///< RegisterInfo
 
 public:
   /// constructor
-  AArch64StmRegKind(const llvm::MachineRegisterInfo&mri):llvm::StmRegKind(),MRI(mri){}
+  AArch64StmRegKind(const MachineRegisterInfo&mri):StmRegKind(),MRI(mri){}
 
   /// \param id register class id
   /// \param isPReg 割当済か
   AArch64StmRegKind(unsigned id,
                     bool isPReg,
-                    const llvm::MachineRegisterInfo&mri): llvm::StmRegKind(id, isPReg),MRI(mri){}
+                    const MachineRegisterInfo&mri): StmRegKind(id, isPReg),MRI(mri){}
 
   AArch64StmRegKind(const AArch64StmRegKind &s): AArch64StmRegKind(s.registerClassId, s.allocated, s.MRI) {}
 
@@ -65,28 +65,28 @@ public:
   /// \retval true Intergerレジスタ
   /// \retval false Integerレジスタ以外
   bool isInteger(void) const override {
-    return registerClassId==llvm::StmRegKind::RegKindID::IntReg;
+    return registerClassId==StmRegKind::RegKindID::IntReg;
   }
 
   /// Floatingレジスタかどうかを確認する
   /// \retval true Floatingレジスタ
   /// \retval false Floatingレジスタ以外
   bool isFloating(void) const  override {
-    return registerClassId==llvm::StmRegKind::RegKindID::FloatReg;
+    return registerClassId==StmRegKind::RegKindID::FloatReg;
   }
 
   /// Predicateレジスタかどうかを確認する
   /// \retval true Predicateレジスタ
   /// \retval false Predicateレジスタ以外
   bool isPredicate(void) const override {
-    return registerClassId==llvm::StmRegKind::RegKindID::PredicateReg;
+    return registerClassId==StmRegKind::RegKindID::PredicateReg;
   }
 
   /// CCレジスタかどうかを確認する
   /// \retval true CCレジスタ
   /// \retval false CCレジスタ以外
   bool isCCRegister(void) const override {
-    return registerClassId==llvm::StmRegKind::RegKindID::CCReg;
+    return registerClassId==StmRegKind::RegKindID::CCReg;
   }
 
   /// Allocate済レジスタかどうかを確認する
@@ -104,16 +104,16 @@ public:
   }
 
   int getNumIntReg() const override {
-    return llvm::AArch64::GPR64RegClass.getNumRegs();
+    return AArch64::GPR64RegClass.getNumRegs();
   }
   int getNumFloatReg() const override {
-    return llvm::AArch64::FPR64RegClass.getNumRegs();
+    return AArch64::FPR64RegClass.getNumRegs();
   }
   int getNumPredicateReg() const override {
-    return llvm::AArch64::PPR_3bRegClass.getNumRegs();
+    return AArch64::PPR_3bRegClass.getNumRegs();
   }
   int getNumCCReg() const override {
-    return llvm::AArch64::CCRRegClass.getNumRegs();
+    return AArch64::CCRRegClass.getNumRegs();
   }
 
   bool isSameKind(unsigned id) const override {
@@ -123,20 +123,20 @@ public:
 
   /// StmRegKindの内容を出力する
   /// \param [out] os 出力先
-  void print(llvm::raw_ostream& os) const override {
-    const llvm::TargetRegisterClass *r=nullptr;
+  void print(raw_ostream& os) const override {
+    const TargetRegisterClass *r=nullptr;
     switch (registerClassId) {
-    case llvm::AArch64::GPR64RegClassID:
-      r=&llvm::AArch64::GPR64RegClass;
+    case AArch64::GPR64RegClassID:
+      r=&AArch64::GPR64RegClass;
       break;
-    case llvm::AArch64::FPR64RegClassID:
-      r=&llvm::AArch64::FPR64RegClass;
+    case AArch64::FPR64RegClassID:
+      r=&AArch64::FPR64RegClass;
       break;
-    case llvm::AArch64::PPRRegClassID:
-      r=&llvm::AArch64::PPRRegClass;
+    case AArch64::PPRRegClassID:
+      r=&AArch64::PPRRegClass;
       break;
-    case llvm::AArch64::CCRRegClassID:
-      r=&llvm::AArch64::CCRRegClass;
+    case AArch64::CCRRegClassID:
+      r=&AArch64::CCRRegClass;
       break;
     }
     os << "AArch64StmRegKind:" << MRI.getTargetRegisterInfo()->getRegClassName(r) << "\n";
@@ -203,30 +203,30 @@ public:
   /// \param [in] def 定義命令
   /// \param [in] use 利用命令
   /// \return 定義から参照までのレイテンシ
-  int computeRegFlowDependence(const llvm::MachineInstr* def, const llvm::MachineInstr* use) const override;
+  int computeRegFlowDependence(const MachineInstr* def, const MachineInstr* use) const override;
 
   /// メモリのdef/use間のレイテンシを計算する。
   /// \param [in] def 定義命令（Store）
   /// \param [in] use 参照命令（Load）
   /// \return レイテンシ
-  int computeMemFlowDependence(const llvm::MachineInstr* def, const llvm::MachineInstr* use) const override;
+  int computeMemFlowDependence(const MachineInstr* def, const MachineInstr* use) const override;
 
   /// メモリのuse/def間のレイテンシを計算する。
   /// \param [in] def 参照命令（Load）
   /// \param [in] use 定義命令（Store）
   /// \return レイテンシ
-  int computeMemAntiDependence(const llvm::MachineInstr* use, const llvm::MachineInstr* def) const override;
+  int computeMemAntiDependence(const MachineInstr* use, const MachineInstr* def) const override;
 
   /// メモリのdef/def間のレイテンシを計算する。
   /// \param [in] def1 定義命令（Store）
   /// \param [in] def2 定義命令（Store）
   /// \return レイテンシ
-  int computeMemOutputDependence(const llvm::MachineInstr* def1, const llvm::MachineInstr* def2) const override;
+  int computeMemOutputDependence(const MachineInstr* def1, const MachineInstr* def2) const override;
 
   /// 指定命令が利用するリソースの利用パターンをすべて返す。
   /// \param [in] mi 対象命令
   /// \return StmPipelinesを返す
-  const StmPipelinesImpl * getPipelines(const llvm::MachineInstr& mi) override;
+  const StmPipelinesImpl * getPipelines(const MachineInstr& mi) override;
 
 
   /// 利用可能な資源の数を返す
@@ -243,7 +243,7 @@ public:
   /// \param [in] mi 対象命令
   /// \retval truer Psedo命令
   /// \retval false Pseudo命令ではない
-  bool isPseudo(const llvm::MachineInstr& mi) const override;
+  bool isPseudo(const MachineInstr& mi) const override;
 };
 
 

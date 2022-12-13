@@ -119,7 +119,7 @@ bool SwplPlan::isSufficientWithRenamingVersions(const SwplLoop& c_loop,
                                                 const SwplInstSlotHashmap& c_inst_slot_map,
                                                 unsigned iteration_interval,
                                                 unsigned n_renaming_versions) {
-  MsResourceResult ms_resource_result;
+  SwplMsResourceResult ms_resource_result;
   unsigned n_necessary_regs;
 
   ms_resource_result.init();
@@ -159,7 +159,7 @@ SwplPlan* SwplPlan::construct(const SwplLoop& c_loop,
                               SwplInstSlotHashmap& inst_slot_map,
                               unsigned min_ii,
                               unsigned ii,
-                              const MsResourceResult& resource) {
+                              const SwplMsResourceResult& resource) {
   SwplPlan* plan = new SwplPlan(c_loop); //plan->loop =loop;
   size_t prolog_blocks, kernel_blocks;
 
@@ -211,7 +211,7 @@ SwplPlan* SwplPlan::generatePlan(SwplDdg& ddg)
 {
   SwplInstSlotHashmap inst_slot_map;
   unsigned ii, min_ii, itr;
-  MsResourceResult resource;
+  SwplMsResourceResult resource;
 
   TryScheduleResult rslt =
     selectPlan(ddg,
@@ -337,7 +337,7 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
                                         unsigned* selected_ii,
                                         unsigned* calculated_min_ii,
                                         unsigned* required_itr,
-                                        MsResourceResult* resource) {
+                                        SwplMsResourceResult* resource) {
   PlanSpec spec(c_ddg);
   if( !(spec.init(res_mii)) ){
     return TryScheduleResult::TRY_SCHEDULE_FAIL;
@@ -349,7 +349,7 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
     return TryScheduleResult::TRY_SCHEDULE_FEW_ITER;
   }
 
-  MsResult *ms_result = MsResult::calculateMsResult(spec);
+  SwplMsResult *ms_result = SwplMsResult::calculateMsResult(spec);
 
   if (ms_result != nullptr && ms_result->inst_slot_map != nullptr) {
     *inst_slot_map = ms_result->inst_slot_map;
@@ -380,13 +380,13 @@ TryScheduleResult SwplPlan::selectPlan(const SwplDdg& c_ddg,
                                        unsigned* selected_ii,
                                        unsigned* calculated_min_ii,
                                        unsigned* required_itr,
-                                       MsResourceResult& resource) {
+                                       SwplMsResourceResult& resource) {
   unsigned res_mii = calcResourceMinIterationInterval( c_ddg.getLoop() );
 
   SwplInstSlotHashmap* inst_slot_map_tmp;
   unsigned ii_tmp, min_ii_tmp, itr;
   bool is_succeeded;
-  MsResourceResult resource_tmp;
+  SwplMsResourceResult resource_tmp;
 
   switch(trySchedule(c_ddg,
                      res_mii,

@@ -23,24 +23,6 @@
 #include "llvm/InitializePasses.h"
 
 namespace llvm {
-// 利用コンテナのエイリアス宣言
-using SwplInsts = std::vector<class SwplInst *>;
-using SwplRegs = std::vector<class SwplReg *>;
-using SwplMems = std::vector<class SwplMem *>;
-using SwplInstList = std::list<class SwplInst *>; //vectorではダメなのか
-using SwplInstEdges = std::vector<class SwplInstEdge *>;
-using SwplInst2InstsMap = std::map<class SwplInst *, SwplInsts>;
-using SwplInst2InstEdgesMap = std::map<class SwplInst *, SwplInstEdges>;
-using Register2SwplRegMap = std::map<Register, class SwplReg *>;
-using SwplInstEdge2Distances = std::map<SwplInstEdge *, std::vector<unsigned>>;
-using SwplInstEdge2Delays = std::map<SwplInstEdge *, std::vector<int>>;
-using SwplInstEdge2ModuloDelay = std::map<SwplInstEdge *, int>;
-
-using SwplInsts_iterator = SwplInsts::iterator;
-using SwplRegs_iterator = SwplRegs::iterator;
-using SwplMems_iterator = SwplMems::iterator;
-using SwplInstList_iterator = SwplInstList::iterator;
-
 
 /// classの前方宣言
 class SwplLoop;
@@ -51,7 +33,25 @@ class SwplInstEdge;
 class SwplInstGraph;
 class SwplDdg;
 
-#define UNKNOWN_MEM_DIFF INT_MIN        /* 0 の正反対 */
+// 利用コンテナのエイリアス宣言
+using SwplInsts = std::vector<SwplInst *>;
+using SwplRegs = std::vector<SwplReg *>;
+using SwplMems = std::vector<SwplMem *>;
+using SwplInstList = std::list<SwplInst *>; //vectorではダメなのか
+using SwplInstEdges = std::vector<SwplInstEdge *>;
+using SwplInst2InstsMap = std::map<SwplInst *, SwplInsts>;
+using SwplInst2InstEdgesMap = std::map<SwplInst *, SwplInstEdges>;
+using Register2SwplRegMap = std::map<Register, SwplReg *>;
+using SwplInstEdge2Distances = std::map<SwplInstEdge *, std::vector<unsigned>>;
+using SwplInstEdge2Delays = std::map<SwplInstEdge *, std::vector<int>>;
+using SwplInstEdge2ModuloDelay = std::map<SwplInstEdge *, int>;
+
+using SwplInsts_iterator = SwplInsts::iterator;
+using SwplRegs_iterator = SwplRegs::iterator;
+using SwplMems_iterator = SwplMems::iterator;
+using SwplInstList_iterator = SwplInstList::iterator;
+
+
 
 
 /**
@@ -101,7 +101,7 @@ public:
   SwplInsts &getBodyInsts() { return BodyInsts; }
   const SwplInsts &getBodyInsts() const { return BodyInsts; }
   SwplMems &getMems() { return Mems; }
-  std::map<class SwplMem *, int> &getMemIncrementMap() { return MemIncrementMap; };
+  std::map<SwplMem *, int> &getMemIncrementMap() { return MemIncrementMap; };
   /// SwplLoop::NewBodyMBB を返す
   MachineBasicBlock *getNewBodyMBB() { return NewBodyMBB; }
   /// SwplLoop::NewBodyMBB を設定する
@@ -187,7 +187,7 @@ public:
   /// \param[in]  L MachineLoop
   /// \param [in] LiveOutReg 対象ループの出口BusyRegister（非SSA化で特別処理を行うために利用する）
   /// \return ループ内の命令情報
-  static SwplLoop *Initialize(MachineLoop &L, const UseMap& LiveOutReg);
+  static SwplLoop *Initialize(MachineLoop &L, const SwplScr::UseMap& LiveOutReg);
 
   /// SwplLoop::MemIncrementMap に要素を追加する
   void addMemIncrementMap(SwplMem *mem, int increment) { MemIncrementMap[mem] = increment; }
@@ -260,7 +260,7 @@ private:
   /// 対象ループのbodyのBasicBlockを非SSA化する
   /// \param[in]  L MachineLoop
   /// \param[in]  LiveOutReg UseReg
-  void convertSSAtoNonSSA(MachineLoop &L, const UseMap &LiveOutReg);
+  void convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOutReg);
   /// MachineBasicBlock の複製を行う
   /// \param[in]  newBody 複製先のMachineBasicBlock
   /// \param[in]  oldBody 複製元のMachineBasicBlock
@@ -272,7 +272,7 @@ private:
   /// \param[in]  org オリジナルの MachineBasicBlock
   /// \param[in]  LiveOutReg UseMap
   void convertNonSSA(MachineBasicBlock *body, MachineBasicBlock *pre, const DebugLoc &dbgloc,
-                     MachineBasicBlock *org, const UseMap &LiveOutReg);
+                     MachineBasicBlock *org, const SwplScr::UseMap &LiveOutReg);
 
   /// pre/post index命令を検索し演算命令＋load/store命令に変換する
   /// @todo 本メソッドTIIに移動する必要がある
@@ -303,7 +303,7 @@ class SwplInst {
 public:
   SwplInst() {};
   /// MI や SwplLoop はnullがあり得るのでアドレス渡し
-  SwplInst(MachineInstr *i, class SwplLoop *l) {
+  SwplInst(MachineInstr *i, SwplLoop *l) {
     MI = i;
     Loop = l;
   }
@@ -670,6 +670,8 @@ class SwplDdg {
   SwplInstEdge2Delays DelaysMap;       ///< SwplInst 間のDelayマップ
 
 public:
+  static const int UNKNOWN_MEM_DIFF = INT_MIN;        /* 0 の正反対 */
+
   SwplDdg() {};
   SwplDdg(SwplLoop &l) {
     Graph = new SwplInstGraph();

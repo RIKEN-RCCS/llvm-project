@@ -18,14 +18,14 @@ namespace llvm {
 
 /// \brief スケジューリング結果が要する回転数が、実際の回転数（可変）を満たすかをチェックする
 /// \note assumeに対応しないため、常にtrueを返却する
-bool SwplCalclIterations::checkIterationCountVariable(const PlanSpec& spec, const MsResult& ms) {
+bool SwplCalclIterations::checkIterationCountVariable(const PlanSpec& spec, const SwplMsResult & ms) {
   return true;
 }
 
 /// \brief スケジューリング結果が要する回転数が、実際の回転数（固定）を満たすかをチェックする
 /// \details スケジューリング結果が要する回転数が、実際の回転数（固定）を満たすかをチェックする
 ///          実際の命令列上の回転数を優先する.
-bool SwplCalclIterations::checkIterationCountConstant(const PlanSpec& spec, const MsResult& ms) {
+bool SwplCalclIterations::checkIterationCountConstant(const PlanSpec& spec, const SwplMsResult & ms) {
   return (ms.required_itr_count <= spec.itr_count);
 }
 
@@ -60,7 +60,7 @@ bool SwplCalclIterations::preCheckIterationCount(const PlanSpec& spec, unsigned 
     /* 見積り値 */
     int assumed_iterations = spec.assumed_iterations;
     if (assumed_iterations >= 0) {
-      assert(assumed_iterations <= ASSUMED_ITERATIONS_MAX);
+      assert(assumed_iterations <= PlanSpec::ASSUMED_ITERATIONS_MAX);
     }
 
     if( assumed_iterations >= 0 && *required_itr > (unsigned)assumed_iterations ) {

@@ -464,16 +464,16 @@ int AArch64InstrInfo::calcEachRegIncrement(const SwplReg *r) const {
     const auto &r2=def_inst->getUseRegs(1);
     if (r1.getDefInst()->isPhi()) {
       if (r2.getDefInst()->isInLoop())
-        return UNKNOWN_MEM_DIFF;
+        return SwplDdg::UNKNOWN_MEM_DIFF;
       def_inst=r1.getDefInst();
       target=&r1;
     } else if (r2.getDefInst()->isPhi()) {
       if (r1.getDefInst()->isInLoop())
-        return UNKNOWN_MEM_DIFF;
+        return SwplDdg::UNKNOWN_MEM_DIFF;
       def_inst=r2.getDefInst();
       target=&r2;
     } else {
-      return UNKNOWN_MEM_DIFF;
+      return SwplDdg::UNKNOWN_MEM_DIFF;
     }
   }
 
@@ -495,19 +495,19 @@ int AArch64InstrInfo::calcEachRegIncrement(const SwplReg *r) const {
         sign = -1;
 
       if (sign == 0)
-        return UNKNOWN_MEM_DIFF;
+        return SwplDdg::UNKNOWN_MEM_DIFF;
 
       if (&(induction_inst->getUseRegs(0)) == target) {
         const auto& mo=mi->getOperand(2);
-        if (!mo.isImm()) return UNKNOWN_MEM_DIFF;
+        if (!mo.isImm()) return SwplDdg::UNKNOWN_MEM_DIFF;
         return mo.getImm();
       }
     } else {
-      return UNKNOWN_MEM_DIFF;
+      return SwplDdg::UNKNOWN_MEM_DIFF;
     }
   } else {
     if (def_inst->isLoad())
-      return UNKNOWN_MEM_DIFF;
+      return SwplDdg::UNKNOWN_MEM_DIFF;
 
     while (def_inst->getSizeUseRegs() == 1) {
       def_inst->getUseRegs(0).getDefPort(&def_inst, &index_dummy);
@@ -515,12 +515,12 @@ int AArch64InstrInfo::calcEachRegIncrement(const SwplReg *r) const {
         return 0;
       }
       if (def_inst->isPhi()) {
-        return UNKNOWN_MEM_DIFF;
+        return SwplDdg::UNKNOWN_MEM_DIFF;
       }
     }
-    return UNKNOWN_MEM_DIFF;
+    return SwplDdg::UNKNOWN_MEM_DIFF;
   }
-  return UNKNOWN_MEM_DIFF;
+  return SwplDdg::UNKNOWN_MEM_DIFF;
 }
 
 SwplTargetMachine *AArch64InstrInfo::getSwplTargetMachine() const {

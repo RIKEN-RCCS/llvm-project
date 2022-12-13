@@ -16,14 +16,15 @@
 #include "llvm/CodeGen/TargetSchedule.h"
 
 namespace llvm {
+
 /// ReourceID
-typedef int StmResourceId;
+using StmResourceId=int ;
 
 /// StmPipeline patternID
-typedef unsigned StmPatternId;
+using StmPatternId=unsigned ;
 
 /// MachineInstr::Opcode
-typedef unsigned StmOpcodeId;
+using StmOpcodeId=unsigned ;
 
 /// Represents the resources used by the instruction.
 /// ex.：LDNP EAG* / EAG*
@@ -37,7 +38,7 @@ typedef unsigned StmOpcodeId;
 ///  pipe3  [label = "{pipeline:}|{stage:|1|1}|{resource:|EAGB|EAGA}"];
 ///  pipe4  [label = "{pipeline:}|{stage:|1|1}|{resource:|EAGB|EAGB}"];
 /// }
-// \enddot
+/// \enddot
 class StmPipeline {
 //  TargetSchedModel& SM;///< SchedModel
 public:
@@ -301,7 +302,7 @@ public:
   /// \param [in] mi instruction
   /// \retval true Psedo
   /// \retval false not Pseudo
-  virtual bool isPseudo(const llvm::MachineInstr& mi) const = 0;
+  virtual bool isPseudo(const MachineInstr& mi) const = 0;
 };
 
 
