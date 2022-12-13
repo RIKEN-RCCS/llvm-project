@@ -105,7 +105,6 @@ struct TransformedMIRInfo {
   }
 };
 
-using UseMap=std::map<Register, std::vector<MachineOperand*>>;
 
 /// Loop形状を変形したり、Loopから情報を探し出す機能を提供する
 class SwplScr {
@@ -160,6 +159,8 @@ private:
   void removePredFromPhi(MachineBasicBlock *fromMBB, MachineBasicBlock *removeMBB);
 
 public:
+  using UseMap=std::map<Register, std::vector<MachineOperand*>>;
+
   SwplScr(MachineLoop&ml):ML(ml){}
 
   /// scr に対し、イタレーションの最後で常に vreg == coefficient * nRemainedIterations + constant を満たすような vreg を探す。

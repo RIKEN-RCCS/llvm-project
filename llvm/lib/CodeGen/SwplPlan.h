@@ -86,7 +86,7 @@ public:
   void dump();
 };
 
-class MsResourceResult;
+class SwplMsResourceResult;
 
 /// \brief スケジューリング結果を保持するクラス
 /// \details transform mirへ渡す情報となる
@@ -165,7 +165,7 @@ public:
                              SwplInstSlotHashmap& inst_slot_map,
                              unsigned min_ii,
                              unsigned ii,
-                             const MsResourceResult& resource);
+                             const SwplMsResourceResult& resource);
   static void destroy(SwplPlan* plan);
   static SwplPlan* generatePlan(SwplDdg& ddg);
 
@@ -178,13 +178,13 @@ private:
                                        unsigned* selected_ii,
                                        unsigned* calculated_min_ii,
                                        unsigned* required_itr,
-                                       MsResourceResult* resource);
+                                       SwplMsResourceResult* resource);
   static TryScheduleResult selectPlan(const SwplDdg& c_ddg,
                                       SwplInstSlotHashmap& rslt_inst_slot_map,
                                       unsigned* selected_ii,
                                       unsigned* calculated_min_ii,
                                       unsigned* required_itr,
-                                      MsResourceResult& resource);
+                                      SwplMsResourceResult& resource);
 };
 
 }

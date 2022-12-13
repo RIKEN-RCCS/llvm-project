@@ -20,11 +20,8 @@
 
 
 namespace llvm{
-#define ASSUMED_ITERATIONS_MAX (32767)
-
 
 using SwplInstIntMap = llvm::DenseMap<const SwplInst*, int>;
-using SwplInstVectorVector = std::vector<std::vector<const SwplInst*>>;
 using SwplInstPrioque = std::map<int, const SwplInst*>;
 using SwplInstSet = std::set<const SwplInst*>;
 
@@ -42,7 +39,7 @@ using SwplInstSet = std::set<const SwplInst*>;
 ///
 class SwplMrt {
   unsigned iteration_interval; ///< II
-  std::vector<std::map<StmResourceId, const SwplInst*>*> table; //< Mrt
+  std::vector<std::map<StmPipeline::StmResourceId, const SwplInst*>*> table; //< Mrt
 
 public:
   SwplMrt(unsigned ii) : iteration_interval(ii) {} ///< constructor
@@ -147,11 +144,11 @@ class PlanSpec {
   public:
     unsigned budget; ///< iterative_scheduleの繰返し上限
   };
-  /// \brief Swing Modulo Scheduling で使用するスケジュールする II に依存しない情報
-  class SmsBaseInfo {
-  };
 
 public:
+  static const int ASSUMED_ITERATIONS_MAX = 32767;
+  static const int ASSUMED_ITERATIONS_NONE = -1;
+
   const SwplDdg& ddg;          ///< 依存情報
   const SwplLoop& loop;        ///< ループ情報
   unsigned n_insts;            ///< スケジューリング対象の命令数
@@ -166,7 +163,6 @@ public:
   unsigned unable_max_ii;      ///< schedulingを失敗した最大のii
   unsigned n_fillable_float_invariants; ///< 浮動小数点のループ不変の仮想レジのうち、フィルしても ResII を増加させない最大数
   ImsBaseInfo ims_base_info;
-  SmsBaseInfo sms_base_info;
 
   PlanSpec(const SwplDdg& c_ddg) : ddg(c_ddg),loop(c_ddg.getLoop()) {} ///< constructor
 
@@ -181,7 +177,7 @@ private:
 
 
 /// \brief schedulingに対するresourceの過不足情報を保持するクラス
-class MsResourceResult {
+class SwplMsResourceResult {
   bool is_resource_sufficient=false;
   unsigned num_necessary_ireg=0; ///< スケジューリング結果から算出した必要な整数レジスタ
   unsigned num_necessary_freg=0; ///< スケジューリング結果から算出した必要な浮動小数点数レジスタ
@@ -223,7 +219,7 @@ private:
 
 
 /// \brief iiとscheduling結果をまとめて扱う為のクラス
-class MsResult {
+class SwplMsResult {
 public:
   /// 処理状態Policyを表すenum
   enum class ProcState {
@@ -234,7 +230,7 @@ public:
                         SIMPLY_SEARCH,      ///< simply search
   };
   SwplInstSlotHashmap* inst_slot_map; ///< スケジューリング結果を保持するHashmap
-  MsResourceResult resource;
+  SwplMsResourceResult resource;
   unsigned ii;
   unsigned tried_n_insts;        ///< スケジューリングされた命令数
   unsigned n_insufficient_iregs;
@@ -253,42 +249,42 @@ public:
   bool isModerate();
   bool isEffective();
 
-  static MsResult* constructInit(unsigned ii, ProcState procstate);
-  static MsResult* calculateMsResult(PlanSpec spec);
+  static SwplMsResult * constructInit(unsigned ii, ProcState procstate);
+  static SwplMsResult * calculateMsResult(PlanSpec spec);
 
 
 private:
   void checkHardResource(const PlanSpec& spec, bool limit_reg);
-  MsResourceResult isHardRegsSufficient(const PlanSpec& spec);
+  SwplMsResourceResult isHardRegsSufficient(const PlanSpec& spec);
   void evaluateSpillingSchedule(const PlanSpec& spec, unsigned kernel_blocks);
   void checkIterationCount(const PlanSpec& spec);
   void checkMve(const PlanSpec& spec);
   unsigned getIncII(PlanSpec& spec, unsigned prev_tried_n_insts);
   void outputDebugMessageForSchedulingResult(PlanSpec spec);
   void outputGiveupMessageForEstimate(PlanSpec& spec);
-  static MsResult* calculateMsResultByBinarySearch(PlanSpec spec);
-  static MsResult* calculateMsResultAtSpecifiedII(PlanSpec spec, unsigned ii, ProcState procstate);
-  static MsResult* calculateMsResultSimply(PlanSpec spec);
+  static SwplMsResult * calculateMsResultByBinarySearch(PlanSpec spec);
+  static SwplMsResult * calculateMsResultAtSpecifiedII(PlanSpec spec, unsigned ii, ProcState procstate);
+  static SwplMsResult * calculateMsResultSimply(PlanSpec spec);
   static bool collectCandidate(PlanSpec& spec,
-                               std::unordered_set<MsResult*>& ms_result_candidate,
+                               std::unordered_set<SwplMsResult *>& ms_result_candidate,
                                bool watch_regs,
                                ProcState procstate);
   static bool collectModerateCandidate(PlanSpec& spec,
-                                       std::unordered_set<MsResult*>& ms_result_candidate,
+                                       std::unordered_set<SwplMsResult *>& ms_result_candidate,
                                        ProcState procstate);
   static bool recollectModerateCandidateWithExII(PlanSpec& spec,
-                                                 std::unordered_set<MsResult*>& ms_result_candidate,
-                                                 MsResult& ms_result);
+                                                 std::unordered_set<SwplMsResult *>& ms_result_candidate,
+      SwplMsResult & ms_result);
   static bool recollectCandidateWithExII(PlanSpec& spec,
-                                         std::unordered_set<MsResult*>& ms_result_candidate);
-  static bool isRegReducible(PlanSpec& spec, std::unordered_set<MsResult*>& ms_result_candidate);
+                                         std::unordered_set<SwplMsResult *>& ms_result_candidate);
+  static bool isRegReducible(PlanSpec& spec, std::unordered_set<SwplMsResult *>& ms_result_candidate);
   static void getBinarySearchRange(const PlanSpec& spec,
-                                   std::unordered_set<MsResult*>& ms_result_candidate,
+                                   std::unordered_set<SwplMsResult *>& ms_result_candidate,
                                    unsigned *able_min_ii, unsigned *unable_max_ii );
-  static MsResult* getEffectiveSchedule(const PlanSpec& spec,
-                                        std::unordered_set<MsResult*>& ms_result_candidate);
-  static bool isAnyScheduleItrSufficient(std::unordered_set<MsResult*>& ms_result_candidate);
-  static MsResult* getModerateSchedule(std::unordered_set<MsResult*>& ms_result_candidate);
+  static SwplMsResult * getEffectiveSchedule(const PlanSpec& spec,
+                                        std::unordered_set<SwplMsResult *>& ms_result_candidate);
+  static bool isAnyScheduleItrSufficient(std::unordered_set<SwplMsResult *>& ms_result_candidate);
+  static SwplMsResult * getModerateSchedule(std::unordered_set<SwplMsResult *>& ms_result_candidate);
 };
 }
 #endif

@@ -464,16 +464,16 @@ int AArch64InstrInfo::calcEachRegIncrement(const SwplReg *r) const {
     const auto &r2=def_inst->getUseRegs(1);
     if (r1.getDefInst()->isPhi()) {
       if (r2.getDefInst()->isInLoop())
-        return UNKNOWN_MEM_DIFF;
+        return SwplDdg::UNKNOWN_MEM_DIFF;
       def_inst=r1.getDefInst();
       target=&r1;
     } else if (r2.getDefInst()->isPhi()) {
       if (r1.getDefInst()->isInLoop())
-        return UNKNOWN_MEM_DIFF;
+        return SwplDdg::UNKNOWN_MEM_DIFF;
       def_inst=r2.getDefInst();
       target=&r2;
     } else {
-      return UNKNOWN_MEM_DIFF;
+      return SwplDdg::UNKNOWN_MEM_DIFF;
     }
   }
 
@@ -495,19 +495,19 @@ int AArch64InstrInfo::calcEachRegIncrement(const SwplReg *r) const {
         sign = -1;
 
       if (sign == 0)
-        return UNKNOWN_MEM_DIFF;
+        return SwplDdg::UNKNOWN_MEM_DIFF;
 
       if (&(induction_inst->getUseRegs(0)) == target) {
         const auto& mo=mi->getOperand(2);
-        if (!mo.isImm()) return UNKNOWN_MEM_DIFF;
+        if (!mo.isImm()) return SwplDdg::UNKNOWN_MEM_DIFF;
         return mo.getImm();
       }
     } else {
-      return UNKNOWN_MEM_DIFF;
+      return SwplDdg::UNKNOWN_MEM_DIFF;
     }
   } else {
     if (def_inst->isLoad())
-      return UNKNOWN_MEM_DIFF;
+      return SwplDdg::UNKNOWN_MEM_DIFF;
 
     while (def_inst->getSizeUseRegs() == 1) {
       def_inst->getUseRegs(0).getDefPort(&def_inst, &index_dummy);
@@ -515,12 +515,12 @@ int AArch64InstrInfo::calcEachRegIncrement(const SwplReg *r) const {
         return 0;
       }
       if (def_inst->isPhi()) {
-        return UNKNOWN_MEM_DIFF;
+        return SwplDdg::UNKNOWN_MEM_DIFF;
       }
     }
-    return UNKNOWN_MEM_DIFF;
+    return SwplDdg::UNKNOWN_MEM_DIFF;
   }
-  return UNKNOWN_MEM_DIFF;
+  return SwplDdg::UNKNOWN_MEM_DIFF;
 }
 
 SwplTargetMachine *AArch64InstrInfo::getSwplTargetMachine() const {
@@ -535,12 +535,12 @@ namespace llvm {
 
 /// 利用資源パターンを生成するための生成過程で使われるデータ構造
 struct work_node {
-  StmResourceId id; ///< 利用資源
+  StmPipeline::StmResourceId id; ///< 利用資源
   int startCycle=0; ///< 開始サイクル
   SmallVector<work_node*, 8> nodes; ///< 次の利用資源
 
   /// constructor
-  explicit work_node(StmResourceId id):id(id){}
+  explicit work_node(StmPipeline::StmResourceId id):id(id){}
 
   /// destructor
   ~work_node() {
@@ -561,9 +561,9 @@ struct work_node {
   /// \param [in] SM SchedModel
   /// \param [out] stmPipelines 生成結果
   void gen_patterns(TargetSchedModel&SM, StmPipelinesImpl &stmPipelines) {
-    std::vector<StmResourceId> ptn;
+    std::vector<StmPipeline::StmResourceId> ptn;
     std::vector<int> cycle;
-    StmPatternId patternId=0;
+    StmPipeline::StmPatternId patternId=0;
     gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
   }
 
@@ -574,7 +574,7 @@ struct work_node {
   /// \param [in] ptn 利用資源パターン
   /// \param [in] cycle 開始サイクル
   /// \param [out] stmPipelines 生成結果
-  void gen_pattern(TargetSchedModel&SM, StmPatternId &patternId, std::vector<StmResourceId> ptn, std::vector<int> cycle,
+  void gen_pattern(TargetSchedModel&SM, StmPipeline::StmPatternId &patternId, std::vector<StmPipeline::StmResourceId> ptn, std::vector<int> cycle,
                    StmPipelinesImpl &stmPipelines) {
     // 引数：ptnはコピーコンストラクタで複製させている。
     if (id!=A64FXRes::PortKind::P_NULL) {
@@ -732,7 +732,7 @@ const char *AArch64StmPipeline::getResourceName(StmResourceId resource) const {
   return name;
 }
 
-const char *AArch64SwplTargetMachine::getResourceName(StmResourceId resource) const {
+const char *AArch64SwplTargetMachine::getResourceName(StmPipeline::StmResourceId resource) const {
   const char *name="";
   switch (resource) {
   case A64FXRes::PortKind::P_FLA:name="FLA";break;

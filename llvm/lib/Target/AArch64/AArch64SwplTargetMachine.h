@@ -146,8 +146,8 @@ public:
 /// SchedModelを利用してターゲット情報を取得し、SWPL機能に提供する
 class AArch64SwplTargetMachine: public SwplTargetMachine {
 protected:
-  DenseMap<StmResourceId, int> tmNumSameKindResources;  ///< 資源種別ごとの数
-  DenseMap<StmOpcodeId, StmPipelinesImpl * > stmPipelines; ///< Opcodeが利用する資源
+  DenseMap<StmPipeline::StmResourceId, int> tmNumSameKindResources;  ///< 資源種別ごとの数
+  DenseMap<StmPipeline::StmOpcodeId, StmPipelinesImpl * > stmPipelines; ///< Opcodeが利用する資源
   unsigned numResource=0; ///< 資源数（資源種別数ではない）
 
   const AArch64A64FXResInfo *ResInfo=nullptr;
@@ -236,7 +236,7 @@ public:
   /// ResourceIdに応じた名前を返す
   /// \param [in] resource 名前を取得したい資源
   /// \return ResourceIdに応じた名前
-  const char* getResourceName(StmResourceId resource) const override;
+  const char* getResourceName(StmPipeline::StmResourceId resource) const override;
 
   /// 命令がPseudoかどうかを判断する
   /// \details 命令がSchedModelに定義されていない場合のみ、Pseudoと判断する

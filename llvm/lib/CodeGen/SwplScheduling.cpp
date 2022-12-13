@@ -220,7 +220,7 @@ void SwplMrt::cancelResourcesForInst(const SwplInst& inst) {
 /// \return なし
 void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream) {
   unsigned modulo_cycle;
-  StmResourceId resource_id;
+  StmPipeline::StmResourceId resource_id;
   unsigned res_max_length = 0;
   unsigned word_width, inst_gen_width, inst_rotation_width;
   unsigned ii = iteration_interval;
@@ -311,7 +311,7 @@ SwplMrt* SwplMrt::construct (unsigned iteration_interval) {
   SwplMrt*  mrt = new SwplMrt(iteration_interval);
   unsigned ii = mrt->iteration_interval;
   for(unsigned i=0; i<ii; i++) {
-    mrt->table.push_back( (new std::map<StmResourceId, const SwplInst*>()) );
+    mrt->table.push_back( (new std::map<StmPipeline::StmResourceId, const SwplInst*>()) );
   }
   return mrt;
 }
@@ -1097,7 +1097,7 @@ unsigned PlanSpec::getMaxIterationInterval(const SwplLoop& loop, unsigned min_ii
 ///
 /// \note 各ms_resource_result毎にget_max_n_regsを制御したいため
 ///       初期化時にregの上限を変更しやすいような構造体の構成としている.
-void MsResourceResult::init() {
+void SwplMsResourceResult::init() {
   num_necessary_ireg = 0;
   num_necessary_freg = 0;
   num_necessary_preg = 0;
@@ -1112,58 +1112,58 @@ void MsResourceResult::init() {
   return;
 }
 
-void MsResourceResult::setSufficient() {
+void SwplMsResourceResult::setSufficient() {
   setSufficientWithArg( (isIregSufficient() &&
                          isFregSufficient() &&
                          isPregSufficient()) );
   return;
 }
 
-bool MsResourceResult::isIregSufficient() {
+bool SwplMsResourceResult::isIregSufficient() {
   return (num_max_ireg >= num_necessary_ireg);
 }
 
-bool MsResourceResult::isFregSufficient() {
+bool SwplMsResourceResult::isFregSufficient() {
   return (num_max_freg >= num_necessary_freg);
 }
 
-bool MsResourceResult::isPregSufficient() {
+bool SwplMsResourceResult::isPregSufficient() {
   return (num_max_preg >= num_necessary_preg);
 }
 
-void MsResourceResult::setNecessaryIreg(unsigned ireg) {
+void SwplMsResourceResult::setNecessaryIreg(unsigned ireg) {
   num_necessary_ireg = ireg;
   setSufficient();
   return;
 }
 
-void MsResourceResult::setNecessaryFreg(unsigned freg) {
+void SwplMsResourceResult::setNecessaryFreg(unsigned freg) {
   num_necessary_freg = freg;
   setSufficient();
   return;
 }
 
-void MsResourceResult::setNecessaryPreg(unsigned preg) {
+void SwplMsResourceResult::setNecessaryPreg(unsigned preg) {
   num_necessary_preg = preg;
   setSufficient();
   return;
 }
 
-unsigned MsResourceResult::getNumInsufficientIreg() {
+unsigned SwplMsResourceResult::getNumInsufficientIreg() {
   if (isIregSufficient()) {
     return 0;
   }
   return getNecessaryIreg() - getMaxIreg();
 }
 
-unsigned MsResourceResult::getNumInsufficientFreg() {
+unsigned SwplMsResourceResult::getNumInsufficientFreg() {
   if (isFregSufficient()) {
     return 0;
   }
   return getNecessaryFreg() - getMaxFreg();
 }
 
-unsigned MsResourceResult::getNumInsufficientPreg() {
+unsigned SwplMsResourceResult::getNumInsufficientPreg() {
   if (isPregSufficient()) {
     return 0;
   }
@@ -1172,8 +1172,8 @@ unsigned MsResourceResult::getNumInsufficientPreg() {
 
 /// \brief レジスタに余裕があるかどうかチェックする
 ///
-/// \note MsResult.isEffective()==trueとなるMsResult.MsResourceResultに対して用いる
-bool MsResourceResult::isModerate() {
+/// \note SwplMsResult.isEffective()==trueとなるMsResult.MsResourceResultに対して用いる
+bool SwplMsResourceResult::isModerate() {
   /* heuristicな条件 */
   if ((num_max_ireg < num_necessary_ireg + loose_margin_ireg) ||
       (num_max_freg < num_necessary_freg + loose_margin_freg) ||
@@ -1223,7 +1223,7 @@ bool MsResourceResult::isModerate() {
 ///  - IMSを実行する関数を呼び出す。スケジューリング結果はSwplTrialState->inst_slot_mapに格納される。
 ///  - スケジューリング結果(SwplTrialState->inst_slot_map)を、MsResultに保持させる
 ///  - SwplTrialStateを破棄 ※ただし、inst_slot_map域は残す
-bool MsResult::constructInstSlotMapAtSpecifiedII(PlanSpec spec) {
+bool SwplMsResult::constructInstSlotMapAtSpecifiedII(PlanSpec spec) {
   SwplInstSlotHashmap* instslotmap;
   SwplModuloDdg* modulo_ddg;
   SwplTrialState* state;
@@ -1282,7 +1282,7 @@ bool MsResult::constructInstSlotMapAtSpecifiedII(PlanSpec spec) {
 /// \param [in] spec スケジューリング指示情報
 /// \param [in] limit_reg レジスタ数上限をチェックするか否か
 /// \return なし
-void MsResult::checkInstSlotMap(const PlanSpec& spec, bool limit_reg) {
+void SwplMsResult::checkInstSlotMap(const PlanSpec& spec, bool limit_reg) {
   checkHardResource(spec, limit_reg);
   checkIterationCount(spec);
   checkMve(spec);
@@ -1292,7 +1292,7 @@ void MsResult::checkInstSlotMap(const PlanSpec& spec, bool limit_reg) {
 /// \brief inst_slot_mapに対して資源が足りているかをチェックする
 ///
 /// \note 現在のところ,整数, predicateレジスタが不足している場合は採用していない
-void MsResult::checkHardResource(const PlanSpec& spec, bool limit_reg) {
+void SwplMsResult::checkHardResource(const PlanSpec& spec, bool limit_reg) {
   if (inst_slot_map == nullptr || !limit_reg) {
     is_reg_sufficient = true;
     n_insufficient_iregs = 0;
@@ -1361,10 +1361,10 @@ void MsResult::checkHardResource(const PlanSpec& spec, bool limit_reg) {
 ///
 /// \note 固定割付けでないレジスタが、整数、浮動小数点数、プレディケートであることが前提の処理である。
 /// \note llvm::AArch64::CCRRegClassIDは固定割付けのため処理しない
-MsResourceResult MsResult::isHardRegsSufficient(const PlanSpec& spec) {
+SwplMsResourceResult SwplMsResult::isHardRegsSufficient(const PlanSpec& spec) {
   unsigned int n_renaming_versions;
   unsigned n_necessary_regs;
-  MsResourceResult ms_resource_result;
+  SwplMsResourceResult ms_resource_result;
 
   ms_resource_result.init();
   n_renaming_versions = inst_slot_map->calcNRenamingVersions(spec.loop, ii);
@@ -1398,7 +1398,7 @@ MsResourceResult MsResult::isHardRegsSufficient(const PlanSpec& spec) {
 
 /// \brief 各II毎のinst_slot_mapに対して回転数が足りているかをチェックする
 /// \return なし。結果は PlanSpec::is_itr_sufficientに格納される。
-void MsResult::checkIterationCount(const PlanSpec& spec) {
+void SwplMsResult::checkIterationCount(const PlanSpec& spec) {
   required_itr_count = 0;
 
   /* スケジューリング自体がない場合は,制限にかからない */
@@ -1437,7 +1437,7 @@ void MsResult::checkIterationCount(const PlanSpec& spec) {
 }
 
 /// \brief kernelの展開数MVEが妥当な数であるかを判定する
-void MsResult::checkMve(const PlanSpec& spec) {
+void SwplMsResult::checkMve(const PlanSpec& spec) {
   required_mve = 0;
 
   /* スケジューリング自体がない場合は,制限にかからない */
@@ -1459,8 +1459,8 @@ void MsResult::checkMve(const PlanSpec& spec) {
 /// \param [in] spec スケジューリング指示情報
 /// \return なし
 ///
-/// \note MsResult.proc_stateによって出力メッセージが一部変わる。
-void MsResult::outputDebugMessageForSchedulingResult(PlanSpec spec) {
+/// \note SwplMsResult.proc_stateによって出力メッセージが一部変わる。
+void SwplMsResult::outputDebugMessageForSchedulingResult(PlanSpec spec) {
   unsigned max_freg, max_ireg, max_preg, req_freg, req_ireg, req_preg;
   if (!SWPipeliner::isDebugOutput()) { return ;}
   /* registerの内容詳細をチェック */
@@ -1532,7 +1532,7 @@ void MsResult::outputDebugMessageForSchedulingResult(PlanSpec spec) {
   case ProcState::BINARY_SEARCH:       statestr="binary search.      "; break;
   case ProcState::SIMPLY_SEARCH:       statestr="simply search.      "; break;
   default:
-    llvm_unreachable("unknown MsResult.proc_state");
+    llvm_unreachable("unknown SwplMsResult.proc_state");
   }
   //dbgs() << ((is_called_from_estimate)?"at estimation.   ":"at binary search.")
   dbgs() << "at " << statestr
@@ -1553,7 +1553,7 @@ void MsResult::outputDebugMessageForSchedulingResult(PlanSpec spec) {
 ///
 /// \note 余裕の基準はheuristicである.
 /// \note OoO資源をベースにして決定したい
-bool MsResult::isModerate() {
+bool SwplMsResult::isModerate() {
   if(isEffective() == false) {
     return false;
   }
@@ -1578,7 +1578,7 @@ bool MsResult::isModerate() {
 /// retval false 資源と回転数が十分なスケジュール結果でない
 ///
 /// \note heuristicな条件は確認しない
-bool MsResult::isEffective() {
+bool SwplMsResult::isEffective() {
   if (inst_slot_map != nullptr &&
       is_itr_sufficient == true &&
       is_reg_sufficient == true &&
@@ -1598,7 +1598,7 @@ bool MsResult::isEffective() {
 ///
 /// \note 現在の仕様ではregister不足でschedulingできなかった場合も,
 ///       inst_slot_mapがnullptrとなっている事に注意すること.
-void MsResult::outputGiveupMessageForEstimate(PlanSpec& spec) {
+void SwplMsResult::outputGiveupMessageForEstimate(PlanSpec& spec) {
   assert(inst_slot_map == nullptr ||
          !(is_reg_sufficient &&
            is_itr_sufficient &&
@@ -1668,7 +1668,7 @@ void MsResult::outputGiveupMessageForEstimate(PlanSpec& spec) {
 ///   ------------------------------------------------------------
 /// ```
 ///
-void MsResult::evaluateSpillingSchedule(const PlanSpec& spec, unsigned kernel_blocks) {
+void SwplMsResult::evaluateSpillingSchedule(const PlanSpec& spec, unsigned kernel_blocks) {
   unsigned num_load  = 0;
   unsigned num_store = 0;
   unsigned num_float = 0;
@@ -1712,13 +1712,13 @@ void MsResult::evaluateSpillingSchedule(const PlanSpec& spec, unsigned kernel_bl
 
 /// \brief MsResultの生成
 /// \details MsResultの生成と初期化
-/// \param [in] ii MsResult.iiの初期値
+/// \param [in] ii SwplMsResult.iiの初期値
 /// \param [in] procstate MsResultの処理状態（ex. binary_search中、など）
 /// \return 生成したMsResultのポインタ
 ///
 /// \note 本関数で生成したMsResultは呼出し側で解放する必要がある。
-MsResult* MsResult::constructInit(unsigned ii, ProcState procstate ) {
-  MsResult* ms_result = new MsResult();
+SwplMsResult *SwplMsResult::constructInit(unsigned ii, ProcState procstate ) {
+  SwplMsResult * ms_result = new SwplMsResult();
 
   ms_result->inst_slot_map = nullptr;
   ms_result->ii = ii;
@@ -1770,9 +1770,9 @@ MsResult* MsResult::constructInit(unsigned ii, ProcState procstate ) {
 ///      (1)で余裕がある解が見つからなかった場合、余裕が無い解を採用する.
 /// ```
 ///
-MsResult* MsResult::calculateMsResult(PlanSpec spec) {
-  std::unordered_set<MsResult*> ms_result_candidate; ///< 試行した結果のMsResultを保持する
-  MsResult *ms_result = nullptr;
+SwplMsResult *SwplMsResult::calculateMsResult(PlanSpec spec) {
+  std::unordered_set<SwplMsResult *> ms_result_candidate; ///< 試行した結果のMsResultを保持する
+  SwplMsResult *ms_result = nullptr;
   bool candidate_is_collected = false;
   bool do_binary_search       = true;
 
@@ -1915,7 +1915,7 @@ MsResult* MsResult::calculateMsResult(PlanSpec spec) {
      * 二分探索の結果, たまたまspec.max_iiがscheduling可能な最小のiiであった場合,
      * ms_result_binaryのinst_slot_mapはnullptrとなる.
      */
-    MsResult* ms_result_binary = calculateMsResultByBinarySearch(spec);
+    SwplMsResult * ms_result_binary = calculateMsResultByBinarySearch(spec);
     if (ms_result_binary) {
       if(ms_result_binary->inst_slot_map != nullptr) {
         delete ms_result->inst_slot_map;
@@ -1946,12 +1946,12 @@ MsResult* MsResult::calculateMsResult(PlanSpec spec) {
 
 /// \brief 資源と回転数が十分なscheduleを取得する
 /// \param [in] spec スケジューリング指示情報
-/// \param [in] ms_result_candidate スケジューリング結果(MsResult*)のHashSet
+/// \param [in] ms_result_candidate スケジューリング結果(SwplMsResult*)のHashSet
 /// \return ms_result_candidateのうち、資源と回転数が十分なスケジューリング結果のMsResultのポインタ
-MsResult* MsResult::getEffectiveSchedule(const PlanSpec& spec,
-                                         std::unordered_set<MsResult*>& ms_result_candidate) {
+SwplMsResult *SwplMsResult::getEffectiveSchedule(const PlanSpec& spec,
+                                         std::unordered_set<SwplMsResult *>& ms_result_candidate) {
   unsigned able_min_ii;
-  MsResult *effective_ms_result;
+  SwplMsResult *effective_ms_result;
 
   able_min_ii = spec.max_ii;
   effective_ms_result = nullptr;
@@ -1972,7 +1972,7 @@ MsResult* MsResult::getEffectiveSchedule(const PlanSpec& spec,
 /// \param [in] ms_result_candidate スケジューリング結果(MS_RESULT)のHashSet
 /// \retval TRUE ms_result_candidateに回転数が足りるscheduleが存在する
 /// \retval FALSE ms_result_candidateに回転数が足りるscheduleが存在しない
-bool MsResult::isAnyScheduleItrSufficient(std::unordered_set<MsResult*>& ms_result_candidate) {
+bool SwplMsResult::isAnyScheduleItrSufficient(std::unordered_set<SwplMsResult *>& ms_result_candidate) {
   for( auto temp : ms_result_candidate) {
     if (temp != nullptr && temp->is_itr_sufficient) {
       return true;
@@ -1988,7 +1988,7 @@ bool MsResult::isAnyScheduleItrSufficient(std::unordered_set<MsResult*>& ms_resu
 /// \return moderateなスケジュール結果（MS_RESULT*）
 ///
 /// \note moderateなscheduleは多くとも1つしかHashされていない
-MsResult* MsResult::getModerateSchedule(std::unordered_set<MsResult*>& ms_result_candidate) {
+SwplMsResult *SwplMsResult::getModerateSchedule(std::unordered_set<SwplMsResult *>& ms_result_candidate) {
 #if !defined(NDEBUG)
   {
     unsigned int number_of_moderate_schedule = 0;
@@ -2016,8 +2016,8 @@ MsResult* MsResult::getModerateSchedule(std::unordered_set<MsResult*>& ms_result
 /// \param [out] able_min_ii スケジューリングが可能な最小のiiを格納するポインタ
 /// \param [out] unable_max_ii スケジューリングが不可能な最大のiiを格納するポインタ
 /// \return なし
-void MsResult::getBinarySearchRange(const PlanSpec& spec,
-                                    std::unordered_set<MsResult*>& ms_result_candidate,
+void SwplMsResult::getBinarySearchRange(const PlanSpec& spec,
+                                    std::unordered_set<SwplMsResult *>& ms_result_candidate,
                                     unsigned *able_min_ii,
                                     unsigned *unable_max_ii ) {
   *able_min_ii   = spec.max_ii;
@@ -2062,9 +2062,9 @@ void MsResult::getBinarySearchRange(const PlanSpec& spec,
 ///   collectCandidateで得られたscheduling結果が利用される.
 /// ```
 ///
-MsResult* MsResult::calculateMsResultByBinarySearch(PlanSpec spec) {
-  MsResult* ms_result;
-  MsResult* ms_result_child;
+SwplMsResult *SwplMsResult::calculateMsResultByBinarySearch(PlanSpec spec) {
+  SwplMsResult * ms_result;
+  SwplMsResult * ms_result_child;
   unsigned point_ii, start_ii, end_ii;
 
   start_ii = spec.min_ii;
@@ -2081,7 +2081,7 @@ MsResult* MsResult::calculateMsResultByBinarySearch(PlanSpec spec) {
   }
 
   /* 中点におけるschedulingの試行 */
-  ms_result = MsResult::calculateMsResultAtSpecifiedII(spec, point_ii, ProcState::BINARY_SEARCH);
+  ms_result = SwplMsResult::calculateMsResultAtSpecifiedII(spec, point_ii, ProcState::BINARY_SEARCH);
 
   /* 探索範囲を二分する*/
   if (ms_result && ms_result->inst_slot_map == nullptr) {
@@ -2095,7 +2095,7 @@ MsResult* MsResult::calculateMsResultByBinarySearch(PlanSpec spec) {
   /* 二分探索の再帰呼出*/
   spec.min_ii = start_ii;
   spec.max_ii = end_ii;
-  ms_result_child = MsResult::calculateMsResultByBinarySearch(spec);
+  ms_result_child = SwplMsResult::calculateMsResultByBinarySearch(spec);
 
   /*
    * ms_result_childのinst_slot_mapがnullptrではない時,
@@ -2128,10 +2128,11 @@ MsResult* MsResult::calculateMsResultByBinarySearch(PlanSpec spec) {
 /// \note 本関数は, binary searchにおける各iiで呼ばれる.<br>
 ///       そのため,資源と回転数が十分のresultのみ返却するものとする.<br>
 ///       またbinary searchを用いない場合の旧方式で使用される.<br>
-MsResult* MsResult::calculateMsResultAtSpecifiedII(PlanSpec spec, unsigned ii, ProcState procstate) {
-  MsResult* ms_result;
+SwplMsResult *
+SwplMsResult::calculateMsResultAtSpecifiedII(PlanSpec spec, unsigned ii, ProcState procstate) {
+  SwplMsResult * ms_result;
 
-  ms_result = MsResult::constructInit(ii, procstate);
+  ms_result = SwplMsResult::constructInit(ii, procstate);
   ms_result->constructInstSlotMapAtSpecifiedII(spec);
   ms_result->checkInstSlotMap(spec);
   ms_result->outputDebugMessageForSchedulingResult(spec);
@@ -2152,12 +2153,12 @@ MsResult* MsResult::calculateMsResultAtSpecifiedII(PlanSpec spec, unsigned ii, P
 /// \return MsResultのポインタ
 ///
 /// \note spec.max_iiでschedulingが可能である事を保証しなければならない.
-MsResult* MsResult::calculateMsResultSimply(PlanSpec spec) {
-  MsResult* ms_result;
+SwplMsResult *SwplMsResult::calculateMsResultSimply(PlanSpec spec) {
+  SwplMsResult * ms_result;
   unsigned ii;
 
   for (ii = spec.min_ii; ii <= spec.max_ii; ++ii) {
-    ms_result = MsResult::calculateMsResultAtSpecifiedII(spec, ii, ProcState::SIMPLY_SEARCH);
+    ms_result = SwplMsResult::calculateMsResultAtSpecifiedII(spec, ii, ProcState::SIMPLY_SEARCH);
     if (ms_result->inst_slot_map != nullptr) {
       break;
     }
@@ -2168,7 +2169,7 @@ MsResult* MsResult::calculateMsResultSimply(PlanSpec spec) {
 
 /// \brief min_iiとmax_iiの間でschedulingできるiiを大まかに探索する
 /// \param [in] spec スケジューリング指示情報のポインタ
-/// \param [in] ms_result_candidate MsResult*のHashSet
+/// \param [in] ms_result_candidate SwplMsResult*のHashSet
 /// \param [in] watch_regs 資源チェックを実施するかのフラグ
 /// \param [in] procstate MsResultの処理状態（ex. binary_search中、など）
 /// \retval true スケジューリングに成功した
@@ -2184,17 +2185,17 @@ MsResult* MsResult::calculateMsResultSimply(PlanSpec spec) {
 ///       このため稀なケースは無視することにした。
 /// \note budgetが尽きるようなIIを選んでいるのでよくない
 /// \note specのメンバ変数のうちunable_max_iiのみが更新される
-bool MsResult::collectCandidate(PlanSpec& spec,
-                                std::unordered_set<MsResult*>& ms_result_candidate,
+bool SwplMsResult::collectCandidate(PlanSpec& spec,
+                                std::unordered_set<SwplMsResult *>& ms_result_candidate,
                                 bool watch_regs,
                                 ProcState procstate) {
-  MsResult *ms_result;
+  SwplMsResult *ms_result;
   unsigned ii, inc_ii, prev_tried_n_insts;
 
   prev_tried_n_insts = 0;
 
   for (ii = spec.min_ii; /* 下で */; ii += inc_ii) {
-    ms_result = MsResult::constructInit(ii, procstate);
+    ms_result = SwplMsResult::constructInit(ii, procstate);
     ms_result->constructInstSlotMapAtSpecifiedII(spec);
     ms_result->checkInstSlotMap(spec);
     ms_result->outputDebugMessageForSchedulingResult(spec);
@@ -2203,7 +2204,7 @@ bool MsResult::collectCandidate(PlanSpec& spec,
      * inst_slot_mapがnullptrではない場合,資源が不足していた場合でも,
      * scheduleが採用される可能性がある為,候補として登録する.
      */
-    MsResult ms_result_tmp = *ms_result; // チェックおよび情報出力のためcopy
+    SwplMsResult ms_result_tmp = *ms_result; // チェックおよび情報出力のためcopy
     if (ms_result->inst_slot_map != nullptr) {
       ms_result_candidate.insert(ms_result);
     }
@@ -2257,16 +2258,16 @@ bool MsResult::collectCandidate(PlanSpec& spec,
 ///     そのスケジューリング結果がMsResult.isModerateの条件を満たす場合は、
 ///     ms_result_candidateに追加して復帰する
 ///   - それ以外の場合は、spec.unable_max_iiを更新し、必要に応じて領域開放し、やり直し
-bool MsResult::collectModerateCandidate(PlanSpec& spec,
-                                        std::unordered_set<MsResult*>& ms_result_candidate,
+bool SwplMsResult::collectModerateCandidate(PlanSpec& spec,
+                                        std::unordered_set<SwplMsResult *>& ms_result_candidate,
                                         ProcState state) {
-  MsResult* ms_result;
+  SwplMsResult * ms_result;
   unsigned ii, inc_ii;
 
   inc_ii = std::max((unsigned)1, (spec.max_ii - spec.min_ii)/5);
 
   for (ii = spec.min_ii; ii < spec.max_ii; ii += inc_ii) {
-    ms_result = MsResult::constructInit(ii, state);
+    ms_result = SwplMsResult::constructInit(ii, state);
     ms_result->constructInstSlotMapAtSpecifiedII(spec);
     ms_result->checkInstSlotMap(spec);
     ms_result->outputDebugMessageForSchedulingResult(spec);
@@ -2299,9 +2300,9 @@ bool MsResult::collectModerateCandidate(PlanSpec& spec,
 /// \param [in] ms_result 再試行のベースとなるMsResult
 /// \retval TRUE スケジューリングに成功した（ms_result_candidateに新しい結果が追加される）
 /// \retval FALSE スケジューリングに失敗した
-bool MsResult::recollectModerateCandidateWithExII(PlanSpec& spec,
-                                                  std::unordered_set<MsResult*>& ms_result_candidate,
-                                                  MsResult& ms_result) {
+bool SwplMsResult::recollectModerateCandidateWithExII(PlanSpec& spec,
+                                                  std::unordered_set<SwplMsResult *>& ms_result_candidate,
+    SwplMsResult & ms_result) {
   unsigned old_maxii = spec.max_ii;
   unsigned old_minii = spec.min_ii;
   spec.min_ii = ms_result.ii+1;
@@ -2323,11 +2324,11 @@ bool MsResult::recollectModerateCandidateWithExII(PlanSpec& spec,
 /// \details スケジューリング指示情報のiiを拡張し、collectCandidate関数を実施して再scheduleする。
 /// \note 資源不足の場合に呼び出され、iiを拡張してscheduleを再収集する。
 /// \param [in,out] spec スケジューリング指示情報のポインタ
-/// \param [in,out] ms_result_candidate MsResult*のHashSet
+/// \param [in,out] ms_result_candidate SwplMsResult*のHashSet
 /// \retval true スケジューリングに成功した
 /// \retval false スケジューリングに失敗した
-bool MsResult::recollectCandidateWithExII(PlanSpec& spec,
-                                          std::unordered_set<MsResult*>& ms_result_candidate) {
+bool SwplMsResult::recollectCandidateWithExII(PlanSpec& spec,
+                                          std::unordered_set<SwplMsResult *>& ms_result_candidate) {
   unsigned old_maxii = spec.max_ii;
   unsigned old_minii = spec.min_ii;
 
@@ -2345,7 +2346,7 @@ bool MsResult::recollectCandidateWithExII(PlanSpec& spec,
    * 拡張したiiでスケジュールの再収集を行なう.
    * \note 解放処理を共通にする為,一度目のscheduleはHashSetに入ったままである.
    */
-  return MsResult::collectCandidate(spec, ms_result_candidate, true, ProcState::RECOLLECT_EFFECTIVE);
+  return SwplMsResult::collectCandidate(spec, ms_result_candidate, true, ProcState::RECOLLECT_EFFECTIVE);
 }
 
 /// \brief collectCandidateのために次回転のinc_iiを取得する
@@ -2355,7 +2356,7 @@ bool MsResult::recollectCandidateWithExII(PlanSpec& spec,
 /// \return 算出したinc_ii
 ///
 /// \note  heuristicな手法でinc_iiを決めている.
-unsigned MsResult::getIncII(PlanSpec& spec, unsigned prev_tried_n_insts) {
+unsigned SwplMsResult::getIncII(PlanSpec& spec, unsigned prev_tried_n_insts) {
   unsigned inc_ii = 0;
 
   /* (n_insts - tried_n_insts)>>1 は schedule されなかった命令数の約半分。*/
@@ -2418,7 +2419,7 @@ unsigned MsResult::getIncII(PlanSpec& spec, unsigned prev_tried_n_insts) {
 /// \details iiを拡張する事で、register不足が解消する可能性があるかを、
 ///          既に得られているscheduleからheuristicに判断する。
 /// \param [in] spec スケジューリング指示情報
-/// \param [in] ms_result_candidate MsResult*のHashSet
+/// \param [in] ms_result_candidate SwplMsResult*のHashSet
 /// \retval true iiを減らすとregが減る事が期待できる
 /// \retval false iiを減らしてもregが減る事が期待できない
 ///
@@ -2432,7 +2433,7 @@ unsigned MsResult::getIncII(PlanSpec& spec, unsigned prev_tried_n_insts) {
 ///       evaluateSpillingScheduleはiiを増やすほど評価が低くなる為,
 ///       不足registerが同じである場合はevaluationが増大する事はない.
 ///       よりよいscheduleが得られると期待できない為,抑止する.
-bool MsResult::isRegReducible(PlanSpec& spec, std::unordered_set<MsResult*>& ms_result_candidate) {
+bool SwplMsResult::isRegReducible(PlanSpec& spec, std::unordered_set<SwplMsResult *>& ms_result_candidate) {
   unsigned threshold_reduced_reg;
 
   unsigned n_candidate = 0;

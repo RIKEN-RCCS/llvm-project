@@ -18,19 +18,12 @@
 #include <unordered_map>
 namespace llvm {
 
-using Reg2Vreg=llvm::DenseMap<const SwplReg*, std::vector<llvm::Register>*>;
-
-using MI2SwplInst=std::unordered_map<const llvm::MachineInstr*, SwplInst*>;
-
-using SwplInst2Slot=std::unordered_map<const SwplInst*, unsigned>;
-
-using MIList=std::vector<llvm::MachineInstr*>;
-
-using RegMap=std::map<llvm::Register,llvm::Register>;
-
 /// スケジューリング結果反映
 class SwplTransformMIR {
 private:
+  using Reg2Vreg=DenseMap<const SwplReg*, std::vector<Register>*>;
+  using RegMap=std::map<Register, Register>;
+
   /// 変換結果の移動先
   enum BLOCK {  PRO_MOVE,  PROLOGUE,  KERNEL,  EPILOGUE,  EPI_MOVE};
   /// MIR出力タイミング
@@ -46,7 +39,7 @@ private:
 
   // SSA化で利用するメンバ変数
   RegMap Org2NewReg; ///< original register->new register
-  UseMap &LiveOutReg;
+  SwplScr::UseMap &LiveOutReg;
 
 
   /// KERNELの分岐言の比較に用いる制御変数のversionを決定する 
@@ -171,7 +164,7 @@ public:
   /// \param [in] mf 対象MachineFunction
   /// \param [in] plan スケジューリング計画
   /// \param [in] liveOutReg 対象ループから出力Busyとなるレジスタ（スケジューリング結果反映時にレジスタ修正範囲を特定するために利用）
-  SwplTransformMIR(llvm::MachineFunction&mf, SwplPlan&plan, UseMap&liveOutReg)
+  SwplTransformMIR(llvm::MachineFunction &mf, SwplPlan&plan, SwplScr::UseMap &liveOutReg)
   :Plan(plan),InstSlotMap(plan.getInstSlotMap()),Loop(plan.getLoop()),MF(mf),LiveOutReg(liveOutReg) {}
 
   virtual ~SwplTransformMIR() {
@@ -190,6 +183,22 @@ public:
 
   /// ファイルを入力し、SwplPlanへ設定する
   void importPlan();
+
+  /// 命令の並びを表現するためのクラス
+  struct IOSlot {
+    unsigned id; ///< 命令の番号（スケジューリング対象命令の出現順番号）
+    unsigned slot; ///< 命令を置くslot番号
+  };
+
+  /// SwplPlanとYAMLの仲介で利用するクラス
+  struct IOPlan {
+    unsigned minimum_iteration_interval;
+    unsigned iteration_interval;
+    size_t n_renaming_versions;
+    size_t n_iteration_copies;
+    unsigned begin_slot;
+    std::vector<IOSlot> Slots;
+  };
 
 };
 

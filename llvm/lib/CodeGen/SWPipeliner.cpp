@@ -213,7 +213,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   if (TargetLoop>0 && TargetLoop!=loopCountForDebug) return Changed;
 
   SwplScr swplScr(L);
-  UseMap liveOutReg;
+  SwplScr::UseMap liveOutReg;
   // SwplLoop::Initialize()でLoop複製されるため、その前に出口Busyレジスタ情報を収集する
   swplScr.collectLiveOut(liveOutReg);
 

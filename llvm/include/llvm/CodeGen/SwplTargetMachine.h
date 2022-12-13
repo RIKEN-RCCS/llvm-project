@@ -16,14 +16,6 @@
 #include "llvm/CodeGen/TargetSchedule.h"
 
 namespace llvm {
-/// ReourceID
-typedef int StmResourceId;
-
-/// StmPipeline patternID
-typedef unsigned StmPatternId;
-
-/// MachineInstr::Opcode
-typedef unsigned StmOpcodeId;
 
 /// Represents the resources used by the instruction.
 /// ex.：LDNP EAG* / EAG*
@@ -41,6 +33,15 @@ typedef unsigned StmOpcodeId;
 class StmPipeline {
 //  TargetSchedModel& SM;///< SchedModel
 public:
+  /// ReourceID
+  using StmResourceId=int ;
+
+  /// StmPipeline patternID
+  using StmPatternId=unsigned ;
+
+  /// MachineInstr::Opcode
+  using StmOpcodeId=unsigned ;
+
   StmPatternId patternId=0;
   SmallVector<unsigned,4> stages;
   SmallVector<StmResourceId,4> resources;
@@ -294,14 +295,14 @@ public:
   /// return the name of the ResourceId
   /// \param [in] resource
   /// \return name
-  virtual const char* getResourceName(StmResourceId resource) const = 0;
+  virtual const char* getResourceName(StmPipeline::StmResourceId resource) const = 0;
 
   /// Determine if an instruction is Pseudo
   /// \details Judge as Pseudo only if instruction is not defined in SchedModel
   /// \param [in] mi instruction
   /// \retval true Psedo
   /// \retval false not Pseudo
-  virtual bool isPseudo(const llvm::MachineInstr& mi) const = 0;
+  virtual bool isPseudo(const MachineInstr& mi) const = 0;
 };
 
 

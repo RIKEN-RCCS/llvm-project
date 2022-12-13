@@ -869,39 +869,19 @@ void SwplTransformMIR::convert2SSA() {
   convertProlog2SSA();
 }
 
-
-namespace llvm {
-
-/// 命令の並びを表現するためのクラス
-struct IOSlot {
-  unsigned id; ///< 命令の番号（スケジューリング対象命令の出現順番号）
-  unsigned slot; ///< 命令を置くslot番号
-};
-
-/// SwplPlanとYAMLの仲介で利用するクラス
-struct IOPlan {
-  unsigned minimum_iteration_interval;
-  unsigned iteration_interval;
-  size_t n_renaming_versions;
-  size_t n_iteration_copies;
-  unsigned begin_slot;
-  std::vector<IOSlot> Slots;
-};
-}
-
 template <>
-struct yaml::MappingTraits<IOSlot> {
-  static void mapping(IO &io, IOSlot &info) {
+struct yaml::MappingTraits<SwplTransformMIR::IOSlot> {
+  static void mapping(IO &io, SwplTransformMIR::IOSlot &info) {
     io.mapRequired("id", info.id);
     io.mapRequired("slot", info.slot);
   }
 };
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(IOSlot)
+LLVM_YAML_IS_SEQUENCE_VECTOR(SwplTransformMIR::IOSlot)
 
 template <>
-struct yaml::MappingTraits<IOPlan> {
-  static void mapping(IO &io, IOPlan &info) {
+struct yaml::MappingTraits<SwplTransformMIR::IOPlan> {
+  static void mapping(IO &io, SwplTransformMIR::IOPlan &info) {
     io.mapRequired("minimum_iteration_interval", info.minimum_iteration_interval);
     io.mapRequired("iteration_interval", info.iteration_interval);
     io.mapRequired("n_renaming_versions", info.n_renaming_versions);

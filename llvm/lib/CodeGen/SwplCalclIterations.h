@@ -20,16 +20,15 @@
 
 namespace llvm {
 
-#define ASSUMED_ITERATIONS_MAX (32767)
-#define ASSUMED_ITERATIONS_NONE (-1)
-#define OCL_ITERATIONS_UNSPECIFIED (-1)
+
 
 /// \brief SwplのPlanを選択するための、ループ回転数に関するルーチン群
 class SwplCalclIterations {
 public:
+
   static bool preCheckIterationCount(const PlanSpec& spec, unsigned int *required_itr);
-  static bool checkIterationCountVariable(const PlanSpec& spec, const MsResult& ms);
-  static bool checkIterationCountConstant(const PlanSpec& spec, const MsResult& ms);
+  static bool checkIterationCountVariable(const PlanSpec& spec, const SwplMsResult & ms);
+  static bool checkIterationCountConstant(const PlanSpec& spec, const SwplMsResult & ms);
 };
 
 }
