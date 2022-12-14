@@ -155,7 +155,7 @@ public:
 
 class A64FXRes {
 public:
-  enum PortKind {P_FLA, P_FLB, P_EXA, P_EXB, P_EAGA, P_EAGB, P_PRX, P_BR};
+  enum PortKind {P_FLA=1, P_FLB=2, P_EXA=3, P_EXB=4, P_EAGA=5, P_EAGB=6, P_PRX=7, P_BR=8};
 };
 
 /// SchedModelを利用してターゲット情報を取得し、SWPL機能に提供する

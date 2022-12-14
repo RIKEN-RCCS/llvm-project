@@ -632,7 +632,14 @@ StmPipelinesImpl *
 AArch64SwplTargetMachine::generateStmPipelines(const MachineInstr &mi) {
   // @todo 作りが必要
   auto *pipelines=new StmPipelines;
-  pipelines->push_back(new AArch64StmPipeline());
+  if (mi.isPseudo()) {
+    pipelines->push_back(new AArch64StmPipeline());
+  } else {
+    auto *p = new AArch64StmPipeline();
+    p->stages.push_back(0);
+    p->resources.push_back(A64FXRes::PortKind::P_BR);
+    pipelines->push_back(p);
+  }
   return pipelines;
 }
 
@@ -663,6 +670,8 @@ bool AArch64SwplTargetMachine::isImplimented(const MachineInstr&mi) const {
 }
 
 bool AArch64SwplTargetMachine::isPseudo(const MachineInstr &mi) const {
-  return !isImplimented(mi);
+  // @todo 作り必要
+  return mi.isPseudo();
+//  return !isImplimented(mi);
 }
 
