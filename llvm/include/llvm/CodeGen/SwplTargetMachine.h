@@ -45,6 +45,7 @@ public:
   StmPatternId patternId=0;
   SmallVector<unsigned,4> stages;
   SmallVector<StmResourceId,4> resources;
+  int latency;
 
   /// constructor
   StmPipeline(){}
