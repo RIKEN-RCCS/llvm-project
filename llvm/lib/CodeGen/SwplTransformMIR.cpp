@@ -328,7 +328,7 @@ void SwplTransformMIR::convertPlan2MIR() {
    * i4maxを越えている事はない。
    */
   assert (TMI.coefficient > 0);
-  assert (min_n_iterations >= 2);
+//  assert (min_n_iterations >= 2);
 }
 
 MachineInstr *SwplTransformMIR::createMIFromInst(const SwplInst &inst, size_t version) {

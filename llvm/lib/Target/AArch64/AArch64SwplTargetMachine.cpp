@@ -530,144 +530,7 @@ SwplTargetMachine *AArch64InstrInfo::getSwplTargetMachine() const {
 
 }
 
-
 namespace llvm {
-
-/// 利用資源パターンを生成するための生成過程で使われるデータ構造
-struct work_node {
-  StmResourceId id; ///< 利用資源
-  int startCycle=0; ///< 開始サイクル
-  SmallVector<work_node*, 8> nodes; ///< 次の利用資源
-
-  /// constructor
-  explicit work_node(StmResourceId id):id(id){}
-
-  /// destructor
-  ~work_node() {
-    /// 次の利用資源を削除する
-    for (auto *n:nodes) delete n;
-  }
-
-  /// 前の利用資源につなげる
-  ///
-  /// \param [in] p つなげる利用資源
-  void append(work_node*p) {
-    if (p==nullptr) return;
-    nodes.push_back(p);
-  }
-
-  /// 資源の利用パターンを生成する
-  ///
-  /// \param [in] SM SchedModel
-  /// \param [out] stmPipelines 生成結果
-  void gen_patterns(TargetSchedModel&SM, StmPipelinesImpl &stmPipelines) {
-    std::vector<StmResourceId> ptn;
-    std::vector<int> cycle;
-    StmPatternId patternId=0;
-    gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
-  }
-
-  /// 資源の利用パターンを生成する
-  ///
-  /// \param [in] SM SchedModel
-  /// \param [in] patternId 利用資源パターンのID
-  /// \param [in] ptn 利用資源パターン
-  /// \param [in] cycle 開始サイクル
-  /// \param [out] stmPipelines 生成結果
-  void gen_pattern(TargetSchedModel&SM, StmPatternId &patternId, std::vector<StmResourceId> ptn, std::vector<int> cycle,
-                   StmPipelinesImpl &stmPipelines) {
-    // 引数：ptnはコピーコンストラクタで複製させている。
-    if (id!=A64FXRes::PortKind::P_NULL) {
-      ptn.push_back(id);
-      cycle.push_back(startCycle);
-      if (nodes.empty()) {
-        AArch64StmPipeline *t=new AArch64StmPipeline();
-        stmPipelines.push_back(t);
-        t->patternId=patternId++;
-        for (auto resource:ptn) {
-          t->resources.push_back(resource);
-        }
-        for (auto stage:cycle) {
-          t->stages.push_back(stage);
-        }
-        return;
-      }
-    }
-    for ( work_node* c : nodes ) {
-      // and-node
-      c->gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
-    }
-  }
-};
-
-}
-
-using nodelist=std::vector<work_node*>;
-
-/// 利用資源パターン生成の準備
-/// \param [in] sm SchedModel
-/// \param [in,out] next_target 次の資源をつなげる親
-/// \param [in] target
-/// \param [in] portKindList
-/// \param [in] cycle 開始サイクル
-static void makePrePattern(TargetSchedModel sm, nodelist&next_target, nodelist&target, const SmallVectorImpl<A64FXRes::PortKind> &portKindList, int cycle) {
-  for (const auto portKind: portKindList) {
-    for (auto *t:target) {
-      work_node *p=new work_node(portKind);
-      p->startCycle=cycle;
-      t->nodes.push_back(p);
-      next_target.push_back(p);
-    }
-
-  }
-}
-
-/// 利用資源パターン生成の準備
-/// \param [in] sm SchedModel
-/// \param [in] resInfo
-/// \param [in] mi 対象のMachineInstr
-/// \return 利用資源パターンを生成するための中間表現
-/// @note
-/// stage値はAArch64A64FXResInfoがstartCycleを真面目に対応しているため、歯抜けになることがある。<br>
-/// スケジューリングの際に問題が出たら、歯抜けステージ値が無くなるよう、「0,1,7」から「0,1,2」に変更する。（2020年11月30日鎌塚氏より指示）<br>
-/// 例：FMAXNMPv2i64pという命令では、以下のようにstage値が0,1,7と歯抜けになる。<br>
-/// (パターン=0) stage/resource: 0/FLA, 1/FLA, 7/FLA<br>
-/// (パターン=1) stage/resource: 0/FLA, 1/FLA, 7/FLB
-static work_node* makePrePatterns(TargetSchedModel& sm, const AArch64A64FXResInfo& resInfo,  const MachineInstr& mi) {
-  work_node *root=nullptr;
-  nodelist *target=nullptr;
-  nodelist *next_target=nullptr;
-  auto *IResDesc = resInfo.getInstResDesc(mi);
-  if (IResDesc==nullptr) {
-    llvm_unreachable("AArch64A64FXResInfo::getInstResDesc() is nullptr");
-  }
-  assert(IResDesc!=nullptr);
-  const auto &cycleList=IResDesc->getStartCycleList();
-  int ix=0;
-  for (const auto &PRE : IResDesc->getResList()) {
-
-    if (root==nullptr) {
-      root=new work_node(A64FXRes::PortKind::P_NULL);
-      target=new nodelist;
-      next_target=new nodelist;
-      target->push_back(root);
-    }
-    makePrePattern(sm, *next_target, *target, PRE, cycleList[ix++]);
-    nodelist* t=target;
-    target=next_target;
-    next_target=t;
-    t->clear();
-  }
-  if  (target!=nullptr) {
-    target->clear();
-    delete target;
-  }
-  if (next_target!=nullptr) {
-    next_target->clear();
-    delete next_target;
-  }
-  return root;
-}
 
 void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
   if (MF==nullptr) {
@@ -767,34 +630,23 @@ AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) {
 
 StmPipelinesImpl *
 AArch64SwplTargetMachine::generateStmPipelines(const MachineInstr &mi) {
-
-  work_node *t=nullptr;
-  if (isImplimented(mi)) {
-    t=makePrePatterns(SM, *ResInfo, mi);
-    if (t==nullptr) {
-      if (DebugStm)
-        dbgs() << "DBG(AArch64SwplTargetMachine::generateStmPipelines): makePrePatterns() is nullptr. MIR=" << mi;
-      return nullptr;
-    }
-  }
+  // @todo 作りが必要
   auto *pipelines=new StmPipelines;
-  if (t) {
-    t->gen_patterns(SM, *pipelines);
-    delete t;
-  } else {
+  if (mi.isPseudo()) {
     pipelines->push_back(new AArch64StmPipeline());
-  }
-  if (DebugStm) {
-    for (auto*pipeline:*pipelines) {
-      pipeline->print(dbgs());
-    }
+  } else {
+    auto *p = new AArch64StmPipeline();
+    p->stages.push_back(0);
+    p->resources.push_back(A64FXRes::PortKind::P_BR);
+    pipelines->push_back(p);
   }
   return pipelines;
 }
+
+}
 int AArch64SwplTargetMachine::computeRegFlowDependence(const MachineInstr* def, const MachineInstr* use) const {
-  const auto *IResDesc=ResInfo->getInstResDesc(*def);
-  if (IResDesc==nullptr) return 1;
-  return IResDesc->getLatency();
+  // @todo 作り必要
+  return 1;
 }
 
 int AArch64SwplTargetMachine::computeMemAntiDependence(const MachineInstr *, const MachineInstr *) const {
@@ -813,11 +665,13 @@ bool AArch64SwplTargetMachine::isImplimented(const MachineInstr&mi) const {
   if (OptionCopyIsVirtual) {
     if (mi.isCopy()) return false;
   }
-
-  return ResInfo->getInstResDesc(mi)!=nullptr;
+  // @todo 作り必要
+  return false;
 }
 
 bool AArch64SwplTargetMachine::isPseudo(const MachineInstr &mi) const {
-  return !isImplimented(mi);
+  // @todo 作り必要
+  return mi.isPseudo();
+//  return !isImplimented(mi);
 }
 
