@@ -408,7 +408,16 @@ SwplInstEdge2ModuloDelay *SwplDdg::getModuloDelayMap(int ii) const {
     auto delay = delays.begin();
     auto distance_end = distances.end();
     for(  ; distance != distance_end ; ++distance, ++delay) {
-      int modulo_delay = *delay - ii * (int)(*distance);
+      int delay_val = *delay;
+
+      if( delay_val == 0 ) {
+        // delayが0となるのは、edgeのfromの命令がPseudo命令である場合のみを想定
+        assert( SWPipeliner::STM->isPseudo( *(edge->getInitial()->getMI() )) );
+        delay_val=1;
+      }
+
+      int modulo_delay = delay_val - ii * (int)(*distance);
+
       max_modulo_delay = (max_modulo_delay > modulo_delay) ? max_modulo_delay : modulo_delay;
     }  
     map->insert(std::make_pair(const_cast<SwplInstEdge*>(edge), max_modulo_delay));

@@ -20,29 +20,6 @@
 
 namespace llvm {
 
-class AArch64StmPipeline: public StmPipeline {
-public:
-
-  /// constructor/destructor
-  AArch64StmPipeline(){}
-  virtual ~AArch64StmPipeline() {}
-
-  /// StmPipelineをダンプする。
-  /// \param ost 出力先
-  void print(raw_ostream& ost) const override;
-
-  /// resourcesに存在する資源を数える
-  /// \param [in] resource カウントしてほしい資源
-  /// \return リソース数
-  int getNResources(StmResourceId resource) const override;
-
-  /// ResourceIdに応じた名前を返す
-  /// \param [in] resource 名前を取得したい資源
-  /// \return ResourceIdに応じた名前
-  const char* getResourceName(StmResourceId resource) const override;
-};
-
-
 /// SWPL向けにRegisterの種別を判断する。
 class AArch64StmRegKind: public StmRegKind {
   const MachineRegisterInfo &MRI;    ///< RegisterInfo
@@ -234,6 +211,11 @@ public:
   /// \param [in] resource 名前を取得したい資源
   /// \return ResourceIdに応じた名前
   const char* getResourceName(StmResourceId resource) const override;
+
+  /// StmPipelineをダンプする。
+  /// \param ost 出力先
+  /// \param pipeline 出力対象pipeline
+  void print(raw_ostream &ost, const StmPipeline &pipeline) const override;
 
   /// 命令がPseudoかどうかを判断する
   /// \details 命令がSchedModelに定義されていない場合のみ、Pseudoと判断する

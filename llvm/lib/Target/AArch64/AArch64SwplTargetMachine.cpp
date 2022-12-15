@@ -582,8 +582,8 @@ void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
     tmNumSameKindResources[A64FXRes::PortKind::P_EAGB_C]=2;
     numResource=16; // 資源管理がSchedModelとは別になったので、ハードコードする
 
-    forPseudoMI.push_back(new AArch64StmPipeline());
-    auto *p = new AArch64StmPipeline();
+    forPseudoMI.push_back(new StmPipeline());
+    auto *p = new StmPipeline();
     p->stages.push_back(0);
     p->resources.push_back(A64FXRes::PortKind::P_BR);
     forNoImplMI.push_back(p);
@@ -600,28 +600,6 @@ unsigned int AArch64SwplTargetMachine::getRealFetchBandwidth(void) const {
   return OptionRealFetchWidth;
 }
 
-int AArch64StmPipeline::getNResources(StmResourceId resource) const {
-  int counter=0;
-  for (StmResourceId r: resources) {
-    if (r==resource) counter++;
-  }
-  return counter;
-}
-
-void AArch64StmPipeline::print(raw_ostream &ost) const {
-  ost << "DBG(AArch64StmPipeline::print) stage/resource("<< patternId << "): ";
-  int last=stages.size();
-  const char *sep="";
-  for (int ix=0; ix<last; ix++) {
-    ost << sep << stages[ix] << "/" << getResourceName(resources[ix]);
-    sep=", ";
-  }
-  ost << "\n";
-}
-
-const char *AArch64StmPipeline::getResourceName(StmResourceId resource) const {
-  return ::getResourceName(resource);
-}
 
 const char *AArch64SwplTargetMachine::getResourceName(StmResourceId resource) const {
   return ::getResourceName(resource);
@@ -637,9 +615,13 @@ int AArch64SwplTargetMachine::computeMemFlowDependence(const MachineInstr *, con
 const StmPipelinesImpl *
 AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) const {
 
-  if (SwplSched.isPseudo(mi)) {
+  if (isPseudo(mi)) {
     return &forPseudoMI;
   } else if (!isImplimented(mi)) {
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DBG(AArch64SwplTargetMachine::getPipelines): undefined machine-instr: "
+             << SWPipeliner::TII->getName(mi.getOpcode()) << "\n";
+    }
     return &forNoImplMI;
   }
   auto id=SwplSched.getRes(mi);
@@ -647,9 +629,8 @@ AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) const {
 }
 
 int AArch64SwplTargetMachine::computeRegFlowDependence(const MachineInstr* def, const MachineInstr* use) const {
-  if (isPseudo(*def) || isPseudo(*use)) {
-    // @todo Pseudo命令の場合は本来０とすべきだが、正しいスケジューリングができないため１としている
-    return 1;
+  if (isPseudo(*def)) {
+    return 0;
   }
   if (isImplimented(*def)) {
     return SwplSched.getLatency(SwplSched.getRes(*def));
@@ -677,8 +658,17 @@ bool AArch64SwplTargetMachine::isImplimented(const MachineInstr&mi) const {
 }
 
 bool AArch64SwplTargetMachine::isPseudo(const MachineInstr &mi) const {
-  if (OptionCopyIsVirtual) {
-    if (mi.isCopy()) return false;
-  }
+  if (OptionCopyIsVirtual && mi.isCopy()) return true;
   return SwplSched.isPseudo(mi);
+}
+
+void AArch64SwplTargetMachine::print(llvm::raw_ostream &ost, const StmPipeline &pipeline) const {
+  ost << "DBG(AArch64StmPipeline::print) stage/resource(" << "): ";
+  int last=pipeline.stages.size();
+  const char *sep="";
+  for (int ix=0; ix<last; ix++) {
+    ost << sep << pipeline.stages[ix] << "/" << getResourceName(pipeline.resources[ix]);
+    sep=", ";
+  }
+  ost << "\n";
 }

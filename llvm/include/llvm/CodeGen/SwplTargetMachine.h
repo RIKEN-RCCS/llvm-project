@@ -39,30 +39,9 @@ using StmOpcodeId=unsigned ;
 ///  pipe4  [label = "{pipeline:}|{stage:|1|1}|{resource:|EAGB|EAGB}"];
 /// }
 /// \enddot
-class StmPipeline {
-//  TargetSchedModel& SM;///< SchedModel
-public:
-  StmPatternId patternId=0;
+struct StmPipeline {
   SmallVector<unsigned,4> stages;
   SmallVector<StmResourceId,4> resources;
-
-  /// constructor
-  StmPipeline(){}
-  virtual ~StmPipeline() {}
-
-  /// Output StmPipeline in display format。
-  /// \param ost output steam
-  virtual void print(llvm::raw_ostream& ost) const = 0;
-
-  /// count the resources present in resources
-  /// \param [in] resource Resources to be counted
-  /// \return number of resource
-  virtual int getNResources(StmResourceId resource) const = 0;
-
-  /// return the resource name
-  /// \param [in] resource ResourceId
-  /// \return Resource name
-  virtual const char* getResourceName(StmResourceId resource) const = 0;
 };
 
 class StmRegKind {
@@ -296,6 +275,11 @@ public:
   /// \param [in] resource
   /// \return name
   virtual const char* getResourceName(StmResourceId resource) const = 0;
+
+  /// print pipeline
+  /// \param [in] ost
+  /// \param [in] pipeline
+  virtual void print(llvm::raw_ostream &ost, const StmPipeline &pipeline) const = 0;
 
   /// Determine if an instruction is Pseudo
   /// \details Judge as Pseudo only if instruction is not defined in SchedModel
