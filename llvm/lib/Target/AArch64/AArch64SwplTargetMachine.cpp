@@ -530,13 +530,40 @@ SwplTargetMachine *AArch64InstrInfo::getSwplTargetMachine() const {
 
 }
 
-namespace llvm {
+static const char *getResourceName(StmResourceId resource) {
+  const char *name="";
+  switch (resource) {
+  case A64FXRes::PortKind::P_FLA:name="FLA";break;
+  case A64FXRes::PortKind::P_FLB:name="FLB";break;
+  case A64FXRes::PortKind::P_EXA:name="EXA";break;
+  case A64FXRes::PortKind::P_EXB:name="EXB";break;
+  case A64FXRes::PortKind::P_EAGA:name="EAGA";break;
+  case A64FXRes::PortKind::P_EAGB:name="EAGB";break;
+  case A64FXRes::PortKind::P_PRX:name="PRX";break;
+  case A64FXRes::PortKind::P_BR:name="BR";break;
+  case A64FXRes::PortKind::P_LSU1:name="LSU1";break;
+  case A64FXRes::PortKind::P_LSU2:name="LSU2";break;
+  case A64FXRes::PortKind::P_FLA_C:name="FLA_C";break;
+  case A64FXRes::PortKind::P_FLB_C:name="FLB_C";break;
+  case A64FXRes::PortKind::P_EXA_C:name="EXA_C";break;
+  case A64FXRes::PortKind::P_EXB_C:name="EXB_C";break;
+  case A64FXRes::PortKind::P_EAGA_C:name="EAGA_C";break;
+  case A64FXRes::PortKind::P_EAGB_C:name="EAGB_C";break;
+  default:
+    llvm_unreachable("unknown resourceid");
+  }
+  return name;
+
+}
+
+static StmPipelines forPseudoMI;
+static StmPipelines forNoImplMI;
+
 
 void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
   if (MF==nullptr) {
     const TargetSubtargetInfo &ST = mf.getSubtarget();
     SM.init(&ST);
-    ResInfo=new AArch64A64FXResInfo(ST);
     tmNumSameKindResources[A64FXRes::PortKind::P_FLA]=2;
     tmNumSameKindResources[A64FXRes::PortKind::P_FLB]=2;
     tmNumSameKindResources[A64FXRes::PortKind::P_EXA]=2;
@@ -545,7 +572,22 @@ void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
     tmNumSameKindResources[A64FXRes::PortKind::P_EAGB]=2;
     tmNumSameKindResources[A64FXRes::PortKind::P_PRX]=1;
     tmNumSameKindResources[A64FXRes::PortKind::P_BR]=1;
-    numResource=8; // 資源管理がSchedModelとは別になったので、ハードコードする
+    tmNumSameKindResources[A64FXRes::PortKind::P_LSU1]=2;
+    tmNumSameKindResources[A64FXRes::PortKind::P_LSU2]=2;
+    tmNumSameKindResources[A64FXRes::PortKind::P_FLA_C]=2;
+    tmNumSameKindResources[A64FXRes::PortKind::P_FLB_C]=2;
+    tmNumSameKindResources[A64FXRes::PortKind::P_EXA_C]=2;
+    tmNumSameKindResources[A64FXRes::PortKind::P_EXB_C]=2;
+    tmNumSameKindResources[A64FXRes::PortKind::P_EAGA_C]=2;
+    tmNumSameKindResources[A64FXRes::PortKind::P_EAGB_C]=2;
+    numResource=16; // 資源管理がSchedModelとは別になったので、ハードコードする
+
+    forPseudoMI.push_back(new AArch64StmPipeline());
+    auto *p = new AArch64StmPipeline();
+    p->stages.push_back(0);
+    p->resources.push_back(A64FXRes::PortKind::P_BR);
+    forNoImplMI.push_back(p);
+
   }
   MF=&mf;
 }
@@ -578,38 +620,11 @@ void AArch64StmPipeline::print(raw_ostream &ost) const {
 }
 
 const char *AArch64StmPipeline::getResourceName(StmResourceId resource) const {
-  // @todo AArch64SwplTargetMachine::getResourceName()を呼び出すようにすべきor本メソッド削除
-  const char *name="";
-  switch (resource) {
-  case A64FXRes::PortKind::P_FLA:name="FLA";break;
-  case A64FXRes::PortKind::P_FLB:name="FLB";break;
-  case A64FXRes::PortKind::P_EXA:name="EXA";break;
-  case A64FXRes::PortKind::P_EXB:name="EXB";break;
-  case A64FXRes::PortKind::P_EAGA:name="EAGA";break;
-  case A64FXRes::PortKind::P_EAGB:name="EAGB";break;
-  case A64FXRes::PortKind::P_PRX:name="PRX";break;
-  case A64FXRes::PortKind::P_BR:name="BR";break;
-  default:
-    llvm_unreachable("unknown resourceid");
-  }
-  return name;
+  return ::getResourceName(resource);
 }
 
 const char *AArch64SwplTargetMachine::getResourceName(StmResourceId resource) const {
-  const char *name="";
-  switch (resource) {
-  case A64FXRes::PortKind::P_FLA:name="FLA";break;
-  case A64FXRes::PortKind::P_FLB:name="FLB";break;
-  case A64FXRes::PortKind::P_EXA:name="EXA";break;
-  case A64FXRes::PortKind::P_EXB:name="EXB";break;
-  case A64FXRes::PortKind::P_EAGA:name="EAGA";break;
-  case A64FXRes::PortKind::P_EAGB:name="EAGB";break;
-  case A64FXRes::PortKind::P_PRX:name="PRX";break;
-  case A64FXRes::PortKind::P_BR:name="BR";break;
-  default:
-    llvm_unreachable("unknown resourceid");
-  }
-  return name;
+  return ::getResourceName(resource);
 }
 
 int AArch64SwplTargetMachine::computeMemFlowDependence(const MachineInstr *, const MachineInstr *) const {
@@ -618,34 +633,24 @@ int AArch64SwplTargetMachine::computeMemFlowDependence(const MachineInstr *, con
   return 1;
 }
 
+
 const StmPipelinesImpl *
-AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) {
-  auto *tps= stmPipelines[mi.getOpcode()];
-  if (tps==nullptr) {
-    tps= generateStmPipelines(mi);
-    stmPipelines[mi.getOpcode()]=tps;
+AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) const {
+
+  if (SwplSched.isPseudo(mi)) {
+    return &forPseudoMI;
+  } else if (!isImplimented(mi)) {
+    return &forNoImplMI;
   }
-  return tps;
+  auto id=SwplSched.getRes(mi);
+  return SwplSched.getPipelines(id);
 }
 
-StmPipelinesImpl *
-AArch64SwplTargetMachine::generateStmPipelines(const MachineInstr &mi) {
-  // @todo 作りが必要
-  auto *pipelines=new StmPipelines;
-  if (mi.isPseudo()) {
-    pipelines->push_back(new AArch64StmPipeline());
-  } else {
-    auto *p = new AArch64StmPipeline();
-    p->stages.push_back(0);
-    p->resources.push_back(A64FXRes::PortKind::P_BR);
-    pipelines->push_back(p);
-  }
-  return pipelines;
-}
-
-}
 int AArch64SwplTargetMachine::computeRegFlowDependence(const MachineInstr* def, const MachineInstr* use) const {
-  // @todo 作り必要
+  if (isPseudo(*def) || isPseudo(*use)) return 0;
+  if (isImplimented(*def)) {
+    return SwplSched.getLatency(SwplSched.getRes(*def));
+  }
   return 1;
 }
 
@@ -662,16 +667,15 @@ unsigned int AArch64SwplTargetMachine::getNumResource(void) const {
 }
 
 bool AArch64SwplTargetMachine::isImplimented(const MachineInstr&mi) const {
-  if (OptionCopyIsVirtual) {
-    if (mi.isCopy()) return false;
-  }
-  // @todo 作り必要
-  return false;
+  if (SwplSched.getRes(mi)==0)
+    return false;
+  else
+    return true;
 }
 
 bool AArch64SwplTargetMachine::isPseudo(const MachineInstr &mi) const {
-  // @todo 作り必要
-  return mi.isPseudo();
-//  return !isImplimented(mi);
+  if (OptionCopyIsVirtual) {
+    if (mi.isCopy()) return false;
+  }
+  return SwplSched.isPseudo(mi);
 }
-

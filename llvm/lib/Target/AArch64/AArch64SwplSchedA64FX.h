@@ -21,8 +21,10 @@ struct AArch64SwplSchedA64FX{
         INT_OP_002
     };
 
-    ResourceID getRes(const MachineInstr &mi);
-    const StmPipelinesImpl *getPipelines(ResourceID id);
+    ResourceID getRes(const MachineInstr &mi) const;
+    const StmPipelinesImpl *getPipelines(ResourceID id) const;
+    unsigned getLatency(ResourceID id) const;
+    bool isPseudo(const MachineInstr &mi) const;
 };
 }
 

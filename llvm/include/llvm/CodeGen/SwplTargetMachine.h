@@ -45,7 +45,6 @@ public:
   StmPatternId patternId=0;
   SmallVector<unsigned,4> stages;
   SmallVector<StmResourceId,4> resources;
-  int latency;
 
   /// constructor
   StmPipeline(){}
@@ -287,7 +286,7 @@ public:
   /// Returns all resource usage patterns used by the specified instruction.
   /// \param [in] mi Target instruction
   /// \return StmPipelines
-  virtual const StmPipelinesImpl * getPipelines(const MachineInstr& mi) = 0;
+  virtual const StmPipelinesImpl * getPipelines(const MachineInstr& mi) const = 0;
 
   /// returns the number of resources available
   /// \return number of resources

@@ -15,12 +15,12 @@
 #include "AArch64TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/SwplTargetMachine.h"
+#include "AArch64SwplSchedA64FX.h"
 
 
 namespace llvm {
 
 class AArch64StmPipeline: public StmPipeline {
-  //  TargetSchedModel& SM;///< SchedModel
 public:
 
   /// constructor/destructor
@@ -143,19 +143,10 @@ public:
   }
 };
 
-// @todo 書き換える必要あります
-class AArch64A64FXResInfo {
-public:
-  AArch64A64FXResInfo() {}
-  AArch64A64FXResInfo(const TargetSubtargetInfo &ST) {}
-  virtual ~AArch64A64FXResInfo() {}
-
-
-};
-
 class A64FXRes {
 public:
-  enum PortKind {P_FLA=1, P_FLB=2, P_EXA=3, P_EXB=4, P_EAGA=5, P_EAGB=6, P_PRX=7, P_BR=8};
+  enum PortKind {P_FLA=1, P_FLB, P_EXA, P_EXB, P_EAGA, P_EAGB, P_PRX, P_BR,
+                  P_LSU1, P_LSU2, P_FLA_C, P_FLB_C, P_EXA_C, P_EXB_C, P_EAGA_C, P_EAGB_C};
 };
 
 /// SchedModelを利用してターゲット情報を取得し、SWPL機能に提供する
@@ -165,12 +156,6 @@ protected:
   DenseMap<StmOpcodeId, StmPipelinesImpl * > stmPipelines; ///< Opcodeが利用する資源
   unsigned numResource=0; ///< 資源数（資源種別数ではない）
 
-  const AArch64A64FXResInfo *ResInfo=nullptr;
-  /// StmPipelineを生成する
-  /// \param [in] mp 対象となる命令
-  /// \return 生成したStmPipeline
-  StmPipelinesImpl *generateStmPipelines(const MachineInstr &mp);
-
   /// 指定命令の資源情報が取得できるかどうかをチェックする
   /// \param [in] mi 調査対象の命令
   /// \retval true 資源情報を取得可能
@@ -178,6 +163,8 @@ protected:
   bool isImplimented(const MachineInstr &mi) const;
 
 public:
+  AArch64SwplSchedA64FX SwplSched; ///< A64FX SchedModel for SWP
+
   /// constructor
   AArch64SwplTargetMachine() {}
   /// destructor
@@ -190,11 +177,6 @@ public:
         delete tms.getSecond();
       }
     }
-    if (ResInfo!=nullptr) {
-      delete ResInfo;
-      ResInfo=nullptr;
-    }
-
   }
 
   /// Tmの初期化を行う。
@@ -241,7 +223,7 @@ public:
   /// 指定命令が利用するリソースの利用パターンをすべて返す。
   /// \param [in] mi 対象命令
   /// \return StmPipelinesを返す
-  const StmPipelinesImpl * getPipelines(const MachineInstr& mi) override;
+  const StmPipelinesImpl * getPipelines(const MachineInstr& mi) const override;
 
 
   /// 利用可能な資源の数を返す
