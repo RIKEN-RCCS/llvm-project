@@ -647,7 +647,10 @@ AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) const {
 }
 
 int AArch64SwplTargetMachine::computeRegFlowDependence(const MachineInstr* def, const MachineInstr* use) const {
-  if (isPseudo(*def) || isPseudo(*use)) return 0;
+  if (isPseudo(*def) || isPseudo(*use)) {
+    // @todo Pseudo命令の場合は本来０とすべきだが、正しいスケジューリングができないため１としている
+    return 1;
+  }
   if (isImplimented(*def)) {
     return SwplSched.getLatency(SwplSched.getRes(*def));
   }
