@@ -576,6 +576,9 @@ void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
   MF=&mf;
 
   // 属性VLをMFから取り出し、AArch64SwplSchedA64FXに設定する
+  const AArch64Subtarget &Subtarget = mf.getSubtarget<AArch64Subtarget>();
+  SwplSched.VectorLength = Subtarget.getMaxSVEVectorSizeInBits();
+  if (SwplSched.VectorLength > 512 || SwplSched.VectorLength == 0) SwplSched.VectorLength = 512;
 
 }
 
