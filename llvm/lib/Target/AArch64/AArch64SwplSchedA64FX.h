@@ -37,14 +37,17 @@ public:
   /// 利用資源ID
   enum ResourceID {
     NA,
-    INT_OP_001 = INT_OP + 1,
-    INT_OP_002 = INT_OP + 2,
-    SIMDFP_SVE_OP_001 = SIMDFP_SVE_OP + 1,
-    SIMDFP_SVE_LD_001 = SIMDFP_SVE_LD + 1,
-    SIMDFP_SVE_LD_002 = SIMDFP_SVE_LD + 2,
-    SIMDFP_SVE_LD_003 = SIMDFP_SVE_LD + 3,
-    SIMDFP_SVE_ST_001 = SIMDFP_SVE_ST + 1,
-    SIMDFP_SVE_ST_002 = SIMDFP_SVE_ST + 2
+    MI_INT_OP_001 = INT_OP + 1,
+    MI_INT_OP_002 = INT_OP + 2,
+    MI_SIMDFP_SVE_OP_001 = SIMDFP_SVE_OP + 1,
+    MI_SIMDFP_SVE_OP_002 = SIMDFP_SVE_OP + 2,
+    MI_SIMDFP_SVE_OP_003 = SIMDFP_SVE_OP + 3,
+    MI_SIMDFP_SVE_LD_001 = SIMDFP_SVE_LD + 1,
+    MI_SIMDFP_SVE_LD_002 = SIMDFP_SVE_LD + 2,
+    MI_SIMDFP_SVE_LD_003 = SIMDFP_SVE_LD + 3,
+    MI_SIMDFP_SVE_ST_001 = SIMDFP_SVE_ST + 1,
+    MI_SIMDFP_SVE_ST_002 = SIMDFP_SVE_ST + 2,
+    MI_PREDICATE_OP_001 = PREDICATE_OP + 1
   };
 
   /// 利用資源情報（Pipeline情報群 + レイテンシ）
@@ -80,12 +83,6 @@ public:
    * \return レイテンシ
    */
   bool isPseudo(const MachineInstr &mi) const;
-
-  /**
-   * \brief VLを設定する。
-   * \param [in] vl VL
-   */
-  void setVL(unsigned);
 
   /**
    * 利用資源IDを調べる。
