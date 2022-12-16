@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/raw_ostream.h"
-//#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 
 using namespace llvm;
 
