@@ -13,14 +13,28 @@
 #include "AArch64InstrInfo.h"
 using namespace llvm;
 
+StmPipeline INT_OP_001_01 = {{0},{A64FXRes::P_EXA}};
+StmPipeline INT_OP_001_02 = {{0},{A64FXRes::P_EXB}};
+StmPipeline INT_OP_001_03 = {{0},{A64FXRes::P_EAGA}};
+StmPipeline INT_OP_001_04 = {{0},{A64FXRes::P_EAGB}};
+
+static std::map<AArch64SwplSchedA64FX::ResourceID,AArch64SwplSchedA64FX::SchedResource> ResInfo{
+    {AArch64SwplSchedA64FX::INT_OP_001,
+        {{&INT_OP_001_01,&INT_OP_001_02,&INT_OP_001_03,&INT_OP_001_04},1}
+    }
+};
+
+static std::map<unsigned int,AArch64SwplSchedA64FX::ResourceID> MIOpcodeInfo{
+    {AArch64::ADDXri,AArch64SwplSchedA64FX::INT_OP_001}
+};
+
 AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::getRes(const MachineInstr &mi) const {
-    // @todo:実装
-    return INT_OP_001;
+    ResourceID id = AArch64SwplSchedA64FX::searchRes(mi);
+    return id;
 }
 
 const StmPipelinesImpl *AArch64SwplSchedA64FX::getPipelines(ResourceID id) const {
-    // @todo:実装
-    return nullptr;
+    return &ResInfo[id].pipelines;
 }
 
 bool AArch64SwplSchedA64FX::isPseudo(const MachineInstr &mi) const {
@@ -35,6 +49,16 @@ bool AArch64SwplSchedA64FX::isPseudo(const MachineInstr &mi) const {
 }
 
 unsigned AArch64SwplSchedA64FX::getLatency(ResourceID id) const {
-    // @todo:実装
-    return 1;
+    return ResInfo[id].latency;
 }
+
+AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchRes(const MachineInstr &mi){
+    auto it = MIOpcodeInfo.find(mi.getOpcode());
+    if (it != MIOpcodeInfo.end()) {
+        return it->second;
+    }
+    // @todo コントロールオプションの処理
+    // @todo VLの処理
+    return AArch64SwplSchedA64FX::NA;
+}
+

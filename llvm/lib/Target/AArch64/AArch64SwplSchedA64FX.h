@@ -12,19 +12,72 @@
 #ifndef TARGET_AARCH64_AARCH64SWPLSCHEDA64FX
 #define TARGET_AARCH64_AARCH64SWPLSCHEDA64FX
 
+#include "AArch64SwplTargetMachine.h"
 #include "llvm/CodeGen/SwplTargetMachine.h"
 
 namespace llvm {
-struct AArch64SwplSchedA64FX{
+class AArch64SwplSchedA64FX{
+public:
+    unsigned int VL;
+
+    /// 命令の種類
+    enum InstKind {
+        INT_OP = 0x1000,
+        INT_LD = 0x2000,
+        INT_ST = 0x3000,
+        SIMDFP_SVE_OP = 0x4000,
+        SIMDFP_SVE_LD = 0x5000,
+        SIMDFP_SVE_ST = 0x6000,
+        SVE_CMP_INST = 0x7000,
+        PREDICATE_OP = 0x8000,
+        PREDICATE_LD = 0x9000,
+        PREDICATE_ST = 0x10000
+    };
+    
+    /// 利用資源ID
     enum ResourceID {
-        INT_OP_001,
-        INT_OP_002
+        NA,
+        INT_OP_001 = INT_OP + 1,
+        INT_OP_002 = INT_OP + 2,
+        SIMDFP_SVE_OP_001 = SIMDFP_SVE_OP + 1,
+        SIMDFP_SVE_LD_001 = SIMDFP_SVE_LD + 1,
+        SIMDFP_SVE_LD_002 = SIMDFP_SVE_LD + 2,
+        SIMDFP_SVE_LD_003 = SIMDFP_SVE_LD + 3,
+        SIMDFP_SVE_ST_001 = SIMDFP_SVE_ST + 1,
+        SIMDFP_SVE_ST_002 = SIMDFP_SVE_ST + 2
     };
 
+    /// 利用資源情報（Pipeline情報群 + レイテンシ）
+    struct SchedResource {
+        StmPipelines pipelines;
+        int latency;
+    };
+
+    /// 利用資源IDと利用資源情報のmap
+    static std::map<ResourceID, SchedResource> ResInfo;
+
+    /// 利用資源IDを返す。
+    /// \param [in] mi 対象命令
+    /// \return 利用資源ID
     ResourceID getRes(const MachineInstr &mi) const;
+
+    /// 利用資源IDに対応する利用資源情報を返す。
+    /// \param [in] id 利用資源ID
+    /// \return 利用資源情報
     const StmPipelinesImpl *getPipelines(ResourceID id) const;
+
     unsigned getLatency(ResourceID id) const;
     bool isPseudo(const MachineInstr &mi) const;
+
+    /// @brief 
+    void setVL(unsigned);
+
+    /// 利用資源IDを調べる。
+    /// 利用資源IDが定義されていない場合はNA(0)を返す
+    /// \param [in] mi 対象命令
+    /// \return 利用資源ID
+    static ResourceID searchRes(const MachineInstr &mi);
+
 };
 }
 
