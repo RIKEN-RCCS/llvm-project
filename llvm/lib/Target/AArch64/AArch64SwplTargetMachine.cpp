@@ -564,23 +564,7 @@ void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
   if (MF==nullptr) {
     const TargetSubtargetInfo &ST = mf.getSubtarget();
     SM.init(&ST);
-    tmNumSameKindResources[A64FXRes::PortKind::P_FLA]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_FLB]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_EXA]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_EXB]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_EAGA]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_EAGB]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_PRX]=1;
-    tmNumSameKindResources[A64FXRes::PortKind::P_BR]=1;
-    tmNumSameKindResources[A64FXRes::PortKind::P_LSU1]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_LSU2]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_FLA_C]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_FLB_C]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_EXA_C]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_EXB_C]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_EAGA_C]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_EAGB_C]=2;
-    numResource=16; // 資源管理がSchedModelとは別になったので、ハードコードする
+    numResource = A64FXRes::PortKind::P_END - A64FXRes::PortKind::P_UNKNOWN;
 
     forPseudoMI.push_back(new StmPipeline());
     auto *p = new StmPipeline();
@@ -590,6 +574,9 @@ void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
 
   }
   MF=&mf;
+
+  // 属性VLをMFから取り出し、AArch64SwplSchedA64FXに設定する
+
 }
 
 unsigned int AArch64SwplTargetMachine::getFetchBandwidth(void) const {
