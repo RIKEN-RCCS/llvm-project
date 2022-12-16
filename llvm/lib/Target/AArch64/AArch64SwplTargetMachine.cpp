@@ -564,7 +564,7 @@ void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
   if (MF==nullptr) {
     const TargetSubtargetInfo &ST = mf.getSubtarget();
     SM.init(&ST);
-    numResource = A64FXRes::PortKind::P_END - A64FXRes::PortKind::P_UNKNOWN;
+    numResource = 16;
 
     forPseudoMI.push_back(new StmPipeline());
     auto *p = new StmPipeline();
