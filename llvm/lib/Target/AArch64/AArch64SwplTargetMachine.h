@@ -122,14 +122,16 @@ public:
 
 class A64FXRes {
 public:
-  enum PortKind {P_FLA=1, P_FLB, P_EXA, P_EXB, P_EAGA, P_EAGB, P_PRX, P_BR,
-                  P_LSU1, P_LSU2, P_FLA_C, P_FLB_C, P_EXA_C, P_EXB_C, P_EAGA_C, P_EAGB_C};
+  enum PortKind {
+    P_FLA=1, P_FLB=2, P_EXA=3, P_EXB=4, P_EAGA=5, P_EAGB=6, P_PRX=7, P_BR=8,
+    P_LSU1=9, P_LSU2=10,
+    P_FLA_C=11, P_FLB_C=12, P_EXA_C=13, P_EXB_C=14, P_EAGA_C=15, P_EAGB_C=16
+  };
 };
 
 /// SchedModelを利用してターゲット情報を取得し、SWPL機能に提供する
 class AArch64SwplTargetMachine: public SwplTargetMachine {
 protected:
-  DenseMap<StmResourceId, int> tmNumSameKindResources;  ///< 資源種別ごとの数
   DenseMap<StmOpcodeId, StmPipelinesImpl * > stmPipelines; ///< Opcodeが利用する資源
   unsigned numResource=0; ///< 資源数（資源種別数ではない）
 
@@ -156,7 +158,7 @@ public:
     }
   }
 
-  /// Tmの初期化を行う。
+  /// SwplTargetMachineの初期化を行う。
   /// \details
   /// runOnFunctionが呼び出される毎にinitialize()を実行し、処理対象となるMachineFunction情報を受け渡す必要がある。
   /// \param mf 処理対象のMachineFunction

@@ -16,15 +16,16 @@
 
 namespace llvm {
 struct AArch64SwplSchedA64FX{
-    enum ResourceID {
+  unsigned VectorLength;
+  enum ResourceID {
         INT_OP_001,
         INT_OP_002
-    };
+  };
 
-    ResourceID getRes(const MachineInstr &mi) const;
-    const StmPipelinesImpl *getPipelines(ResourceID id) const;
-    unsigned getLatency(ResourceID id) const;
-    bool isPseudo(const MachineInstr &mi) const;
+  ResourceID getRes(const MachineInstr &mi) const;
+  const StmPipelinesImpl *getPipelines(ResourceID id) const;
+  unsigned getLatency(ResourceID id) const;
+  bool isPseudo(const MachineInstr &mi) const;
 };
 }
 
