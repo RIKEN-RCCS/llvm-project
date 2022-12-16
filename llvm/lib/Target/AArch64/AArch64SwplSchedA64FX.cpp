@@ -9,6 +9,7 @@
 // SchedModel for SWP.
 //
 //===----------------------------------------------------------------------===//
+#include "AArch64SwplTargetMachine.h"
 #include "AArch64SwplSchedA64FX.h"
 #include "AArch64InstrInfo.h"
 using namespace llvm;
@@ -34,7 +35,7 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::getRes(const MachineIns
 }
 
 const StmPipelinesImpl *AArch64SwplSchedA64FX::getPipelines(ResourceID id) const {
-    return &ResInfo[id].pipelines;
+    return &::ResInfo[id].pipelines;
 }
 
 bool AArch64SwplSchedA64FX::isPseudo(const MachineInstr &mi) const {
@@ -49,7 +50,7 @@ bool AArch64SwplSchedA64FX::isPseudo(const MachineInstr &mi) const {
 }
 
 unsigned AArch64SwplSchedA64FX::getLatency(ResourceID id) const {
-    return ResInfo[id].latency;
+    return ::ResInfo[id].latency;
 }
 
 AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchRes(const MachineInstr &mi){
