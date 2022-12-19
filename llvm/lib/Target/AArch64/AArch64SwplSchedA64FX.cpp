@@ -16,159 +16,164 @@
 using namespace llvm;
 
 /// INT_OP
-StmPipeline RES_INT_OP_001 = {{0}, {A64FXRes::P_EXA}};
-StmPipeline RES_INT_OP_002 = {{0}, {A64FXRes::P_EXB}};
-StmPipeline RES_INT_OP_003 = {{0}, {A64FXRes::P_EAGA}};
-StmPipeline RES_INT_OP_004 = {{0}, {A64FXRes::P_EAGB}};
+StmPipeline RES_INT_OP_001_01 = {{0}, {A64FXRes::P_EXA}};
+StmPipeline RES_INT_OP_001_02 = {{0}, {A64FXRes::P_EXB}};
+StmPipeline RES_INT_OP_001_03 = {{0}, {A64FXRes::P_EAGA}};
+StmPipeline RES_INT_OP_001_04 = {{0}, {A64FXRes::P_EAGB}};
+StmPipeline RES_INT_OP_002_01 = {{0}, {A64FXRes::P_EXA}};
+StmPipeline RES_INT_OP_002_02 = {{0}, {A64FXRes::P_EXB}};
 
 /// SIMDFP_SVE_OP
-StmPipeline RES_SIMDFP_SVE_OP_001 = {{0}, {A64FXRes::P_FLA}};
-StmPipeline RES_SIMDFP_SVE_OP_002 = {{0}, {A64FXRes::P_FLB}};
+StmPipeline RES_SIMDFP_SVE_OP_001_01 = {{0}, {A64FXRes::P_FLA}};
+StmPipeline RES_SIMDFP_SVE_OP_001_02 = {{0}, {A64FXRes::P_FLB}};
+StmPipeline RES_SIMDFP_SVE_OP_002_01 = {{0}, {A64FXRes::P_FLA}};
+StmPipeline RES_SIMDFP_SVE_OP_002_02 = {{0}, {A64FXRes::P_FLB}};
+StmPipeline RES_SIMDFP_SVE_OP_003_01 = {{0}, {A64FXRes::P_FLA}};
 
 /// SIMDFP_SVE_LD
-StmPipeline RES_SIMDFP_SVE_LD_001 = {
+StmPipeline RES_SIMDFP_SVE_LD_001_01 = {
   {0, 0},
   {A64FXRes::P_EAGA, A64FXRes::P_LSU1}};
-StmPipeline RES_SIMDFP_SVE_LD_002 = {
+StmPipeline RES_SIMDFP_SVE_LD_001_02 = {
   {0, 0},
   {A64FXRes::P_EAGB, A64FXRes::P_LSU1}};
-StmPipeline RES_SIMDFP_SVE_LD_003 = {
+StmPipeline RES_SIMDFP_SVE_LD_001_03 = {
   {0, 0},
   {A64FXRes::P_EAGA, A64FXRes::P_LSU2}};
-StmPipeline RES_SIMDFP_SVE_LD_004 = {
+StmPipeline RES_SIMDFP_SVE_LD_001_04 = {
   {0, 0},
   {A64FXRes::P_EAGB, A64FXRes::P_LSU2}};
 
-StmPipeline RES_SIMDFP_SVE_LD_005 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_01 = {
     {0, 0, 0, 1, 8},
     {A64FXRes::P_EAGA, A64FXRes::P_EXA, A64FXRes::P_LSU1, A64FXRes::P_EXA_C,A64FXRes::P_EAGA_C}};
-StmPipeline RES_SIMDFP_SVE_LD_006 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_02 = {
     {0, 0, 0, 1, 8},
     {A64FXRes::P_EAGA, A64FXRes::P_EXB, A64FXRes::P_LSU1, A64FXRes::P_EXB_C, A64FXRes::P_EAGA_C}};
-StmPipeline RES_SIMDFP_SVE_LD_007 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_03 = {
     {0, 0, 1, 2, 8},
     {A64FXRes::P_EAGA, A64FXRes::P_LSU1, A64FXRes::P_EAGA, A64FXRes::P_EAGA_C, A64FXRes::P_EAGA_C}};
-StmPipeline RES_SIMDFP_SVE_LD_008 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_04 = {
     {0, 0, 0, 1, 8},
     {A64FXRes::P_EAGA, A64FXRes::P_EAGB, A64FXRes::P_LSU1, A64FXRes::P_EAGB_C, A64FXRes::P_EAGA_C}};
-StmPipeline RES_SIMDFP_SVE_LD_009 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_05 = {
     {0, 0, 0, 1, 8},
     {A64FXRes::P_EAGB, A64FXRes::P_EXA, A64FXRes::P_LSU1, A64FXRes::P_EXA_C, A64FXRes::P_EAGB_C}};
-StmPipeline RES_SIMDFP_SVE_LD_010 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_06 = {
     {0, 0, 0, 1, 8},
     {A64FXRes::P_EAGB, A64FXRes::P_EXB, A64FXRes::P_LSU1, A64FXRes::P_EXB_C, A64FXRes::P_EAGB_C}};
-StmPipeline RES_SIMDFP_SVE_LD_011 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_07 = {
     {0, 0, 0, 1, 8},
     {A64FXRes::P_EAGB, A64FXRes::P_EAGA, A64FXRes::P_LSU1, A64FXRes::P_EAGA_C, A64FXRes::P_EAGB_C}};
-StmPipeline RES_SIMDFP_SVE_LD_012 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_08 = {
     {0, 0, 1, 2, 8},
     {A64FXRes::P_EAGB, A64FXRes::P_LSU1, A64FXRes::P_EAGB, A64FXRes::P_EAGB_C, A64FXRes::P_EAGB_C}};
-StmPipeline RES_SIMDFP_SVE_LD_013 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_09 = {
     {0, 0, 0, 1, 8},
     {A64FXRes::P_EAGA, A64FXRes::P_EXA, A64FXRes::P_LSU2, A64FXRes::P_EXA_C, A64FXRes::P_EAGA_C}};
-StmPipeline RES_SIMDFP_SVE_LD_014 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_10 = {
     {0, 0, 0, 1, 8},
     {A64FXRes::P_EAGA, A64FXRes::P_EXB, A64FXRes::P_LSU2, A64FXRes::P_EXB_C, A64FXRes::P_EAGA_C}};
-StmPipeline RES_SIMDFP_SVE_LD_015 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_11 = {
     {0, 0, 1, 2, 8},
     {A64FXRes::P_EAGA, A64FXRes::P_LSU2, A64FXRes::P_EAGA, A64FXRes::P_EAGA_C, A64FXRes::P_EAGA_C}};
-StmPipeline RES_SIMDFP_SVE_LD_016 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_12 = {
     {0, 0, 0, 1, 8},
     {A64FXRes::P_EAGA, A64FXRes::P_EAGB, A64FXRes::P_LSU2, A64FXRes::P_EAGB_C, A64FXRes::P_EAGA_C}};
-StmPipeline RES_SIMDFP_SVE_LD_017 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_13 = {
     {0, 0, 0, 1, 8},
     {A64FXRes::P_EAGB, A64FXRes::P_EXA, A64FXRes::P_LSU2, A64FXRes::P_EXA_C, A64FXRes::P_EAGB_C}};
-StmPipeline RES_SIMDFP_SVE_LD_018 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_14 = {
     {0, 0, 0, 1, 8},
     {A64FXRes::P_EAGB, A64FXRes::P_EXB, A64FXRes::P_LSU2, A64FXRes::P_EXB_C, A64FXRes::P_EAGB_C}};
-StmPipeline RES_SIMDFP_SVE_LD_019 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_15 = {
     {0, 0, 0, 1, 8},
     {A64FXRes::P_EAGB, A64FXRes::P_EAGA, A64FXRes::P_LSU2, A64FXRes::P_EAGA_C, A64FXRes::P_EAGB_C}};
-StmPipeline RES_SIMDFP_SVE_LD_020 = {
+StmPipeline RES_SIMDFP_SVE_LD_002_16 = {
     {0, 0, 1, 2, 8},
     {A64FXRes::P_EAGB, A64FXRes::P_LSU2, A64FXRes::P_EAGB, A64FXRes::P_EAGB_C, A64FXRes::P_EAGB_C}};
 
-StmPipeline RES_SIMDFP_SVE_LD_021 = {
+StmPipeline RES_SIMDFP_SVE_LD_003_01 = {
     {0, 0, 8}, {A64FXRes::P_EAGA, A64FXRes::P_LSU1, A64FXRes::P_EAGA_C}};
-StmPipeline RES_SIMDFP_SVE_LD_022 = {
+StmPipeline RES_SIMDFP_SVE_LD_003_02 = {
     {0, 0, 8}, {A64FXRes::P_EAGB, A64FXRes::P_LSU1, A64FXRes::P_EAGB_C}};
-StmPipeline RES_SIMDFP_SVE_LD_023 = {
+StmPipeline RES_SIMDFP_SVE_LD_003_03 = {
     {0, 0, 8}, {A64FXRes::P_EAGA, A64FXRes::P_LSU2, A64FXRes::P_EAGA_C}};
-StmPipeline RES_SIMDFP_SVE_LD_024 = {
+StmPipeline RES_SIMDFP_SVE_LD_003_04 = {
     {0, 0, 8}, {A64FXRes::P_EAGB, A64FXRes::P_LSU2, A64FXRes::P_EAGB_C}};
 
 /// SIMDFP_SVE_ST
-StmPipeline RES_SIMDFP_SVE_ST_001 = {
+StmPipeline RES_SIMDFP_SVE_ST_001_01 = {
     {0, 0, 0, 0},
     {A64FXRes::P_EAGA, A64FXRes::P_FLA, A64FXRes::P_LSU1, A64FXRes::P_LSU2}};
-StmPipeline RES_SIMDFP_SVE_ST_002 = {
+StmPipeline RES_SIMDFP_SVE_ST_001_02 = {
     {0, 0, 0, 0},
     {A64FXRes::P_EAGB, A64FXRes::P_FLA, A64FXRes::P_LSU1, A64FXRes::P_LSU2}};
 
-StmPipeline RES_SIMDFP_SVE_ST_003 = {
+StmPipeline RES_SIMDFP_SVE_ST_002_01 = {
     {0, 0, 0, 0, 0},
     {A64FXRes::P_EAGA, A64FXRes::P_FLA, A64FXRes::P_EXA, A64FXRes::P_LSU1, A64FXRes::P_LSU2}};
-StmPipeline RES_SIMDFP_SVE_ST_004 = {
+StmPipeline RES_SIMDFP_SVE_ST_002_02 = {
     {0, 0, 0, 0, 0},
     {A64FXRes::P_EAGA, A64FXRes::P_FLA, A64FXRes::P_EXB, A64FXRes::P_LSU1, A64FXRes::P_LSU2}};
-StmPipeline RES_SIMDFP_SVE_ST_005 = {
+StmPipeline RES_SIMDFP_SVE_ST_002_03 = {
     {0, 0, 0, 0, 0},
     {A64FXRes::P_EAGA, A64FXRes::P_FLA, A64FXRes::P_EAGB, A64FXRes::P_LSU1, A64FXRes::P_LSU2}};
-StmPipeline RES_SIMDFP_SVE_ST_006 = {
+StmPipeline RES_SIMDFP_SVE_ST_002_04 = {
     {0, 0, 0, 0, 0},
     {A64FXRes::P_EAGB, A64FXRes::P_FLA, A64FXRes::P_EXA, A64FXRes::P_LSU1, A64FXRes::P_LSU2}};
-StmPipeline RES_SIMDFP_SVE_ST_007 = {
+StmPipeline RES_SIMDFP_SVE_ST_002_05 = {
     {0, 0, 0, 0, 0},
     {A64FXRes::P_EAGB, A64FXRes::P_FLA, A64FXRes::P_EXB, A64FXRes::P_LSU1, A64FXRes::P_LSU2}};
-StmPipeline RES_SIMDFP_SVE_ST_008 = {
+StmPipeline RES_SIMDFP_SVE_ST_002_06 = {
     {0, 0, 0, 0, 0},
     {A64FXRes::P_EAGB, A64FXRes::P_FLA, A64FXRes::P_EAGA, A64FXRes::P_LSU1, A64FXRes::P_LSU2}};
 
 /// PREDICATE_OP
-StmPipeline RES_PREDICATE_OP_001 = {{0}, {A64FXRes::P_PRX}};
+StmPipeline RES_PREDICATE_OP_001_01 = {{0}, {A64FXRes::P_PRX}};
 
 /// 利用資源IDと利用資源情報のmap
 static std::map<AArch64SwplSchedA64FX::ResourceID,
                 AArch64SwplSchedA64FX::SchedResource>
   ResInfo{
     {AArch64SwplSchedA64FX::MI_INT_OP_001,  /// EX* | EAG*
-      {{&RES_INT_OP_001, &RES_INT_OP_002, &RES_INT_OP_003, &RES_INT_OP_004},
+      {{&RES_INT_OP_001_01, &RES_INT_OP_001_02, &RES_INT_OP_001_03, &RES_INT_OP_001_04},
       1}},
     {AArch64SwplSchedA64FX::MI_INT_OP_002,  /// EX*
-      {{&RES_INT_OP_001, &RES_INT_OP_002}, 1}},
+      {{&RES_INT_OP_002_01, &RES_INT_OP_002_02}, 1}},
     {AArch64SwplSchedA64FX::MI_SIMDFP_SVE_OP_001,  /// FL*
-      {{&RES_SIMDFP_SVE_OP_001, &RES_SIMDFP_SVE_OP_002}, 9}},
+      {{&RES_SIMDFP_SVE_OP_001_01, &RES_SIMDFP_SVE_OP_002_02}, 9}},
     {AArch64SwplSchedA64FX::MI_SIMDFP_SVE_OP_002,  /// FL*
-      {{&RES_SIMDFP_SVE_OP_001, &RES_SIMDFP_SVE_OP_002}, 4}},
+      {{&RES_SIMDFP_SVE_OP_002_01, &RES_SIMDFP_SVE_OP_002_02}, 4}},
     {AArch64SwplSchedA64FX::MI_SIMDFP_SVE_OP_003,  /// FLA
-      {{&RES_SIMDFP_SVE_OP_001}, 9}},
+      {{&RES_SIMDFP_SVE_OP_003_01}, 9}},
     {AArch64SwplSchedA64FX::MI_SIMDFP_SVE_LD_001,  /// EAG*, FLA
-      {{&RES_SIMDFP_SVE_LD_001, &RES_SIMDFP_SVE_LD_002,
-        &RES_SIMDFP_SVE_LD_003, &RES_SIMDFP_SVE_LD_004},
+      {{&RES_SIMDFP_SVE_LD_001_01, &RES_SIMDFP_SVE_LD_001_02,
+        &RES_SIMDFP_SVE_LD_001_03, &RES_SIMDFP_SVE_LD_001_04},
       11}},
     {AArch64SwplSchedA64FX::MI_SIMDFP_SVE_LD_002,  /// EAG*, FLA / EX*| EAG*
-      {{&RES_SIMDFP_SVE_LD_005, &RES_SIMDFP_SVE_LD_006,
-        &RES_SIMDFP_SVE_LD_007, &RES_SIMDFP_SVE_LD_008,
-        &RES_SIMDFP_SVE_LD_009, &RES_SIMDFP_SVE_LD_010,
-        &RES_SIMDFP_SVE_LD_011, &RES_SIMDFP_SVE_LD_012,
-        &RES_SIMDFP_SVE_LD_013, &RES_SIMDFP_SVE_LD_014,
-        &RES_SIMDFP_SVE_LD_015, &RES_SIMDFP_SVE_LD_016,
-        &RES_SIMDFP_SVE_LD_017, &RES_SIMDFP_SVE_LD_018,
-        &RES_SIMDFP_SVE_LD_019, &RES_SIMDFP_SVE_LD_020},
+      {{&RES_SIMDFP_SVE_LD_002_01, &RES_SIMDFP_SVE_LD_002_02,
+        &RES_SIMDFP_SVE_LD_002_03, &RES_SIMDFP_SVE_LD_002_04,
+        &RES_SIMDFP_SVE_LD_002_05, &RES_SIMDFP_SVE_LD_002_06,
+        &RES_SIMDFP_SVE_LD_002_07, &RES_SIMDFP_SVE_LD_002_08,
+        &RES_SIMDFP_SVE_LD_002_09, &RES_SIMDFP_SVE_LD_002_10,
+        &RES_SIMDFP_SVE_LD_002_11, &RES_SIMDFP_SVE_LD_002_12,
+        &RES_SIMDFP_SVE_LD_002_13, &RES_SIMDFP_SVE_LD_002_14,
+        &RES_SIMDFP_SVE_LD_002_15, &RES_SIMDFP_SVE_LD_002_16},
       8}},
     {AArch64SwplSchedA64FX::MI_SIMDFP_SVE_LD_003,  /// EAG*
-      {{&RES_SIMDFP_SVE_LD_021, &RES_SIMDFP_SVE_LD_022,
-        &RES_SIMDFP_SVE_LD_023, &RES_SIMDFP_SVE_LD_024},
+      {{&RES_SIMDFP_SVE_LD_003_01, &RES_SIMDFP_SVE_LD_003_02,
+        &RES_SIMDFP_SVE_LD_003_03, &RES_SIMDFP_SVE_LD_003_04},
       8}},
     {AArch64SwplSchedA64FX::MI_SIMDFP_SVE_ST_001,  /// EAG*, FLA
-      {{&RES_SIMDFP_SVE_ST_001, &RES_SIMDFP_SVE_ST_002}, 1}},
+      {{&RES_SIMDFP_SVE_ST_001_01, &RES_SIMDFP_SVE_ST_001_02}, 1}},
     {AArch64SwplSchedA64FX::MI_SIMDFP_SVE_ST_002,  /// EAG*, FLA / EX*| EAG*
-      {{&RES_SIMDFP_SVE_ST_003, &RES_SIMDFP_SVE_ST_004,
-        &RES_SIMDFP_SVE_ST_005, &RES_SIMDFP_SVE_ST_006,
-        &RES_SIMDFP_SVE_ST_007, &RES_SIMDFP_SVE_ST_008},
+      {{&RES_SIMDFP_SVE_ST_002_01, &RES_SIMDFP_SVE_ST_002_02,
+        &RES_SIMDFP_SVE_ST_002_03, &RES_SIMDFP_SVE_ST_002_04,
+        &RES_SIMDFP_SVE_ST_002_05, &RES_SIMDFP_SVE_ST_002_06},
       1}},
     {AArch64SwplSchedA64FX::MI_PREDICATE_OP_001,  /// PRX
-      {{&RES_PREDICATE_OP_001}, 1}}
+      {{&RES_PREDICATE_OP_001_01}, 1}}
   };
 
 /// 命令と利用資源IDのmap
@@ -211,7 +216,7 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::getRes(
 
 const StmPipelinesImpl *AArch64SwplSchedA64FX::getPipelines(
   ResourceID id) const {
-  return &::ResInfo[id].pipelines;
+  return &::ResInfo.at(id).pipelines;
 }
 
 bool AArch64SwplSchedA64FX::isPseudo(const MachineInstr &mi) const {
@@ -226,7 +231,7 @@ bool AArch64SwplSchedA64FX::isPseudo(const MachineInstr &mi) const {
 }
 
 unsigned AArch64SwplSchedA64FX::getLatency(ResourceID id) const {
-  return ::ResInfo[id].latency;
+  return ::ResInfo.at(id).latency;
 }
 
 AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchRes(
