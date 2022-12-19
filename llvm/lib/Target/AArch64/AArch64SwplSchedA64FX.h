@@ -16,10 +16,8 @@
 #include "llvm/CodeGen/SwplTargetMachine.h"
 
 namespace llvm {
-class AArch64SwplSchedA64FX{
-public:
-  unsigned int VL = 512;
-
+struct AArch64SwplSchedA64FX{
+  unsigned VectorLength;
   /// 命令の種類
   enum InstKind {
     INT_OP = 0x1000,
@@ -33,7 +31,7 @@ public:
     PREDICATE_LD = 0x9000,
     PREDICATE_ST = 0x10000
   };
-  
+
   /// 利用資源ID
   enum ResourceID {
     NA,
