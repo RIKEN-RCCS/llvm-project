@@ -12,11 +12,10 @@
 #ifndef AARCH64SWPLTM_H
 #define AARCH64SWPLTM_H
 
-#include "AArch64TargetTransformInfo.h"
-#include "llvm/CodeGen/TargetSchedule.h"
-#include "llvm/CodeGen/SwplTargetMachine.h"
 #include "AArch64SwplSchedA64FX.h"
-
+#include "AArch64TargetTransformInfo.h"
+#include "llvm/CodeGen/SwplTargetMachine.h"
+#include "llvm/CodeGen/TargetSchedule.h"
 
 namespace llvm {
 
