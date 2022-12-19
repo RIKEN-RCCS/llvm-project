@@ -32,6 +32,14 @@ struct AArch64SwplSchedA64FX{
     PREDICATE_ST = 0x10000
   };
 
+  /// 資源
+  enum PortKind {
+    FLA=1, FLB=2, EXA=3, EXB=4, EAGA=5, EAGB=6, PRX=7, BR=8,
+    LSU1=9, LSU2=10,
+    FLA_C=11, FLB_C=12, EXA_C=13, EXB_C=14, EAGA_C=15, EAGB_C=16
+  };
+
+
   /// 利用資源ID
   enum ResourceID {
     NA,
@@ -53,6 +61,9 @@ struct AArch64SwplSchedA64FX{
     StmPipelines pipelines;
     int latency;
   };
+
+  static std::map<ResourceID, SchedResource> ResInfo; ///< 資源情報を参照するための紐づけ
+  static std::map<unsigned int, ResourceID> MIOpcodeInfo; ///< MIと資源情報の紐づけ
 
   /**
    * \brief 利用資源IDを返す。

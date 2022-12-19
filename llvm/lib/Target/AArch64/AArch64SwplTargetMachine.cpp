@@ -533,22 +533,22 @@ SwplTargetMachine *AArch64InstrInfo::getSwplTargetMachine() const {
 static const char *getResourceName(StmResourceId resource) {
   const char *name="";
   switch (resource) {
-  case A64FXRes::PortKind::P_FLA:name="FLA";break;
-  case A64FXRes::PortKind::P_FLB:name="FLB";break;
-  case A64FXRes::PortKind::P_EXA:name="EXA";break;
-  case A64FXRes::PortKind::P_EXB:name="EXB";break;
-  case A64FXRes::PortKind::P_EAGA:name="EAGA";break;
-  case A64FXRes::PortKind::P_EAGB:name="EAGB";break;
-  case A64FXRes::PortKind::P_PRX:name="PRX";break;
-  case A64FXRes::PortKind::P_BR:name="BR";break;
-  case A64FXRes::PortKind::P_LSU1:name="LSU1";break;
-  case A64FXRes::PortKind::P_LSU2:name="LSU2";break;
-  case A64FXRes::PortKind::P_FLA_C:name="FLA_C";break;
-  case A64FXRes::PortKind::P_FLB_C:name="FLB_C";break;
-  case A64FXRes::PortKind::P_EXA_C:name="EXA_C";break;
-  case A64FXRes::PortKind::P_EXB_C:name="EXB_C";break;
-  case A64FXRes::PortKind::P_EAGA_C:name="EAGA_C";break;
-  case A64FXRes::PortKind::P_EAGB_C:name="EAGB_C";break;
+  case AArch64SwplSchedA64FX::FLA:name="FLA";break;
+  case AArch64SwplSchedA64FX::FLB:name="FLB";break;
+  case AArch64SwplSchedA64FX::EXA:name="EXA";break;
+  case AArch64SwplSchedA64FX::EXB:name="EXB";break;
+  case AArch64SwplSchedA64FX::EAGA:name="EAGA";break;
+  case AArch64SwplSchedA64FX::EAGB:name="EAGB";break;
+  case AArch64SwplSchedA64FX::PRX:name="PRX";break;
+  case AArch64SwplSchedA64FX::BR:name="BR";break;
+  case AArch64SwplSchedA64FX::LSU1:name="LSU1";break;
+  case AArch64SwplSchedA64FX::LSU2:name="LSU2";break;
+  case AArch64SwplSchedA64FX::FLA_C:name="FLA_C";break;
+  case AArch64SwplSchedA64FX::FLB_C:name="FLB_C";break;
+  case AArch64SwplSchedA64FX::EXA_C:name="EXA_C";break;
+  case AArch64SwplSchedA64FX::EXB_C:name="EXB_C";break;
+  case AArch64SwplSchedA64FX::EAGA_C:name="EAGA_C";break;
+  case AArch64SwplSchedA64FX::EAGB_C:name="EAGB_C";break;
   default:
     llvm_unreachable("unknown resourceid");
   }
@@ -569,7 +569,7 @@ void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
     forPseudoMI.push_back(new StmPipeline());
     auto *p = new StmPipeline();
     p->stages.push_back(0);
-    p->resources.push_back(A64FXRes::PortKind::P_BR);
+    p->resources.push_back(AArch64SwplSchedA64FX::BR);
     forNoImplMI.push_back(p);
 
   }
@@ -615,6 +615,10 @@ const StmPipelinesImpl *
 AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) const {
 
   if (isPseudo(mi)) {
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DBG(AArch64SwplTargetMachine::getPipelines): Pseudo-instr: "
+             << SWPipeliner::TII->getName(mi.getOpcode()) << "\n";
+    }
     return &forPseudoMI;
   } else if (!isImplimented(mi)) {
     if (SWPipeliner::isDebugOutput()) {
@@ -624,7 +628,15 @@ AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) const {
     return &forNoImplMI;
   }
   auto id=SwplSched.getRes(mi);
-  return SwplSched.getPipelines(id);
+  const StmPipelinesImpl *p=SwplSched.getPipelines(id);
+  if (SWPipeliner::isDebugOutput()) {
+    dbgs() << "DBG(AArch64SwplTargetMachine::getPipelines): MI: " << mi;
+    dbgs() << "  ResourceID: " << id << "\n";
+    for (const auto s: *p) {
+      print(dbgs(), *s);
+    }
+  }
+  return p;
 }
 
 int AArch64SwplTargetMachine::computeRegFlowDependence(const MachineInstr* def, const MachineInstr* use) const {
@@ -662,7 +674,7 @@ bool AArch64SwplTargetMachine::isPseudo(const MachineInstr &mi) const {
 }
 
 void AArch64SwplTargetMachine::print(llvm::raw_ostream &ost, const StmPipeline &pipeline) const {
-  ost << "DBG(AArch64StmPipeline::print) stage/resource(" << "): ";
+  ost << "  stage/resource(" << "): ";
   int last=pipeline.stages.size();
   const char *sep="";
   for (int ix=0; ix<last; ix++) {
