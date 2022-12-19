@@ -12,6 +12,7 @@
 #include "AArch64SwplTargetMachine.h"
 #include "AArch64SwplSchedA64FX.h"
 #include "AArch64InstrInfo.h"
+#include "../../CodeGen/SWPipeliner.h"
 using namespace llvm;
 
 /// INT_OP
@@ -232,14 +233,21 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchRes(
   const MachineInstr &mi) {
   auto it = MIOpcodeInfo.find(mi.getOpcode());
   if (it != MIOpcodeInfo.end()) {
-      return it->second;
+    return it->second;
   }
-  // COPY命令は代表的なレイテンシ・演算器でレジスタ別に定義
-  if (mi.getOpcode() == AArch64::COPY){
-    // @todo:実装
-    // return MI_INT_OP_001;
-    // return MI_SIMDFP_SVE_OP_002;
-    // return MI_PREDICATE_OP_001;
+
+  // COPY命令はレジスタ種別で利用する資源が異なるため
+  // レジスタ種別ごとに代表的なレイテンシ・演算器で定義する
+  if (mi.getOpcode() == AArch64::COPY) {
+      Register r = mi.getOperand(0).getReg();
+      StmRegKind *rkind = SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, r);
+      if (rkind->isFloating()) {
+        return MI_SIMDFP_SVE_OP_002;
+      } else if (rkind->isPredicate()) {
+        return MI_PREDICATE_OP_001;
+      } else {
+        return MI_INT_OP_001;
+      }
   }
   // @todo コントロールオプションの処理
   // @todo VLの処理

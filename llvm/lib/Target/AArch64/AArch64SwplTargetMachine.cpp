@@ -650,7 +650,7 @@ unsigned int AArch64SwplTargetMachine::getNumResource(void) const {
 }
 
 bool AArch64SwplTargetMachine::isImplimented(const MachineInstr&mi) const {
-  if (SwplSched.getRes(mi)==0)
+  if (SwplSched.getRes(mi) == AArch64SwplSchedA64FX::NA)
     return false;
   else
     return true;
