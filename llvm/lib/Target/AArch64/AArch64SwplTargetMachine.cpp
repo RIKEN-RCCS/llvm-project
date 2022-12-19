@@ -631,7 +631,20 @@ AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) const {
   const StmPipelinesImpl *p=SwplSched.getPipelines(id);
   if (SWPipeliner::isDebugOutput()) {
     dbgs() << "DBG(AArch64SwplTargetMachine::getPipelines): MI: " << mi;
-    dbgs() << "  ResourceID: " << id << "\n";
+    const char *q="";
+    switch ((id&0xfffff000)) {
+    case AArch64SwplSchedA64FX::INT_OP:q="INT_OP"; break;
+    case AArch64SwplSchedA64FX::INT_LD:q="INT_LD"; break;
+    case AArch64SwplSchedA64FX::INT_ST:q="INT_ST"; break;
+    case AArch64SwplSchedA64FX::SIMDFP_SVE_OP:q="SIMDFP_SVE_OP"; break;
+    case AArch64SwplSchedA64FX::SIMDFP_SVE_LD:q="SIMDFP_SVE_LD"; break;
+    case AArch64SwplSchedA64FX::SIMDFP_SVE_ST:q="SIMDFP_SVE_ST"; break;
+    case AArch64SwplSchedA64FX::SVE_CMP_INST:q="SVE_CMP_INST"; break;
+    case AArch64SwplSchedA64FX::PREDICATE_OP:q="PREDICATE_OP"; break;
+    case AArch64SwplSchedA64FX::PREDICATE_LD:q="PREDICATE_LD"; break;
+    case AArch64SwplSchedA64FX::PREDICATE_ST:q="PREDICATE_ST"; break;
+    }
+    dbgs() << "  ResourceID: " << q << "+" << (id&0xfff) << "\n";
     for (const auto s: *p) {
       print(dbgs(), *s);
     }

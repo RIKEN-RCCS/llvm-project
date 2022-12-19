@@ -951,9 +951,9 @@ void SwplTrialState::destroy(SwplTrialState* state) {
 /// \retval true specの初期化成功
 /// \retval false specの初期化失敗
 ///
-/// \note 現在、PlanSpec.assumed_iterationは常にASSUMED_ITERATIONS_NONE (-1)
-/// \note 現在、PlanSpec.pre_expand_numは常に1
-bool PlanSpec::init(unsigned arg_res_mii) {
+/// \note 現在、SwplPlanSpec.assumed_iterationは常にASSUMED_ITERATIONS_NONE (-1)
+/// \note 現在、SwplPlanSpec.pre_expand_numは常に1
+bool SwplPlanSpec::init(unsigned arg_res_mii) {
   if (SWPipeliner::isDebugOutput()) {
     dbgs() << "        : (Iterative Modulo Scheduling"
            << ". ResMII " << arg_res_mii << ". ";
@@ -1000,7 +1000,7 @@ bool PlanSpec::init(unsigned arg_res_mii) {
 /// \note  言数はspillを含むscheduleの評価に用いられる
 /// \note  store系およびindirectload系はFLA,FLBを利用する為,
 ///        資源の圧迫率が高い.
-void PlanSpec::countLoadStore(unsigned *num_load, unsigned *num_store, unsigned *num_float ) const {
+void SwplPlanSpec::countLoadStore(unsigned *num_load, unsigned *num_store, unsigned *num_float ) const {
   *num_load  = 0;
   *num_store = 0;
   *num_float = 0;
@@ -1026,9 +1026,9 @@ void PlanSpec::countLoadStore(unsigned *num_load, unsigned *num_store, unsigned 
 ///          回転数が取得できた場合は、itr_countメンバ変数に格納し、TRUEを返す。
 /// \retval TRUE ループ回転数が取得できた
 /// \retval FALSE ループ回転数が取得できなかった
-bool PlanSpec::isIterationCountConstant(const SwplLoop& c_loop, unsigned* iteration_count) {
+bool SwplPlanSpec::isIterationCountConstant(const SwplLoop& c_loop, unsigned* iteration_count) {
   SwplScr swpl_scr( *(const_cast<llvm::MachineLoop*>(c_loop.getML())) );
-  TransformedMIRInfo temp_tli;
+  SwplTransformedMIRInfo temp_tli;
 
   *iteration_count = 0;
 
@@ -1049,7 +1049,7 @@ bool PlanSpec::isIterationCountConstant(const SwplLoop& c_loop, unsigned* iterat
 /// \brief iterative_scheduleの繰返し上限を求める
 /// \param [in] n_insts スケジューリング対象の命令数
 /// \return iterative_scheduleの繰返し上限
-unsigned PlanSpec::getBudget(unsigned n_insts) {
+unsigned SwplPlanSpec::getBudget(unsigned n_insts) {
   double ratio;
 
   /* ループの言数により動的に決定する。*/
@@ -1065,7 +1065,7 @@ unsigned PlanSpec::getBudget(unsigned n_insts) {
 /// \param [in] loop ループを構成する命令の情報
 /// \param [in] min_ii MinII
 /// \return 算出したスケジューリングのiiの上限値
-unsigned PlanSpec::getMaxIterationInterval(const SwplLoop& loop, unsigned min_ii) {
+unsigned SwplPlanSpec::getMaxIterationInterval(const SwplLoop& loop, unsigned min_ii) {
   unsigned maxii_base;
   unsigned maxii_for_minii;
   unsigned maxii;
@@ -1223,7 +1223,7 @@ bool SwplMsResourceResult::isModerate() {
 ///  - IMSを実行する関数を呼び出す。スケジューリング結果はSwplTrialState->inst_slot_mapに格納される。
 ///  - スケジューリング結果(SwplTrialState->inst_slot_map)を、MsResultに保持させる
 ///  - SwplTrialStateを破棄 ※ただし、inst_slot_map域は残す
-bool SwplMsResult::constructInstSlotMapAtSpecifiedII(PlanSpec spec) {
+bool SwplMsResult::constructInstSlotMapAtSpecifiedII(SwplPlanSpec spec) {
   SwplInstSlotHashmap* instslotmap;
   SwplModuloDdg* modulo_ddg;
   SwplTrialState* state;
@@ -1282,7 +1282,7 @@ bool SwplMsResult::constructInstSlotMapAtSpecifiedII(PlanSpec spec) {
 /// \param [in] spec スケジューリング指示情報
 /// \param [in] limit_reg レジスタ数上限をチェックするか否か
 /// \return なし
-void SwplMsResult::checkInstSlotMap(const PlanSpec& spec, bool limit_reg) {
+void SwplMsResult::checkInstSlotMap(const SwplPlanSpec & spec, bool limit_reg) {
   checkHardResource(spec, limit_reg);
   checkIterationCount(spec);
   checkMve(spec);
@@ -1292,7 +1292,7 @@ void SwplMsResult::checkInstSlotMap(const PlanSpec& spec, bool limit_reg) {
 /// \brief inst_slot_mapに対して資源が足りているかをチェックする
 ///
 /// \note 現在のところ,整数, predicateレジスタが不足している場合は採用していない
-void SwplMsResult::checkHardResource(const PlanSpec& spec, bool limit_reg) {
+void SwplMsResult::checkHardResource(const SwplPlanSpec & spec, bool limit_reg) {
   if (inst_slot_map == nullptr || !limit_reg) {
     is_reg_sufficient = true;
     n_insufficient_iregs = 0;
@@ -1361,7 +1361,7 @@ void SwplMsResult::checkHardResource(const PlanSpec& spec, bool limit_reg) {
 ///
 /// \note 固定割付けでないレジスタが、整数、浮動小数点数、プレディケートであることが前提の処理である。
 /// \note llvm::AArch64::CCRRegClassIDは固定割付けのため処理しない
-SwplMsResourceResult SwplMsResult::isHardRegsSufficient(const PlanSpec& spec) {
+SwplMsResourceResult SwplMsResult::isHardRegsSufficient(const SwplPlanSpec & spec) {
   unsigned int n_renaming_versions;
   unsigned n_necessary_regs;
   SwplMsResourceResult ms_resource_result;
@@ -1397,8 +1397,8 @@ SwplMsResourceResult SwplMsResult::isHardRegsSufficient(const PlanSpec& spec) {
 }
 
 /// \brief 各II毎のinst_slot_mapに対して回転数が足りているかをチェックする
-/// \return なし。結果は PlanSpec::is_itr_sufficientに格納される。
-void SwplMsResult::checkIterationCount(const PlanSpec& spec) {
+/// \return なし。結果は SwplPlanSpec::is_itr_sufficientに格納される。
+void SwplMsResult::checkIterationCount(const SwplPlanSpec & spec) {
   required_itr_count = 0;
 
   /* スケジューリング自体がない場合は,制限にかからない */
@@ -1437,7 +1437,7 @@ void SwplMsResult::checkIterationCount(const PlanSpec& spec) {
 }
 
 /// \brief kernelの展開数MVEが妥当な数であるかを判定する
-void SwplMsResult::checkMve(const PlanSpec& spec) {
+void SwplMsResult::checkMve(const SwplPlanSpec & spec) {
   required_mve = 0;
 
   /* スケジューリング自体がない場合は,制限にかからない */
@@ -1460,7 +1460,7 @@ void SwplMsResult::checkMve(const PlanSpec& spec) {
 /// \return なし
 ///
 /// \note SwplMsResult.proc_stateによって出力メッセージが一部変わる。
-void SwplMsResult::outputDebugMessageForSchedulingResult(PlanSpec spec) {
+void SwplMsResult::outputDebugMessageForSchedulingResult(SwplPlanSpec spec) {
   unsigned max_freg, max_ireg, max_preg, req_freg, req_ireg, req_preg;
   if (!SWPipeliner::isDebugOutput()) { return ;}
   /* registerの内容詳細をチェック */
@@ -1598,7 +1598,7 @@ bool SwplMsResult::isEffective() {
 ///
 /// \note 現在の仕様ではregister不足でschedulingできなかった場合も,
 ///       inst_slot_mapがnullptrとなっている事に注意すること.
-void SwplMsResult::outputGiveupMessageForEstimate(PlanSpec& spec) {
+void SwplMsResult::outputGiveupMessageForEstimate(SwplPlanSpec & spec) {
   assert(inst_slot_map == nullptr ||
          !(is_reg_sufficient &&
            is_itr_sufficient &&
@@ -1668,7 +1668,7 @@ void SwplMsResult::outputGiveupMessageForEstimate(PlanSpec& spec) {
 ///   ------------------------------------------------------------
 /// ```
 ///
-void SwplMsResult::evaluateSpillingSchedule(const PlanSpec& spec, unsigned kernel_blocks) {
+void SwplMsResult::evaluateSpillingSchedule(const SwplPlanSpec & spec, unsigned kernel_blocks) {
   unsigned num_load  = 0;
   unsigned num_store = 0;
   unsigned num_float = 0;
@@ -1770,7 +1770,7 @@ SwplMsResult *SwplMsResult::constructInit(unsigned ii, ProcState procstate ) {
 ///      (1)で余裕がある解が見つからなかった場合、余裕が無い解を採用する.
 /// ```
 ///
-SwplMsResult *SwplMsResult::calculateMsResult(PlanSpec spec) {
+SwplMsResult *SwplMsResult::calculateMsResult(SwplPlanSpec spec) {
   std::unordered_set<SwplMsResult *> ms_result_candidate; ///< 試行した結果のMsResultを保持する
   SwplMsResult *ms_result = nullptr;
   bool candidate_is_collected = false;
@@ -1948,7 +1948,7 @@ SwplMsResult *SwplMsResult::calculateMsResult(PlanSpec spec) {
 /// \param [in] spec スケジューリング指示情報
 /// \param [in] ms_result_candidate スケジューリング結果(SwplMsResult*)のHashSet
 /// \return ms_result_candidateのうち、資源と回転数が十分なスケジューリング結果のMsResultのポインタ
-SwplMsResult *SwplMsResult::getEffectiveSchedule(const PlanSpec& spec,
+SwplMsResult *SwplMsResult::getEffectiveSchedule(const SwplPlanSpec & spec,
                                          std::unordered_set<SwplMsResult *>& ms_result_candidate) {
   unsigned able_min_ii;
   SwplMsResult *effective_ms_result;
@@ -2016,7 +2016,7 @@ SwplMsResult *SwplMsResult::getModerateSchedule(std::unordered_set<SwplMsResult 
 /// \param [out] able_min_ii スケジューリングが可能な最小のiiを格納するポインタ
 /// \param [out] unable_max_ii スケジューリングが不可能な最大のiiを格納するポインタ
 /// \return なし
-void SwplMsResult::getBinarySearchRange(const PlanSpec& spec,
+void SwplMsResult::getBinarySearchRange(const SwplPlanSpec & spec,
                                     std::unordered_set<SwplMsResult *>& ms_result_candidate,
                                     unsigned *able_min_ii,
                                     unsigned *unable_max_ii ) {
@@ -2062,7 +2062,7 @@ void SwplMsResult::getBinarySearchRange(const PlanSpec& spec,
 ///   collectCandidateで得られたscheduling結果が利用される.
 /// ```
 ///
-SwplMsResult *SwplMsResult::calculateMsResultByBinarySearch(PlanSpec spec) {
+SwplMsResult *SwplMsResult::calculateMsResultByBinarySearch(SwplPlanSpec spec) {
   SwplMsResult * ms_result;
   SwplMsResult * ms_result_child;
   unsigned point_ii, start_ii, end_ii;
@@ -2129,7 +2129,7 @@ SwplMsResult *SwplMsResult::calculateMsResultByBinarySearch(PlanSpec spec) {
 ///       そのため,資源と回転数が十分のresultのみ返却するものとする.<br>
 ///       またbinary searchを用いない場合の旧方式で使用される.<br>
 SwplMsResult *
-SwplMsResult::calculateMsResultAtSpecifiedII(PlanSpec spec, unsigned ii, ProcState procstate) {
+SwplMsResult::calculateMsResultAtSpecifiedII(SwplPlanSpec spec, unsigned ii, ProcState procstate) {
   SwplMsResult * ms_result;
 
   ms_result = SwplMsResult::constructInit(ii, procstate);
@@ -2153,7 +2153,7 @@ SwplMsResult::calculateMsResultAtSpecifiedII(PlanSpec spec, unsigned ii, ProcSta
 /// \return MsResultのポインタ
 ///
 /// \note spec.max_iiでschedulingが可能である事を保証しなければならない.
-SwplMsResult *SwplMsResult::calculateMsResultSimply(PlanSpec spec) {
+SwplMsResult *SwplMsResult::calculateMsResultSimply(SwplPlanSpec spec) {
   SwplMsResult * ms_result;
   unsigned ii;
 
@@ -2185,7 +2185,8 @@ SwplMsResult *SwplMsResult::calculateMsResultSimply(PlanSpec spec) {
 ///       このため稀なケースは無視することにした。
 /// \note budgetが尽きるようなIIを選んでいるのでよくない
 /// \note specのメンバ変数のうちunable_max_iiのみが更新される
-bool SwplMsResult::collectCandidate(PlanSpec& spec,
+bool SwplMsResult::collectCandidate(
+    SwplPlanSpec & spec,
                                 std::unordered_set<SwplMsResult *>& ms_result_candidate,
                                 bool watch_regs,
                                 ProcState procstate) {
@@ -2258,7 +2259,8 @@ bool SwplMsResult::collectCandidate(PlanSpec& spec,
 ///     そのスケジューリング結果がMsResult.isModerateの条件を満たす場合は、
 ///     ms_result_candidateに追加して復帰する
 ///   - それ以外の場合は、spec.unable_max_iiを更新し、必要に応じて領域開放し、やり直し
-bool SwplMsResult::collectModerateCandidate(PlanSpec& spec,
+bool SwplMsResult::collectModerateCandidate(
+    SwplPlanSpec & spec,
                                         std::unordered_set<SwplMsResult *>& ms_result_candidate,
                                         ProcState state) {
   SwplMsResult * ms_result;
@@ -2300,7 +2302,8 @@ bool SwplMsResult::collectModerateCandidate(PlanSpec& spec,
 /// \param [in] ms_result 再試行のベースとなるMsResult
 /// \retval TRUE スケジューリングに成功した（ms_result_candidateに新しい結果が追加される）
 /// \retval FALSE スケジューリングに失敗した
-bool SwplMsResult::recollectModerateCandidateWithExII(PlanSpec& spec,
+bool SwplMsResult::recollectModerateCandidateWithExII(
+    SwplPlanSpec & spec,
                                                   std::unordered_set<SwplMsResult *>& ms_result_candidate,
     SwplMsResult & ms_result) {
   unsigned old_maxii = spec.max_ii;
@@ -2327,7 +2330,8 @@ bool SwplMsResult::recollectModerateCandidateWithExII(PlanSpec& spec,
 /// \param [in,out] ms_result_candidate SwplMsResult*のHashSet
 /// \retval true スケジューリングに成功した
 /// \retval false スケジューリングに失敗した
-bool SwplMsResult::recollectCandidateWithExII(PlanSpec& spec,
+bool SwplMsResult::recollectCandidateWithExII(
+    SwplPlanSpec & spec,
                                           std::unordered_set<SwplMsResult *>& ms_result_candidate) {
   unsigned old_maxii = spec.max_ii;
   unsigned old_minii = spec.min_ii;
@@ -2356,7 +2360,7 @@ bool SwplMsResult::recollectCandidateWithExII(PlanSpec& spec,
 /// \return 算出したinc_ii
 ///
 /// \note  heuristicな手法でinc_iiを決めている.
-unsigned SwplMsResult::getIncII(PlanSpec& spec, unsigned prev_tried_n_insts) {
+unsigned SwplMsResult::getIncII(SwplPlanSpec & spec, unsigned prev_tried_n_insts) {
   unsigned inc_ii = 0;
 
   /* (n_insts - tried_n_insts)>>1 は schedule されなかった命令数の約半分。*/
@@ -2433,7 +2437,8 @@ unsigned SwplMsResult::getIncII(PlanSpec& spec, unsigned prev_tried_n_insts) {
 ///       evaluateSpillingScheduleはiiを増やすほど評価が低くなる為,
 ///       不足registerが同じである場合はevaluationが増大する事はない.
 ///       よりよいscheduleが得られると期待できない為,抑止する.
-bool SwplMsResult::isRegReducible(PlanSpec& spec, std::unordered_set<SwplMsResult *>& ms_result_candidate) {
+bool SwplMsResult::isRegReducible(
+    SwplPlanSpec & spec, std::unordered_set<SwplMsResult *>& ms_result_candidate) {
   unsigned threshold_reduced_reg;
 
   unsigned n_candidate = 0;

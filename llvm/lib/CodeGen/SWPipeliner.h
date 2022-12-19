@@ -206,7 +206,7 @@ public:
   /// \return former_memとlatter_memが重なる可能性のある最小の回転数
   unsigned getMemsMinOverlapDistance(SwplMem *former_mem, SwplMem *latter_mem);
 
-  bool findBasicInductionVariable(TransformedMIRInfo &TMI) const;
+  bool findBasicInductionVariable(SwplTransformedMIRInfo &TMI) const;
 
   /// SwplLoop::OrgMI2NewMI および SwplLoop::NewMI2OrgMI に要素を追加する
   /// \param [in] orgMI オリジナルMI
@@ -756,8 +756,8 @@ private:
   void analysisInstDependence();
 
 };
-//  extern SwplLoop loop;
 
+/// SWPL pass
 struct SWPipeliner : public MachineFunctionPass {
   /// swpl-choice-loopで対象Loop特定に利用する
   int loopCountForDebug=0;

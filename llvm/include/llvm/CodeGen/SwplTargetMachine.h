@@ -44,6 +44,7 @@ struct StmPipeline {
   SmallVector<StmResourceId,4> resources;
 };
 
+/// Handles the register types used by the SWPL function
 class StmRegKind {
 protected:
   enum RegKindID {unknown=0, IntReg=1, FloatReg=2, PredicateReg=3, CCReg=4};
@@ -208,6 +209,7 @@ using StmPipelinesImpl =std::vector<const StmPipeline *>;
 /// list of StmPipeline(for var)
 using StmPipelines =std::vector<const StmPipeline *>;
 
+/// Target machine information used by the SWPL function
 class SwplTargetMachine {
 protected:
   const MachineFunction *MF=nullptr; ///< Remember the MachineFunction to get the information needed by SwplTargetMachine

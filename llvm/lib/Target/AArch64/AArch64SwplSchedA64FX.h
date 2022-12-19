@@ -29,7 +29,7 @@ struct AArch64SwplSchedA64FX{
     SVE_CMP_INST = 0x7000,
     PREDICATE_OP = 0x8000,
     PREDICATE_LD = 0x9000,
-    PREDICATE_ST = 0x10000
+    PREDICATE_ST = 0xA000
   };
 
   /// 資源

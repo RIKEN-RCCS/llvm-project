@@ -33,7 +33,7 @@ private:
   SwplPlan &Plan; ///< 処理対象のスケジュールプラン
   SwplInstSlotHashmap &InstSlotMap; ///< Planの命令配置
   SwplLoop &Loop; ///< 処理対象のループ
-  TransformedMIRInfo TMI; ///< 変換に必要な回転数などの情報
+  SwplTransformedMIRInfo TMI; ///< 変換に必要な回転数などの情報
   Reg2Vreg VRegMap;  ///< オリジナルRegisterと新Register＋Versionのマップ
   llvm::MachineFunction& MF; ///< llvm::MachineInstrを扱う際に必要なクラス
 
@@ -92,7 +92,7 @@ private:
   /// \return 取得したvreg
   llvm::Register getVReg(const SwplReg& org, size_t version );
 
-  /// TransformedMIRInfo::MIsに格納された命令を指定ブロック(KERNEL, PROLOGUE等)へ挿入する
+  /// SwplTransformedMIRInfo::MIsに格納された命令を指定ブロック(KERNEL, PROLOGUE等)へ挿入する
   /// \param [in] ins
   /// \param [in] block
   void insertMIs(llvm::MachineBasicBlock&ins, BLOCK block);
