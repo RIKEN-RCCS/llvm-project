@@ -16,7 +16,7 @@ namespace llvm {
   class SwplLoop;
   class SwplInst;
   class SwplMem;
-  struct TransformedMIRInfo;
+  struct SwplTransformedMIRInfo;
 }
 
 #include "SwplTransformMIR.h"
@@ -58,7 +58,7 @@ bool SwplTransformMIR::transformMIR() {
   convertPlan2MIR();
   if (TMI.isNecessaryTransformMIR()){
     updated=true;
-    /// (2) TransformedMIRInfo::isNecessaryTransformMIR()であれば\n
+    /// (2) SwplTransformedMIRInfo::isNecessaryTransformMIR()であれば\n
     /// (2-1) SwplScr::prepareCompensationLoop()でループの外を変形する
     SCR.prepareCompensationLoop(TMI);
     /// (2-2) transformKernel()でループの中を変形する
@@ -70,9 +70,9 @@ bool SwplTransformMIR::transformMIR() {
     /// (2-4) postTransformKernel() Check1,Check2合流点でPHIを生成する
     postTransformKernel();
     if (DumpMIR) {
-      dbgs() << "** TransformedMIRInfo begin **\n";
+      dbgs() << "** SwplTransformedMIRInfo begin **\n";
       TMI.print();
-      dbgs() << "** TransformedMIRInfo end   **\n";
+      dbgs() << "** SwplTransformedMIRInfo end   **\n";
       if (DumpMIR & (int)AFTER) dumpMIR(AFTER);
     }
 

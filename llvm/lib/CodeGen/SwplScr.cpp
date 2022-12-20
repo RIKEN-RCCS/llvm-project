@@ -40,7 +40,7 @@ bool SwplScr::getCoefficient(const MachineOperand &op, int *coefficient) const {
   return true;
 }
 
-void SwplScr::makeBypass(const TransformedMIRInfo &tmi,
+void SwplScr::makeBypass(const SwplTransformedMIRInfo &tmi,
                      const DebugLoc& dbgloc,
                      MachineBasicBlock &skip_kernel_from,
                      MachineBasicBlock &skip_kernel_to,
@@ -56,7 +56,7 @@ void SwplScr::makeBypass(const TransformedMIRInfo &tmi,
 }
 
 
-bool SwplScr::getDoInitialValue(TransformedMIRInfo &TMI) const {
+bool SwplScr::getDoInitialValue(SwplTransformedMIRInfo &TMI) const {
   ///
   /// ```
   /// PH: %reg1=MOVi32imm imm OR %regs=MOVi64imm imm
@@ -107,8 +107,8 @@ void SwplScr::moveBody(llvm::MachineBasicBlock*newBody, llvm::MachineBasicBlock*
 
 // public
 
-bool SwplScr::findBasicInductionVariable(TransformedMIRInfo &TMI) const {
-  /// TransformedMIRInfoの以下メンバを設定する(括弧内は下記例のどれかを示す)
+bool SwplScr::findBasicInductionVariable(SwplTransformedMIRInfo &TMI) const {
+  /// SwplTransformedMIRInfoの以下メンバを設定する(括弧内は下記例のどれかを示す)
   /// - isIterationCountConstant(immを抽出成功)
   /// - doVRegInitialValue(imm)
   /// - originalKernelIteration((doVRegInitialValue-constant)/coefficient)
@@ -215,7 +215,7 @@ bool SwplScr::findBasicInductionVariable(TransformedMIRInfo &TMI) const {
 /// nb->nb [tailport = s, headport = n];
 /// }
 /// \enddot
-void SwplScr::prepareCompensationLoop(TransformedMIRInfo &tmi) {
+void SwplScr::prepareCompensationLoop(SwplTransformedMIRInfo &tmi) {
 
   MachineBasicBlock* ob=ML.getTopBlock();
   const BasicBlock*ob_bb=ob->getBasicBlock();
@@ -334,7 +334,7 @@ void SwplScr::prepareCompensationLoop(TransformedMIRInfo &tmi) {
   //      +-------------------------------+
 }
 
-void SwplScr::postSSA(TransformedMIRInfo &tmi) {
+void SwplScr::postSSA(SwplTransformedMIRInfo &tmi) {
   if (!tmi.isNecessaryBypassKernel()) {
     removeMBB(tmi.Check1, tmi.OrgPreHeader, tmi.Prolog);
     tmi.Check1=nullptr;
@@ -428,7 +428,7 @@ void SwplScr::removePredFromPhi(MachineBasicBlock *fromMBB,
   else                  \
     llvm::dbgs() << llvm::printMBBReference(*name) << "\n";
 
-void TransformedMIRInfo::print() {
+void SwplTransformedMIRInfo::print() {
   llvm::dbgs() << "originalDoVReg:" << printReg(originalDoVReg, SWPipeliner::TRI) << "\n"
                << "originalDoInitVar:" << printReg(originalDoInitVar, SWPipeliner::TRI) << "\n"
                << "doVReg:" << printReg(doVReg, SWPipeliner::TRI) << "\n"

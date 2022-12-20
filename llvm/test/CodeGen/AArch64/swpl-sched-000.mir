@@ -72,163 +72,163 @@
 # CHECK:   distance:20
 # CHECK:   delay:6
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %43:zpr = LD1W %18:ppr_3b, %17:gpr64common, %41:gpr64common :: (load unknown-size from %ir.uglygep, align 64, !tbaa !6)
-# CHECK:   ResourceID: 20481
+# CHECK:   ResourceID: SIMDFP_SVE_LD+1
 # CHECK:   stage/resource(): 0/EAGA, 0/LSU1
 # CHECK:   stage/resource(): 0/EAGB, 0/LSU1
 # CHECK:   stage/resource(): 0/EAGA, 0/LSU2
 # CHECK:   stage/resource(): 0/EAGB, 0/LSU2
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %44:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZPZI_UNDEF_S %18:ppr_3b, killed %43:zpr, 1
-# CHECK:   ResourceID: 16387
+# CHECK:   ResourceID: SIMDFP_SVE_OP+3
 # CHECK:   stage/resource(): 0/FLA
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: ST1W killed %44:zpr, %18:ppr_3b, %22:gpr64common, %41:gpr64common :: (store unknown-size into %ir.uglygep23, align 64, !tbaa !6)
-# CHECK:   ResourceID: 24577
+# CHECK:   ResourceID: SIMDFP_SVE_ST+1
 # CHECK:   stage/resource(): 0/EAGA, 0/FLA, 0/LSU1, 0/LSU2
 # CHECK:   stage/resource(): 0/EAGB, 0/FLA, 0/LSU1, 0/LSU2
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %45:gpr64sp = nuw ADDXri %41:gpr64common, 16, 0
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %46:gpr64all = COPY %45:gpr64sp
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %47:gpr64 = SUBSXri %42:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %48:gpr64all = COPY %47:gpr64
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %41:gpr64common = COPY %46:gpr64all
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %42:gpr64sp = COPY %48:gpr64all
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %43:zpr = LD1W %18:ppr_3b, %17:gpr64common, %41:gpr64common :: (load unknown-size from %ir.uglygep, align 64, !tbaa !6)
-# CHECK:   ResourceID: 20481
+# CHECK:   ResourceID: SIMDFP_SVE_LD+1
 # CHECK:   stage/resource(): 0/EAGA, 0/LSU1
 # CHECK:   stage/resource(): 0/EAGB, 0/LSU1
 # CHECK:   stage/resource(): 0/EAGA, 0/LSU2
 # CHECK:   stage/resource(): 0/EAGB, 0/LSU2
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %44:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZPZI_UNDEF_S %18:ppr_3b, killed %43:zpr, 1
-# CHECK:   ResourceID: 16387
+# CHECK:   ResourceID: SIMDFP_SVE_OP+3
 # CHECK:   stage/resource(): 0/FLA
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %43:zpr = LD1W %18:ppr_3b, %17:gpr64common, %41:gpr64common :: (load unknown-size from %ir.uglygep, align 64, !tbaa !6)
-# CHECK:   ResourceID: 20481
+# CHECK:   ResourceID: SIMDFP_SVE_LD+1
 # CHECK:   stage/resource(): 0/EAGA, 0/LSU1
 # CHECK:   stage/resource(): 0/EAGB, 0/LSU1
 # CHECK:   stage/resource(): 0/EAGA, 0/LSU2
 # CHECK:   stage/resource(): 0/EAGB, 0/LSU2
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: ST1W killed %44:zpr, %18:ppr_3b, %22:gpr64common, %41:gpr64common :: (store unknown-size into %ir.uglygep23, align 64, !tbaa !6)
-# CHECK:   ResourceID: 24577
+# CHECK:   ResourceID: SIMDFP_SVE_ST+1
 # CHECK:   stage/resource(): 0/EAGA, 0/FLA, 0/LSU1, 0/LSU2
 # CHECK:   stage/resource(): 0/EAGB, 0/FLA, 0/LSU1, 0/LSU2
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: ST1W killed %44:zpr, %18:ppr_3b, %22:gpr64common, %41:gpr64common :: (store unknown-size into %ir.uglygep23, align 64, !tbaa !6)
-# CHECK:   ResourceID: 24577
+# CHECK:   ResourceID: SIMDFP_SVE_ST+1
 # CHECK:   stage/resource(): 0/EAGA, 0/FLA, 0/LSU1, 0/LSU2
 # CHECK:   stage/resource(): 0/EAGB, 0/FLA, 0/LSU1, 0/LSU2
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %44:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZPZI_UNDEF_S %18:ppr_3b, killed %43:zpr, 1
-# CHECK:   ResourceID: 16387
+# CHECK:   ResourceID: SIMDFP_SVE_OP+3
 # CHECK:   stage/resource(): 0/FLA
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %44:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZPZI_UNDEF_S %18:ppr_3b, killed %43:zpr, 1
-# CHECK:   ResourceID: 16387
+# CHECK:   ResourceID: SIMDFP_SVE_OP+3
 # CHECK:   stage/resource(): 0/FLA
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %43:zpr = LD1W %18:ppr_3b, %17:gpr64common, %41:gpr64common :: (load unknown-size from %ir.uglygep, align 64, !tbaa !6)
-# CHECK:   ResourceID: 20481
+# CHECK:   ResourceID: SIMDFP_SVE_LD+1
 # CHECK:   stage/resource(): 0/EAGA, 0/LSU1
 # CHECK:   stage/resource(): 0/EAGB, 0/LSU1
 # CHECK:   stage/resource(): 0/EAGA, 0/LSU2
 # CHECK:   stage/resource(): 0/EAGB, 0/LSU2
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %43:zpr = LD1W %18:ppr_3b, %17:gpr64common, %41:gpr64common :: (load unknown-size from %ir.uglygep, align 64, !tbaa !6)
-# CHECK:   ResourceID: 20481
+# CHECK:   ResourceID: SIMDFP_SVE_LD+1
 # CHECK:   stage/resource(): 0/EAGA, 0/LSU1
 # CHECK:   stage/resource(): 0/EAGB, 0/LSU1
 # CHECK:   stage/resource(): 0/EAGA, 0/LSU2
 # CHECK:   stage/resource(): 0/EAGB, 0/LSU2
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %45:gpr64sp = nuw ADDXri %41:gpr64common, 16, 0
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %46:gpr64all = COPY %45:gpr64sp
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %45:gpr64sp = nuw ADDXri %41:gpr64common, 16, 0
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %47:gpr64 = SUBSXri %42:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %48:gpr64all = COPY %47:gpr64
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %47:gpr64 = SUBSXri %42:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %41:gpr64common = COPY %46:gpr64all
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %46:gpr64all = COPY %45:gpr64sp
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %45:gpr64sp = nuw ADDXri %41:gpr64common, 16, 0
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %42:gpr64sp = COPY %48:gpr64all
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %48:gpr64all = COPY %47:gpr64
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA
 # CHECK:   stage/resource(): 0/EAGB
 # CHECK: DBG(AArch64SwplTargetMachine::getPipelines): MI: %47:gpr64 = SUBSXri %42:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK:   ResourceID: 4097
+# CHECK:   ResourceID: INT_OP+1
 # CHECK:   stage/resource(): 0/EXA
 # CHECK:   stage/resource(): 0/EXB
 # CHECK:   stage/resource(): 0/EAGA

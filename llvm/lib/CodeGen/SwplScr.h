@@ -19,7 +19,7 @@ namespace llvm {
 class SwplLoop;
 
 /// 命令列変換情報
-struct TransformedMIRInfo {
+struct SwplTransformedMIRInfo {
   Register originalDoVReg=0; ///<  オリジナルの制御変数（updateDoVRegMIのop1）
   Register originalDoInitVar=0; ///< オリジナル制御変数の定義PHIの初期値
   Register nonSSAOriginalDoVReg =0; ///< オリジナルの制御変数に対応した、データ抽出処理で非SSAに変換したMIR
@@ -59,7 +59,7 @@ struct TransformedMIRInfo {
 
   void print();
 
-  virtual ~TransformedMIRInfo() {
+  virtual ~SwplTransformedMIRInfo() {
   }
 
   /// SWPL変換が必要かどうかの判定
@@ -115,7 +115,7 @@ private:
   /// \param [out] TMI
   /// \retval true 取得成功
   /// \retval false 取得失敗
-  bool getDoInitialValue(TransformedMIRInfo &TMI) const;
+  bool getDoInitialValue(SwplTransformedMIRInfo &TMI) const;
 
   /// 定数オペランドを３２ビット整数に変換する
   /// \param [in] op
@@ -131,7 +131,7 @@ private:
   /// \param [out] skip_kernel_to
   /// \param [out] skip_mod_from
   /// \param [out] skip_mod_to
-  void makeBypass(const TransformedMIRInfo &tmi, const DebugLoc&dbgloc,
+  void makeBypass(const SwplTransformedMIRInfo &tmi, const DebugLoc&dbgloc,
                   MachineBasicBlock &skip_kernel_from, MachineBasicBlock &skip_kernel_to,
                   MachineBasicBlock &skip_mod_from, MachineBasicBlock &skip_mod_to);
 
@@ -168,15 +168,15 @@ public:
   /// \param [out] TMI
   /// \retval true 誘導変数発見
   /// \retval false 誘導変数検出できず
-  bool findBasicInductionVariable(TransformedMIRInfo &TMI) const;
+  bool findBasicInductionVariable(SwplTransformedMIRInfo &TMI) const;
 
   /// SWPLの結果をMIRへ反映するために,MBBの構成を行なう.
   /// \param [in,out] tmi
-  void prepareCompensationLoop(TransformedMIRInfo &tmi);
+  void prepareCompensationLoop(SwplTransformedMIRInfo &tmi);
 
   /// SWPL処理の最後に、無駄な分岐等を削除する
   /// \param [in] tmi
-  void postSSA(TransformedMIRInfo &tmi);
+  void postSSA(SwplTransformedMIRInfo &tmi);
 
   /// original loopから、loop外で参照しているregister情報を収集する
   void collectLiveOut(UseMap &usemap);

@@ -26,7 +26,7 @@ using SwplInstPrioque = std::map<int, const SwplInst*>;
 using SwplInstSet = std::set<const SwplInst*>;
 
 
-/// \brief MRTを表現するクラス
+/// \brief MRTを表現
 /// \details MRTを表現する。
 ///          MRTは、ResourceIDが要素番号として扱えない場合でも対応可能とするため、
 ///          ResourceIDとSwplInst*のmapのvectorで表現する。
@@ -64,7 +64,7 @@ private:
 };
 
 
-/// \brief スケジューリング機能において依存関係を保持するクラス
+/// \brief スケジューリング機能において依存関係を保持する
 class SwplModuloDdg {
   const SwplInstGraph& graph; /* Ref */
   const SwplLoop& loop;       /* Ref */
@@ -89,7 +89,7 @@ public:
 };
 
 
-/// \brief スケジューリング情報および結果を保持するクラス
+/// \brief スケジューリング情報および結果を保持する
 class SwplTrialState {
   /// \brief instが配置できるslot, inst, 配置可能となったpipeline,の組を保持するクラス
   class SlotInstPipeline {
@@ -137,8 +137,8 @@ private:
 };
 
 
-/// \brief schedulingの詳細仕様およびスケジューリング処理制御をするクラス
-class PlanSpec {
+/// \brief スケジューリング対象およびスケジューリングを制御するための情報を保持
+class SwplPlanSpec {
   /// \brief Iterative Modulo Scheduling で使用するスケジュールする II に依存しない情報
   class ImsBaseInfo {
   public:
@@ -164,7 +164,7 @@ public:
   unsigned n_fillable_float_invariants; ///< 浮動小数点のループ不変の仮想レジのうち、フィルしても ResII を増加させない最大数
   ImsBaseInfo ims_base_info;
 
-  PlanSpec(const SwplDdg& c_ddg) : ddg(c_ddg),loop(c_ddg.getLoop()) {} ///< constructor
+  SwplPlanSpec(const SwplDdg& c_ddg) : ddg(c_ddg),loop(c_ddg.getLoop()) {} ///< constructor
 
   bool init(unsigned res_mii);
   void countLoadStore(unsigned *num_load, unsigned *num_store, unsigned *num_float) const;
@@ -176,7 +176,7 @@ private:
 };
 
 
-/// \brief schedulingに対するresourceの過不足情報を保持するクラス
+/// \brief schedulingに対するresourceの過不足情報を保持する
 class SwplMsResourceResult {
   bool is_resource_sufficient=false;
   unsigned num_necessary_ireg=0; ///< スケジューリング結果から算出した必要な整数レジスタ
@@ -218,7 +218,7 @@ private:
 };
 
 
-/// \brief iiとscheduling結果をまとめて扱う為のクラス
+/// \brief iiとscheduling結果をまとめて扱う
 class SwplMsResult {
 public:
   /// 処理状態Policyを表すenum
@@ -244,44 +244,47 @@ public:
   double evaluation;
   ProcState proc_state;          ///< MsResultの処理状態（ex. binary_search中、など）
 
-  bool constructInstSlotMapAtSpecifiedII(PlanSpec spec);
-  void checkInstSlotMap(const PlanSpec& spec, bool limit_reg=true); // limit_reg is true at default.
+  bool constructInstSlotMapAtSpecifiedII(SwplPlanSpec spec);
+  void checkInstSlotMap(const SwplPlanSpec & spec, bool limit_reg=true); // limit_reg is true at default.
   bool isModerate();
   bool isEffective();
 
   static SwplMsResult * constructInit(unsigned ii, ProcState procstate);
-  static SwplMsResult * calculateMsResult(PlanSpec spec);
+  static SwplMsResult * calculateMsResult(SwplPlanSpec spec);
 
 
 private:
-  void checkHardResource(const PlanSpec& spec, bool limit_reg);
-  SwplMsResourceResult isHardRegsSufficient(const PlanSpec& spec);
-  void evaluateSpillingSchedule(const PlanSpec& spec, unsigned kernel_blocks);
-  void checkIterationCount(const PlanSpec& spec);
-  void checkMve(const PlanSpec& spec);
-  unsigned getIncII(PlanSpec& spec, unsigned prev_tried_n_insts);
-  void outputDebugMessageForSchedulingResult(PlanSpec spec);
-  void outputGiveupMessageForEstimate(PlanSpec& spec);
-  static SwplMsResult * calculateMsResultByBinarySearch(PlanSpec spec);
-  static SwplMsResult * calculateMsResultAtSpecifiedII(PlanSpec spec, unsigned ii, ProcState procstate);
-  static SwplMsResult * calculateMsResultSimply(PlanSpec spec);
-  static bool collectCandidate(PlanSpec& spec,
+  void checkHardResource(const SwplPlanSpec & spec, bool limit_reg);
+  SwplMsResourceResult isHardRegsSufficient(const SwplPlanSpec & spec);
+  void evaluateSpillingSchedule(const SwplPlanSpec & spec, unsigned kernel_blocks);
+  void checkIterationCount(const SwplPlanSpec & spec);
+  void checkMve(const SwplPlanSpec & spec);
+  unsigned getIncII(SwplPlanSpec & spec, unsigned prev_tried_n_insts);
+  void outputDebugMessageForSchedulingResult(SwplPlanSpec spec);
+  void outputGiveupMessageForEstimate(SwplPlanSpec & spec);
+  static SwplMsResult * calculateMsResultByBinarySearch(SwplPlanSpec spec);
+  static SwplMsResult * calculateMsResultAtSpecifiedII(SwplPlanSpec spec, unsigned ii, ProcState procstate);
+  static SwplMsResult * calculateMsResultSimply(SwplPlanSpec spec);
+  static bool collectCandidate(SwplPlanSpec & spec,
                                std::unordered_set<SwplMsResult *>& ms_result_candidate,
                                bool watch_regs,
                                ProcState procstate);
-  static bool collectModerateCandidate(PlanSpec& spec,
+  static bool collectModerateCandidate(
+      SwplPlanSpec & spec,
                                        std::unordered_set<SwplMsResult *>& ms_result_candidate,
                                        ProcState procstate);
-  static bool recollectModerateCandidateWithExII(PlanSpec& spec,
+  static bool recollectModerateCandidateWithExII(
+      SwplPlanSpec & spec,
                                                  std::unordered_set<SwplMsResult *>& ms_result_candidate,
       SwplMsResult & ms_result);
-  static bool recollectCandidateWithExII(PlanSpec& spec,
+  static bool recollectCandidateWithExII(
+      SwplPlanSpec & spec,
                                          std::unordered_set<SwplMsResult *>& ms_result_candidate);
-  static bool isRegReducible(PlanSpec& spec, std::unordered_set<SwplMsResult *>& ms_result_candidate);
-  static void getBinarySearchRange(const PlanSpec& spec,
+  static bool isRegReducible(SwplPlanSpec & spec, std::unordered_set<SwplMsResult *>& ms_result_candidate);
+  static void getBinarySearchRange(const SwplPlanSpec & spec,
                                    std::unordered_set<SwplMsResult *>& ms_result_candidate,
                                    unsigned *able_min_ii, unsigned *unable_max_ii );
-  static SwplMsResult * getEffectiveSchedule(const PlanSpec& spec,
+  static SwplMsResult * getEffectiveSchedule(const SwplPlanSpec & spec,
                                         std::unordered_set<SwplMsResult *>& ms_result_candidate);
   static bool isAnyScheduleItrSufficient(std::unordered_set<SwplMsResult *>& ms_result_candidate);
   static SwplMsResult * getModerateSchedule(std::unordered_set<SwplMsResult *>& ms_result_candidate);
