@@ -63,7 +63,7 @@ using SwplInstList_iterator = SwplInstList::iterator;
 bool enableSWP(const Loop*);
 
 /// \class SwplLoop
-/// \brief ループ内の命令情報を管理するclass
+/// \brief ループ内の命令情報を管理する
 class SwplLoop {
   MachineLoop *ML;               ///< ループを示す中間表現
   SwplInsts PreviousInsts;             ///< preheaderの命令の集合
@@ -290,7 +290,7 @@ private:
 };
 
 /// \class SwplInst
-/// \brief 命令情報を管理するclass
+/// \brief 命令情報を管理する
 /// \note SwplReg の解放は SwplLoop で一括して行う
 class SwplInst {
   MachineInstr *MI;     ///< 命令を示す中間表現
@@ -412,7 +412,7 @@ public:
 };
 
 /// \class SwplReg
-/// \brief レジスタ情報を管理するclass
+/// \brief レジスタ情報を管理する
 class SwplReg {
   Register Reg=0;      ///< レジスタ
   SwplInst *DefInst;         ///< 本レジスタを定義(Def)している命令
@@ -511,7 +511,7 @@ public:
 };
 
 /// \class SwplMem
-/// \brief メモリアクセスを表現するclass
+/// \brief メモリアクセスを表現する
 class SwplMem {
   const MachineMemOperand *MO;   ///< メモリアクセスを示すオペランド情報
   SwplInst *Inst;                ///< 本メモリアクセスする命令を示す SwplInst
@@ -558,7 +558,7 @@ public:
 };
 
 /// \class SwplInstEdge
-/// \brief 命令間のエッジを表現するclass
+/// \brief 命令間のエッジを表現する
 class SwplInstEdge {
   const SwplInst *InitialVertex;  ///< エッジを構成する始点のノード
   const SwplInst *TerminalVertex; ///< エッジを構成する終点のノード
@@ -576,7 +576,7 @@ public:
 };
 
 /// \class SwplInstGraph
-/// \brief 命令間の依存グラフを表現するclass
+/// \brief 命令間の依存グラフを表現する
 class SwplInstGraph {
   SwplInsts Vertices;                  ///< ノード（命令）のVector
   SwplInstEdges Edges;                 ///< 命令間のエッジのVector
@@ -662,7 +662,7 @@ public:
 };
 
 /// \class SwplDdg
-/// \brief ループ内の命令の依存情報を管理するclass
+/// \brief ループ内の命令の依存情報を管理する
 class SwplDdg {
   SwplInstGraph *Graph;                ///< 命令間の依存グラフを表現するclass
   SwplLoop *Loop;                      ///< ループ内の命令情報を管理するclass
