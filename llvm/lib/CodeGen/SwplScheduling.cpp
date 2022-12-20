@@ -1593,7 +1593,7 @@ bool SwplMsResult::isEffective() {
 /// \details schedulingに失敗した時のmessageを設定および出力する。
 ///          失敗原因が、Rotation shortage（回転数不足）、レジスタ不足、MVEが大きすぎる、の
 ///          いずれでもない場合のみ、IODにメッセージIDを設定する。
-/// \param [in] spec MachineLoopを取得するためのPlanSpec
+/// \param [in] spec MachineLoopを取得するためのSwplPlanSpec
 /// \return なし
 ///
 /// \note 現在の仕様ではregister不足でschedulingできなかった場合も,
@@ -1641,7 +1641,7 @@ void SwplMsResult::outputGiveupMessageForEstimate(SwplPlanSpec & spec) {
 }
 
 /// \brief spillがある場合のscheduleの評価を行なう
-/// \param [in] spec MachineLoopを取得するためのPlanSpec
+/// \param [in] spec MachineLoopを取得するためのSwplPlanSpec
 /// \param [in] kernel_blocks kernelのブロック数
 /// \return なし
 ///
