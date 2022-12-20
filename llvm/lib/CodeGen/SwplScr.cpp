@@ -108,7 +108,7 @@ void SwplScr::moveBody(llvm::MachineBasicBlock*newBody, llvm::MachineBasicBlock*
 // public
 
 bool SwplScr::findBasicInductionVariable(SwplTransformedMIRInfo &TMI) const {
-  /// TransformedMIRInfoの以下メンバを設定する(括弧内は下記例のどれかを示す)
+  /// SwplTransformedMIRInfoの以下メンバを設定する(括弧内は下記例のどれかを示す)
   /// - isIterationCountConstant(immを抽出成功)
   /// - doVRegInitialValue(imm)
   /// - originalKernelIteration((doVRegInitialValue-constant)/coefficient)

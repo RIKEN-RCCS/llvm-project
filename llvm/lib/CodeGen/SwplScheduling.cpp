@@ -943,8 +943,8 @@ void SwplTrialState::destroy(SwplTrialState* state) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-/// \brief PlanSpecを初期化する
-/// \details PlanSpecをSwplDdgの情報他で初期化する。
+/// \brief SwplPlanSpecを初期化する
+/// \details SwplPlanSpecをSwplDdgの情報他で初期化する。
 ///          - 初期化に失敗した場合は falseを返却する。
 ///
 /// \param [in] res_mii リソースMII
