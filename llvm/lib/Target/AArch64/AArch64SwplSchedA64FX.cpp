@@ -16,6 +16,8 @@
 using namespace llvm;
 using P_=AArch64SwplSchedA64FX::PortKind;
 
+#define LATENCY_NA 1
+
 /// INT_OP
 static StmPipeline RES_INT_OP_001_01 = {{0}, {P_::EXA}};
 static StmPipeline RES_INT_OP_001_02 = {{0}, {P_::EXB}};
@@ -23,6 +25,19 @@ static StmPipeline RES_INT_OP_001_03 = {{0}, {P_::EAGA}};
 static StmPipeline RES_INT_OP_001_04 = {{0}, {P_::EAGB}};
 static StmPipeline RES_INT_OP_002_01 = {{0}, {P_::EXA}};
 static StmPipeline RES_INT_OP_002_02 = {{0}, {P_::EXB}};
+static StmPipeline RES_INT_OP_003_01 = {
+  {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
+  {P_::FLA, P_::FLB, P_::EXA, P_::EXB, P_::EAGA, P_::EAGB, P_::PRX,  P_::BR,
+    P_::FLA, P_::FLB, P_::EXA, P_::EXB, P_::EAGA, P_::EAGB, P_::PRX,  P_::BR}};
+static StmPipeline RES_INT_OP_004_01 = {
+  {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2},
+  {P_::FLA, P_::FLB, P_::EXA, P_::EXB, P_::EAGA, P_::EAGB, P_::PRX, P_::BR,
+    P_::FLA, P_::FLB, P_::EXA, P_::EXB, P_::EAGA, P_::EAGB, P_::PRX, P_::BR,
+    P_::FLA, P_::FLB, P_::EXA, P_::EXB, P_::EAGA, P_::EAGB, P_::PRX, P_::BR}};
+static StmPipeline RES_INT_OP_005_01 = {{0}, {P_::EAGA}};
+static StmPipeline RES_INT_OP_005_02 = {{0}, {P_::EAGB}};
+static StmPipeline RES_INT_OP_006_01 = {{0}, {P_::EXA}};
+static StmPipeline RES_INT_OP_006_02 = {{0}, {P_::EXB}};
 
 /// SIMDFP_SVE_OP
 static StmPipeline RES_SIMDFP_SVE_OP_001_01 = {{0}, {P_::FLA}};
@@ -30,6 +45,7 @@ static StmPipeline RES_SIMDFP_SVE_OP_001_02 = {{0}, {P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_002_01 = {{0}, {P_::FLA}};
 static StmPipeline RES_SIMDFP_SVE_OP_002_02 = {{0}, {P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_003_01 = {{0}, {P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_004_01 = {{0}, {P_::FLA}};
 
 /// SIMDFP_SVE_LD
 static StmPipeline RES_SIMDFP_SVE_LD_001_01 = {
@@ -136,22 +152,32 @@ static StmPipeline RES_PREDICATE_OP_001_01 = {{0}, {P_::PRX}};
 /// 利用資源IDと利用資源情報のmap
 std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource>
     AArch64SwplSchedA64FX::ResInfo={
-    {MI_INT_OP_001,  /// EX* | EAG*
+    {MI_INT_OP_001,  /// Pipeline:EX* | EAG*  Latency:1
       {{&RES_INT_OP_001_01, &RES_INT_OP_001_02, &RES_INT_OP_001_03, &RES_INT_OP_001_04},
       1}},
-    {MI_INT_OP_002,  /// EX*
+    {MI_INT_OP_002,  /// Pipeline:EX*  Latency:1
       {{&RES_INT_OP_002_01, &RES_INT_OP_002_02}, 1}},
-    {MI_SIMDFP_SVE_OP_001,  /// FL*
+    {MI_INT_OP_003,  /// Pipeline:(EXA + EXA) | (EXB + EXB)  Latency:1+1
+      {{&RES_INT_OP_003_01}, 2}},
+    {MI_INT_OP_004,  /// Pipeline:(EXA + EXA) | (EXB + EXB)  Latency:2+1
+      {{&RES_INT_OP_004_01}, 3}},
+    {MI_INT_OP_005,  /// Pipeline:EAG*  Latency:NA
+      {{&RES_INT_OP_005_01, &RES_INT_OP_005_02}, LATENCY_NA}},
+    {MI_INT_OP_006,  /// Pipeline:EX*  Latency:2
+      {{&RES_INT_OP_006_01, &RES_INT_OP_006_02}, 2}},
+    {MI_SIMDFP_SVE_OP_001,  /// Pipeline:FL*  Latency:9
       {{&RES_SIMDFP_SVE_OP_001_01, &RES_SIMDFP_SVE_OP_001_02}, 9}},
-    {MI_SIMDFP_SVE_OP_002,  /// FL*
+    {MI_SIMDFP_SVE_OP_002,  /// Pipeline:FL*  Latency:4
       {{&RES_SIMDFP_SVE_OP_002_01, &RES_SIMDFP_SVE_OP_002_02}, 4}},
-    {MI_SIMDFP_SVE_OP_003,  /// FLA
+    {MI_SIMDFP_SVE_OP_003,  /// Pipeline:FLA   Latency:9
       {{&RES_SIMDFP_SVE_OP_003_01}, 9}},
-    {MI_SIMDFP_SVE_LD_001,  /// EAG*, FLA
+    {MI_SIMDFP_SVE_OP_004,  /// Pipeline:FLA   Latency:6
+      {{&RES_SIMDFP_SVE_OP_004_01}, 6}},
+    {MI_SIMDFP_SVE_LD_001,  /// Pipeline:EAG*, FLA  Latency:11
       {{&RES_SIMDFP_SVE_LD_001_01, &RES_SIMDFP_SVE_LD_001_02,
         &RES_SIMDFP_SVE_LD_001_03, &RES_SIMDFP_SVE_LD_001_04},
       11}},
-    {MI_SIMDFP_SVE_LD_002,  /// EAG*, FLA / EX*| EAG*
+    {MI_SIMDFP_SVE_LD_002,  /// Pipeline:EAG*, FLA / EX*| EAG*  Latency:8/1
       {{&RES_SIMDFP_SVE_LD_002_01, &RES_SIMDFP_SVE_LD_002_02,
         &RES_SIMDFP_SVE_LD_002_03, &RES_SIMDFP_SVE_LD_002_04,
         &RES_SIMDFP_SVE_LD_002_05, &RES_SIMDFP_SVE_LD_002_06,
@@ -161,18 +187,18 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
         &RES_SIMDFP_SVE_LD_002_13, &RES_SIMDFP_SVE_LD_002_14,
         &RES_SIMDFP_SVE_LD_002_15, &RES_SIMDFP_SVE_LD_002_16},
       8}},
-    {MI_SIMDFP_SVE_LD_003,  /// EAG*
+    {MI_SIMDFP_SVE_LD_003,  /// Pipeline:EAG*  Latency:8
       {{&RES_SIMDFP_SVE_LD_003_01, &RES_SIMDFP_SVE_LD_003_02,
         &RES_SIMDFP_SVE_LD_003_03, &RES_SIMDFP_SVE_LD_003_04},
       8}},
-    {MI_SIMDFP_SVE_ST_001,  /// EAG*, FLA
-      {{&RES_SIMDFP_SVE_ST_001_01, &RES_SIMDFP_SVE_ST_001_02}, 1}},
-    {MI_SIMDFP_SVE_ST_002,  /// EAG*, FLA / EX*| EAG*
+    {MI_SIMDFP_SVE_ST_001,  /// Pipeline:EAG*, FLA  Latency:NA,NA
+      {{&RES_SIMDFP_SVE_ST_001_01, &RES_SIMDFP_SVE_ST_001_02}, LATENCY_NA}},
+    {MI_SIMDFP_SVE_ST_002,  /// Pipeline:EAG*, FLA / EX*| EAG*  Latency:NA,NA / 1
       {{&RES_SIMDFP_SVE_ST_002_01, &RES_SIMDFP_SVE_ST_002_02,
         &RES_SIMDFP_SVE_ST_002_03, &RES_SIMDFP_SVE_ST_002_04,
         &RES_SIMDFP_SVE_ST_002_05, &RES_SIMDFP_SVE_ST_002_06},
-      1}},
-    {MI_PREDICATE_OP_001,  /// PRX
+      LATENCY_NA}},
+    {MI_PREDICATE_OP_001,  /// Pipeline:PRX  Latency:3
       {{&RES_PREDICATE_OP_001_01}, 1}}
   };
 
@@ -181,29 +207,55 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   // Base
   {AArch64::ADDXri, MI_INT_OP_001},
   {AArch64::ADDXrr, MI_INT_OP_001},
+  {AArch64::PRFMui, MI_INT_OP_005},
   {AArch64::SUBSXri, MI_INT_OP_001},
   {AArch64::SUBSXrr, MI_INT_OP_002},
   {AArch64::SUBXri, MI_INT_OP_001},
+  
   // SIMD&FP
   {AArch64::FADDDrr, MI_SIMDFP_SVE_OP_001},
   {AArch64::FADDSrr, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FADDv2f64, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FADDv4f32, MI_SIMDFP_SVE_OP_001},
 
+  {AArch64::LDRDpost, MI_SIMDFP_SVE_LD_002},
+  {AArch64::LDRDpre, MI_SIMDFP_SVE_LD_002},
+  {AArch64::LDRDui, MI_SIMDFP_SVE_LD_002},
+  {AArch64::LDRQui, MI_SIMDFP_SVE_LD_002},
+  {AArch64::LDRSpre, MI_SIMDFP_SVE_LD_002},
+  {AArch64::LDRSroX, MI_SIMDFP_SVE_LD_003},
+  {AArch64::LDRSpost, MI_SIMDFP_SVE_LD_002},
+  {AArch64::LDRSui, MI_SIMDFP_SVE_LD_002},
   {AArch64::LDURDi, MI_SIMDFP_SVE_LD_003},
+  {AArch64::LDURQi, MI_SIMDFP_SVE_LD_003},
   {AArch64::LDURSi, MI_SIMDFP_SVE_LD_003},
-
+  
+  {AArch64::ST1i32, MI_SIMDFP_SVE_ST_001},
   {AArch64::STRDpost, MI_SIMDFP_SVE_ST_002},
+  {AArch64::STRDroX, MI_SIMDFP_SVE_ST_001},
+  {AArch64::STRDui, MI_SIMDFP_SVE_ST_002},
+  
   {AArch64::STRSpost, MI_SIMDFP_SVE_ST_002},
+  {AArch64::STRSroX, MI_SIMDFP_SVE_ST_001},
+  {AArch64::STRSui, MI_SIMDFP_SVE_ST_002},
   {AArch64::STURDi, MI_SIMDFP_SVE_ST_001},
   {AArch64::STURSi, MI_SIMDFP_SVE_ST_001},
+  
   // SVE
+  {AArch64::DUP_ZZI_D, MI_SIMDFP_SVE_OP_004},
+  {AArch64::DUP_ZZI_S, MI_SIMDFP_SVE_OP_004},
   {AArch64::FADD_ZPZI_UNDEF_D, MI_SIMDFP_SVE_OP_003},
   {AArch64::FADD_ZPZI_UNDEF_S, MI_SIMDFP_SVE_OP_003},
-
+  {AArch64::FADD_ZZZ_D, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FADD_ZZZ_S, MI_SIMDFP_SVE_OP_001},
+  
+  {AArch64::LD1B, MI_SIMDFP_SVE_LD_001},
   {AArch64::LD1D, MI_SIMDFP_SVE_LD_001},
+  {AArch64::LD1D_IMM, MI_SIMDFP_SVE_LD_001},
   {AArch64::LD1W, MI_SIMDFP_SVE_LD_001},
-  {AArch64::LDRDpost, MI_SIMDFP_SVE_LD_002},
-  {AArch64::LDRSpost, MI_SIMDFP_SVE_LD_002},
-
+  {AArch64::LD1W_IMM, MI_SIMDFP_SVE_LD_001},
+  
+  {AArch64::ST1B, MI_SIMDFP_SVE_ST_001},
   {AArch64::ST1D, MI_SIMDFP_SVE_ST_001},
   {AArch64::ST1W, MI_SIMDFP_SVE_ST_001},
 };
@@ -236,25 +288,145 @@ unsigned AArch64SwplSchedA64FX::getLatency(ResourceID id) const {
 
 AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchRes(
   const MachineInstr &mi) {
-  auto it = MIOpcodeInfo.find(mi.getOpcode());
+
+  unsigned Opcode = mi.getOpcode();
+  auto it = MIOpcodeInfo.find(Opcode);
   if (it != MIOpcodeInfo.end()) {
     return it->second;
   }
 
   // COPY命令はレジスタ種別で利用する資源が異なるため
   // レジスタ種別ごとに代表的なレイテンシ・演算器で定義する
-  if (mi.getOpcode() == AArch64::COPY) {
-      Register r = mi.getOperand(0).getReg();
-      StmRegKind *rkind = SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, r);
-      if (rkind->isFloating()) {
-        return MI_SIMDFP_SVE_OP_002;
-      } else if (rkind->isPredicate()) {
-        return MI_PREDICATE_OP_001;
-      } else {
-        return MI_INT_OP_001;
-      }
+  if (Opcode == AArch64::COPY) {
+    Register r = mi.getOperand(0).getReg();
+    StmRegKind *rkind = SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, r);
+    if (rkind->isFloating()) {
+      return MI_SIMDFP_SVE_OP_002;
+    } else if (rkind->isPredicate()) {
+      return MI_PREDICATE_OP_001;
+    } else {
+      return MI_INT_OP_001;
+    }
   }
-  // @todo コントロールオプションの処理
+  // SBFM/UBFM命令の判断
+  if (Opcode == AArch64::SBFMXri || Opcode == AArch64::SBFMWri ||
+      Opcode == AArch64::UBFMXri || Opcode == AArch64::UBFMWri){
+    return AArch64SwplSchedA64FX::searchResSBFM(mi);
+  }
   // @todo VLの処理
-  return AArch64SwplSchedA64FX::NA;
+  return AArch64SwplSchedA64FX::MI_NA;
+}
+
+AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchResSBFM(const MachineInstr &mi) {
+  // 参考: AArch64InstPrinter.cpp AArch64InstPrinter::printInst
+  // @todo SBFM命令のAliasesの資源定義
+  
+  unsigned Opcode = mi.getOpcode();
+
+  const MachineOperand Op2 = mi.getOperand(2);
+  const MachineOperand Op3 = mi.getOperand(3);
+
+  bool IsSigned = (Opcode == AArch64::SBFMXri || Opcode == AArch64::SBFMWri);
+  bool Is64Bit = (Opcode == AArch64::SBFMXri || Opcode == AArch64::UBFMXri);
+  if (Op2.isImm() && Op2.getImm() == 0 && Op3.isImm()) {
+    switch (Op3.getImm()) {
+    default:
+      break;
+    case 7:
+      if (IsSigned){
+        // SXTB
+        return MI_NA;
+      } else if (!Is64Bit) {
+        // UXTB 
+        return MI_INT_OP_002;
+      }
+      break;
+    case 15:
+      if (IsSigned){
+        // SXTH
+        return MI_NA;
+      } else if (!Is64Bit){
+        // UXTH
+        return MI_INT_OP_002;
+      }
+      break;
+    case 31:
+      // *xtw is only valid for signed 64-bit operations.
+      if (Is64Bit && IsSigned){
+        // SXTW
+        return MI_NA;
+      }
+      break;
+    }
+  }
+
+  // All immediate shifts are aliases, implemented using the Bitfield
+  // instruction. In all cases the immediate shift amount shift must be in
+  // the range 0 to (reg.size -1).
+  if (Op2.isImm() && Op3.isImm()) {
+    int shift = 0;
+    int64_t immr = Op2.getImm();
+    int64_t imms = Op3.getImm();
+    if (Opcode == AArch64::UBFMWri && imms != 0x1F && ((imms + 1) == immr)) {
+      // LSL
+      shift = 31 - imms;
+      if (1 <= shift && shift <= 4) {
+        return MI_INT_OP_002;
+      } else {
+        return MI_INT_OP_006;
+      }
+    } else if (Opcode == AArch64::UBFMXri && imms != 0x3f &&
+                ((imms + 1 == immr))) {
+      // LSL
+      shift = 63 - imms;
+      if (1 <= shift && shift <= 4) {
+        return MI_INT_OP_002;
+      } else {
+        return MI_INT_OP_006;
+      }
+    } else if (Opcode == AArch64::UBFMWri && imms == 0x1f) {
+      // LSR
+      shift = immr;
+      if (shift == 0) {
+        return MI_INT_OP_002;
+      } else {
+        return MI_INT_OP_006;
+      }
+    } else if (Opcode == AArch64::UBFMXri && imms == 0x3f) {
+      // LSR
+      shift = immr;
+      if (shift == 0) {
+        return MI_INT_OP_002;
+      } else {
+        return MI_INT_OP_006;
+      }
+    } else if (Opcode == AArch64::SBFMWri && imms == 0x1f) {
+      // ASR
+      shift = immr;
+      return MI_NA;
+    } else if (Opcode == AArch64::SBFMXri && imms == 0x3f) {
+      // ASR
+      shift = immr;
+      return MI_NA;
+    }
+  }
+
+  // SBFIZ/UBFIZ aliases
+  if (Op2.getImm() > Op3.getImm()) {
+    if (IsSigned) {
+      // SBFIZ
+      return MI_NA;
+    } else {
+      // UBFIX
+      return MI_INT_OP_004;
+    }
+  }
+
+  if (IsSigned) {
+    // SBFX
+    return MI_NA;
+  } else {
+    // UBFX
+    return MI_INT_OP_004;
+  }
 }
