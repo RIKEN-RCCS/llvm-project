@@ -311,14 +311,15 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchRes(
   // SBFM/UBFM命令の判断
   if (Opcode == AArch64::SBFMXri || Opcode == AArch64::SBFMWri ||
       Opcode == AArch64::UBFMXri || Opcode == AArch64::UBFMWri){
-    AArch64SwplSchedA64FX::searchResSBFM(mi);
+    return AArch64SwplSchedA64FX::searchResSBFM(mi);
   }
   // @todo VLの処理
   return AArch64SwplSchedA64FX::MI_NA;
 }
 
 AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchResSBFM(const MachineInstr &mi) {
-  // @todo SBFM命令およびSBFM命令のAliasesの資源定義
+  // 参考: AArch64InstPrinter.cpp AArch64InstPrinter::printInst
+  // @todo SBFM命令のAliasesの資源定義
   
   unsigned Opcode = mi.getOpcode();
 
@@ -340,7 +341,6 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchResSBFM(const Mac
         return MI_INT_OP_002;
       }
       break;
-
     case 15:
       if (IsSigned){
         // SXTH
@@ -403,9 +403,11 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchResSBFM(const Mac
     } else if (Opcode == AArch64::SBFMWri && imms == 0x1f) {
       // ASR
       shift = immr;
+      return MI_NA;
     } else if (Opcode == AArch64::SBFMXri && imms == 0x3f) {
       // ASR
       shift = immr;
+      return MI_NA;
     }
   }
 
