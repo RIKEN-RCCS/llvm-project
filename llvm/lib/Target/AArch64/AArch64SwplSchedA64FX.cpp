@@ -256,6 +256,7 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::LDRDpost, MI_SIMDFP_SVE_LD_002},
   {AArch64::LDRDpre, MI_SIMDFP_SVE_LD_002},
   {AArch64::LDRDui, MI_SIMDFP_SVE_LD_002},
+  {AArch64::LDRDroX, MI_SIMDFP_SVE_LD_003},
   {AArch64::LDRQui, MI_SIMDFP_SVE_LD_002},
   {AArch64::LDRSpre, MI_SIMDFP_SVE_LD_002},
   {AArch64::LDRSroX, MI_SIMDFP_SVE_LD_003},
@@ -382,6 +383,11 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchRes(
 
 AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchResShiftReg(const MachineInstr &mi) {
   // 参考：AArch64InstrInfo.cpp AArch64InstrInfo::isFalkorShiftExtFast
+
+  // ShiftValが0の場合、Immは存在しないことがある
+  if (mi.getNumOperands() < 4)
+    return MI_INT_OP_001;
+
   unsigned Imm = mi.getOperand(3).getImm();
   unsigned ShiftVal = AArch64_AM::getShiftValue(Imm);
     if (ShiftVal == 0) 
