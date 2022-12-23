@@ -238,10 +238,12 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
 std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX::MIOpcodeInfo{
   // Base
   {AArch64::ADDXri, MI_INT_OP_001},
+  {AArch64::ADDXrr, MI_INT_OP_001},
   {AArch64::PRFMui, MI_INT_OP_005},
   {AArch64::SUBSXri, MI_INT_OP_002},
-  {AArch64::SUBSXrr, MI_INT_OP_002}, //@todo:SUBSXrsと同様のルートに記載
+  {AArch64::SUBSXrr, MI_INT_OP_002},
   {AArch64::SUBXri, MI_INT_OP_001},
+  {AArch64::SUBXrr, MI_INT_OP_001},
   
   // SIMD&FP
   {AArch64::FADDDrr, MI_SIMDFP_SVE_OP_001},
@@ -366,8 +368,7 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchRes(
   }
 
   // ADDXrs/SUBXrs命令の判断
-  if (Opcode == AArch64::ADDXrs || Opcode == AArch64::ADDXrr || 
-      Opcode == AArch64::SUBXrs || Opcode == AArch64::SUBXrr){
+  if (Opcode == AArch64::ADDXrs || Opcode == AArch64::SUBXrs){
     return AArch64SwplSchedA64FX::searchResShiftReg(mi);
   }
 
@@ -390,12 +391,12 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchResShiftReg(const
 
   unsigned Imm = mi.getOperand(3).getImm();
   unsigned ShiftVal = AArch64_AM::getShiftValue(Imm);
-    if (ShiftVal == 0) 
-      return MI_INT_OP_001;
-    else if (ShiftVal <= 4 && AArch64_AM::getShiftType(Imm) == AArch64_AM::LSL)
-      return MI_INT_OP_003;
-    else
-      return MI_INT_OP_004;
+  if (ShiftVal == 0) 
+    return MI_INT_OP_001;
+  else if (ShiftVal <= 4 && AArch64_AM::getShiftType(Imm) == AArch64_AM::LSL)
+    return MI_INT_OP_003;
+  else
+    return MI_INT_OP_004;
 }
 
 

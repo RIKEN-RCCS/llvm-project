@@ -111,7 +111,7 @@ struct AArch64SwplSchedA64FX{
   static ResourceID searchRes(const MachineInstr &mi);
 
   /**
-   * ADDXrr,ADDXrs,SUBXrr,SUBXrsの利用資源IDを調べる。
+   * ADDXrs,SUBXrsの利用資源IDを調べる。
    * 利用資源IDが定義されていない場合はNA(0)を返す。
    * \param [in] mi 対象命令
    * \return 利用資源ID
