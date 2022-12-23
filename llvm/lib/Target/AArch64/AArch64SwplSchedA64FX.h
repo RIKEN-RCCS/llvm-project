@@ -54,6 +54,9 @@ struct AArch64SwplSchedA64FX{
     MI_SIMDFP_SVE_OP_003 = SIMDFP_SVE_OP + 3,
     MI_SIMDFP_SVE_OP_004 = SIMDFP_SVE_OP + 4,
     MI_SIMDFP_SVE_OP_005 = SIMDFP_SVE_OP + 5,
+    MI_SIMDFP_SVE_OP_006 = SIMDFP_SVE_OP + 6,
+    MI_SIMDFP_SVE_OP_007 = SIMDFP_SVE_OP + 7,
+    MI_SIMDFP_SVE_OP_008 = SIMDFP_SVE_OP + 8,
     MI_SIMDFP_SVE_LD_001 = SIMDFP_SVE_LD + 1,
     MI_SIMDFP_SVE_LD_002 = SIMDFP_SVE_LD + 2,
     MI_SIMDFP_SVE_LD_003 = SIMDFP_SVE_LD + 3,
@@ -69,6 +72,7 @@ struct AArch64SwplSchedA64FX{
   struct SchedResource {
     StmPipelines pipelines;
     int latency;
+    bool isSeqDecode = false;
   };
 
   static std::map<ResourceID, SchedResource> ResInfo; ///< 資源情報を参照するための紐づけ
