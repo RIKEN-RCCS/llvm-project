@@ -278,6 +278,8 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::FMULv1i64_indexed, MI_SIMDFP_SVE_OP_006},
   {AArch64::FMULv2f64, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMULv4f32, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FSUBDrr, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FSUBSrr, MI_SIMDFP_SVE_OP_001},
   {AArch64::INSvi32lane, MI_SIMDFP_SVE_OP_004},
   {AArch64::INSvi64lane, MI_SIMDFP_SVE_OP_004},
   {AArch64::ZIP1v2i64, MI_SIMDFP_SVE_OP_004},
