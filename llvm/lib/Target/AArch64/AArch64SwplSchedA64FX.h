@@ -53,11 +53,15 @@ struct AArch64SwplSchedA64FX{
     MI_SIMDFP_SVE_OP_002 = SIMDFP_SVE_OP + 2,
     MI_SIMDFP_SVE_OP_003 = SIMDFP_SVE_OP + 3,
     MI_SIMDFP_SVE_OP_004 = SIMDFP_SVE_OP + 4,
+    MI_SIMDFP_SVE_OP_005 = SIMDFP_SVE_OP + 5,
     MI_SIMDFP_SVE_LD_001 = SIMDFP_SVE_LD + 1,
     MI_SIMDFP_SVE_LD_002 = SIMDFP_SVE_LD + 2,
     MI_SIMDFP_SVE_LD_003 = SIMDFP_SVE_LD + 3,
+    MI_SIMDFP_SVE_LD_004 = SIMDFP_SVE_LD + 4,
+    MI_SIMDFP_SVE_LD_005 = SIMDFP_SVE_LD + 5,
     MI_SIMDFP_SVE_ST_001 = SIMDFP_SVE_ST + 1,
     MI_SIMDFP_SVE_ST_002 = SIMDFP_SVE_ST + 2,
+    MI_SIMDFP_SVE_ST_003 = SIMDFP_SVE_ST + 3,
     MI_PREDICATE_OP_001 = PREDICATE_OP + 1
   };
 
@@ -105,6 +109,14 @@ struct AArch64SwplSchedA64FX{
    * \return 利用資源ID
    */
   static ResourceID searchRes(const MachineInstr &mi);
+
+  /**
+   * ADDXrs,SUBXrsの利用資源IDを調べる。
+   * 利用資源IDが定義されていない場合はNA(0)を返す。
+   * \param [in] mi 対象命令
+   * \return 利用資源ID
+   */
+  static ResourceID searchResShiftReg(const MachineInstr &mi);
 
   /**
    * SBFM, UBFMの利用資源IDを調べる。
