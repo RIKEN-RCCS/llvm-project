@@ -49,7 +49,7 @@ static StmPipeline RES_SIMDFP_SVE_OP_003_01 = {{0}, {P_::FLA}};
 static StmPipeline RES_SIMDFP_SVE_OP_004_01 = {{0, 6}, {P_::FLA, P_::FLA_C}};
 static StmPipeline RES_SIMDFP_SVE_OP_005_01 = {{0, 4, 8}, {P_::EXA, P_::FLA, P_::FLA_C}};
 static StmPipeline RES_SIMDFP_SVE_OP_006_01 = {{0, 6}, {P_::FLA, P_::FLA}};
-static StmPipeline RES_SIMDFP_SVE_OP_006_02 = {{0, 6}, {P_::FLB, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_006_02 = {{0, 6}, {P_::FLA, P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_007_01 = {{0, 4}, {P_::FLA, P_::FLA_C}};
 static StmPipeline RES_SIMDFP_SVE_OP_008_01 = {{0, 1, 1, 5}, {P_::FLA, P_::FLA_C, P_::FLA, P_::FLA_C}};
 
