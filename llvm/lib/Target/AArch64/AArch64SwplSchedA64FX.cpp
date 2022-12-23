@@ -445,7 +445,6 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchResShiftReg(const
 
 AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchResSBFM(const MachineInstr &mi) {
   // 参考: AArch64InstPrinter.cpp AArch64InstPrinter::printInst
-  // @todo コードの整形
   unsigned Opcode = mi.getOpcode();
 
   const MachineOperand Op2 = mi.getOperand(2);
@@ -458,20 +457,14 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchResSBFM(const Mac
     default:
       break;
     case 7:
-      if (IsSigned){
-        // SXTB
-        return MI_INT_OP_002;
-      } else if (!Is64Bit) {
-        // UXTB 
+      if (IsSigned || (!Is64Bit)){
+        // SXTB/UXTB
         return MI_INT_OP_002;
       }
       break;
     case 15:
-      if (IsSigned){
-        // SXTH
-        return MI_INT_OP_002;
-      } else if (!Is64Bit){
-        // UXTH
+      if (IsSigned || (!Is64Bit)){
+        // SXTH/UXTH
         return MI_INT_OP_002;
       }
       break;
@@ -544,23 +537,6 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchResSBFM(const Mac
     }
   }
 
-  // SBFIZ/UBFIZ aliases
-  if (Op2.getImm() > Op3.getImm()) {
-    return MI_INT_OP_004;
-    if (IsSigned) {
-      // SBFIZ
-      return MI_INT_OP_004;
-    } else {
-      // UBFIZ
-      return MI_INT_OP_004;
-    }
-  }
-
-  if (IsSigned) {
-    // SBFX
-    return MI_INT_OP_004;
-  } else {
-    // UBFX
-    return MI_INT_OP_004;
-  }
+  // SBFIZ/UBFIZ or SBFX/UBFX
+  return MI_INT_OP_004;
 }
