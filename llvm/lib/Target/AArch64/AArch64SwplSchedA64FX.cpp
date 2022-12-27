@@ -652,12 +652,12 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchRes(
 
   // ADDXrs/SUBXrs命令の判断
   if (Opcode == AArch64::ADDXrs || Opcode == AArch64::SUBXrs){
-    return AArch64SwplSchedA64FX::searchResADDExtendReg(mi);
+    return AArch64SwplSchedA64FX::searchResADDSUBShiftReg(mi);
   }
 
   // ADDXrx命令の判断
   if (Opcode == AArch64::ADDXrx){
-    return AArch64SwplSchedA64FX::searchResADDSUBShiftReg(mi);
+    return AArch64SwplSchedA64FX::searchResADDExtendReg(mi);
   }
 
   // ORRWrs/ORRXrs命令の判断
