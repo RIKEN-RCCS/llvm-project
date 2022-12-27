@@ -304,13 +304,7 @@ static StmPipeline RES_SIMDFP_SVE_ST_005_01 = {
   {P_::EAGA, P_::FLA, P_::LSU1, P_::LSU2, P_::EAGA, P_::FLA, P_::EAGB}};
 static StmPipeline RES_SIMDFP_SVE_ST_005_02 = {
   {0, 0, 0, 0, 1, 1, 1},
-  {P_::EAGA, P_::FLA, P_::LSU1, P_::LSU2, P_::EAGB, P_::FLA, P_::EAGA}};
-static StmPipeline RES_SIMDFP_SVE_ST_005_03 = {
-  {0, 0, 0, 0, 1, 1, 1},
   {P_::EAGB, P_::FLA, P_::LSU1, P_::LSU2, P_::EAGA, P_::FLA, P_::EAGB}};
-static StmPipeline RES_SIMDFP_SVE_ST_005_04 = {
-  {0, 0, 0, 0, 1, 1, 1},
-  {P_::EAGB, P_::FLA, P_::LSU1, P_::LSU2, P_::EAGB, P_::FLA, P_::EAGA}};
 
 /// PREDICATE_OP
 static StmPipeline RES_PREDICATE_OP_001_01 = {{0}, {P_::PRX}};
@@ -415,8 +409,7 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
       &RES_SIMDFP_SVE_ST_004_03, &RES_SIMDFP_SVE_ST_004_04},
       1 + LATENCY_NA}},
   {MI_SIMDFP_SVE_ST_005,  /// Pipeline:EAG* / EAG*, FLA / EAG*, FLA Latency:1 / NA, NA / NA, NA
-    {{&RES_SIMDFP_SVE_ST_005_01, &RES_SIMDFP_SVE_ST_005_02,
-      &RES_SIMDFP_SVE_ST_005_03, &RES_SIMDFP_SVE_ST_005_04},
+    {{&RES_SIMDFP_SVE_ST_005_01, &RES_SIMDFP_SVE_ST_005_02},
       1 + LATENCY_NA}},
   {MI_PREDICATE_OP_001,  /// Pipeline:PRX  Latency:3
     {{&RES_PREDICATE_OP_001_01}, 1}}
