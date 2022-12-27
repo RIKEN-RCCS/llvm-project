@@ -111,15 +111,16 @@ struct AArch64SwplSchedA64FX{
   /**
    * \brief 利用資源IDに対応するSequential decodeか否かの情報を返す。
    * \param [in] id 利用資源ID
-   * \return true Sequential decode
-   * \return false Sequential decodeではない
+   * \retval true Sequential decode
+   * \retval false Sequential decodeではない
    */
   bool isSeqDecode(ResourceID id) const;
 
   /**
-   * \brief 利用資源IDに対応するレイテンシを返す。
-   * \param [in] id 利用資源ID
-   * \return レイテンシ
+   * \brief (実命令に変換されずに)消えるPseudo命令か否かの情報を返す
+   * \param [in] mi 対象命令
+   * \retval true 消えるPseudo命令
+   * \retval false 消えるPseudo命令ではない
    */
   bool isPseudo(const MachineInstr &mi) const;
 
