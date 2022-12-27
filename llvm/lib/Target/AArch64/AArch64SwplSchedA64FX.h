@@ -49,6 +49,7 @@ struct AArch64SwplSchedA64FX{
     MI_INT_OP_004 = INT_OP + 4,
     MI_INT_OP_005 = INT_OP + 5,
     MI_INT_OP_006 = INT_OP + 6,
+    MI_INT_ST_001 = INT_ST + 1,
     MI_SIMDFP_SVE_OP_001 = SIMDFP_SVE_OP + 1,
     MI_SIMDFP_SVE_OP_002 = SIMDFP_SVE_OP + 2,
     MI_SIMDFP_SVE_OP_003 = SIMDFP_SVE_OP + 3,
@@ -57,14 +58,22 @@ struct AArch64SwplSchedA64FX{
     MI_SIMDFP_SVE_OP_006 = SIMDFP_SVE_OP + 6,
     MI_SIMDFP_SVE_OP_007 = SIMDFP_SVE_OP + 7,
     MI_SIMDFP_SVE_OP_008 = SIMDFP_SVE_OP + 8,
+    MI_SIMDFP_SVE_OP_009 = SIMDFP_SVE_OP + 9,
     MI_SIMDFP_SVE_LD_001 = SIMDFP_SVE_LD + 1,
     MI_SIMDFP_SVE_LD_002 = SIMDFP_SVE_LD + 2,
     MI_SIMDFP_SVE_LD_003 = SIMDFP_SVE_LD + 3,
     MI_SIMDFP_SVE_LD_004 = SIMDFP_SVE_LD + 4,
     MI_SIMDFP_SVE_LD_005 = SIMDFP_SVE_LD + 5,
+    MI_SIMDFP_SVE_LD_006 = SIMDFP_SVE_LD + 6,
+    MI_SIMDFP_SVE_LD_007 = SIMDFP_SVE_LD + 7,
+    MI_SIMDFP_SVE_LD_008 = SIMDFP_SVE_LD + 8,
+    MI_SIMDFP_SVE_LD_009 = SIMDFP_SVE_LD + 9,
+    MI_SIMDFP_SVE_LD_010 = SIMDFP_SVE_LD + 10,
     MI_SIMDFP_SVE_ST_001 = SIMDFP_SVE_ST + 1,
     MI_SIMDFP_SVE_ST_002 = SIMDFP_SVE_ST + 2,
     MI_SIMDFP_SVE_ST_003 = SIMDFP_SVE_ST + 3,
+    MI_SIMDFP_SVE_ST_004 = SIMDFP_SVE_ST + 4,
+    MI_SIMDFP_SVE_ST_005 = SIMDFP_SVE_ST + 5,
     MI_PREDICATE_OP_001 = PREDICATE_OP + 1
   };
 
@@ -72,7 +81,7 @@ struct AArch64SwplSchedA64FX{
   struct SchedResource {
     StmPipelines pipelines;
     int latency;
-    bool isSeqDecode = false;
+    bool seqdecode = false;
   };
 
   static std::map<ResourceID, SchedResource> ResInfo; ///< 資源情報を参照するための紐づけ
@@ -92,17 +101,26 @@ struct AArch64SwplSchedA64FX{
    */
   const StmPipelinesImpl *getPipelines(ResourceID id) const;
 
-   /**
+  /**
    * \brief 利用資源IDに対応するレイテンシを返す。
    * \param [in] id 利用資源ID
    * \return レイテンシ
    */
   unsigned getLatency(ResourceID id) const;
 
-   /**
-   * \brief 利用資源IDに対応するレイテンシを返す。
+  /**
+   * \brief 利用資源IDに対応するSequential decodeか否かの情報を返す。
    * \param [in] id 利用資源ID
-   * \return レイテンシ
+   * \retval true Sequential decode
+   * \retval false Sequential decodeではない
+   */
+  bool isSeqDecode(ResourceID id) const;
+
+  /**
+   * \brief (実命令に変換されずに)消えるPseudo命令か否かの情報を返す
+   * \param [in] mi 対象命令
+   * \retval true 消えるPseudo命令
+   * \retval false 消えるPseudo命令ではない
    */
   bool isPseudo(const MachineInstr &mi) const;
 
@@ -116,11 +134,24 @@ struct AArch64SwplSchedA64FX{
 
   /**
    * ADDXrs,SUBXrsの利用資源IDを調べる。
-   * 利用資源IDが定義されていない場合はNA(0)を返す。
    * \param [in] mi 対象命令
    * \return 利用資源ID
    */
-  static ResourceID searchResShiftReg(const MachineInstr &mi);
+  static ResourceID searchResADDSUBShiftReg(const MachineInstr &mi);
+
+  /**
+   * ADDXrxの利用資源IDを調べる。
+   * \param [in] mi 対象命令
+   * \return 利用資源ID
+   */
+  static ResourceID searchResADDExtendReg(const MachineInstr &mi);
+
+  /**
+   * ORRWrs, ORRXrsの利用資源IDを調べる。
+   * \param [in] mi 対象命令
+   * \return 利用資源ID
+   */
+  static ResourceID searchResORRShiftReg(const MachineInstr &mi);
 
   /**
    * SBFM, UBFMの利用資源IDを調べる。

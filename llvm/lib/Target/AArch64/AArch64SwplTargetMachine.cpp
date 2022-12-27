@@ -645,6 +645,8 @@ AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) const {
     case AArch64SwplSchedA64FX::PREDICATE_ST:q="PREDICATE_ST"; break;
     }
     dbgs() << "  ResourceID: " << q << "+" << (id&0xfff) << "\n";
+    dbgs() << "  latency: " << SwplSched.getLatency(id) << "\n";
+    dbgs() << "  seqDecode: " << (SwplSched.isSeqDecode(id) ? "true" : "false") << "\n";
     for (const auto s: *p) {
       print(dbgs(), *s);
     }
