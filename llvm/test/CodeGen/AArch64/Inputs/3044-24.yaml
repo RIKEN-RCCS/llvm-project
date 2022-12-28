@@ -1,0 +1,42 @@
+# inst-slot-map(Supplement of export-plan):
+# 0,%20:fpr32 = LDRSroX %11:gpr64common, %17:gpr64common, 0, 0 :: (load 4 from %ir.uglygep23, !tbaa !2)
+# 1,%21:fpr32 = nnan ninf nsz arcp contract afn reassoc FADDSrr %20:fpr32, %20:fpr32
+# 2,STRSroX %21:fpr32, %14:gpr64common, %17:gpr64common, 0, 0 :: (store 4 into %ir.uglygep1, !tbaa !2)
+# 3,%22:fpr32 = nnan ninf nsz arcp contract afn reassoc FADDSrr %21:fpr32, %18:fpr32
+# 4,%23:gpr64sp = nuw nsw ADDXri %17:gpr64common, 4, 0
+# 5,%24:gpr64all = COPY %23:gpr64sp
+# 6,%25:gpr64 = SUBSXri %19:gpr64sp, 1, 0, implicit-def $nzcv
+# 7,%26:gpr64all = COPY %25:gpr64
+# 8,%17:gpr64common = COPY %24:gpr64all
+# 9,%18:fpr32 = COPY %22:fpr32
+# 10,%19:gpr64sp = COPY %26:gpr64all
+---
+minimum_iteration_interval: 4
+iteration_interval: 10
+n_renaming_versions: 3
+n_iteration_copies: 6
+begin_slot:      999760
+slots:
+  - id:              0
+    slot:            28
+  - id:              1
+    slot:            93
+  - id:              2
+    slot:            228
+  - id:              3
+    slot:            165
+  - id:              4
+    slot:            84
+  - id:              5
+    slot:            92
+  - id:              6
+    slot:            220
+  - id:              7
+    slot:            230
+  - id:              8
+    slot:            100
+  - id:              9
+    slot:            239
+  - id:              10
+    slot:            236
+...
