@@ -26,9 +26,9 @@ namespace llvm {
 class SwplCalclIterations {
 public:
 
-  static bool preCheckIterationCount(const PlanSpec& spec, unsigned int *required_itr);
-  static bool checkIterationCountVariable(const PlanSpec& spec, const SwplMsResult & ms);
-  static bool checkIterationCountConstant(const PlanSpec& spec, const SwplMsResult & ms);
+  static bool preCheckIterationCount(const SwplPlanSpec & spec, unsigned int *required_itr);
+  static bool checkIterationCountVariable(const SwplPlanSpec & spec, const SwplMsResult & ms);
+  static bool checkIterationCountConstant(const SwplPlanSpec & spec, const SwplMsResult & ms);
 };
 
 }

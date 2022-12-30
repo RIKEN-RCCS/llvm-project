@@ -54,6 +54,7 @@ MachineRegisterInfo *SWPipeliner::MRI = nullptr;
 SwplTargetMachine *SWPipeliner::STM = nullptr;
 AliasAnalysis *SWPipeliner::AA = nullptr;
 
+/// loop normalization pass for SWPL
 struct SWPipelinerPre : public MachineFunctionPass {
 public:
   static char ID;               ///< PassのID

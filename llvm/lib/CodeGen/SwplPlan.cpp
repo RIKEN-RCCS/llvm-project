@@ -338,14 +338,14 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
                                         unsigned* calculated_min_ii,
                                         unsigned* required_itr,
                                         SwplMsResourceResult* resource) {
-  PlanSpec spec(c_ddg);
+  SwplPlanSpec spec(c_ddg);
   if( !(spec.init(res_mii)) ){
     return TryScheduleResult::TRY_SCHEDULE_FAIL;
   }
 
   *calculated_min_ii = spec.min_ii;
 
-  if( !(SwplCalclIterations::preCheckIterationCount(const_cast<const PlanSpec&>(spec), required_itr)) ) {
+  if( !(SwplCalclIterations::preCheckIterationCount(const_cast<const SwplPlanSpec &>(spec), required_itr)) ) {
     return TryScheduleResult::TRY_SCHEDULE_FEW_ITER;
   }
 

@@ -18,14 +18,14 @@ namespace llvm {
 
 /// \brief スケジューリング結果が要する回転数が、実際の回転数（可変）を満たすかをチェックする
 /// \note assumeに対応しないため、常にtrueを返却する
-bool SwplCalclIterations::checkIterationCountVariable(const PlanSpec& spec, const SwplMsResult & ms) {
+bool SwplCalclIterations::checkIterationCountVariable(const SwplPlanSpec & spec, const SwplMsResult & ms) {
   return true;
 }
 
 /// \brief スケジューリング結果が要する回転数が、実際の回転数（固定）を満たすかをチェックする
 /// \details スケジューリング結果が要する回転数が、実際の回転数（固定）を満たすかをチェックする
 ///          実際の命令列上の回転数を優先する.
-bool SwplCalclIterations::checkIterationCountConstant(const PlanSpec& spec, const SwplMsResult & ms) {
+bool SwplCalclIterations::checkIterationCountConstant(const SwplPlanSpec & spec, const SwplMsResult & ms) {
   return (ms.required_itr_count <= spec.itr_count);
 }
 
@@ -39,9 +39,9 @@ bool SwplCalclIterations::checkIterationCountConstant(const PlanSpec& spec, cons
 /// \note 2回転の時はschedulingしたいが,
 ///       現在の実装ではn_copies >=3 を要求する為,できていない.
 ///       この値(2回転) はis_iteration_count_constantでも利用している為そろえる事.
-/// \note 現在、PlanSpec.assumed_iterationは常にASSUMED_ITERATIONS_NONE (-1)
-/// \note 現在、PlanSpec.pre_expand_numは常に1
-bool SwplCalclIterations::preCheckIterationCount(const PlanSpec& spec, unsigned int *required_itr) {
+/// \note 現在、SwplPlanSpec.assumed_iterationは常にASSUMED_ITERATIONS_NONE (-1)
+/// \note 現在、SwplPlanSpec.pre_expand_numは常に1
+bool SwplCalclIterations::preCheckIterationCount(const SwplPlanSpec & spec, unsigned int *required_itr) {
   *required_itr = 0;
 
   unsigned int const minimum_n_copies = 3;
@@ -60,7 +60,7 @@ bool SwplCalclIterations::preCheckIterationCount(const PlanSpec& spec, unsigned 
     /* 見積り値 */
     int assumed_iterations = spec.assumed_iterations;
     if (assumed_iterations >= 0) {
-      assert(assumed_iterations <= PlanSpec::ASSUMED_ITERATIONS_MAX);
+      assert(assumed_iterations <= SwplPlanSpec::ASSUMED_ITERATIONS_MAX);
     }
 
     if( assumed_iterations >= 0 && *required_itr > (unsigned)assumed_iterations ) {

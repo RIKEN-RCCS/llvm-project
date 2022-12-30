@@ -182,7 +182,7 @@ public:
 
   }
 
-  /// Tmの初期化を行う。
+  /// SwplTargetMachineの初期化を行う。
   /// \details
   /// runOnFunctionが呼び出される毎にinitialize()を実行し、処理対象となるMachineFunction情報を受け渡す必要がある。
   /// \param mf 処理対象のMachineFunction
