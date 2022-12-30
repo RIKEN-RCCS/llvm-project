@@ -3,8 +3,6 @@
 # CHECK: before:early-clobber %39:gpr64sp, %40:fpr32 = LDRSpre %37:gpr64sp(tied-def 0), -4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
 # CHECK: after 1:%40:fpr32 = LDURSi %37:gpr64sp, -4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
 # CHECK: after 2:%39:gpr64sp = SUBXri %37:gpr64sp, 4, 0
-# CHECL: 'SVE instruction latency is calculated at '
-# CHECK: '512'
 
 --- |
   ; ModuleID = 'a.c'
