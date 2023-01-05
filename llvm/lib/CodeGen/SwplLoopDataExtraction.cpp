@@ -657,6 +657,7 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
 
 void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOutReg) {
   std::vector<llvm::MachineInstr *> delete_mi;
+  std::vector<llvm::MachineOperand *> target_mo;
   for (auto &mi:*body) {
     if (!mi.isCopy()) continue;
     if (SWPipeliner::isDebugOutput()) {
@@ -683,25 +684,26 @@ void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOu
     Register r0 = op0.getReg();
     if (r0.isPhysical()) {
       if (SWPipeliner::isDebugOutput()) {
-        dbgs() << " op0 is physical!\n";
+        dbgs() << " op0 isnot virtual-reg!\n";
       }
       continue;
     }
     if (SWPipeliner::TII->removeCopy(*body, mi)){
       for (auto &u:SWPipeliner::MRI->use_operands(r0)) {
-        auto *umi=u.getParent();
+        target_mo.push_back(&u);
+      }
+      for (auto *op:target_mo) {
+        auto *umi=op->getParent();
         if (SWPipeliner::isDebugOutput()) {
           dbgs() << " before: " << *umi;
         }
-#if 0
         // r0を参照しているオペランドを書き換える
         auto &op1 = mi.getOperand(1);
-        u.setReg(op1.getReg());
-        u.setSubReg(op1.getSubReg());
+        op->setReg(op1.getReg());
+        op->setSubReg(op1.getSubReg());
         if (SWPipeliner::isDebugOutput()) {
           dbgs() << " after: " << *umi;
         }
-#endif
       }
 
       // クローン前命令とクローン後命令の再紐づけ
