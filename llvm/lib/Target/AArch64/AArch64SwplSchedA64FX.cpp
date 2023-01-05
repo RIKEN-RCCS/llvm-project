@@ -587,6 +587,7 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::LDRDpost, MI_SIMDFP_SVE_LD_002},
   {AArch64::LDRDpre, MI_SIMDFP_SVE_LD_002},
   {AArch64::LDRDui, MI_SIMDFP_SVE_LD_002},
+  {AArch64::LDRDroW, MI_SIMDFP_SVE_LD_003},
   {AArch64::LDRDroX, MI_SIMDFP_SVE_LD_003},
   {AArch64::LDRQroX, MI_SIMDFP_SVE_LD_003},
   {AArch64::LDRQui, MI_SIMDFP_SVE_LD_002},
@@ -594,6 +595,7 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::LDRSroX, MI_SIMDFP_SVE_LD_003},
   {AArch64::LDRSpost, MI_SIMDFP_SVE_LD_002},
   {AArch64::LDRSui, MI_SIMDFP_SVE_LD_002},
+  {AArch64::LDRSroW, MI_SIMDFP_SVE_LD_003},
   {AArch64::LDURDi, MI_SIMDFP_SVE_LD_003},
   {AArch64::LDURQi, MI_SIMDFP_SVE_LD_003},
   {AArch64::LDURSi, MI_SIMDFP_SVE_LD_003},
@@ -881,15 +883,15 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchResMADD(const Mac
   Register r = mi.getOperand(3).getReg();
   
   // MADD:32bit Wa==WZRの場合、MULと等価
-  if (Opcode == AArch64::MADDWrrr || r == AArch64::WZR){
+  if (Opcode == AArch64::MADDWrrr && r == AArch64::WZR){
     return MI_INT_OP_007;
   }
   // MADD:64bit Xa==XZRの場合、MULと等価
-  if (Opcode == AArch64::MADDXrrr || r == AArch64::XZR){
+  if (Opcode == AArch64::MADDXrrr && r == AArch64::XZR){
     return MI_INT_OP_007;
   }
   // UMADDL Xa==XZRの場合、UMULLと等価
-  if (Opcode == AArch64::UMADDLrrr || r == AArch64::XZR){
+  if (Opcode == AArch64::UMADDLrrr && r == AArch64::XZR){
     return MI_INT_OP_007;
   }
 
