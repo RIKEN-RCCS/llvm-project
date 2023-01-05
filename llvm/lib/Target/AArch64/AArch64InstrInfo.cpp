@@ -8142,8 +8142,21 @@ AArch64InstrInfo::getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
   return OptLevel >= CodeGenOpt::Aggressive ? 6 : 2;
 }
 
+bool AArch64InstrInfo::removeCopy(
+    MachineBasicBlock &MBB,
+    MachineInstr &MI) const {
+  auto &op0=MI.getOperand(0);
+  auto &op1=MI.getOperand(1);
+  Register r0 = op0.getReg();
+  Register r1 = op1.getReg();
+  if (r1==AArch64::WZR || r1==AArch64::XZR) {
+    return true;
+  }
+  return false;
+}
+
 bool AArch64InstrInfo::splitPrePostIndexInstr(
-    MachineBasicBlock &MBB, MachineInstr &MI, MachineInstr **ldst, MachineInstr **add ) const {
+    MachineBasicBlock &MBB, MachineInstr &MI, MachineInstr **ldst, MachineInstr **add) const {
   MachineInstr *tadd = nullptr;
   MachineInstr *tldst = nullptr;
   Register def_addr_reg;

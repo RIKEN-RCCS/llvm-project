@@ -26,6 +26,7 @@ using namespace llvm;
 static cl::opt<bool> DebugLoop("swpl-debug-loop",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> NoUseAA("swpl-no-use-aa",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableConvPrePost("swpl-disable-convert-prepost",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> DisableRmCopy("swpl-disable-rm-copy",cl::init(false), cl::ReallyHidden);
 
 using BasicBlocks = std::vector<MachineBasicBlock *>;
 using BasicBlocksIterator = std::vector<MachineBasicBlock *>::iterator ;
@@ -645,6 +646,8 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
   
   /// cloneBody() を呼び出し、MachineBasickBlockの複製とレジスタリネーミングを行う。
   cloneBody(new_bb, ob);
+  if (!DisableRmCopy)
+    removeCopy(new_bb, LiveOutReg);
   /// convertPostPreIndeTo()を呼び出し、post/pre index命令を演算＋load/store命令に変換する
   if (!DisableConvPrePost)
     convertPrePostIndexInstr(new_bb);
@@ -652,7 +655,72 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
   convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);
 }
 
-void SwplLoop::convertPrePostIndexInstr(llvm::MachineBasicBlock *body) {
+void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOutReg) {
+  std::vector<llvm::MachineInstr *> delete_mi;
+  for (auto &mi:*body) {
+    if (!mi.isCopy()) continue;
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DBG(SwplLoop::removeCopy)\n";
+      dbgs() << " target mi: " << mi;
+    }
+
+    const auto *org_copy=NewMI2OrgMI.at(&mi);
+    auto org_def_r= org_copy->getOperand(0).getReg();
+    if (LiveOutReg.count(org_def_r)) {
+      if (SWPipeliner::isDebugOutput()) {
+        dbgs() << " org mi: " << org_copy;
+        dbgs() << " op0 is liveout!\n";
+      }
+      continue;
+    }
+    auto &op0=mi.getOperand(0);
+    if (!mi.getOperand(1).isReg()) {
+      if (SWPipeliner::isDebugOutput()) {
+        dbgs() << " op1 isnot reg!\n";
+      }
+      continue;
+    }
+    Register r0 = op0.getReg();
+    if (r0.isPhysical()) {
+      if (SWPipeliner::isDebugOutput()) {
+        dbgs() << " op0 is physical!\n";
+      }
+      continue;
+    }
+    if (SWPipeliner::TII->removeCopy(*body, mi)){
+      for (auto &u:SWPipeliner::MRI->use_operands(r0)) {
+        auto *umi=u.getParent();
+        if (SWPipeliner::isDebugOutput()) {
+          dbgs() << " before: " << *umi;
+        }
+#if 0
+        // r0を参照しているオペランドを書き換える
+        auto &op1 = mi.getOperand(1);
+        u.setReg(op1.getReg());
+        u.setSubReg(op1.getSubReg());
+        if (SWPipeliner::isDebugOutput()) {
+          dbgs() << " after: " << *umi;
+        }
+#endif
+      }
+
+      // クローン前命令とクローン後命令の再紐づけ
+      auto *org = NewMI2OrgMI.at(&mi);
+      NewMI2OrgMI.erase(&mi);
+      OrgMI2NewMI[org]=nullptr;
+      if (SWPipeliner::isDebugOutput()) {
+        dbgs() << " removed!\n";
+      }
+      // MBBから削除する命令の収集
+      delete_mi.push_back(&mi);
+    }
+  }
+  for (auto *mi:delete_mi)
+    mi->eraseFromParent();
+
+}
+
+void SwplLoop::convertPrePostIndexInstr(MachineBasicBlock *body) {
   std::vector<llvm::MachineInstr *> delete_mi;
   for (auto &mi:*body) {
     MachineInstr *ldst=nullptr;

@@ -261,10 +261,12 @@ private:
   /// \param[in]  L MachineLoop
   /// \param[in]  LiveOutReg UseReg
   void convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOutReg);
+
   /// MachineBasicBlock の複製を行う
   /// \param[in]  newBody 複製先のMachineBasicBlock
   /// \param[in]  oldBody 複製元のMachineBasicBlock
   void cloneBody(MachineBasicBlock*newBody, MachineBasicBlock*oldBody);
+
   /// Phi命令を検索し、非SSA形式に命令例を変換する
   /// \param[in,out]  body ループボディの MachineBasicBlock
   /// \param[in,out]  pre preheaderの MachineBasicBlock
@@ -278,6 +280,11 @@ private:
   /// @todo 本メソッドTIIに移動する必要がある
   /// \param[in,out]  body ループボディの MachineBasicBlock
   void convertPrePostIndexInstr(MachineBasicBlock *body);
+
+  /// 対象ループのbodyの無駄なCopyを削除する
+  /// \param[in,out]  body ループボディの MachineBasicBlock
+  /// \param[in]  LiveOutReg
+  void removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOutReg);
 
   /// SwplLoop::OrgMI2NewMI の命令列を走査し、SwplLoop::OrgReg2NewReg に登録されているレジスタへのリネーミングを行う
   void renameReg(void);

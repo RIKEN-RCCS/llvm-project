@@ -335,10 +335,13 @@ public:
                                                   int64_t &ByteSized,
                                                   int64_t &VGSized);
 
+  bool removeCopy(MachineBasicBlock &MBB,
+                  MachineInstr &MI) const override;
+
   bool splitPrePostIndexInstr(MachineBasicBlock &MBB,
                               MachineInstr &MI,
                               MachineInstr **ldst,
-                              MachineInstr **add ) const override;
+                              MachineInstr **add) const override;
 
   MachineInstr* makeKernelIterationBranch(MachineRegisterInfo &MRI,
                                           MachineBasicBlock &MBB,
