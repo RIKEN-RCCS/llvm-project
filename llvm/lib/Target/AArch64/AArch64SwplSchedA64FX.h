@@ -16,8 +16,9 @@
 #include "llvm/CodeGen/SwplTargetMachine.h"
 
 namespace llvm {
+
 struct AArch64SwplSchedA64FX{
-  unsigned VectorLength;
+  static unsigned VectorLength;
   /// 命令の種類
   enum InstKind {
     INT_OP = 0x1000,
@@ -49,6 +50,8 @@ struct AArch64SwplSchedA64FX{
     MI_INT_OP_004 = INT_OP + 4,
     MI_INT_OP_005 = INT_OP + 5,
     MI_INT_OP_006 = INT_OP + 6,
+    MI_INT_OP_007 = INT_OP + 7,
+    MI_INT_OP_008 = INT_OP + 8,
     MI_INT_ST_001 = INT_ST + 1,
     MI_SIMDFP_SVE_OP_001 = SIMDFP_SVE_OP + 1,
     MI_SIMDFP_SVE_OP_002 = SIMDFP_SVE_OP + 2,
@@ -59,6 +62,15 @@ struct AArch64SwplSchedA64FX{
     MI_SIMDFP_SVE_OP_007 = SIMDFP_SVE_OP + 7,
     MI_SIMDFP_SVE_OP_008 = SIMDFP_SVE_OP + 8,
     MI_SIMDFP_SVE_OP_009 = SIMDFP_SVE_OP + 9,
+    MI_SIMDFP_SVE_OP_010 = SIMDFP_SVE_OP + 10,
+    MI_SIMDFP_SVE_OP_011 = SIMDFP_SVE_OP + 11,
+    MI_SIMDFP_SVE_OP_012 = SIMDFP_SVE_OP + 12,
+    MI_SIMDFP_SVE_OP_013 = SIMDFP_SVE_OP + 13,
+    MI_SIMDFP_SVE_OP_014 = SIMDFP_SVE_OP + 14,
+    MI_SIMDFP_SVE_OP_015 = SIMDFP_SVE_OP + 15,
+    MI_SIMDFP_SVE_OP_016 = SIMDFP_SVE_OP + 16,
+    MI_SIMDFP_SVE_OP_017 = SIMDFP_SVE_OP + 17,
+    MI_SIMDFP_SVE_OP_018 = SIMDFP_SVE_OP + 18,
     MI_SIMDFP_SVE_LD_001 = SIMDFP_SVE_LD + 1,
     MI_SIMDFP_SVE_LD_002 = SIMDFP_SVE_LD + 2,
     MI_SIMDFP_SVE_LD_003 = SIMDFP_SVE_LD + 3,
@@ -74,7 +86,8 @@ struct AArch64SwplSchedA64FX{
     MI_SIMDFP_SVE_ST_003 = SIMDFP_SVE_ST + 3,
     MI_SIMDFP_SVE_ST_004 = SIMDFP_SVE_ST + 4,
     MI_SIMDFP_SVE_ST_005 = SIMDFP_SVE_ST + 5,
-    MI_PREDICATE_OP_001 = PREDICATE_OP + 1
+    MI_PREDICATE_OP_001 = PREDICATE_OP + 1,
+    MI_PREDICATE_OP_002 = PREDICATE_OP + 2,
   };
 
   /// 利用資源情報（Pipeline情報群 + レイテンシ）
@@ -145,6 +158,13 @@ struct AArch64SwplSchedA64FX{
    * \return 利用資源ID
    */
   static ResourceID searchResADDExtendReg(const MachineInstr &mi);
+
+  /**
+   * MADD,UMADDLの利用資源IDを調べる。
+   * \param [in] mi 対象命令
+   * \return 利用資源ID
+   */
+  static ResourceID searchResMADD(const MachineInstr &mi);
 
   /**
    * ORRWrs, ORRXrsの利用資源IDを調べる。
