@@ -688,7 +688,7 @@ void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOu
       }
       continue;
     }
-    if (SWPipeliner::TII->removeCopy(*body, mi)){
+    if (SWPipeliner::TII->canRemoveCopy(*body, mi)){
       for (auto &u:SWPipeliner::MRI->use_operands(r0)) {
         target_mo.push_back(&u);
       }

@@ -8142,9 +8142,10 @@ AArch64InstrInfo::getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
   return OptLevel >= CodeGenOpt::Aggressive ? 6 : 2;
 }
 
-bool AArch64InstrInfo::removeCopy(
+bool AArch64InstrInfo::canRemoveCopy(
     MachineBasicBlock &MBB,
     MachineInstr &MI) const {
+  assert(MI.isCopy());
   auto &op0=MI.getOperand(0);
   auto &op1=MI.getOperand(1);
   Register r0 = op0.getReg();
