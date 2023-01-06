@@ -2009,6 +2009,11 @@ public:
     return false;
   }
 
+  /// Can Remove copy-mi
+  virtual bool canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI) const {
+    return false;
+  }
+
   /// generate iteration branch
   virtual MachineInstr* makeKernelIterationBranch(MachineRegisterInfo &MRI,
       MachineBasicBlock &MBB, const DebugLoc &debugLoc, Register doVReg, int iterationCount, int coefficient) const {
