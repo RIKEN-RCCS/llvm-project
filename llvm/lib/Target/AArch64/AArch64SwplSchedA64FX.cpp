@@ -110,19 +110,19 @@ static StmPipeline RES_SIMDFP_SVE_OP_015_02 = {
   {0, 1, 7},
   {P_::FLA, P_::FLA, P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_016_01 = {
-  {0, 4, 10, 10, 19}, 
+  {0, 4, 10, 11, 19}, 
   {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
 static StmPipeline RES_SIMDFP_SVE_OP_016_02 = {
   {0, 4, 10, 10, 19}, 
   {P_::FLB, P_::FLA, P_::FLA, P_::FLB, P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_017_01 = {
-  {0, 4, 10, 10, 16, 19, 28},
+  {0, 4, 10, 11, 17, 19, 28},
   {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA}};
 static StmPipeline RES_SIMDFP_SVE_OP_017_02 = {
   {0, 4, 10, 10, 16, 19, 28},
   {P_::FLB, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_018_01 = {
-  {0, 4, 10, 10, 16, 19, 22, 28, 37},
+  {0, 4, 10, 11, 17, 19, 23, 28, 37},
   {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
     P_::FLA}};
 static StmPipeline RES_SIMDFP_SVE_OP_018_02 = {
@@ -428,11 +428,11 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
   {MI_SIMDFP_SVE_OP_015,  /// Pipeline:FLA / FLA / FL*  Latency:6 / 6 / [1,2]9  Seq-decode:true
     {{&RES_SIMDFP_SVE_OP_015_01, &RES_SIMDFP_SVE_OP_015_02}, 16, true}},
   {MI_SIMDFP_SVE_OP_016,  /// Pipeline:FL* / (FLA / FL*) x 2  Latency:4 / ([1]6 / [1,2]9) x 2  Seq-decode:true
-    {{&RES_SIMDFP_SVE_OP_016_01, &RES_SIMDFP_SVE_OP_016_02}, true}},
+    {{&RES_SIMDFP_SVE_OP_016_01, &RES_SIMDFP_SVE_OP_016_02}, 28, true}},
   {MI_SIMDFP_SVE_OP_017,  /// Pipeline:FL* / (FLA / FL*) x 3  Latency:4 / ([1]6 / [1,2]9) x 3  Seq-decode:true
-    {{&RES_SIMDFP_SVE_OP_017_01, &RES_SIMDFP_SVE_OP_017_02}, true}},
+    {{&RES_SIMDFP_SVE_OP_017_01, &RES_SIMDFP_SVE_OP_017_02}, 37, true}},
   {MI_SIMDFP_SVE_OP_018,  /// Pipeline:FL* / (FLA / FL*) x 4  Latency:4 / ([1]6 / [1,2]9) x 4  Seq-decode:true
-    {{&RES_SIMDFP_SVE_OP_018_01, &RES_SIMDFP_SVE_OP_018_02}, true}},
+    {{&RES_SIMDFP_SVE_OP_018_01, &RES_SIMDFP_SVE_OP_018_02}, 46, true}},
   {MI_SIMDFP_SVE_LD_001,  /// Pipeline:EAG*, FLA  Latency:11
     {{&RES_SIMDFP_SVE_LD_001_01, &RES_SIMDFP_SVE_LD_001_02,
       &RES_SIMDFP_SVE_LD_001_03, &RES_SIMDFP_SVE_LD_001_04},
@@ -625,8 +625,8 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::ADR_LSL_ZZZ_D_2, MI_SIMDFP_SVE_OP_008},
   {AArch64::ADR_LSL_ZZZ_D_3, MI_SIMDFP_SVE_OP_008},
   {AArch64::AND_ZI, MI_SIMDFP_SVE_OP_007},
-  {AArch64::BIC_PPzPP, MI_SIMDFP_SVE_OP_001},
-  {AArch64::CMPHI_PPzZZ_D, MI_SIMDFP_SVE_OP_002},
+  {AArch64::BIC_PPzPP, MI_PREDICATE_OP_001},
+  {AArch64::CMPHI_PPzZZ_D, MI_PREDICATE_OP_002},
   {AArch64::CPY_ZPmV_D, MI_SIMDFP_SVE_OP_004},
   {AArch64::DUP_ZR_D, MI_SIMDFP_SVE_OP_005},
   {AArch64::DUP_ZZI_D, MI_SIMDFP_SVE_OP_004},
