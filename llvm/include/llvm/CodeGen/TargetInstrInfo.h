@@ -2010,7 +2010,9 @@ public:
   }
 
   /// Can Remove copy-mi
-  virtual bool canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI) const {
+  virtual bool canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI,
+                             const MachineRegisterInfo &MRI,
+                             const TargetRegisterInfo &TRI) const {
     return false;
   }
 
