@@ -698,8 +698,8 @@ void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOu
       if (!umi->isPHI()) use_onlyphi=false;
     }
 
-    if (use_onlyphi || SWPipeliner::TII->canRemoveCopy(
-                           *body, mi, *SWPipeliner::MRI, *SWPipeliner::TRI)){
+    if (use_onlyphi ||
+        SWPipeliner::TII->canRemoveCopy(*body, mi, *SWPipeliner::MRI)){
       for (auto *op:target_mo) {
         auto *umi=op->getParent();
         if (SWPipeliner::isDebugOutput()) {

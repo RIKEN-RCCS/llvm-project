@@ -8143,8 +8143,7 @@ AArch64InstrInfo::getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
 }
 
 bool AArch64InstrInfo::canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI,
-                                     const MachineRegisterInfo &MRI,
-                                     const TargetRegisterInfo &TRI) const {
+                                     const MachineRegisterInfo &MRI) const {
   assert(MI.isCopy());
   auto &op0=MI.getOperand(0);
   auto &op1=MI.getOperand(1);
@@ -8155,7 +8154,7 @@ bool AArch64InstrInfo::canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI,
     if (r0_class->contains(r1) && op0.getSubReg() == op1.getSubReg()) return true;
   } else {
     const auto *r1_class = MRI.getRegClass(r1);
-    if (r0_class == r1_class && op0.getSubReg() == op1.getSubReg()) return true;
+    if (r0_class->getID() == r1_class->getID() && op0.getSubReg() == op1.getSubReg()) return true;
     switch (r0_class->getID()) {
     case AArch64::GPR32RegClassID:
       if (r1_class->getID() == AArch64::GPR64RegClassID && op1.getSubReg()==AArch64::sub_32) return true;
