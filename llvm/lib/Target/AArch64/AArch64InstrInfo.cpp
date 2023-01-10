@@ -8142,16 +8142,50 @@ AArch64InstrInfo::getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
   return OptLevel >= CodeGenOpt::Aggressive ? 6 : 2;
 }
 
-bool AArch64InstrInfo::canRemoveCopy(
-    MachineBasicBlock &MBB,
-    MachineInstr &MI) const {
+bool AArch64InstrInfo::canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI,
+                                     const MachineRegisterInfo &MRI) const {
   assert(MI.isCopy());
   auto &op0=MI.getOperand(0);
   auto &op1=MI.getOperand(1);
   Register r0 = op0.getReg();
   Register r1 = op1.getReg();
-  if (r1==AArch64::WZR || r1==AArch64::XZR) {
-    return true;
+  const auto *r0_class = MRI.getRegClass(r0);
+  if (r1.isPhysical()) {
+    if (r0_class->contains(r1) && op0.getSubReg() == op1.getSubReg()) return true;
+  } else {
+    const auto *r1_class = MRI.getRegClass(r1);
+    if (r0_class->getID() == r1_class->getID() && op0.getSubReg() == op1.getSubReg()) return true;
+    switch (r0_class->getID()) {
+    case AArch64::GPR32RegClassID:
+      if (r1_class->getID() == AArch64::GPR64RegClassID && op1.getSubReg()==AArch64::sub_32) return true;
+      break;
+    case AArch64::GPR32spRegClassID:
+      if (r1_class->getID() == AArch64::GPR64spRegClassID && op1.getSubReg()==AArch64::sub_32) return true;
+      break;
+    case AArch64::GPR32allRegClassID:
+      if (r1_class->getID() == AArch64::GPR64allRegClassID && op1.getSubReg()==AArch64::sub_32) return true;
+      break;
+    case AArch64::FPR32RegClassID:
+      if (r1_class->getID() == AArch64::FPR64RegClassID && op1.getSubReg()==AArch64::ssub) return true;
+      if (r1_class->getID() == AArch64::FPR128RegClassID && op1.getSubReg()==AArch64::ssub) return true;
+      break;
+    case AArch64::FPR64RegClassID:
+      if (r1_class->getID() == AArch64::FPR128RegClassID && op1.getSubReg()==AArch64::dsub) return true;
+      break;
+    case AArch64::ZPRRegClassID:
+      if (r1_class->getID() == AArch64::ZPR2RegClassID &&
+          (op1.getSubReg()==AArch64::zsub0 || op1.getSubReg()==AArch64::zsub1))
+        return true;
+      if (r1_class->getID() == AArch64::ZPR3RegClassID &&
+          (op1.getSubReg()==AArch64::zsub0 || op1.getSubReg()==AArch64::zsub1 || op1.getSubReg()==AArch64::zsub2))
+        return true;
+      if (r1_class->getID() == AArch64::ZPR4RegClassID &&
+          (op1.getSubReg()==AArch64::zsub0 || op1.getSubReg()==AArch64::zsub1 || op1.getSubReg()==AArch64::zsub2 ||
+           op1.getSubReg()==AArch64::zsub3))
+        return true;
+      break;
+    }
+
   }
   return false;
 }

@@ -688,10 +688,18 @@ void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOu
       }
       continue;
     }
-    if (SWPipeliner::TII->canRemoveCopy(*body, mi)){
-      for (auto &u:SWPipeliner::MRI->use_operands(r0)) {
-        target_mo.push_back(&u);
-      }
+    target_mo.clear();
+    for (auto &u:SWPipeliner::MRI->use_operands(r0)) {
+      target_mo.push_back(&u);
+    }
+    bool use_onlyphi=true;
+    for (auto *op:target_mo) {
+      auto *umi = op->getParent();
+      if (!umi->isPHI()) use_onlyphi=false;
+    }
+
+    if (use_onlyphi ||
+        SWPipeliner::TII->canRemoveCopy(*body, mi, *SWPipeliner::MRI)){
       for (auto *op:target_mo) {
         auto *umi=op->getParent();
         if (SWPipeliner::isDebugOutput()) {
@@ -701,6 +709,7 @@ void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOu
         auto &op1 = mi.getOperand(1);
         op->setReg(op1.getReg());
         op->setSubReg(op1.getSubReg());
+        op->setIsKill(false);
         if (SWPipeliner::isDebugOutput()) {
           dbgs() << " after: " << *umi;
         }

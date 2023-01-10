@@ -335,8 +335,8 @@ public:
                                                   int64_t &ByteSized,
                                                   int64_t &VGSized);
 
-  bool canRemoveCopy(MachineBasicBlock &MBB,
-                  MachineInstr &MI) const override;
+  bool canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI,
+                     const MachineRegisterInfo &MRI) const override;
 
   bool splitPrePostIndexInstr(MachineBasicBlock &MBB,
                               MachineInstr &MI,

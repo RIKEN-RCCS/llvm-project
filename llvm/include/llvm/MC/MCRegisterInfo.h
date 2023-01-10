@@ -452,7 +452,7 @@ public:
   /// Provide a get method, equivalent to [], but more useful with a
   /// pointer to this object.
   const MCRegisterDesc &get(MCRegister RegNo) const {
-    return operator[](RegNo);
+ return operator[](RegNo);
   }
 
   /// Returns the physical register number of sub-register "Index"
