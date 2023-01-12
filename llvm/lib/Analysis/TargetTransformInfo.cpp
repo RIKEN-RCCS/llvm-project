@@ -118,22 +118,32 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
     }
 
     const SCEV *EC = SE.getExitCount(L, BB);
-    if (isa<SCEVCouldNotCompute>(EC))
+    if (isa<SCEVCouldNotCompute>(EC)) {
+      Reason="SCEVCouldNotCompute";
       continue;
+    }
     if (const SCEVConstant *ConstEC = dyn_cast<SCEVConstant>(EC)) {
-      if (ConstEC->getValue()->isZero())
+      if (ConstEC->getValue()->isZero()) {
+        Reason="SCEConstant is Zero";
         continue;
-    } else if (!SE.isLoopInvariant(EC, L))
+      }
+    } else if (!SE.isLoopInvariant(EC, L)) {
+      Reason="SCEV is changing in the specified loop";
       continue;
+    }
 
-    if (SE.getTypeSizeInBits(EC->getType()) > CountType->getBitWidth())
+    if (SE.getTypeSizeInBits(EC->getType()) > CountType->getBitWidth()) {
+      Reason="SCEV type > CountType";
       continue;
+    }
 
     // If this exiting block is contained in a nested loop, it is not eligible
     // for insertion of the branch-and-decrement since the inner loop would
     // end up messing up the value in the CTR.
-    if (!IsNestingLegal && LI.getLoopFor(BB) != L && !ForceNestedLoop)
+    if (!IsNestingLegal && LI.getLoopFor(BB) != L && !ForceNestedLoop) {
+      // already checked
       continue;
+    }
 
     // We now have a loop-invariant count of loop iterations (which is not the
     // constant zero) for which we know that this loop will not exit via this

@@ -324,7 +324,7 @@ bool HardwareLoops::TryConvertLoop(HardwareLoopInfo &HWLoopInfo) {
     if (!HWLoopInfo.Reason.empty()) {
       msg=llvm::formatv("{0}(reason={1})", msg1, HWLoopInfo.Reason);
     }
-    reportHWLoopFailure(msg1, "HWLoopNoCandidate", ORE, L);
+    reportHWLoopFailure(msg, "HWLoopNoCandidate", ORE, L);
     return false;
   }
 
