@@ -440,8 +440,8 @@ static StmPipeline RES_PREDICATE_OP_002_01 = {{0, 0, 4}, {P_::PRX, P_::FLA, P_::
 std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource>
   AArch64SwplSchedA64FX::ResInfo={
   {MI_INT_OP_001,  /// Pipeline:EX* | EAG*  Latency:1
-    {{&RES_INT_OP_001_01, &RES_INT_OP_001_02, &RES_INT_OP_001_03, &RES_INT_OP_001_04},
-    1}},
+    {{&RES_INT_OP_001_01, &RES_INT_OP_001_02, 
+      &RES_INT_OP_001_03, &RES_INT_OP_001_04},1}},
   {MI_INT_OP_002,  /// Pipeline:EX*  Latency:1
     {{&RES_INT_OP_002_01, &RES_INT_OP_002_02}, 1}},
   {MI_INT_OP_003,  /// Pipeline:(EXA + EXA) | (EXB + EXB)  Latency:1+1  Blocking:P
@@ -466,7 +466,8 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
       &RES_INT_LD_001_13, &RES_INT_LD_001_14,
       &RES_INT_LD_001_15, &RES_INT_LD_001_16}, 5}},
   {MI_INT_LD_002,  /// Pipeline:EAG*  Latency:5
-    {{&RES_INT_LD_002_01, &RES_INT_LD_002_02, &RES_INT_LD_002_03}, 5}},
+    {{&RES_INT_LD_002_01, &RES_INT_LD_002_02,
+      &RES_INT_LD_002_03, &RES_INT_LD_002_04}, 5}},
   {MI_INT_ST_001,  /// Pipeline:EAG*, EXA  Latency:NA, NA
     {{&RES_INT_ST_001_01, &RES_INT_ST_001_02}, LATENCY_NA}},
   {MI_SIMDFP_SVE_OP_001,  /// Pipeline:FL*  Latency:9
