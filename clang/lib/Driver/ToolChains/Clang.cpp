@@ -1931,6 +1931,12 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   }
 
   AddUnalignedAccessWarning(CmdArgs);
+
+  if (Args.hasArg(options::OPT_fswp)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-fswp");
+  }
+
 }
 
 void Clang::AddMIPSTargetArgs(const ArgList &Args,

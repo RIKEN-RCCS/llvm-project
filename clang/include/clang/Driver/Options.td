@@ -3588,6 +3588,9 @@ def mvscale_max_EQ : Joined<["-"], "mvscale-max=">,
            " vector length agnostic value of \"0\". (AArch64 only)">,
   MarshallingInfoInt<LangOpts<"VScaleMax">>;
 
+def fswp : Flag<["-"], "fswp">, Group<m_aarch64_Features_Group>,
+  HelpText<"Apply the software pipeline. (AArch64 only)">;
+
 def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
   Flags<[CC1Option]>, Group<m_Group>, Values<"none,all,non-leaf">,
   HelpText<"Select return address signing scope">;
