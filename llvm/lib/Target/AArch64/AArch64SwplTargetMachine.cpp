@@ -63,39 +63,25 @@ enum MsgID {
 static void outputRemarkAnalysis(MachineLoop &L, int msg_id) {
   switch (msg_id) {
   case MsgID_swpl_branch_not_for_loop:
-    SWPipeliner::ORE->emit([&]() {
-      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
-                                               L.getStartLoc(), L.getHeader())
-             << "This loop cannot be software pipelined because the loop contains a branch instruction.";
-    });
+    SWPipeliner::Reason = "This loop cannot be software pipelined"
+                          " because the loop contains a branch instruction.";
     break;
   case MsgID_swpl_many_insts:
-    SWPipeliner::ORE->emit([&]() {
-      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
-                                               L.getStartLoc(), L.getHeader())
-             << "This loop is not software pipelined because the loop contains too many instructions.";
-    });
+    SWPipeliner::Reason = "This loop is not software pipelined"
+                          " because the loop contains too many instructions.";
     break;
   case MsgID_swpl_many_memory_insts:
-    SWPipeliner::ORE->emit([&]() {
-      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
-                                               L.getStartLoc(), L.getHeader())
-             << "This loop is not software pipelined because the loop contains too many instructions accessing memory.";
-    });
+    SWPipeliner::Reason = "This loop is not software pipelined"
+                          " because the loop contains too many instructions accessing memory.";
     break;
   case MsgID_swpl_not_covered_inst:
-    SWPipeliner::ORE->emit([&]() {
-      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
-                                               L.getStartLoc(), L.getHeader())
-             << "This loop cannot be software pipelined because the loop contains an instruction, such as function call,which is not supported by software pipelining.";
-    });
+    SWPipeliner::Reason = "This loop cannot be software pipelined"
+                          " because the loop contains an instruction, such as function call,"
+                          " which is not supported by software pipelining.";
     break;
   case MsgID_swpl_not_covered_loop_shape:
-    SWPipeliner::ORE->emit([&]() {
-      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
-                                               L.getStartLoc(), L.getHeader())
-             << "This loop cannot be software pipelined because the shape of the loop is not covered by software pipelining.";
-    });
+    SWPipeliner::Reason = "This loop cannot be software pipelined"
+                          " because the shape of the loop is not covered by software pipelining.";
     break;
   }
   return;

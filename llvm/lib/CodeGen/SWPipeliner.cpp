@@ -24,6 +24,7 @@
 #include "SwplPlan.h"
 #include "SwplScr.h"
 #include "SwplTransformMIR.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 
@@ -53,6 +54,7 @@ const TargetRegisterInfo *SWPipeliner::TRI = nullptr;
 MachineRegisterInfo *SWPipeliner::MRI = nullptr;
 SwplTargetMachine *SWPipeliner::STM = nullptr;
 AliasAnalysis *SWPipeliner::AA = nullptr;
+std::string SWPipeliner::Reason;
 
 /// loop normalization pass for SWPL
 struct SWPipelinerPre : public MachineFunctionPass {
@@ -144,6 +146,7 @@ bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
   MRI = &(MF->getRegInfo());
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   STM = TII->getSwplTargetMachine();
+  Reason = "";
 
   STM->initialize(*MF);
 
@@ -164,6 +167,18 @@ static void printDebug(const char *f, const StringRef &msg, const MachineLoop &L
   errs() <<"\n";
 }
 
+void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {
+  std::string msg1=msg;
+  if (!SWPipeliner::Reason.empty()) {
+    msg1 = SWPipeliner::Reason;
+  }
+
+  ORE->emit([&]() {
+    return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipleined",
+                                           L.getStartLoc(), L.getHeader())
+           << msg1;
+  });
+}
 /**
  * \brief scheduleLoop
  *        Swpl最適化を実施する。
@@ -200,11 +215,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
 
   if (!TII->canPipelineLoop(L)) {
     printDebug(__func__, "!!! Can not pipeline loop.", L);
-    ORE->emit([&]() {
-      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipleined",
-                                             L.getStartLoc(), L.getHeader())
-             << "Failed to pipeline loop";
-    });
+    remarkMissed("Failed to pipeline loop", L);
 
     return Changed;
   }
@@ -226,12 +237,8 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   SwplPlan* plan = SwplPlan::generatePlan(*ddg);
   if (plan != NULL) {
     if (plan->getPrologCycles() == 0) {
-      ORE->emit([&]() {
-        return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipleined",
-                                               loop->getML()->getStartLoc(),
-                                               loop->getML()->getHeader())
-                << "This loop is not software pipelined because the software pipelining does not improve the performance.";
-      });
+      remarkMissed("This loop is not software pipelined because the software pipelining does not improve the performance.",
+                   *loop->getML());
       if (SWPipeliner::isDebugOutput()) {
         dbgs() << "        : Loop isn't software pipelined because prologue is 0 cycle.\n";
       }
@@ -245,12 +252,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     }
     SwplPlan::destroy( plan );
   } else {
-    ORE->emit([&]() {
-      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipleined",
-                                             loop->getML()->getStartLoc(),
-                                             loop->getML()->getHeader())
-              << "This loop is not software pipelined because no schedule is obtained.";
-    });
+    remarkMissed("This loop is not software pipelined because no schedule is obtained.", *loop->getML());
     if (SWPipeliner::isDebugOutput()) {
       dbgs() << "        : Loop isn't software pipelined because plan is NULL.\n";
     }

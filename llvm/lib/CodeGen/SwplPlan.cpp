@@ -16,6 +16,7 @@
 #include "SwplRegEstimate.h"
 #include "SwplScheduling.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm; // for NV
 using namespace ore; // for NV
@@ -225,15 +226,10 @@ SwplPlan* SwplPlan::generatePlan(SwplDdg& ddg)
     return nullptr;
 
   case TryScheduleResult::TRY_SCHEDULE_FEW_ITER: {
-    SWPipeliner::ORE->emit([&]() {
-                      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
-                                                               ddg.getLoop()->getML()->getStartLoc(),
-                                                               ddg.getLoop()->getML()->getHeader())
-                        << "This loop is not software pipelined because the iteration count is smaller than "
-                        << NV("required_iteration", itr)
-                        << " and the software pipelining does not improve the performance.";
-                    });
-
+    SWPipeliner::Reason =
+        llvm::formatv("This loop is not software pipelined because the iteration count is smaller than "
+                      "{0} and "
+                      "the software pipelining does not improve the performance.", itr);
     return nullptr;
   }
   }
@@ -340,6 +336,7 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
                                         SwplMsResourceResult* resource) {
   SwplPlanSpec spec(c_ddg);
   if( !(spec.init(res_mii)) ){
+    // SwplPlanSpec::init()復帰値はtrueのみ。将来的にfalseがｋ
     return TryScheduleResult::TRY_SCHEDULE_FAIL;
   }
 
@@ -385,7 +382,6 @@ TryScheduleResult SwplPlan::selectPlan(const SwplDdg& c_ddg,
 
   SwplInstSlotHashmap* inst_slot_map_tmp;
   unsigned ii_tmp, min_ii_tmp, itr;
-  bool is_succeeded;
   SwplMsResourceResult resource_tmp;
 
   switch(trySchedule(c_ddg,
@@ -396,27 +392,20 @@ TryScheduleResult SwplPlan::selectPlan(const SwplDdg& c_ddg,
                      &itr,
                      &resource_tmp)) {
   case TryScheduleResult::TRY_SCHEDULE_SUCCESS:
-    is_succeeded = true;
     rslt_inst_slot_map = *inst_slot_map_tmp; // copy
     delete inst_slot_map_tmp;
     *selected_ii = ii_tmp;
     *calculated_min_ii = min_ii_tmp;
     *required_itr = itr;
     resource = resource_tmp; // copy
-    break;
+    return TryScheduleResult::TRY_SCHEDULE_SUCCESS;
   case TryScheduleResult::TRY_SCHEDULE_FAIL:
-    is_succeeded = false;
-    break;
+    return TryScheduleResult::TRY_SCHEDULE_FAIL;
   case TryScheduleResult::TRY_SCHEDULE_FEW_ITER:
     *required_itr = itr;
     return TryScheduleResult::TRY_SCHEDULE_FEW_ITER;
   }
-
-  if(is_succeeded) {
-    return TryScheduleResult::TRY_SCHEDULE_SUCCESS;
-  } else {
-    return TryScheduleResult::TRY_SCHEDULE_FAIL;
-  }
+  llvm_unreachable("unknown TryScheduleResult");
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
