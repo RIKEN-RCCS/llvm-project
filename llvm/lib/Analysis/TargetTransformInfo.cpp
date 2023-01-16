@@ -119,12 +119,12 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
 
     const SCEV *EC = SE.getExitCount(L, BB);
     if (isa<SCEVCouldNotCompute>(EC)) {
-      Reason="SCEVCouldNotCompute";
+      Reason="Loop count cannot be calculated";
       continue;
     }
     if (const SCEVConstant *ConstEC = dyn_cast<SCEVConstant>(EC)) {
       if (ConstEC->getValue()->isZero()) {
-        Reason="SCEConstant is Zero";
+        Reason="SCEV is Zero";
         continue;
       }
     } else if (!SE.isLoopInvariant(EC, L)) {

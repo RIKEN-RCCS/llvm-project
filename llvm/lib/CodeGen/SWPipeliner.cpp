@@ -150,8 +150,10 @@ bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
 
   STM->initialize(*MF);
 
-  for (auto &L : *MLI)
+  for (auto &L : *MLI) {
     scheduleLoop(*L);
+    assert(Reason.empty());
+  }
 
   return Modified;
 }
@@ -171,6 +173,7 @@ void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {
   std::string msg1=msg;
   if (!SWPipeliner::Reason.empty()) {
     msg1 = SWPipeliner::Reason;
+    SWPipeliner::Reason = "";
   }
 
   ORE->emit([&]() {
