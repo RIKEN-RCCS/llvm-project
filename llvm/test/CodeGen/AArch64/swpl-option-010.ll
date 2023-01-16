@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=a64fx -debug-hardwareloops  -O0 -ffj-swp  -debug-aarch64tti -o /dev/null 2>&1 | FileCheck --allow-empty %s
+; RUN: llc < %s -mcpu=a64fx -debug-hardwareloops  -O0 -fswp  -debug-aarch64tti -o /dev/null 2>&1 | FileCheck --allow-empty %s
 ; CHECK-NOT: DBG
 
 ; ModuleID = '2901-1.c'

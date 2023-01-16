@@ -31,8 +31,7 @@ using namespace llvm::PatternMatch;
 
 static cl::opt<bool> EnableSaveCmp("enable-savecmp",cl::init(false), cl::ReallyHidden);
 static cl::opt<unsigned> MaxSize("hwloop-max-size",cl::init(500), cl::ReallyHidden);
-static cl::opt<bool> EnableSWP("ffj-swp",cl::init(false), cl::Hidden);
-static cl::opt<bool> DisableSWP("ffj-no-swp",cl::init(false), cl::Hidden);
+static cl::opt<bool> EnableSWP("fswp",cl::init(false), cl::Hidden);
 static cl::opt<bool> DebugOutput("debug-aarch64tti",cl::init(false), cl::ReallyHidden);
 
 static cl::opt<bool> EnableFalkorHWPFUnrollFix("enable-falkor-hwpf-unroll-fix",
@@ -3204,12 +3203,12 @@ static int enableLoopSWP(const Loop* L, bool &exists) {
 
 bool llvm::enableSWP(const Loop *L) {
   bool exists=false;
-  bool r;
   assert(L!=nullptr);
-  r=enableLoopSWP(L, exists);
-  if (exists) return r;
-  if (DisableSWP) return false;
-  if (EnableSWP) return true;
+  if (EnableSWP) {
+    bool r=enableLoopSWP(L, exists);
+    if (exists) return r;
+    return true;
+  }
   return false;
 }
 
