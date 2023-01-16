@@ -244,6 +244,11 @@ public:
   /// \retval truer Psedo命令
   /// \retval false Pseudo命令ではない
   bool isPseudo(const MachineInstr& mi) const override;
+
+  /// SWPLでのレジスタ割り付けを無効にするか否かを判断する
+  /// \retval true  レジスタ割り付けを無効にする
+  /// \retval false レジスタ割り付けを無効にしない
+  bool isDisableRegAlloc(void) const override;
 };
 
 

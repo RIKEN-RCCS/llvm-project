@@ -58,6 +58,11 @@ bool SwplTransformMIR::transformMIR() {
   convertPlan2MIR();
   if (TMI.isNecessaryTransformMIR()){
     updated=true;
+
+    /// 物理レジスタを割り付ける
+    if (!SWPipeliner::STM->isDisableRegAlloc())
+      SWPipeliner::TII->physRegAllocLoop(&TMI, MF);
+
     /// (2) SwplTransformedMIRInfo::isNecessaryTransformMIR()であれば\n
     /// (2-1) SwplScr::prepareCompensationLoop()でループの外を変形する
     SCR.prepareCompensationLoop(TMI);
@@ -501,10 +506,53 @@ void SwplTransformMIR::insertMIs(MachineBasicBlock& ins,
     }
   }
   /// (3) 計算した開始slotから終了slotまでの命令を挿入位置に移動する
-  for (size_t i = start_index; i < end_index; ++i) {
-    auto *mi = TMI.mis[i];
-    if (mi != nullptr) {
-      ins.push_back(mi);
+  if (!SWPipeliner::STM->isDisableRegAlloc() && block==KERNEL) {
+    /// レジスタ割り付けで作成したMIの挿入
+    int num_mis = 0;
+    for (size_t i = start_index; i < end_index; ++i) {
+      auto *mi = TMI.mis[i];
+      if (mi != nullptr)
+        ++num_mis;
+    }
+    bool inserted = false;
+    int loc_end = num_mis;
+    num_mis = 0;
+    for (size_t i = start_index; i < end_index; ++i) {
+      auto *mi = TMI.mis[i];
+      if (mi != nullptr) {
+        ++num_mis;
+        if (!inserted) {
+          /// KERNEL始端なら
+          /// 仮想レジスタから物理レジスタへのCOPY命令を挿入する
+          std::vector<llvm::MachineInstr*> *kpremi = &TMI.kernel_pre_mis;
+          if (kpremi != nullptr) {
+            for (std::vector<llvm::MachineInstr*>::iterator Itr = kpremi->begin();
+                Itr != kpremi->end(); ++Itr) {
+              ins.push_back(*Itr);
+            }
+          }
+          inserted = true;
+        }
+        if (num_mis==loc_end) {
+          /// KERNEL終端なら
+          /// 物理レジスタから仮想レジスタへのCOPY命令を挿入する
+          std::vector<llvm::MachineInstr*> *kpostmi = &TMI.kernel_post_mis;
+          if (kpostmi != nullptr) {
+            for (std::vector<llvm::MachineInstr*>::iterator Itr = kpostmi->begin();
+                Itr != kpostmi->end(); ++Itr) {
+              ins.push_back(*Itr);
+            }
+          }
+        }
+        ins.push_back(mi);
+      }
+    }
+  } else {
+    for (size_t i = start_index; i < end_index; ++i) {
+      auto *mi = TMI.mis[i];
+      if (mi != nullptr) {
+        ins.push_back(mi);
+      }
     }
   }
 }
@@ -512,9 +560,20 @@ void SwplTransformMIR::insertMIs(MachineBasicBlock& ins,
 void SwplTransformMIR::makeKernelIterationBranch(MachineBasicBlock &MBB) {
 
   assert(TMI.branchDoVRegMI->isBranch());
+  Register preg = 0;
+  if (!SWPipeliner::STM->isDisableRegAlloc() && TMI.swplRAITbl != nullptr) {
+    // レジスタ割り付け有効時
+    auto rai = TMI.swplRAITbl->getWithVReg( TMI.doVReg );
+    if( rai != nullptr ) {
+      preg = rai->preg;
+    }
+    // physRegAllocLoop()内で獲得した領域はこの時点で不要となるため解放
+    delete TMI.swplRAITbl;
+    TMI.swplRAITbl = nullptr;
+  }
   const auto &debugLoc= TMI.branchDoVRegMI->getDebugLoc();
-  MachineInstr *br = SWPipeliner::TII->makeKernelIterationBranch(*SWPipeliner::MRI, MBB, debugLoc,
-                                                                 TMI.doVReg, TMI.expansion, TMI.coefficient);
+  MachineInstr *br = SWPipeliner::TII->makeKernelIterationBranch(*SWPipeliner::MRI, MBB, debugLoc, TMI.doVReg,
+                                                                 TMI.expansion, TMI.coefficient, preg);
 
   /// すでに存在するCheck2(ModLoop迂回用チェック)の比較命令の対象レジスタをTMI.nonSSAOriginalDoVRegに書き換える
   // c2 mbbの先頭命令を取得
@@ -975,4 +1034,19 @@ void SwplTransformMIR::dumpMIR(DumpMIRID id) const {
 
 unsigned SwplTransformMIR::relativeInstSlot(const SwplInst *inst) const {
   return InstSlotMap[const_cast<SwplInst*>(inst)]-Plan.getBeginSlot();
+}
+
+void SwplTransformMIR::printTransformingMI(const MachineInstr *mi) {
+  /*
+   * SWPLの結果反映中のMIは、MFから紐づいていないため、
+   * mi->print(dbgs())でOpcodeがUNKNOWNで出力されてしまう。
+   * 本関数は、結果反映前のMFを用いてprintするための関数である。
+   */
+  mi->print(dbgs(),
+            /* IsStandalone= */ true,
+            /* SkipOpers= */ false,
+            /* SkipDebugLoc= */ false,
+            /* AddNewLine= */ true,
+            MF.getSubtarget().getInstrInfo() );
+  return;
 }
