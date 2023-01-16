@@ -7,7 +7,7 @@
 ; CHECK-NEXT: Function:        func
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          'hardware-loop not created: '
-; CHECK-NEXT:   - String:          'loop is not a candidate(reason=SCEVCouldNotCompute)'
+; CHECK-NEXT:   - String:          'loop is not a candidate(reason=Loop count cannot be calculated)'
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            hardware-loops
 ; CHECK-NEXT: Name:            HWLoopNotProfitable
