@@ -47,7 +47,6 @@
 #define HW_LOOPS_NAME "Hardware Loop Insertion"
 
 using namespace llvm;
-static cl::opt<bool> DebugOutput("debug-hardwareloops",cl::init(false), cl::ReallyHidden);
 
 static cl::opt<bool>
 ForceHardwareLoops("force-hardware-loops", cl::Hidden, cl::init(false),
