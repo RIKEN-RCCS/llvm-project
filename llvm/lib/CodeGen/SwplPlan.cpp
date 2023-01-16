@@ -336,7 +336,7 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
                                         SwplMsResourceResult* resource) {
   SwplPlanSpec spec(c_ddg);
   if( !(spec.init(res_mii)) ){
-    // SwplPlanSpec::init()復帰値はtrueのみ。将来的にfalseがｋ
+    // SwplPlanSpec::init()復帰値は現在trueのみ。将来的にfalseがくる可能性を考えifを残す
     return TryScheduleResult::TRY_SCHEDULE_FAIL;
   }
 

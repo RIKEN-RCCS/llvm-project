@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=a64fx -O1 -ffj-swp -o /dev/null -pass-remarks-filter=hardware-loops -pass-remarks-output=- %s 2>&1 | FileCheck %s
+; RUN: llc -mcpu=a64fx -O1 -fswp -o /dev/null -pass-remarks-filter=hardware-loops -pass-remarks-output=- %s 2>&1 | FileCheck %s
 ;
 ; CHECK: --- !Passed
 ; CHECK-NEXT: Pass:            hardware-loops
