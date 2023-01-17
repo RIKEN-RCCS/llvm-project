@@ -306,10 +306,15 @@ public:
   /// \retval false not Pseudo
   virtual bool isPseudo(const MachineInstr& mi) const = 0;
 
-  /// Determine if the register allocation has validated.
-  /// \retval true  Valid the register allocation in the swpl pass.
-  /// \retval false Invalid the register allocation in the swpl pass.
+  /// Determine if the register allocation has invalidated.
+  /// \retval true Invalid the register allocation in the swpl pass.
+  /// \retval false Valid the register allocation in the swpl pass.
   virtual bool isDisableRegAlloc(void) const = 0;
+
+  /// [TODO: To Be Deleted] Determine if the register allocation has validated.
+  /// \retval true Valid the register allocation in the swpl pass.
+  /// \retval false Invalid the register allocation in the swpl pass.
+  virtual bool isEnableRegAlloc(void) const = 0;
 };
 
 
