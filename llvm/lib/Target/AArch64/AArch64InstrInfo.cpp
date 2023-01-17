@@ -8400,17 +8400,23 @@ MachineInstr* AArch64InstrInfo::makeKernelIterationBranch(MachineRegisterInfo &M
                                                           const DebugLoc &debugLoc,
                                                           Register doVReg,
                                                           int iterationCount,
-                                                          int coefficient) const {
+                                                          int coefficient,
+                                                          Register preg) const {
 
   auto insertionPoint=MBB.getFirstInstrTerminator();
 
   const auto*regClass = MRI.getRegClass(doVReg);
   auto ini = doVReg;
-  if (regClass->hasSubClassEq(&AArch64::GPR64RegClass)) {
-    /// 条件判定（SUBSXri）で利用できないレジスタクラスの場合、COPYを生成し、利用可能レジスタクラスを定義する
-    ini = MRI.createVirtualRegister(&AArch64::GPR64spRegClass);
-    BuildMI(MBB, insertionPoint, debugLoc, get(TargetOpcode::COPY), ini)
-        .addReg(doVReg);
+  if (preg > 0) {
+    /// physRegAllocLoop()で割り当てられた物理レジスタを使用する
+    ini = preg;
+  } else {
+    if (regClass->hasSubClassEq(&AArch64::GPR64RegClass)) {
+      /// 条件判定（SUBSXri）で利用できないレジスタクラスの場合、COPYを生成し、利用可能レジスタクラスを定義する
+      ini = MRI.createVirtualRegister(&AArch64::GPR64spRegClass);
+      BuildMI(MBB, insertionPoint, debugLoc, get(TargetOpcode::COPY), ini)
+          .addReg(doVReg);
+    }
   }
 
   /// compare(SUBSXri)生成

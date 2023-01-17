@@ -159,6 +159,9 @@ private:
   /// \param [in] id Dumpタイミング
   void dumpMIR(DumpMIRID id) const;
 
+  /// 結果反映前のMachineInstrのprint
+  /// \param [in] mi 対象のMachineInstr
+  void printTransformingMI(const MachineInstr *mi);
 public:
   /// コストラクタ
   /// \param [in] mf 対象MachineFunction

@@ -62,6 +62,8 @@ class TargetSubtargetInfo;
 class StmRegKind;
 class SwplReg;
 class SwplTargetMachine;
+class SwplRegAllocInfoTbl;
+struct SwplTransformedMIRInfo;
 
 template <class T> class SmallVectorImpl;
 
@@ -2017,7 +2019,7 @@ public:
 
   /// generate iteration branch
   virtual MachineInstr* makeKernelIterationBranch(MachineRegisterInfo &MRI,
-      MachineBasicBlock &MBB, const DebugLoc &debugLoc, Register doVReg, int iterationCount, int coefficient) const {
+      MachineBasicBlock &MBB, const DebugLoc &debugLoc, Register doVReg, int iterationCount, int coefficient, Register preg) const {
     return nullptr;
   }
 
@@ -2110,6 +2112,13 @@ public:
     return nullptr;
   }
 
+  /// Register allocation for software pipelined loops.
+  /// \param [in] tmi Information for the SwplTransformMIR
+  /// \param [in] MF MachineFunction
+  virtual void physRegAllocLoop(SwplTransformedMIRInfo *tmi,
+                                const MachineFunction &MF) const {
+    return;
+  }
 
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;

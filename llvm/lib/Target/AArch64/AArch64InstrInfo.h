@@ -348,7 +348,8 @@ public:
                                           const DebugLoc &debugLoc,
                                           Register doVReg,
                                           int iterationCount,
-                                          int coefficient) const override;
+                                          int coefficient,
+                                          Register preg) const override;
 
   bool isPrefetch(unsigned opcode) const override;
   void makeBypassKernel(MachineRegisterInfo &MRI,
@@ -378,6 +379,7 @@ public:
   bool canPipelineLoop(MachineLoop &L) const override;
   int calcEachRegIncrement(const SwplReg *r) const override;
   SwplTargetMachine *getSwplTargetMachine() const override;
+  void physRegAllocLoop(SwplTransformedMIRInfo *tmi, const MachineFunction &MF) const override;
 
 
 #define GET_INSTRINFO_HELPER_DECLS
