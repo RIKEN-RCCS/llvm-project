@@ -60,7 +60,8 @@ bool SwplTransformMIR::transformMIR() {
     updated=true;
 
     /// 物理レジスタを割り付ける
-    if (!SWPipeliner::STM->isDisableRegAlloc())
+    //if (!SWPipeliner::STM->isDisableRegAlloc())
+    if (SWPipeliner::STM->isEnableRegAlloc())
       SWPipeliner::TII->physRegAllocLoop(&TMI, MF);
 
     /// (2) SwplTransformedMIRInfo::isNecessaryTransformMIR()であれば\n
@@ -506,7 +507,8 @@ void SwplTransformMIR::insertMIs(MachineBasicBlock& ins,
     }
   }
   /// (3) 計算した開始slotから終了slotまでの命令を挿入位置に移動する
-  if (!SWPipeliner::STM->isDisableRegAlloc() && block==KERNEL) {
+  //if (!SWPipeliner::STM->isDisableRegAlloc() && block==KERNEL) {
+  if (SWPipeliner::STM->isEnableRegAlloc() && block==KERNEL) {
     /// レジスタ割り付けで作成したMIの挿入
     int num_mis = 0;
     for (size_t i = start_index; i < end_index; ++i) {
@@ -561,8 +563,10 @@ void SwplTransformMIR::makeKernelIterationBranch(MachineBasicBlock &MBB) {
 
   assert(TMI.branchDoVRegMI->isBranch());
   Register preg = 0;
-  if (!SWPipeliner::STM->isDisableRegAlloc() && TMI.swplRAITbl != nullptr) {
-    // レジスタ割り付け有効時
+  //if (!SWPipeliner::STM->isDisableRegAlloc() && TMI.swplRAITbl != nullptr) {
+  if (SWPipeliner::STM->isEnableRegAlloc && TMI.swplRAITbl != nullptr) {
+    // TMI.doVReg に入っている仮想レジスタに、physRegAllocLoop()で
+    // 物理レジスタが割り当てられていたら、それを使用する。
     auto rai = TMI.swplRAITbl->getWithVReg( TMI.doVReg );
     if( rai != nullptr ) {
       preg = rai->preg;

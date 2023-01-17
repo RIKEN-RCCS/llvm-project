@@ -34,6 +34,7 @@ static cl::opt<bool> EnableSensitiveCheck("swpl-sensitive-check",cl::init(false)
 static cl::opt<unsigned> MaxInstNum("swpl-max-inst-num",cl::init(500), cl::ReallyHidden);
 static cl::opt<unsigned> MaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyHidden);
 static cl::opt<bool> DisableRegAlloc("swpl-disable-reg-alloc",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> EnableRegAlloc("swpl-enable-reg-alloc",cl::init(false), cl::ReallyHidden);
 
 // TargetLoopのMI出力オプション（swpl処理は迂回）
 static cl::opt<bool> OptionDumpTargetLoopOnly("swpl-debug-dump-targetloop-only",cl::init(false), cl::ReallyHidden);
@@ -824,4 +825,8 @@ bool AArch64SwplTargetMachine::isPseudo(const MachineInstr &mi) const {
 
 bool AArch64SwplTargetMachine::isDisableRegAlloc(void) const {
   return DisableRegAlloc;
+}
+
+bool AArch64SwplTargetMachine::isEnableRegAlloc(void) const {
+  return EnableRegAlloc;
 }

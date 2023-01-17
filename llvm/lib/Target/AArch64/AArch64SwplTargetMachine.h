@@ -249,6 +249,11 @@ public:
   /// \retval true  レジスタ割り付けを無効にする
   /// \retval false レジスタ割り付けを無効にしない
   bool isDisableRegAlloc(void) const override;
+
+  /// [TODO:削除予定] SWPLでのレジスタ割り付けを有効にするか否かを判断する
+  /// \retval true  レジスタ割り付けを有効にする
+  /// \retval false レジスタ割り付けを有効にしない
+  bool isEnableRegAlloc(void) const override;
 };
 
 
