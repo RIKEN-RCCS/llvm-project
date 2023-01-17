@@ -776,6 +776,8 @@ public:
   static MachineRegisterInfo *MRI;
   static SwplTargetMachine *STM;
   static AliasAnalysis *AA;
+  static std::string Reason;
+
 
   MachineFunction *MF = nullptr;
   const MachineLoopInfo *MLI = nullptr;
@@ -811,6 +813,9 @@ public:
   StringRef getPassName() const override {
     return "Software Pipeliner";
   }
+
+  static void remarkMissed(const char *msg, MachineLoop &L);
+
 private:
   bool scheduleLoop(MachineLoop &L);
   void outputRemarkAnalysis(MachineLoop &L, int msg_id);

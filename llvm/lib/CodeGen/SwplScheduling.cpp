@@ -17,6 +17,7 @@
 #include "SwplRegEstimate.h"
 #include "SwplScr.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 using namespace ore; // for NV
@@ -1317,34 +1318,19 @@ void SwplMsResult::checkHardResource(const SwplPlanSpec & spec, bool limit_reg) 
     /* 整数より浮動小数点不足優先で出力. */
     if ( !resource.isFregSufficient() ) {
       // 浮動小数点数レジスタの場合
-      SWPipeliner::ORE->emit([&]() {
-                        return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
-                                                                 spec.loop.getML()->getStartLoc(),
-                                                                 spec.loop.getML()->getHeader())
-                          << "Trial at iteration-interval="
-                          << NV("iteration_interval", ii)
-                          << ". This loop cannot be software pipelined because of shortage of floating-point registers.";
-                      });
+      SWPipeliner::Reason = llvm::formatv(
+          "Trial at iteration-interval={0}. "
+          "This loop cannot be software pipelined because of shortage of floating-point registers.", ii);
     } else if ( !resource.isIregSufficient() ) {
       // 整数レジスタの場合
-      SWPipeliner::ORE->emit([&]() {
-                        return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
-                                                                 spec.loop.getML()->getStartLoc(),
-                                                                 spec.loop.getML()->getHeader())
-                          << "Trial at iteration-interval="
-                          << NV("iteration_interval", ii)
-                          << ". This loop cannot be software pipelined because of shortage of integer registers.";
-                      });
+      SWPipeliner::Reason = llvm::formatv(
+          "Trial at iteration-interval={0}. "
+          "This loop cannot be software pipelined because of shortage of integer registers.", ii);
     } else if ( !resource.isPregSufficient() ) {
       // predicateレジスタの場合
-      SWPipeliner::ORE->emit([&]() {
-                        return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
-                                                                 spec.loop.getML()->getStartLoc(),
-                                                                 spec.loop.getML()->getHeader())
-                          << "Trial at iteration-interval="
-                          << NV("iteration_interval", ii)
-                          << ". This loop cannot be software pipelined because of shortage of predicate registers.";
-                      });
+      SWPipeliner::Reason = llvm::formatv(
+          "Trial at iteration-interval={0}. "
+          "This loop cannot be software pipelined because of shortage of predicate registers.", ii);
     }
 
     if ( resource.isIregSufficient() ) {
@@ -1422,16 +1408,10 @@ void SwplMsResult::checkIterationCount(const SwplPlanSpec & spec) {
   }
 
   if (is_itr_sufficient == false) {
-    SWPipeliner::ORE->emit([&]() {
-                      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
-                                                               spec.loop.getML()->getStartLoc(),
-                                                               spec.loop.getML()->getHeader())
-                        << "Trial at iteration-interval="
-                        << NV("iteration_interval", ii)
-                        << ". This loop is not software pipelined because the iteration count is smaller than "
-                        << NV("required_iteration", required_itr_count)
-                        << " and the software pipelining does not improve the performance.";
-                    });
+    SWPipeliner::Reason = llvm::formatv("Trial at iteration-interval={0}."
+                                        " This loop is not software pipelined because the iteration count is smaller than {1}"
+                                        " and the software pipelining does not improve the performance.",
+                                        ii, required_itr_count);
   }
   return;
 }
@@ -1627,14 +1607,9 @@ void SwplMsResult::outputGiveupMessageForEstimate(SwplPlanSpec & spec) {
     if( !is_itr_sufficient==false && !is_reg_sufficient==false && !is_mve_appropriate==false) {
       // int_slot_mapができない最終原因が、
       // レジスタ不足、回転数不足、MVE制限によるものでない場合
-      SWPipeliner::ORE->emit([&]() {
-                        return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NotSoftwarePipleined",
-                                                                 spec.loop.getML()->getStartLoc(),
-                                                                 spec.loop.getML()->getHeader())
-                          << "Trial at iteration-interval="
-                          << NV("iteration_interval", ii)
-                          << ". This loop is not software pipelined because no schedule is obtained.";
-                      });
+      SWPipeliner::Reason = llvm::formatv(
+          "Trial at iteration-interval={0}. "
+          "This loop is not software pipelined because no schedule is obtained.", ii);
     }
   }
   return;
