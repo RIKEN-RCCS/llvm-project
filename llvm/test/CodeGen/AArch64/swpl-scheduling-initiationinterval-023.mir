@@ -1,9 +1,14 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-max-ireg=10 -swpl-maxii=9 -swpl-minii=8   -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-minii=5  -swpl-maxii=5 -swpl-max-freg=4   -o /dev/null 2>&1 | FileCheck %s
 
 
 #CHECK:        : (sched for small loop (Iterative Modulo Scheduling). ResMII 3. NumOfBodyInsts 10. Budget 50. Minimum II = 3.)
-#CHECK:        :  (x) Register (I) short     at estimation.          : (II: 8 in [ 8,9]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (Reg Fp: 10/32, Int: 11/10, Pre: 1/8) Eval:-1.000000e+00.
+#CHECK:        :  (x) Iteration  shortage    at estimation.          : (II: 5 in [ 5,5]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (Reg Fp: 7/4, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        : Extend ii range for iteration shortage:[ 5, 5 ] -> [ 5, 10 ]
+#CHECK:        :  (x) Iteration  shortage    at recollect effective. : (II: 5 in [ 5,10]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (Reg Fp: 7/4, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at recollect effective. : (II: 8 in [ 5,10]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (Reg Fp: 10/4, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at recollect effective. : (II: 9 in [ 5,10]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (Reg Fp: 5/4, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Loop isn't software pipelined because plan is NULL.
+
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
@@ -61,7 +66,7 @@
   !llvm.module.flags = !{!3, !4, !5}
   !llvm.ident = !{!6}
   
-  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, splitDebugInlining: false, nameTableKind: None)
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "/TEST/tp/testprg.c", directory: "/TEST")
   !2 = !{}
   !3 = !{i32 7, !"Dwarf Version", i32 4}
