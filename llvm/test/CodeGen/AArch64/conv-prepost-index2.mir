@@ -1,4 +1,4 @@
-# RUN: llc -mcpu=a64fx -O3 -ffj-swp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
+# RUN: llc -mcpu=a64fx -O3 -fswp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
 #
 # CHECK: before:%199:gpr64sp, %200:fpr128 = LD1i32_POST %198:fpr128(tied-def 1), 1, %194:gpr64common(tied-def 0), $xzr
 # CHECK: after 1:%200:fpr128 = LD1i32 %198:fpr128(tied-def 0), 1, %194:gpr64common

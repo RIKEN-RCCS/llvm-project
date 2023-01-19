@@ -1,4 +1,4 @@
-# RUN: llc -mcpu=a64fx -O3 -ffj-swp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
+# RUN: llc -mcpu=a64fx -O3 -fswp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
 #
 # CHECK:  before:%193:gpr64sp = ST2Twov4s_POST killed %191:qq, %139:gpr64sp(tied-def 0), $xzr
 # CHECK:  after 1:ST2Twov4s %191:qq, %139:gpr64sp

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=a64fx -O1  -ffj-swp  -disable-hwloop  -debug-aarch64tti  -debug-hardwareloops  --pass-remarks-filter=hardware-loops  -o - 2>&1 | FileCheck %s
+; RUN: llc < %s -mcpu=a64fx -O1  -fswp  -disable-hwloop  -debug-aarch64tti --pass-remarks-filter=hardware-loops  -o - 2>&1 | FileCheck %s
 ; CHECK-NOT: DBG
 ; ModuleID = '2901-2-13.c'
 source_filename = "2901-2-13.c"

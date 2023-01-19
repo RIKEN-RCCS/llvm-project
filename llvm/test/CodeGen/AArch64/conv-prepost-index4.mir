@@ -1,4 +1,4 @@
-# RUN: llc -mcpu=a64fx -O3 -ffj-swp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
+# RUN: llc -mcpu=a64fx -O3 -fswp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
 #
 # CHECK:  before:early-clobber %74:gpr64sp, %75:fpr32 = LDRSpost %70:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.lsr.iv35, !tbaa !6)
 # CHECK:  after 1:%75:fpr32 = LDURSi %70:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv35, !tbaa !6)

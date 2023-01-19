@@ -1,4 +1,4 @@
-# RUN: llc -mcpu=a64fx -march=aarch64 -ffj-swp -start-after=aarch64-dead-defs -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
+# RUN: llc -mcpu=a64fx -march=aarch64 -fswp -start-after=aarch64-dead-defs -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
 # CHECK: pipeliner info:multi-defoperand==NZCV
 
 --- |

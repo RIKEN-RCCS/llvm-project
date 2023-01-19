@@ -1,5 +1,5 @@
-; RUN: llc < %s -mcpu=a64fx -O1  -ffj-swp  -debug-hardwareloops --pass-remarks-filter=hardware-loops -debug-aarch64tti  -o - 2>&1 | FileCheck %s
-; CHECK: HardwareLoopInsertion succeeded
+; RUN: llc < %s -mcpu=a64fx -O1  -fswp --pass-remarks-output=- --pass-remarks-filter=hardware-loops -o /dev/null | FileCheck %s
+; CHECK: hardware-loop created
 ; ModuleID = '2901-2-07.c'
 source_filename = "2901-2-07.c"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

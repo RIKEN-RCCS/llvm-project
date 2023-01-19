@@ -1,4 +1,4 @@
-# RUN: llc -mcpu=a64fx -O1 -ffj-swp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
+# RUN: llc -mcpu=a64fx -O1 -fswp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
 # CHECK: DBG(SwplLoop::removeCopy)
 # CHECK-NEXT:  target mi: %96:zpr = COPY %94:zpr, debug-location !17; s128.c:40:19
 # CHECK-NEXT:  before: SST1D_SCALED killed %109:zpr, %34:ppr_3b, killed %110:gpr64sp, %96:zpr, debug-location !28 :: (store unknown-size, align 8, !tbaa !20); s128.c:43:18

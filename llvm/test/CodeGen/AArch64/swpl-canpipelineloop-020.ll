@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=a64fx -swpl-debug -O1  -ffj-swp  --pass-remarks-filter=aarch64-swp --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -mcpu=a64fx -swpl-debug -O1  -fswp  --pass-remarks-filter=aarch64-swp --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck %s
 ;CHECK: not found (BCC || SUBSXri)
 ;CHECK: This loop cannot be software pipelined because the shape of the loop is not covered by software pipelining.
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -O1 -ffj-swp  -swpl-max-inst-num=100  -mcpu=a64fx  -swpl-debug --pass-remarks-filter=aarch64-swpipeliner  -pass-remarks-missed= --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -O1 -fswp  -swpl-max-inst-num=100  -mcpu=a64fx  -swpl-debug --pass-remarks-filter=aarch64-swpipeliner  -pass-remarks-missed= --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck %s
 ;CHECK:over inst limit num
 ;CHECK:canPipelineLoop:NG
 ;CHECK:This loop is not software pipelined because the loop contains too many instructions

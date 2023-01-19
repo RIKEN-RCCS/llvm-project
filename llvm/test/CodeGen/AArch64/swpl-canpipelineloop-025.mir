@@ -1,4 +1,4 @@
-# RUN: llc -ffj-swp  -march=aarch64  -mcpu=a64fx -start-after=aarch64-dead-defs -o /dev/null -swpl-debug %s 2>&1 | FileCheck %s
+# RUN: llc -fswp  -march=aarch64  -mcpu=a64fx -start-after=aarch64-dead-defs -o /dev/null -swpl-debug %s 2>&1 | FileCheck %s
 # CHECK: canPipelineLoop:OK
 --- |
   ; ModuleID = './test.base.ll'

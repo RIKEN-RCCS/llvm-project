@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=a64fx -O1 -ffj-swp -debug-hardwareloops -disable-hwloop --pass-remarks-filter=hardware-loops --pass-remarks-output=-  -debug-aarch64tti -o /dev/null 2>&1 | FileCheck --allow-empty %s
+; RUN: llc < %s -mcpu=a64fx -O1 -fswp -disable-hwloop --pass-remarks-filter=hardware-loops --pass-remarks-output=-  -debug-aarch64tti -o /dev/null 2>&1 | FileCheck --allow-empty %s
 ; CHECK-NOT: DBG
 
 ; ModuleID = '2901-2-14.c'

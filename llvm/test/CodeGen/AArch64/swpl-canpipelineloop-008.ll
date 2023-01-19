@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=a64fx -swpl-debug -O1 -swpl-max-mem-num=10 -ffj-swp --pass-remarks-missed=aarch64-swpipeliner --pass-remarks-filter=aarch64-swpipeliner --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck --allow-empty %s
+; RUN: llc < %s -mcpu=a64fx -swpl-debug -O1 -swpl-max-mem-num=10 -fswp --pass-remarks-missed=aarch64-swpipeliner --pass-remarks-filter=aarch64-swpipeliner --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck --allow-empty %s
 ;CHECK: canPipelineLoop:OK
 
 ; ModuleID = '2912.c'
