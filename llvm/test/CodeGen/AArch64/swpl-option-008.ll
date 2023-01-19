@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=a64fx -O1 -fswp -debug-hardwareloops -debug-aarch64tti -o - 2>&1 | FileCheck %s
+; RUN: llc < %s -mcpu=a64fx -O1 -fswp -debug-aarch64tti -o - 2>&1 | FileCheck %s
 ; CHECK: enableSWP() is false
 ; ModuleID = '2901-1.ll'
 source_filename = "2901-1.c"
@@ -67,4 +67,4 @@ attributes #1 = { nofree nounwind "correctly-rounded-divide-sqrt-fp-math"="false
 !22 = distinct !{!22, !10, !23, !24, !25}
 !23 = !DILocation(line: 8, column: 2, scope: !7)
 !24 = !{!"llvm.loop.unroll.disable"}
-!25 = !{!"llvm.loop.swp.disable"}
+!25 = !{!"llvm.loop.pipeline.disable"}
