@@ -43,71 +43,64 @@ using namespace swpl;
 static cl::opt<bool> DebugSwplRegAlloc("swpl-debug-reg-alloc",cl::init(false), cl::ReallyHidden);
 
 /**
- * @brief  物理レジスタ割り付け対象外の仮想レジスタか否かを判定する
+ * @brief  物理レジスタ割り付け対象外の仮想レジスタ一覧を作成する
  * @param  [in]     mi llvm::MachineInstr
  * @param  [in]     mo llvm::MachineOperand
  * @param  [in,out] ex_vreg 割り付け対象外仮想レジスタ
  * @param  [in]     reg getReg()で取得したレジスタ番号
- * @retval true  物理レジスタ割り当て対象から除外する
- * @retval false 物理レジスタ割り当て対象から除外しない
  * @note   制約のある命令は、仮対処として、物理レジスタ割り付け対象外とする。
  */
-static bool excludeRegalloc(MachineInstr *mi, MachineOperand *mo,
-                            vector<unsigned> *ex_vreg, unsigned reg) {
-  bool ret = false;
-
+static void createExcludeVReg(MachineInstr *mi, MachineOperand *mo,
+                              vector<unsigned> *ex_vreg, unsigned reg) {
   if (!Register::isVirtualRegister(reg)) {
     // 仮想レジスタでない
-    return ret;
+    return;
   }
 
   vector<unsigned>::iterator itr_exvreg =
     std::find(ex_vreg->begin(), ex_vreg->end(), reg);
   if (itr_exvreg != ex_vreg->end()) {
-    // 除外リストに含まれている
-    ret = true;
+    // 除外リストに追加済み
+    return;
+  }
+
+  if (mo->getSubReg() != 0) {
+    // sub-registerを持つレジスタなら除外リストに追加
+    if( DebugSwplRegAlloc ) {
+      dbgs() << "Excluded subreg.   MachineOperand: ";
+      mo->print(dbgs());
+      dbgs() << "\n";
+    }
+    ex_vreg->push_back(reg);
+  } else if (mo->isTied()) {
+    // tied-defなら除外リストに追加
+    if( DebugSwplRegAlloc ) {
+      dbgs() << "Excluded tied-def.   MachineOperand: ";
+      mo->print(dbgs());
+      dbgs() << "\n";
+    }
+    ex_vreg->push_back(reg);
   } else {
-    if (mo->getSubReg() != 0) {
-      // sub-registerを持つレジスタなら除外リストに追加
+    // 対象のオペランドなら除外リストに追加
+    switch (mi->getOpcode()) {
+    case TargetOpcode::EXTRACT_SUBREG:
+    case TargetOpcode::INSERT_SUBREG:
+    case TargetOpcode::REG_SEQUENCE:
+    case TargetOpcode::SUBREG_TO_REG:
       if( DebugSwplRegAlloc ) {
-        dbgs() << "Excluded subreg.   MachineOperand: ";
+        dbgs() << "Excluded operand: " << mi->getOpcode()
+                << ", MachineOperand: ";
         mo->print(dbgs());
         dbgs() << "\n";
       }
       ex_vreg->push_back(reg);
-      ret = true;
-    } else if (mo->isTied()) {
-      // tied-defなら除外リストに追加
-      if( DebugSwplRegAlloc ) {
-        dbgs() << "Excluded tied-def.   MachineOperand: ";
-        mo->print(dbgs());
-        dbgs() << "\n";
-      }
-      ex_vreg->push_back(reg);
-      ret = true;
-    } else {
-      // 対象のオペランドなら除外リストに追加
-      switch (mi->getOpcode()) {
-      case TargetOpcode::EXTRACT_SUBREG:
-      case TargetOpcode::INSERT_SUBREG:
-      case TargetOpcode::REG_SEQUENCE:
-      case TargetOpcode::SUBREG_TO_REG:
-        if( DebugSwplRegAlloc ) {
-          dbgs() << "Excluded operand: " << mi->getOpcode()
-                 << ", MachineOperand: ";
-          mo->print(dbgs());
-          dbgs() << "\n";
-        }
-        ex_vreg->push_back(reg);
-        ret = true;
-        break;
-      default:
-        break;
-      }
+      break;
+    default:
+      break;
     }
   }
 
-  return ret;
+  return;
 }
 
 /*
@@ -117,12 +110,14 @@ static bool excludeRegalloc(MachineInstr *mi, MachineOperand *mo,
  * @param  [in,out] reginfo 割り当て済みレジスタ情報
  * @param  [in]     num_mi llvm::MachineInstrの通し番号
  * @param  [in]     total_mi llvm::MachineInstrの総数
+ * @param  [in]     ex_vreg 割り付け対象外仮想レジスタ
  * @retval 0 正常終了
  * @retval 0以外 異常終了
  */
 static int createLiveRange(MachineOperand *mo, unsigned reg,
                            SwplRegAllocInfoTbl &rai_tbl,
-                           int num_mi, int total_mi) {
+                           int num_mi, int total_mi,
+                           vector<unsigned> *ex_vreg) {
   int ret = 0;
 
   /*
@@ -147,38 +142,44 @@ static int createLiveRange(MachineOperand *mo, unsigned reg,
   } else if (Register::isVirtualRegister(reg)) {
     // 仮想レジスタである
 
-    // 割り当て済みレジスタ情報を当該仮想レジスタで検索
-    auto rai = rai_tbl.getWithVReg( reg );
+    vector<unsigned>::iterator itr_exvreg =
+      std::find(ex_vreg->begin(), ex_vreg->end(), reg);
+    // 除外リストに含まれていない限り、処理続行
+    if (itr_exvreg == ex_vreg->end()) {
 
-    // TODO: 以下、同じような処理が続くため、関数化した方が良い
-    // 当該オペランドが"定義"か
-    if (mo->isDef()) {
-      if (rai != nullptr) {
-        // 同じ仮想レジスタの定義は、複数存在しないことが前提
-        // 現在 assertとしているが、想定外としてエラーとすべきか。
-        assert( rai->num_def == -1 );
-        
-        // 当該仮想レジスタは登録済みなのでMI通し番号を更新
-        rai->updateNumDef( num_mi );
-        rai->addMo(mo);
-      } else {
-        // 当該仮想レジスタは登録されていないため新規登録
-        rai_tbl.addRegAllocInfo( reg, num_mi, -1, mo );
-      }
-    }
-    // 当該オペランドが"参照"か
-    if (mo->isUse()) {
-      if (rai != nullptr) {
-        if( rai->num_def == -1 ||
-            rai->num_use == -1 ||
-            rai->num_use > rai->num_def ) {
+      // 割り当て済みレジスタ情報を当該仮想レジスタで検索
+      auto rai = rai_tbl.getWithVReg( reg );
+
+      // TODO: 以下、同じような処理が続くため、関数化した方が良い
+      // 当該オペランドが"定義"か
+      if (mo->isDef()) {
+        if (rai != nullptr) {
+          // 同じ仮想レジスタの定義は、複数存在しないことが前提
+          // 現在 assertとしているが、想定外としてエラーとすべきか。
+          assert( rai->num_def == -1 );
+
           // 当該仮想レジスタは登録済みなのでMI通し番号を更新
-          rai->updateNumUse( num_mi );
+          rai->updateNumDef( num_mi );
+          rai->addMo(mo);
+        } else {
+          // 当該仮想レジスタは登録されていないため新規登録
+          rai_tbl.addRegAllocInfo( reg, num_mi, -1, mo );
         }
-        rai->addMo(mo);
-      } else {
-        // 当該仮想レジスタは登録されていないため新規登録
-        rai_tbl.addRegAllocInfo( reg, -1, num_mi, mo );
+      }
+      // 当該オペランドが"参照"か
+      if (mo->isUse()) {
+        if (rai != nullptr) {
+          if( rai->num_def == -1 ||
+              rai->num_use == -1 ||
+              rai->num_use > rai->num_def ) {
+            // 当該仮想レジスタは登録済みなのでMI通し番号を更新
+            rai->updateNumUse( num_mi );
+          }
+          rai->addMo(mo);
+        } else {
+          // 当該仮想レジスタは登録されていないため新規登録
+          rai_tbl.addRegAllocInfo( reg, -1, num_mi, mo );
+        }
       }
     }
   }  else {
@@ -326,62 +327,6 @@ static void dumpKernelInstrs(const MachineFunction &MF,
 }
 
 /**
- * @brief  割り当て対象外の仮想レジスタリスト もしくは 生存区間リストを作成する
- * @param  [in]     mi llvm::MachineInstr
- * @param  [in,out] ex_vreg 割り付け対象外仮想レジスタ
- * @param  [in]     call_createLiveRange createLiveRange()を呼ぶフラグ
- * @param  [in,out] tmi 命令列変換情報
- * @param  [in]     num_mi llvm::MachineInstrの通し番号
- * @param  [in]     total_mi llvm::MachineInstrの総数
- * @retval 0 正常終了
- * @retval 0以外 異常終了
- */
-static int createLiveRangeWithValidVreg(
-                                MachineInstr *mi,
-                                vector<unsigned> *ex_vreg,
-                                bool call_createLiveRange,
-                                SwplTransformedMIRInfo *tmi,
-                                unsigned num_mi,
-                                unsigned total_mi) {
-  assert(mi);
-
-  // MIのオペランド数でループ
-  for (unsigned i = 0; i < mi->getNumOperands(); ++i) {
-    MachineOperand &mo = mi->getOperand(i);
-
-    // レジスタオペランドなら以降の処理継続
-    if (!mo.isReg())
-      continue;
-
-      // レジスタ番号を取得する
-    unsigned reg = mo.getReg();
-
-    // レジスタ番号 0 は予約域
-    // いかなる種類のレジスタも表しておらず、そこから情報を取得することはできない。
-    if (reg == 0)
-      continue;
-
-    // TODO: 割り付け対象としないレジスタは無視(仮対処)
-    if (excludeRegalloc(mi, &mo, ex_vreg, reg))
-      continue;
-
-    // 必要なければ生存区間リストは作成しない
-    if (!call_createLiveRange)
-      continue;
-
-    // 各仮想レジスタの生存区間リストを作成する
-    assert((tmi != nullptr) && (num_mi > 0) && (total_mi > 0));
-    if (createLiveRange(&mo, reg, *(tmi->swplRAITbl), num_mi, total_mi) != 0) {
-      dbgs() << "\n  createLiveRange() failed\n";
-      // TODO: 失敗時の動作
-      return -1;
-    }
-  }
-
-  return 0;
-}
-
-/**
  * @brief  SWPLpass内における仮想レジスタへの物理レジスタ割り付け
  * @param  [in,out] tmi 命令列変換情報
  * @param  [in]     MF  MachineFunction
@@ -404,8 +349,19 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
       firstMI = mi;
     ++total_mi;
 
-    // 割り付け対象外リストを作成する
-    createLiveRangeWithValidVreg(mi, &exclude_vreg, false, nullptr, 0, 0);
+    // MIのオペランド数でループ
+    for (unsigned j = 0; j < mi->getNumOperands(); ++j) {
+      MachineOperand &mo = mi->getOperand(j);
+
+      // レジスタオペランドなら以降の処理継続
+      // レジスタ番号 0 はいかなる種類のレジスタも表していない
+      unsigned reg = 0;
+      if ((!mo.isReg()) || ((reg = mo.getReg()) == 0))
+        continue;
+
+      // TODO: 割り付け対象としないレジスタ一覧を作る(仮対処)
+      createExcludeVReg(mi, &mo, &exclude_vreg, reg);
+    }
   }
 
   if( DebugSwplRegAlloc  ) {
@@ -423,10 +379,22 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
     if (lastMI==nullptr && num_mi==total_mi)
       lastMI = tmi->mis[num_mi];
 
-    // 生存区間リストを作成する
-    if (createLiveRangeWithValidVreg(mi, &exclude_vreg, true,
-                                     tmi, num_mi, total_mi) != 0) {
-      return;
+    // MIのオペランド数でループ
+    for (unsigned j = 0; j < mi->getNumOperands(); ++j) {
+      MachineOperand &mo = mi->getOperand(j);
+
+      // レジスタオペランドなら以降の処理継続
+      // レジスタ番号 0 はいかなる種類のレジスタも表していない
+      unsigned reg = 0;
+      if ((!mo.isReg()) || ((reg = mo.getReg()) == 0))
+        continue;
+
+      // 各仮想レジスタの生存区間リストを作成する
+      if (createLiveRange(&mo, reg, *(tmi->swplRAITbl),
+                          num_mi, total_mi, &exclude_vreg) != 0) {
+        dbgs() << "\n  createLiveRange() failed\n";
+        return;
+      }
     }
   }
 
