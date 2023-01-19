@@ -67,8 +67,17 @@ static bool excludeRegalloc(MachineInstr *mi, MachineOperand *mo,
     // 除外リストに含まれている
     ret = true;
   } else {
-    // tied-defなら除外リストに追加
-    if (mo->isTied()) {
+    if (mo->getSubReg() != 0) {
+      // sub-registerを持つレジスタなら除外リストに追加
+      if( DebugSwplRegAlloc ) {
+        dbgs() << "Excluded subreg.   MachineOperand: ";
+        mo->print(dbgs());
+        dbgs() << "\n";
+      }
+      ex_vreg->push_back(reg);
+      ret = true;
+    } else if (mo->isTied()) {
+      // tied-defなら除外リストに追加
       if( DebugSwplRegAlloc ) {
         dbgs() << "Excluded tied-def.   MachineOperand: ";
         mo->print(dbgs());
@@ -275,7 +284,8 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl, unsigned tota
 static void callSetReg(SwplRegAllocInfoTbl &rai_tbl) {
   for (size_t i = 0; i < rai_tbl.length(); i++) {
     RegAllocInfo *rinfo = rai_tbl.getWithIdx(i);
-    if (rinfo->preg == 0)
+    // 仮想レジスタと物理レジスタが有効な値でない限り何もしない
+    if ((rinfo->vreg == 0) || (rinfo->preg == 0))
       continue;
     // 当該物理レジスタを使用するMachineOperandすべてにsetReg()する
     for (vector<MachineOperand*>::iterator itr_mo = rinfo->vreg_mo.begin(),
@@ -316,18 +326,75 @@ static void dumpKernelInstrs(const MachineFunction &MF,
 }
 
 /**
+ * @brief  割り当て対象外の仮想レジスタリスト もしくは 生存区間リストを作成する
+ * @param  [in]     mi llvm::MachineInstr
+ * @param  [in,out] ex_vreg 割り付け対象外仮想レジスタ
+ * @param  [in]     call_createLiveRange createLiveRange()を呼ぶフラグ
+ * @param  [in,out] tmi 命令列変換情報
+ * @param  [in]     num_mi llvm::MachineInstrの通し番号
+ * @param  [in]     total_mi llvm::MachineInstrの総数
+ * @retval 0 正常終了
+ * @retval 0以外 異常終了
+ */
+static int createLiveRangeWithValidVreg(
+                                MachineInstr *mi,
+                                vector<unsigned> *ex_vreg,
+                                bool call_createLiveRange,
+                                SwplTransformedMIRInfo *tmi,
+                                unsigned num_mi,
+                                unsigned total_mi) {
+  assert(mi);
+
+  // MIのオペランド数でループ
+  for (unsigned i = 0; i < mi->getNumOperands(); ++i) {
+    MachineOperand &mo = mi->getOperand(i);
+
+    // レジスタオペランドなら以降の処理継続
+    if (!mo.isReg())
+      continue;
+
+      // レジスタ番号を取得する
+    unsigned reg = mo.getReg();
+
+    // レジスタ番号 0 は予約域
+    // いかなる種類のレジスタも表しておらず、そこから情報を取得することはできない。
+    if (reg == 0)
+      continue;
+
+    // TODO: 割り付け対象としないレジスタは無視(仮対処)
+    if (excludeRegalloc(mi, &mo, ex_vreg, reg))
+      continue;
+
+    // 必要なければ生存区間リストは作成しない
+    if (!call_createLiveRange)
+      continue;
+
+    // 各仮想レジスタの生存区間リストを作成する
+    assert((tmi != nullptr) && (num_mi > 0) && (total_mi > 0));
+    if (createLiveRange(&mo, reg, *(tmi->swplRAITbl), num_mi, total_mi) != 0) {
+      dbgs() << "\n  createLiveRange() failed\n";
+      // TODO: 失敗時の動作
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
+/**
  * @brief  SWPLpass内における仮想レジスタへの物理レジスタ割り付け
- * @param  [in,out] reginfo 割り当て済みレジスタ情報
- * @param  [in]     MF      MachineFunction 
+ * @param  [in,out] tmi 命令列変換情報
+ * @param  [in]     MF  MachineFunction
  * @note   カーネルループのみが対象。spillが発生する場合は再スケジュール。
  */
 void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
                                         const MachineFunction &MF) const {
   const MachineInstr *firstMI = nullptr;
   const MachineInstr *lastMI  = nullptr;
+  vector<unsigned> exclude_vreg;
 
   /// kernel部のMachineInstrを対象とする
-  /// まず初めに有効な総MI数を数える
+  /// まず初めに有効な総MI数を数えつつ、割り付け対象としないレジスタのリストを作成する
   unsigned total_mi = 0;
   for (size_t i = tmi->prologEndIndx; i < tmi->kernelEndIndx; ++i) {
     MachineInstr *mi = tmi->mis[i];
@@ -336,13 +403,15 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
     if (firstMI == nullptr)
       firstMI = mi;
     ++total_mi;
+
+    // 割り付け対象外リストを作成する
+    createLiveRangeWithValidVreg(mi, &exclude_vreg, false, nullptr, 0, 0);
   }
 
   if( DebugSwplRegAlloc  ) {
     dumpKernelInstrs(MF, tmi->prologEndIndx, tmi->kernelEndIndx, tmi->mis);
   }
 
-  vector<unsigned> exclude_vreg;
   tmi->swplRAITbl = new SwplRegAllocInfoTbl(total_mi);
 
   unsigned num_mi = 0;
@@ -354,32 +423,10 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
     if (lastMI==nullptr && num_mi==total_mi)
       lastMI = tmi->mis[num_mi];
 
-    // MIのオペランド数でループ
-    for (unsigned j = 0; j < mi->getNumOperands(); ++j) {
-      MachineOperand &mo = mi->getOperand(j);
-
-      // レジスタオペランドなら以降の処理継続
-      if (!mo.isReg() || mo.getSubReg())
-        continue;
-
-      // レジスタ番号を取得する
-      unsigned reg = mo.getReg();
-
-      // レジスタ番号 0 は予約域
-      // いかなる種類のレジスタも表しておらず、そこから情報を取得することはできない。
-      if (reg == 0)
-        continue;
-
-      // TODO: 割り付け対象としないレジスタは無視(仮対処)
-      if (excludeRegalloc(mi, &mo, &exclude_vreg, reg))
-        continue;
-
-      // 各仮想レジスタの生存区間リストを作成する
-      if (createLiveRange(&mo, reg, *(tmi->swplRAITbl), num_mi, total_mi) != 0) {
-        dbgs() << "\n  createLiveRange() failed\n";
-        // TODO: 失敗時の動作
-        return;
-      }
+    // 生存区間リストを作成する
+    if (createLiveRangeWithValidVreg(mi, &exclude_vreg, true,
+                                     tmi, num_mi, total_mi) != 0) {
+      return;
     }
   }
 
@@ -625,7 +672,7 @@ void SwplRegAllocInfoTbl::dump() {
       // 仮想レジスタのMachineOperand
       MachineOperand *m = ri_p->vreg_mo[l];
       // レジスタオペランドなら出力内容を分かり易くする
-      if (m->isReg() && !m->getSubReg()) {
+      if (m->isReg()) {
         dbgs() << printReg(m->getReg(), SWPipeliner::TRI);
       } else {
         m->print(dbgs());
