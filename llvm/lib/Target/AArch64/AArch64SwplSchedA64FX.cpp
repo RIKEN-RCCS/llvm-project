@@ -458,7 +458,7 @@ static StmPipeline RES_SIMDFP_SVE_ST_002_06 = {
 static StmPipeline RES_SIMDFP_SVE_ST_003_01 = {
   {0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 9, 9, 10, 10, 11, 11},
   {P_::EXA, P_::LSU1, P_::LSU2, P_::EXA, P_::EXA, P_::EXA, P_::FLA, P_::FLA,
-    P_::FLA, P_::EAGA, P_::EAGB, P_::EAGA, P_::EAGB, P_::EAGA, P_::EAGB,
+    P_::FLA, P_::FLA, P_::EAGA, P_::EAGB, P_::EAGA, P_::EAGB, P_::EAGA, P_::EAGB,
     P_::EAGA, P_::EAGB}};
 
 static StmPipeline RES_SIMDFP_SVE_ST_004_01 = {
