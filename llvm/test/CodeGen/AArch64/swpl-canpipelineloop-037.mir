@@ -1,4 +1,4 @@
-#RUN: llc %s -ffj-swp -swpl-debug -march=aarch64 -mcpu=a64fx -start-after=aarch64-dead-defs -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -fswp -swpl-debug -march=aarch64 -mcpu=a64fx -start-after=aarch64-dead-defs -o /dev/null 2>&1 | FileCheck %s
 #CHECK:not found (BCC || SUBSXri)
 --- |
   ; ModuleID = './test.base.ll'

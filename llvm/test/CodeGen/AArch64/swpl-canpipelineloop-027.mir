@@ -1,4 +1,4 @@
-# RUN: llc %s  -ffj-swp   -march=aarch64 -mcpu=a64fx -start-after=aarch64-dead-defs  -o /dev/null  -swpl-debug  2>&1 | FileCheck %s
+# RUN: llc %s  -fswp   -march=aarch64 -mcpu=a64fx -start-after=aarch64-dead-defs  -o /dev/null  -swpl-debug  2>&1 | FileCheck %s
 # CHECK:not found (BCC || SUBSXri)
 
 --- |

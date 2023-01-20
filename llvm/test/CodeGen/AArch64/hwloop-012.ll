@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=a64fx -O1 -ffj-swp  -debug-hardwareloops --pass-remarks-filter=hardware-loops --pass-remarks-output=-  -debug-aarch64tti -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -mcpu=a64fx -O1 -fswp --pass-remarks-filter=hardware-loops --pass-remarks-output=-  -debug-aarch64tti -o /dev/null 2>&1 | FileCheck %s
 ; CHECK: (reason=CALL or ASM exists)
 
 ; ModuleID = '2901-2-12.c'

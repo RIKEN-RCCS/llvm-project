@@ -1,4 +1,4 @@
-; RUN: llc < %s -O1 -mcpu=a64fx  -ffj-swp  -swpl-max-mem-num=10  -swpl-debug  --pass-remarks-filter=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner  --pass-remarks-output=-  -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -O1 -mcpu=a64fx  -fswp  -swpl-max-mem-num=10  -swpl-debug  --pass-remarks-filter=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner  --pass-remarks-output=-  -o /dev/null 2>&1 | FileCheck %s
 ;CHECK:over mem limit num
 ;CHECK:canPipelineLoop:NG
 ;CHECK:This loop is not software pipelined because the loop contains too many instructions accessing memory.

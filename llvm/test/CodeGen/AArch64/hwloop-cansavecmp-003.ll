@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=a64fx -O1  -ffj-swp  -enable-savecmp  -debug-aarch64tti  -debug-hardwareloops  -o - 2>&1 | FileCheck %s
+; RUN: llc < %s -mcpu=a64fx -O1  -fswp  -enable-savecmp  -debug-aarch64tti -o - 2>&1 | FileCheck %s
 ; CHECK: return true
 ; ModuleID = '2901-3-03.c'
 source_filename = "2901-3-03.c"

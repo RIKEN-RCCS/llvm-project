@@ -1,4 +1,4 @@
-# RUN: llc -mcpu=a64fx -O1 -ffj-swp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
+# RUN: llc -mcpu=a64fx -O1 -fswp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
 # CHECK: DBG(SwplLoop::removeCopy)
 # CHECK-NEXT:  target mi: %101:gpr64all = COPY %100:gpr64sp
 # CHECK-NEXT:  before: %95:gpr64sp = PHI %9:gpr64all, %bb.4, %101:gpr64all, %bb.7
