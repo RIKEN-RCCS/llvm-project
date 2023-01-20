@@ -106,13 +106,15 @@ static void createExcludeVReg(MachineInstr *mi, MachineOperand &mo,
  * @param  [in]     num_mi llvm::MachineInstrの通し番号
  * @param  [in]     total_mi llvm::MachineInstrの総数
  * @param  [in]     ex_vreg 割り付け対象外仮想レジスタ
+ * @param  [in]     doVReg renaming後の制御変数
  * @retval 0 正常終了
  * @retval 0以外 異常終了
  */
 static int createLiveRange(MachineOperand &mo, unsigned reg,
                            SwplRegAllocInfoTbl &rai_tbl,
                            int num_mi, int total_mi,
-                           unordered_set<unsigned> &ex_vreg) {
+                           unordered_set<unsigned> &ex_vreg,
+                           Register doVReg) {
   int ret = 0;
 
   /*
@@ -152,7 +154,13 @@ static int createLiveRange(MachineOperand &mo, unsigned reg,
           assert( rai->num_def == -1 );
 
           // 当該仮想レジスタは登録済みなのでMI通し番号を更新
-          rai->updateNumDef( num_mi );
+          if (reg == doVReg) {
+            // doVRegに該当する場合、当該仮想レジスタに割り当てる物理レジスタは
+            // 再利用されて欲しくないため、liverangeをMAX値で更新
+            rai->updateNumDefNoReuse(num_mi, total_mi);
+          } else {
+            rai->updateNumDef( num_mi );
+          }
           rai->addMo(&mo);
         } else {
           // 当該仮想レジスタは登録されていないため新規登録
@@ -166,7 +174,13 @@ static int createLiveRange(MachineOperand &mo, unsigned reg,
               rai->num_use == -1 ||
               rai->num_use > rai->num_def ) {
             // 当該仮想レジスタは登録済みなのでMI通し番号を更新
-            rai->updateNumUse( num_mi );
+            if (reg == doVReg) {
+              // doVRegに該当する場合、当該仮想レジスタに割り当てる物理レジスタは
+              // 再利用されて欲しくないため、liverangeをMAX値で更新
+              rai->updateNumUseNoReuse(num_mi, total_mi);
+            } else {
+              rai->updateNumUse( num_mi );
+            }
           }
           rai->addMo(&mo);
         } else {
@@ -379,8 +393,8 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
         continue;
 
       // 各仮想レジスタの生存区間リストを作成する
-      if (createLiveRange(mo, reg, *(tmi->swplRAITbl),
-                          num_mi, total_mi, exclude_vreg) != 0) {
+      if (createLiveRange(mo, reg, *(tmi->swplRAITbl), num_mi,
+                          total_mi, exclude_vreg, tmi->doVReg) != 0) {
         dbgs() << "\n  createLiveRange() failed\n";
         return;
       }
@@ -409,6 +423,24 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
   }
 
   return;
+}
+
+/**
+ * @brief  定義点と参照点から生存区間を求める(再利用禁止版)
+ * @details 仮想レジスタごとの生存区間を返す。
+ *          定義 < 参照の場合、当該仮想レジスタに割り当たる物理レジスタの
+ *          再利用を禁止するため、参照点を最大値(total_mi)にする。
+ * @param  [in] total_mi カーネル部の総MI数
+ * @retval -1より大きい値 計算した生存区間
+ * @retval -1            計算不能
+ */
+int RegAllocInfo::calcLiveRangeNoReuse(int total_mi) {
+  if ((num_def != -1) && (num_use != -1) && (num_def < num_use)) {
+    // 定義の時点で参照がある or 参照の時点で定義がある and
+    // 定義の後に参照があるケースでは、再利用させないための値を設定する
+    num_use = total_mi;
+  }
+  return calcLiveRange();
 }
 
 /**
