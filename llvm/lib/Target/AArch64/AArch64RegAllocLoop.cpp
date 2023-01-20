@@ -33,6 +33,7 @@ namespace swpl {
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include <unordered_set>
 
 using namespace std;
 using namespace llvm;
@@ -50,36 +51,30 @@ static cl::opt<bool> DebugSwplRegAlloc("swpl-debug-reg-alloc",cl::init(false), c
  * @param  [in]     reg getReg()で取得したレジスタ番号
  * @note   制約のある命令は、仮対処として、物理レジスタ割り付け対象外とする。
  */
-static void createExcludeVReg(MachineInstr *mi, MachineOperand *mo,
-                              vector<unsigned> *ex_vreg, unsigned reg) {
+static void createExcludeVReg(MachineInstr *mi, MachineOperand &mo,
+                              unordered_set<unsigned> &ex_vreg, unsigned reg) {
   if (!Register::isVirtualRegister(reg)) {
     // 仮想レジスタでない
     return;
   }
 
-  vector<unsigned>::iterator itr_exvreg =
-    std::find(ex_vreg->begin(), ex_vreg->end(), reg);
-  if (itr_exvreg != ex_vreg->end()) {
-    // 除外リストに追加済み
-    return;
-  }
-
-  if (mo->getSubReg() != 0) {
+  assert(mi);
+  if (mo.getSubReg() != 0) {
     // sub-registerを持つレジスタなら除外リストに追加
     if( DebugSwplRegAlloc ) {
       dbgs() << "Excluded subreg.   MachineOperand: ";
-      mo->print(dbgs());
+      mo.print(dbgs());
       dbgs() << "\n";
     }
-    ex_vreg->push_back(reg);
-  } else if (mo->isTied()) {
+    ex_vreg.insert(reg);
+  } else if (mo.isTied()) {
     // tied-defなら除外リストに追加
     if( DebugSwplRegAlloc ) {
       dbgs() << "Excluded tied-def.   MachineOperand: ";
-      mo->print(dbgs());
+      mo.print(dbgs());
       dbgs() << "\n";
     }
-    ex_vreg->push_back(reg);
+    ex_vreg.insert(reg);
   } else {
     // 対象のオペランドなら除外リストに追加
     switch (mi->getOpcode()) {
@@ -90,10 +85,10 @@ static void createExcludeVReg(MachineInstr *mi, MachineOperand *mo,
       if( DebugSwplRegAlloc ) {
         dbgs() << "Excluded operand: " << mi->getOpcode()
                 << ", MachineOperand: ";
-        mo->print(dbgs());
+        mo.print(dbgs());
         dbgs() << "\n";
       }
-      ex_vreg->push_back(reg);
+      ex_vreg.insert(reg);
       break;
     default:
       break;
@@ -103,7 +98,7 @@ static void createExcludeVReg(MachineInstr *mi, MachineOperand *mo,
   return;
 }
 
-/*
+/**
  * @brief  仮想レジスタごとに生存区間リストを作成する
  * @param  [in]     mo llvm::MachineOperand
  * @param  [in]     reg getReg()で取得したレジスタ番号
@@ -114,10 +109,10 @@ static void createExcludeVReg(MachineInstr *mi, MachineOperand *mo,
  * @retval 0 正常終了
  * @retval 0以外 異常終了
  */
-static int createLiveRange(MachineOperand *mo, unsigned reg,
+static int createLiveRange(MachineOperand &mo, unsigned reg,
                            SwplRegAllocInfoTbl &rai_tbl,
                            int num_mi, int total_mi,
-                           vector<unsigned> *ex_vreg) {
+                           unordered_set<unsigned> &ex_vreg) {
   int ret = 0;
 
   /*
@@ -137,22 +132,20 @@ static int createLiveRange(MachineOperand *mo, unsigned reg,
     if( !(rai_tbl.isUsePReg(reg)) ) {
       // 物理レジスタ割り付け前に登場する物理レジスタは使用することができない。
       // 無効な情報として、レジスタ情報になければ新規登録するのみ。
-      rai_tbl.addRegAllocInfo(0, 1, total_mi, mo, reg);
+      rai_tbl.addRegAllocInfo(0, 1, total_mi, &mo, reg);
     }
   } else if (Register::isVirtualRegister(reg)) {
     // 仮想レジスタである
 
-    vector<unsigned>::iterator itr_exvreg =
-      std::find(ex_vreg->begin(), ex_vreg->end(), reg);
     // 除外リストに含まれていない限り、処理続行
-    if (itr_exvreg == ex_vreg->end()) {
+    if (ex_vreg.find(reg) == ex_vreg.end()) {
 
       // 割り当て済みレジスタ情報を当該仮想レジスタで検索
       auto rai = rai_tbl.getWithVReg( reg );
 
       // TODO: 以下、同じような処理が続くため、関数化した方が良い
       // 当該オペランドが"定義"か
-      if (mo->isDef()) {
+      if (mo.isDef()) {
         if (rai != nullptr) {
           // 同じ仮想レジスタの定義は、複数存在しないことが前提
           // 現在 assertとしているが、想定外としてエラーとすべきか。
@@ -160,14 +153,14 @@ static int createLiveRange(MachineOperand *mo, unsigned reg,
 
           // 当該仮想レジスタは登録済みなのでMI通し番号を更新
           rai->updateNumDef( num_mi );
-          rai->addMo(mo);
+          rai->addMo(&mo);
         } else {
           // 当該仮想レジスタは登録されていないため新規登録
-          rai_tbl.addRegAllocInfo( reg, num_mi, -1, mo );
+          rai_tbl.addRegAllocInfo( reg, num_mi, -1, &mo );
         }
       }
       // 当該オペランドが"参照"か
-      if (mo->isUse()) {
+      if (mo.isUse()) {
         if (rai != nullptr) {
           if( rai->num_def == -1 ||
               rai->num_use == -1 ||
@@ -175,10 +168,10 @@ static int createLiveRange(MachineOperand *mo, unsigned reg,
             // 当該仮想レジスタは登録済みなのでMI通し番号を更新
             rai->updateNumUse( num_mi );
           }
-          rai->addMo(mo);
+          rai->addMo(&mo);
         } else {
           // 当該仮想レジスタは登録されていないため新規登録
-          rai_tbl.addRegAllocInfo( reg, -1, num_mi, mo );
+          rai_tbl.addRegAllocInfo( reg, -1, num_mi, &mo );
         }
       }
     }
@@ -336,7 +329,7 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
                                         const MachineFunction &MF) const {
   const MachineInstr *firstMI = nullptr;
   const MachineInstr *lastMI  = nullptr;
-  vector<unsigned> exclude_vreg;
+  unordered_set<unsigned> exclude_vreg;
 
   /// kernel部のMachineInstrを対象とする
   /// まず初めに有効な総MI数を数えつつ、割り付け対象としないレジスタのリストを作成する
@@ -350,9 +343,7 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
     ++total_mi;
 
     // MIのオペランド数でループ
-    for (unsigned j = 0; j < mi->getNumOperands(); ++j) {
-      MachineOperand &mo = mi->getOperand(j);
-
+    for (MachineOperand& mo:mi->operands()) {
       // レジスタオペランドなら以降の処理継続
       // レジスタ番号 0 はいかなる種類のレジスタも表していない
       unsigned reg = 0;
@@ -360,7 +351,7 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
         continue;
 
       // TODO: 割り付け対象としないレジスタ一覧を作る(仮対処)
-      createExcludeVReg(mi, &mo, &exclude_vreg, reg);
+      createExcludeVReg(mi, mo, exclude_vreg, reg);
     }
   }
 
@@ -380,9 +371,7 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
       lastMI = tmi->mis[num_mi];
 
     // MIのオペランド数でループ
-    for (unsigned j = 0; j < mi->getNumOperands(); ++j) {
-      MachineOperand &mo = mi->getOperand(j);
-
+    for (MachineOperand& mo:mi->operands()) {
       // レジスタオペランドなら以降の処理継続
       // レジスタ番号 0 はいかなる種類のレジスタも表していない
       unsigned reg = 0;
@@ -390,8 +379,8 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
         continue;
 
       // 各仮想レジスタの生存区間リストを作成する
-      if (createLiveRange(&mo, reg, *(tmi->swplRAITbl),
-                          num_mi, total_mi, &exclude_vreg) != 0) {
+      if (createLiveRange(mo, reg, *(tmi->swplRAITbl),
+                          num_mi, total_mi, exclude_vreg) != 0) {
         dbgs() << "\n  createLiveRange() failed\n";
         return;
       }
