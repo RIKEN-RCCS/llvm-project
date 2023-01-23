@@ -705,10 +705,10 @@ SwplRegAllocInfoTbl::SwplRegAllocInfoTbl(unsigned num_of_mi) {
   regconstrain[AArch64::W25] = { AArch64::X25 };
   regconstrain[AArch64::W26] = { AArch64::X26 };
   regconstrain[AArch64::W27] = { AArch64::X27 };
-  regconstrain[AArch64::W28] = { AArch64::FP  };
-  regconstrain[AArch64::W29] = { AArch64::LR  };
-  regconstrain[AArch64::W30] = { AArch64::SP  };
-  regconstrain[AArch64::WSP] = { AArch64::XZR };
+  regconstrain[AArch64::W28] = { AArch64::X28 };
+  regconstrain[AArch64::W29] = { AArch64::FP  };
+  regconstrain[AArch64::W30] = { AArch64::LR  };
+  regconstrain[AArch64::WSP] = { AArch64::SP };
   regconstrain[AArch64::WZR] = { AArch64::XZR };
   
   regconstrain[AArch64::X0]  = { AArch64::W0 };
