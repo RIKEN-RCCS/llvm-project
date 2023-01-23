@@ -40,6 +40,7 @@ using namespace llvm;
 using namespace swpl;
 
 #define DEBUG_TYPE "aarch64-swpipeliner"
+#define UNAVAILABLE_REGS 7
 
 static cl::opt<bool> DebugSwplRegAlloc("swpl-debug-reg-alloc",cl::init(false), cl::ReallyHidden);
 
@@ -208,10 +209,13 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl, unsigned tota
   int ret = 0;
 
   // 使ってはいけない物理レジスタのリスト
-  std::array<unsigned, 4> nousePhysRegs {
-    (unsigned)AArch64::SP,
-    (unsigned)AArch64::FP,
-    (unsigned)AArch64::LR
+  std::array<unsigned, UNAVAILABLE_REGS> nousePhysRegs {
+    (unsigned)AArch64::SP,   // ゼロレジスタ(XZR)に等しい
+    (unsigned)AArch64::FP,   // X29
+    (unsigned)AArch64::LR,   // X30
+    (unsigned)AArch64::WSP,  // ゼロレジスタ(WZR)に等しい
+    (unsigned)AArch64::W29,  // FP(X29)相当
+    (unsigned)AArch64::W30   // LR(X30)相当
   };
 
   // 割り当て済みレジスタ情報でループ
@@ -243,7 +247,7 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl, unsigned tota
         unsigned preg = *itr_trc;
 
         // 使ってはいけない物理レジスタは割付けない
-        std::array<unsigned, 4>::iterator itr_nousePreg;
+        std::array<unsigned, UNAVAILABLE_REGS>::iterator itr_nousePreg;
         itr_nousePreg = std::find(nousePhysRegs.begin(), nousePhysRegs.end(), preg);        
         if (itr_nousePreg != nousePhysRegs.end()) continue;
 
@@ -706,9 +710,8 @@ SwplRegAllocInfoTbl::SwplRegAllocInfoTbl(unsigned num_of_mi) {
   regconstrain[AArch64::W26] = { AArch64::X26 };
   regconstrain[AArch64::W27] = { AArch64::X27 };
   regconstrain[AArch64::W28] = { AArch64::X28 };
-  regconstrain[AArch64::W29] = { AArch64::FP  };
-  regconstrain[AArch64::W30] = { AArch64::LR  };
-  regconstrain[AArch64::WSP] = { AArch64::SP };
+  // W29-W30は割り付けに使用されない
+  regconstrain[AArch64::WSP] = { AArch64::SP  };
   regconstrain[AArch64::WZR] = { AArch64::XZR };
   
   regconstrain[AArch64::X0]  = { AArch64::W0 };
