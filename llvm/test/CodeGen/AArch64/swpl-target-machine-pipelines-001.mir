@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource=".*" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %54:gpr32 = LDRWroX %49:gpr64common, %53:gpr64, 0, 0 :: (load (s32) from %ir.uglygep9, !tbaa !5)
 #CHECK-NEXT:  ResourceID: INT_LD+2
