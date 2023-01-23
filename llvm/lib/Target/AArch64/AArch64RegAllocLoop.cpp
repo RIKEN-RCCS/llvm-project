@@ -158,7 +158,7 @@ static int createLiveRange(MachineOperand &mo, unsigned reg,
           if (reg == doVReg) {
             // doVRegに該当する場合、当該仮想レジスタに割り当てる物理レジスタは
             // 再利用されて欲しくないため、liverangeをMAX値で更新
-            rai->updateNumDefNoReuse(num_mi, total_mi);
+            rai->updateNumDefNoReuse( num_mi );
           } else {
             rai->updateNumDef( num_mi );
           }
@@ -178,7 +178,7 @@ static int createLiveRange(MachineOperand &mo, unsigned reg,
             if (reg == doVReg) {
               // doVRegに該当する場合、当該仮想レジスタに割り当てる物理レジスタは
               // 再利用されて欲しくないため、liverangeをMAX値で更新
-              rai->updateNumUseNoReuse(num_mi, total_mi);
+              rai->updateNumUseNoReuse( num_mi );
             } else {
               rai->updateNumUse( num_mi );
             }
@@ -434,11 +434,10 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
  * @details 仮想レジスタごとの生存区間を返す。
  *          定義 < 参照の場合、当該仮想レジスタに割り当たる物理レジスタの
  *          再利用を禁止するため、参照点を最大値(total_mi)にする。
- * @param  [in] total_mi カーネル部の総MI数
  * @retval -1より大きい値 計算した生存区間
  * @retval -1            計算不能
  */
-int RegAllocInfo::calcLiveRangeNoReuse(int total_mi) {
+int RegAllocInfo::calcLiveRangeNoReuse() {
   if ((num_def != -1) && (num_use != -1) && (num_def < num_use)) {
     // 定義の時点で参照がある or 参照の時点で定義がある and
     // 定義の後に参照があるケースでは、再利用させないための値を設定する
