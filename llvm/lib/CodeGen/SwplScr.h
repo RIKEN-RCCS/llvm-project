@@ -216,12 +216,32 @@ public:
       return;
     };
 
+    /// 定義番号を更新する
+    /// また、更新された定義番号を使用して、LiveRangeを再計算する
+    /// 物理レジスタの再利用を禁止するため、参照点は最大値となる
+    /// \param [in] def 定義番号
+    void updateNumDefNoReuse(int def) {
+      num_def = def;
+      liverange = calcLiveRangeNoReuse();
+      return;
+    };
+
     /// 参照番号を更新する
     /// また、更新された参照番号を使用して、LiveRangeを再計算する
     /// \param [in] use 参照番号
     void updateNumUse( int use ) {
       num_use = use;
       liverange = calcLiveRange();
+      return;
+    };
+
+    /// 参照番号を更新する
+    /// また、更新された参照番号を使用して、LiveRangeを再計算する
+    /// 物理レジスタの再利用を禁止するため、参照点は最大値となる
+    /// \param [in] use 参照番号
+    void updateNumUseNoReuse(int use) {
+      num_use = use;
+      liverange = calcLiveRangeNoReuse();
       return;
     };
 
@@ -232,6 +252,15 @@ public:
     /// \retval 0以上 計算した生存区間
     /// \retval -1 計算不能
     int calcLiveRange();
+
+    /// 定義点と参照点から生存区間を求める
+    /// 仮想レジスタごとの生存区間を求める。
+    /// 定義点、参照点のどちらかが存在しない場合、計算不能として-1を返す。
+    /// 定義 < 参照の場合、物理レジスタの再利用を禁止するため、
+    /// 参照点を最大値にする。
+    /// \retval 0以上 計算した生存区間
+    /// \retval -1 計算不能
+    int calcLiveRangeNoReuse();
   };
 
   /// Swpl-RAで使用する生存区間表

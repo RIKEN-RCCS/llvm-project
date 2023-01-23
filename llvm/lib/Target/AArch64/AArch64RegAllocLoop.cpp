@@ -40,6 +40,7 @@ using namespace llvm;
 using namespace swpl;
 
 #define DEBUG_TYPE "aarch64-swpipeliner"
+#define UNAVAILABLE_REGS 7
 
 static cl::opt<bool> DebugSwplRegAlloc("swpl-debug-reg-alloc",cl::init(false), cl::ReallyHidden);
 
@@ -106,13 +107,15 @@ static void createExcludeVReg(MachineInstr *mi, MachineOperand &mo,
  * @param  [in]     num_mi llvm::MachineInstrの通し番号
  * @param  [in]     total_mi llvm::MachineInstrの総数
  * @param  [in]     ex_vreg 割り付け対象外仮想レジスタ
+ * @param  [in]     doVReg renaming後の制御変数
  * @retval 0 正常終了
  * @retval 0以外 異常終了
  */
 static int createLiveRange(MachineOperand &mo, unsigned reg,
                            SwplRegAllocInfoTbl &rai_tbl,
                            int num_mi, int total_mi,
-                           unordered_set<unsigned> &ex_vreg) {
+                           unordered_set<unsigned> &ex_vreg,
+                           Register doVReg) {
   int ret = 0;
 
   /*
@@ -152,7 +155,13 @@ static int createLiveRange(MachineOperand &mo, unsigned reg,
           assert( rai->num_def == -1 );
 
           // 当該仮想レジスタは登録済みなのでMI通し番号を更新
-          rai->updateNumDef( num_mi );
+          if (reg == doVReg) {
+            // doVRegに該当する場合、当該仮想レジスタに割り当てる物理レジスタは
+            // 再利用されて欲しくないため、liverangeをMAX値で更新
+            rai->updateNumDefNoReuse( num_mi );
+          } else {
+            rai->updateNumDef( num_mi );
+          }
           rai->addMo(&mo);
         } else {
           // 当該仮想レジスタは登録されていないため新規登録
@@ -166,7 +175,13 @@ static int createLiveRange(MachineOperand &mo, unsigned reg,
               rai->num_use == -1 ||
               rai->num_use > rai->num_def ) {
             // 当該仮想レジスタは登録済みなのでMI通し番号を更新
-            rai->updateNumUse( num_mi );
+            if (reg == doVReg) {
+              // doVRegに該当する場合、当該仮想レジスタに割り当てる物理レジスタは
+              // 再利用されて欲しくないため、liverangeをMAX値で更新
+              rai->updateNumUseNoReuse( num_mi );
+            } else {
+              rai->updateNumUse( num_mi );
+            }
           }
           rai->addMo(&mo);
         } else {
@@ -194,10 +209,13 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl, unsigned tota
   int ret = 0;
 
   // 使ってはいけない物理レジスタのリスト
-  std::array<unsigned, 4> nousePhysRegs {
-    (unsigned)AArch64::SP,
-    (unsigned)AArch64::FP,
-    (unsigned)AArch64::LR
+  std::array<unsigned, UNAVAILABLE_REGS> nousePhysRegs {
+    (unsigned)AArch64::SP,   // ゼロレジスタ(XZR)に等しい
+    (unsigned)AArch64::FP,   // X29
+    (unsigned)AArch64::LR,   // X30
+    (unsigned)AArch64::WSP,  // ゼロレジスタ(WZR)に等しい
+    (unsigned)AArch64::W29,  // FP(X29)相当
+    (unsigned)AArch64::W30   // LR(X30)相当
   };
 
   // 割り当て済みレジスタ情報でループ
@@ -229,7 +247,7 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl, unsigned tota
         unsigned preg = *itr_trc;
 
         // 使ってはいけない物理レジスタは割付けない
-        std::array<unsigned, 4>::iterator itr_nousePreg;
+        std::array<unsigned, UNAVAILABLE_REGS>::iterator itr_nousePreg;
         itr_nousePreg = std::find(nousePhysRegs.begin(), nousePhysRegs.end(), preg);        
         if (itr_nousePreg != nousePhysRegs.end()) continue;
 
@@ -379,8 +397,8 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
         continue;
 
       // 各仮想レジスタの生存区間リストを作成する
-      if (createLiveRange(mo, reg, *(tmi->swplRAITbl),
-                          num_mi, total_mi, exclude_vreg) != 0) {
+      if (createLiveRange(mo, reg, *(tmi->swplRAITbl), num_mi,
+                          total_mi, exclude_vreg, tmi->doVReg) != 0) {
         dbgs() << "\n  createLiveRange() failed\n";
         return;
       }
@@ -409,6 +427,23 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
   }
 
   return;
+}
+
+/**
+ * @brief  定義点と参照点から生存区間を求める(再利用禁止版)
+ * @details 仮想レジスタごとの生存区間を返す。
+ *          定義 < 参照の場合、当該仮想レジスタに割り当たる物理レジスタの
+ *          再利用を禁止するため、参照点を最大値(total_mi)にする。
+ * @retval -1より大きい値 計算した生存区間
+ * @retval -1            計算不能
+ */
+int RegAllocInfo::calcLiveRangeNoReuse() {
+  if ((num_def != -1) && (num_use != -1) && (num_def < num_use)) {
+    // 定義の時点で参照がある or 参照の時点で定義がある and
+    // 定義の後に参照があるケースでは、再利用させないための値を設定する
+    num_use = total_mi;
+  }
+  return calcLiveRange();
 }
 
 /**
@@ -673,10 +708,9 @@ SwplRegAllocInfoTbl::SwplRegAllocInfoTbl(unsigned num_of_mi) {
   regconstrain[AArch64::W25] = { AArch64::X25 };
   regconstrain[AArch64::W26] = { AArch64::X26 };
   regconstrain[AArch64::W27] = { AArch64::X27 };
-  regconstrain[AArch64::W28] = { AArch64::FP  };
-  regconstrain[AArch64::W29] = { AArch64::LR  };
-  regconstrain[AArch64::W30] = { AArch64::SP  };
-  regconstrain[AArch64::WSP] = { AArch64::XZR };
+  regconstrain[AArch64::W28] = { AArch64::X28 };
+  // W29-W30は割り付けに使用されない
+  regconstrain[AArch64::WSP] = { AArch64::SP  };
   regconstrain[AArch64::WZR] = { AArch64::XZR };
   
   regconstrain[AArch64::X0]  = { AArch64::W0 };
