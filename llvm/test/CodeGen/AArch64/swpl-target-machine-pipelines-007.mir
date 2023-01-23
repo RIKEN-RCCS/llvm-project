@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource="FADDV_VPZ_S" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource-filter="FADDV_VPZ_S" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %173:zpr = FADDV_VPZ_S %33:ppr_3b, killed %169:zpr
 #CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+18

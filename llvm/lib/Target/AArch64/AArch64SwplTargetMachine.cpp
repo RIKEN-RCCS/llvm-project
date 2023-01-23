@@ -40,7 +40,7 @@ static cl::opt<bool> OptionDumpTargetLoopOnly("swpl-debug-dump-targetloop-only",
 // TargetLoopのMI出力オプション
 static cl::opt<bool> OptionDumpTargetLoop("swpl-debug-dump-targetloop",cl::init(false), cl::ReallyHidden);
 // MIのリソース情報出力オプション
-static cl::opt<std::string> OptionDumpResource("swpl-debug-dump-resource",cl::init(""), cl::ReallyHidden);
+static cl::opt<std::string> OptionDumpResource("swpl-debug-dump-resource-filter",cl::init(""), cl::ReallyHidden);
 
 static void printDebug(const char *f, const StringRef &msg, const MachineLoop &L) {
   if (!SWPipeliner::isDebugOutput()) return;
@@ -623,7 +623,7 @@ AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) const {
 
   // swpl-debug-dump-resourceで指定されていて、まだdumpしていないMIのみdumpする
   bool dump = false;
-  if (OptionDumpResource.size() != 0){
+  if (!(OptionDumpResource.empty())){
     // miを文字列にして既にdumpしたかを判断する
     std::string mistr;
     raw_string_ostream mistream(mistr);

@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource="FSQRT_ZPmZ_UNDEF_D|FDIV_ZPZZ_UNDEF_D" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource-filter="FSQRT_ZPmZ_UNDEF_D|FDIV_ZPZZ_UNDEF_D" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %188:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_UNDEF_D %84:zpr, %62:ppr_3b, killed %187:zpr
 #CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+19
