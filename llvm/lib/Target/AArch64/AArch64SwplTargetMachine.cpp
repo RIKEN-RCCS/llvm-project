@@ -561,7 +561,8 @@ static const char *getResourceName(StmResourceId resource) {
 
 static StmPipelines forPseudoMI;
 static StmPipelines forNoImplMI;
-std::set<const MachineInstr *> dumpedMIResource;
+Regex RDumpResource;
+StringSet<> dumpedMIResource;
 
 void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
   if (MF==nullptr) {
@@ -592,6 +593,8 @@ void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
          << "SVE instruction latency is calculated at " << ore::NV("VL", SwplSched.VectorLength) << "bit.";
   });
   
+  // swpl-debug-dump-resourceで設定された正規表現をコンパイルする
+  RDumpResource = Regex(OptionDumpResource);
   dumpedMIResource.clear();
 }
 
@@ -621,11 +624,14 @@ AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) const {
   // swpl-debug-dump-resourceで指定されていて、まだdumpしていないMIのみdumpする
   bool dump = false;
   if (OptionDumpResource.size() != 0){
-    Regex R = Regex(OptionDumpResource);
-    if (R.match(SWPipeliner::TII->getName(mi.getOpcode())) &&
-        dumpedMIResource.find(&mi) == dumpedMIResource.end()){
+    // miを文字列にして既にdumpしたかを判断する
+    std::string mistr;
+    raw_string_ostream mistream(mistr);
+    mi.print(mistream);
+    if (RDumpResource.match(SWPipeliner::TII->getName(mi.getOpcode())) &&
+        !(dumpedMIResource.contains(mistr))){
       dump = true;
-      dumpedMIResource.insert(&mi);
+      dumpedMIResource.insert(mistr);
     }
   }
 
