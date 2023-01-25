@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Regex.h"
 
 using namespace llvm;
 
@@ -38,6 +39,8 @@ static cl::opt<unsigned> MaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyH
 static cl::opt<bool> OptionDumpTargetLoopOnly("swpl-debug-dump-targetloop-only",cl::init(false), cl::ReallyHidden);
 // TargetLoopのMI出力オプション
 static cl::opt<bool> OptionDumpTargetLoop("swpl-debug-dump-targetloop",cl::init(false), cl::ReallyHidden);
+// MIのリソース情報出力オプション
+static cl::opt<std::string> OptionDumpResource("swpl-debug-dump-resource-filter",cl::init(""), cl::ReallyHidden);
 
 static void printDebug(const char *f, const StringRef &msg, const MachineLoop &L) {
   if (!SWPipeliner::isDebugOutput()) return;
@@ -558,7 +561,8 @@ static const char *getResourceName(StmResourceId resource) {
 
 static StmPipelines forPseudoMI;
 static StmPipelines forNoImplMI;
-
+Regex RDumpResource;
+StringSet<> dumpedMIResource;
 
 void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
   if (MF==nullptr) {
@@ -588,7 +592,10 @@ void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
     return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "VectorLength", loc, &mbb)
          << "SVE instruction latency is calculated at " << ore::NV("VL", SwplSched.VectorLength) << "bit.";
   });
-
+  
+  // swpl-debug-dump-resourceで設定された正規表現をコンパイルする
+  RDumpResource = Regex(OptionDumpResource);
+  dumpedMIResource.clear();
 }
 
 unsigned int AArch64SwplTargetMachine::getFetchBandwidth(void) const {
@@ -614,14 +621,28 @@ int AArch64SwplTargetMachine::computeMemFlowDependence(const MachineInstr *, con
 const StmPipelinesImpl *
 AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) const {
 
+  // swpl-debug-dump-resourceで指定されていて、まだdumpしていないMIのみdumpする
+  bool dump = false;
+  if (!(OptionDumpResource.empty())){
+    // miを文字列にして既にdumpしたかを判断する
+    std::string mistr;
+    raw_string_ostream mistream(mistr);
+    mi.print(mistream);
+    if (RDumpResource.match(SWPipeliner::TII->getName(mi.getOpcode())) &&
+        !(dumpedMIResource.contains(mistr))){
+      dump = true;
+      dumpedMIResource.insert(mistr);
+    }
+  }
+
   if (isPseudo(mi)) {
-    if (SWPipeliner::isDebugOutput()) {
+    if (dump) {
       dbgs() << "DBG(AArch64SwplTargetMachine::getPipelines): Pseudo-instr: "
              << SWPipeliner::TII->getName(mi.getOpcode()) << "\n";
     }
     return &forPseudoMI;
   } else if (!isImplimented(mi)) {
-    if (SWPipeliner::isDebugOutput()) {
+    if (dump || SWPipeliner::isDebugOutput()) {
       dbgs() << "DBG(AArch64SwplTargetMachine::getPipelines): undefined machine-instr: "
              << SWPipeliner::TII->getName(mi.getOpcode()) << "\n";
     }
@@ -629,7 +650,7 @@ AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) const {
   }
   auto id=SwplSched.getRes(mi);
   const StmPipelinesImpl *p=SwplSched.getPipelines(id);
-  if (SWPipeliner::isDebugOutput()) {
+  if (dump) {
     dbgs() << "DBG(AArch64SwplTargetMachine::getPipelines): MI: " << mi;
     const char *q="";
     switch ((id&0xfffff000)) {

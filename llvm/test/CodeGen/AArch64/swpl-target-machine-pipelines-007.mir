@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource-filter="FADDV_VPZ_S" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %173:zpr = FADDV_VPZ_S %33:ppr_3b, killed %169:zpr
 #CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+18
@@ -8,8 +8,8 @@
 #CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 10/FLB, 16/FLA, 19/FLB, 22/FLA, 28/FLB, 37/FLB
 
 --- |
-  ; ModuleID = '/home/deno/dev/swpl-test/benchmark/TSVC_2/src_sep_optnone/s352.c'
-  source_filename = "/home/deno/dev/swpl-test/benchmark/TSVC_2/src_sep_optnone/s352.c"
+  ; ModuleID = '/TSVC_2/src_sep_optnone/s352.c'
+  source_filename = "/TSVC_2/src_sep_optnone/s352.c"
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-unknown-linux-gnu"
   
