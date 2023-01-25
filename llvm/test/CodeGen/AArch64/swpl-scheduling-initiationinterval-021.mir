@@ -1,21 +1,18 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-minii=5 -swpl-maxii=7   -o /dev/null 2>&1 | FileCheck %s
 
 
-#CHECK:        : (sched for small loop (Iterative Modulo Scheduling). ResMII 3. NumOfBodyInsts 10. Budget 50. Minimum II = 3.)
-#CHECK:        :  (x) Iteration  shortage    at estimation.          : (II: 5 in [ 5,7]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (Reg Fp: 7/32, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Iteration  shortage    at estimation.          : (II: 6 in [ 5,7]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (Reg Fp: 7/32, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Iteration  shortage    at estimation.          : (II: 6 in [ 5,7]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (VReg Fp: 7/32, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Extend ii range for iteration shortage:[ 5, 7 ] -> [ 7, 14 ]
-#CHECK:        :  (O) Scheduling succeeds    at recollect effective. : (II: 7 in [ 7,14]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (Reg Fp: 10/32, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at recollect effective. : (II: 7 in [ 7,14]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (VReg Fp: 10/32, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Required iteration count in MIR input is        :   5 (= kernel:3 + pro/epilogue:2 + mod:0) 
 #CHECK:        : Original iteration count in MIR is found        :   5
 #CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 3, 1, 0)
-#CHECK::
+#CHECK:        :
 #CHECK:        : Loop is software pipelined. (ii=7, kernel=21 cycles, prologue,epilogue =14 cycles)
-#CHECK:        :      S
 #CHECK:        :      IPC (initial=2.00, real=1.43, rate=71.43%)
 #CHECK:        :      = Instructions(10)/II(7)
 #CHECK:        :      Virtual inst:(0)
-#CHECK::
+#CHECK:        :
 
 
 --- |

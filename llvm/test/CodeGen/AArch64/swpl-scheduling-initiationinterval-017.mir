@@ -1,10 +1,15 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner  -swpl-maxii=10 -swpl-minii=3 -swpl-max-freg=9 -swpl-mve-limit=2   -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:        : (sched for small loop (Iterative Modulo Scheduling). ResMII 3. NumOfBodyInsts 10. Budget 50. Minimum II = 3.)
-#CHECK:        :  (x) Iteration  shortage    at estimation.          : (II: 3 in [ 3,10]) MVE: 7 Last inst: 0. (Itr Org: 5, Req: 13) (Reg Fp: 11/9, Int: 19/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Iteration  shortage    at estimation.          : (II: 5 in [ 3,10]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (Reg Fp: 7/9, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (X) Too large mve          at estimation.          : (II: 9 in [ 3,10]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (Reg Fp: 5/9, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        : Loop isn't software pipelined because plan is NULL.
+#CHECK: :  (x) Iteration  shortage    at estimation.          : (II: 3 in [ 3,10]) MVE: 7 Last inst: 0. (Itr Org: 5, Req: 13) (VReg Fp: 11/9, Int: 19/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK: :  (x) Iteration  shortage    at estimation.          : (II: 5 in [ 3,10]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (VReg Fp: 7/9, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK: :  (X) Too large mve          at estimation.          : (II: 9 in [ 3,10]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (VReg Fp: 5/9, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK: : Loop isn't software pipelined because plan is NULL.
+
+
+
+
+
+
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'

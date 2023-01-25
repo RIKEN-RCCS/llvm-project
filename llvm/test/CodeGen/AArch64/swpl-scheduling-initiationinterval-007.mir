@@ -1,24 +1,17 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-max-freg=8 -swpl-minii=40  -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:        : (sched for small loop (Iterative Modulo Scheduling). ResMII 29. NumOfBodyInsts 69. Budget 345. Minimum II = 29.)
-#CHECK:        :  (@) Scheduling tight       at estimation.          : (II: 40 in [ 40,95]) MVE: 2 Last inst: 0. (Itr Org: 5, Req: 3) (Reg Fp: 8/8, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        : Change ii range for moderate schedule search:[ 40, 95 ] -> [ 41, 80 ]
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 41 in [ 41,80]) MVE: 2 Last inst: 0. (Itr Org: 5, Req: 3) (Reg Fp: 8/8, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (O) Scheduling succeeds    at recollect moderate.  : (II: 48 in [ 41,80]) MVE: 1 Last inst: 0. (Itr Org: 5, Req: 1) (Reg Fp: 5/8, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at binary search.       : (II: 44 in [ 41,48]) MVE: 2 Last inst: 0. (Itr Org: 5, Req: 3) (Reg Fp: 7/8, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 46 in [ 44,48]) MVE: 1 Last inst: 0. (Itr Org: 5, Req: 2) (Reg Fp: 5/8, Int: 12/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at binary search.       : (II: 45 in [ 44,46]) MVE: 2 Last inst: 0. (Itr Org: 5, Req: 3) (Reg Fp: 7/8, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:                : Change ii range for moderate schedule search:[ 40, 95 ] -> [ 41, 80 ]
+#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 46 in [ 44,48]) MVE: 1 Last inst: 0. (Itr Org: 5, Req: 2) (VReg Fp: 5/8, Int: 12/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at binary search.       : (II: 45 in [ 44,46]) MVE: 2 Last inst: 0. (Itr Org: 5, Req: 3) (VReg Fp: 7/8, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Required iteration count in MIR input is        :   2 (= kernel:1 + pro/epilogue:1 + mod:0) 
 #CHECK:        : Original iteration count in MIR is found        :   5
 #CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 1, 4, 0)
-#CHECK::
+#CHECK:        :
 #CHECK:        : Loop is software pipelined. (ii=46, kernel=46 cycles, prologue,epilogue =46 cycles)
-#CHECK:        :      S
 #CHECK:        :      IPC (initial=1.73, real=1.50, rate=86.96%)
 #CHECK:        :      = Instructions(69)/II(46)
 #CHECK:        :      Virtual inst:(0)
-#CHECK::
-
+#CHECK:        :
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'

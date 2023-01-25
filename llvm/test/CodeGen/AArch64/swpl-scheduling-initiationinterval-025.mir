@@ -1,13 +1,12 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner  -swpl-maxii=6 -swpl-minii=2 -swpl-max-freg=9 -swpl-max-ireg=7  -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:        : (sched for small loop (Iterative Modulo Scheduling). ResMII 3. NumOfBodyInsts 10. Budget 50. Minimum II = 3.)
-#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 2 in [ 2,6]) MVE: 0 Last inst: 2. (Itr Org: 5, Req: 0) (Reg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        :  (x) Iteration  shortage    at estimation.          : (II: 3 in [ 2,6]) MVE: 7 Last inst: 0. (Itr Org: 5, Req: 13) (Reg Fp: 11/9, Int: 19/7, Pre: 1/8) Eval:-1.000000e+00.
-#CHECK:        :  (x) Iteration  shortage    at estimation.          : (II: 5 in [ 2,6]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (Reg Fp: 7/9, Int: 13/7, Pre: 1/8) Eval:-1.000000e+00.
+#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 2 in [ 2,6]) MVE: 0 Last inst: 2. (Itr Org: 5, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+#CHECK:        :  (x) Iteration  shortage    at estimation.          : (II: 3 in [ 2,6]) MVE: 7 Last inst: 0. (Itr Org: 5, Req: 13) (VReg Fp: 11/9, Int: 19/7, Pre: 1/8) Eval:-1.000000e+00.
+#CHECK:        :  (x) Iteration  shortage    at estimation.          : (II: 5 in [ 2,6]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (VReg Fp: 7/9, Int: 13/7, Pre: 1/8) Eval:-1.000000e+00.
 #CHECK:        : Extend ii range for iteration shortage:[ 2, 6 ] -> [ 6, 12 ]
-#CHECK:        :  (x) Iteration  shortage    at recollect effective. : (II: 6 in [ 6,12]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (Reg Fp: 7/9, Int: 11/7, Pre: 1/8) Eval:-1.000000e+00.
-#CHECK:        :  (x) Register (I) short     at recollect effective. : (II: 10 in [ 6,12]) MVE: 2 Last inst: 0. (Itr Org: 5, Req: 3) (Reg Fp: 3/9, Int: 9/7, Pre: 1/8) Eval:-1.000000e+00.
-#CHECK:        :  (x) Register (I) short     at recollect effective. : (II: 11 in [ 6,12]) MVE: 2 Last inst: 0. (Itr Org: 5, Req: 3) (Reg Fp: 3/9, Int: 8/7, Pre: 1/8) Eval:-1.000000e+00.
+#CHECK:        :  (x) Iteration  shortage    at recollect effective. : (II: 6 in [ 6,12]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (VReg Fp: 7/9, Int: 11/7, Pre: 1/8) Eval:-1.000000e+00.
+#CHECK:        :  (x) Register (I) short     at recollect effective. : (II: 10 in [ 6,12]) MVE: 2 Last inst: 0. (Itr Org: 5, Req: 3) (VReg Fp: 3/9, Int: 9/7, Pre: 1/8) Eval:-1.000000e+00.
+#CHECK:       :  (x) Register (I) short     at recollect effective. : (II: 11 in [ 6,12]) MVE: 2 Last inst: 0. (Itr Org: 5, Req: 3) (VReg Fp: 3/9, Int: 8/7, Pre: 1/8) Eval:-1.000000e+00.
 #CHECK:        : Loop isn't software pipelined because plan is NULL.
 
 --- |

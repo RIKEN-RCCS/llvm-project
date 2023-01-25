@@ -1,14 +1,16 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-maxii=5 -swpl-max-freg=4 -swpl-minii=3   -o /dev/null 2>&1 | FileCheck %s
 
 
-#CHECK:        : (sched for small loop (Iterative Modulo Scheduling). ResMII 3. NumOfBodyInsts 10. Budget 50. Minimum II = 3.)
-#CHECK:        :  (x) Iteration  shortage    at estimation.          : (II: 3 in [ 3,5]) MVE: 7 Last inst: 0. (Itr Org: 5, Req: 13) (Reg Fp: 11/4, Int: 19/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Iteration  shortage    at estimation.          : (II: 4 in [ 3,5]) MVE: 5 Last inst: 0. (Itr Org: 5, Req: 9) (Reg Fp: 16/4, Int: 15/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Iteration  shortage    at estimation.          : (II: 3 in [ 3,5]) MVE: 7 Last inst: 0. (Itr Org: 5, Req: 13) (VReg Fp: 11/4, Int: 19/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:              :  (x) Iteration  shortage    at estimation.          : (II: 4 in [ 3,5]) MVE: 5 Last inst: 0. (Itr Org: 5, Req: 9) (VReg Fp: 16/4, Int: 15/32, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Extend ii range for iteration shortage:[ 3, 5 ] -> [ 5, 10 ]
-#CHECK:        :  (x) Iteration  shortage    at recollect effective. : (II: 5 in [ 5,10]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (Reg Fp: 7/4, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Register (F) short     at recollect effective. : (II: 8 in [ 5,10]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (Reg Fp: 10/4, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Register (F) short     at recollect effective. : (II: 9 in [ 5,10]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (Reg Fp: 5/4, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Iteration  shortage    at recollect effective. : (II: 5 in [ 5,10]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (VReg Fp: 7/4, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at recollect effective. : (II: 8 in [ 5,10]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (VReg Fp: 10/4, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:         :  (x) Register (F) short     at recollect effective. : (II: 9 in [ 5,10]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (VReg Fp: 5/4, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Loop isn't software pipelined because plan is NULL.
+
+
+
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'

@@ -1,12 +1,13 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-debug-dump-estimate-reg=true -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:Estimated number of I registers (classid:21) : immortal 3, mortal  10, interfered 15, extended 11, pattern 6, margin 1,
+
+
+#CHECK:Estimated number of I registers (classid:1) : immortal 3, mortal  10, interfered 15, extended 11, pattern 6, margin 1,
 #CHECK: total    : 19
-#CHECK:Estimated number of F registers (classid:20) : immortal 0, mortal  10, interfered 0, extended 10, pattern 6, margin 1,
+#CHECK:Estimated number of F registers (classid:2) : immortal 0, mortal  10, interfered 0, extended 10, pattern 6, margin 1,
 #CHECK: total    : 11
 #CHECK:Estimated number of P registers (classid:3) : immortal 0, mortal  0, interfered 0, extended 0, pattern 0, margin 1,
 #CHECK: total    : 1
-
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.ll'

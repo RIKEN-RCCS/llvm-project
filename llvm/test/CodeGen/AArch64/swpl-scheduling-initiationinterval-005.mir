@@ -1,18 +1,18 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-max-ireg=15 -swpl-ii-by-Bsearch=false -swpl-minii=15   -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp  -swpl-debug -start-before=aarch64-swpipeliner -swpl-max-freg=8 -swpl-ii-by-Bsearch=false -swpl-minii=38   -o /dev/null 2>&1 | FileCheck %s
 
 
-#CHECK:        : (sched for small loop (Iterative Modulo Scheduling). ResMII 10. NumOfBodyInsts 23. Budget 115. Minimum II = 10.)
-#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 15 in [ 15,95]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 2) (Reg Fp: 0/32, Int: 12/15, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:                : Change ii range for moderate schedule search:[ 38, 95 ] -> [ 39, 76 ]
+#CHECK:        :  (O) Scheduling succeeds    at simply search.       : (II: 46 in [ 39,46]) MVE: 1 Last inst: 0. (Itr Org: 5, Req: 2) (VReg Fp: 5/8, Int: 12/32, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Required iteration count in MIR input is        :   2 (= kernel:1 + pro/epilogue:1 + mod:0) 
-#CHECK:        : Original iteration count in MIR is found        :   99
-#CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 1, 98, 0)
-#CHECK::
-#CHECK:        : Loop is software pipelined. (ii=15, kernel=15 cycles, prologue,epilogue =15 cycles)
-#CHECK:        :      S
-#CHECK:        :      IPC (initial=1.40, real=1.40, rate=100.00%)
-#CHECK:        :      = Instructions(21)/II(15)
-#CHECK:        :      Virtual inst:(2)
-#CHECK::
+#CHECK:        : Original iteration count in MIR is found        :   5
+#CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 1, 4, 0)
+#CHECK:        :
+#CHECK:        : Loop is software pipelined. (ii=46, kernel=46 cycles, prologue,epilogue =46 cycles)
+#CHECK:        :      IPC (initial=1.82, real=1.50, rate=82.61%)
+#CHECK:       :      = Instructions(69)/II(46)
+#CHECK:       :      Virtual inst:(0)
+#CHECK:       :
+
 
 
 --- |
@@ -21,29 +21,37 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-unknown-linux-gnu"
   
+  @b = dso_local local_unnamed_addr global [1000 x double] zeroinitializer, align 8
+  @c = dso_local local_unnamed_addr global [1000 x double] zeroinitializer, align 8
+  @a = dso_local local_unnamed_addr global [1000 x double] zeroinitializer, align 8
+  
   ; Function Attrs: nofree norecurse nounwind
-  define dso_local i32 @test(i32* nocapture %0) local_unnamed_addr #0 !dbg !7 {
-    %2 = getelementptr i32, i32* %0, i64 1, !dbg !10
-    call void @llvm.set.loop.iterations.i64(i64 99), !dbg !10
-    br label %3, !dbg !10
+  define dso_local i32 @main() local_unnamed_addr #0 !dbg !7 {
+    call void @llvm.set.loop.iterations.i64(i64 5), !dbg !10
+    br label %4, !dbg !10
   
-  3:                                                ; preds = %3, %1
-    %4 = phi i32* [ %10, %3 ], [ %2, %1 ]
-    %5 = phi i64 [ %9, %3 ], [ -990, %1 ]
-    %6 = phi i64 [ 99, %1 ], [ %11, %3 ], !dbg !11
-    %7 = add i64 %5, 1000, !dbg !11
-    %8 = trunc i64 %7 to i32
-    store i32 %8, i32* %4, align 4, !dbg !11, !tbaa !12
-    %9 = add nsw i64 %5, 10, !dbg !16
-    %10 = getelementptr i32, i32* %4, i64 1, !dbg !16
-    %11 = call i64 @llvm.loop.decrement.reg.i64(i64 %6, i64 1), !dbg !10
-    %12 = icmp ne i64 %11, 0, !dbg !10
-    br i1 %12, label %3, label %13, !dbg !10, !llvm.loop !17
+  1:                                                ; preds = %4
+    %2 = load double, double* getelementptr inbounds ([1000 x double], [1000 x double]* @a, i64 0, i64 500), align 8, !dbg !11, !tbaa !12
+    %3 = fptosi double %2 to i32, !dbg !11
+    ret i32 %3, !dbg !16
   
-  13:                                               ; preds = %3
-    %14 = getelementptr inbounds i32, i32* %0, i64 99, !dbg !20
-    %15 = load i32, i32* %14, align 4, !dbg !20, !tbaa !12
-    ret i32 %15, !dbg !21
+  4:                                                ; preds = %4, %0
+    %5 = phi i64 [ %16, %4 ], [ 0, %0 ]
+    %6 = phi i64 [ 5, %0 ], [ %17, %4 ], !dbg !17
+    %7 = getelementptr i8, i8* bitcast ([1000 x double]* @b to i8*), i64 %5, !dbg !17
+    %8 = bitcast i8* %7 to double*
+    %9 = load double, double* %8, align 8, !dbg !17, !tbaa !12
+    %10 = getelementptr i8, i8* bitcast ([1000 x double]* @c to i8*), i64 %5, !dbg !18
+    %11 = bitcast i8* %10 to double*
+    %12 = load double, double* %11, align 8, !dbg !18, !tbaa !12
+    %13 = fadd fast double %12, %9, !dbg !19
+    %14 = getelementptr i8, i8* bitcast ([1000 x double]* @a to i8*), i64 %5, !dbg !20
+    %15 = bitcast i8* %14 to double*
+    store double %13, double* %15, align 8, !dbg !20, !tbaa !12
+    %16 = add nuw nsw i64 %5, 8, !dbg !21
+    %17 = call i64 @llvm.loop.decrement.reg.i64(i64 %6, i64 1), !dbg !10
+    %18 = icmp ne i64 %17, 0, !dbg !10
+    br i1 %18, label %4, label %1, !dbg !10, !llvm.loop !22
   }
   
   ; Function Attrs: noduplicate nounwind
@@ -70,25 +78,28 @@
   !4 = !{i32 2, !"Debug Info Version", i32 3}
   !5 = !{i32 1, !"wchar_size", i32 4}
   !6 = !{!"clang version 11.0.0 "}
-  !7 = distinct !DISubprogram(name: "test", scope: !8, file: !8, line: 1, type: !9, scopeLine: 2, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+  !7 = distinct !DISubprogram(name: "main", scope: !8, file: !8, line: 4, type: !9, scopeLine: 4, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
   !8 = !DIFile(filename: "tp/testprg.c", directory: "/TEST")
   !9 = !DISubroutineType(types: !2)
-  !10 = !DILocation(line: 5, column: 3, scope: !7)
-  !11 = !DILocation(line: 7, column: 10, scope: !7)
+  !10 = !DILocation(line: 6, column: 3, scope: !7)
+  !11 = !DILocation(line: 9, column: 10, scope: !7)
   !12 = !{!13, !13, i64 0}
-  !13 = !{!"int", !14, i64 0}
+  !13 = !{!"double", !14, i64 0}
   !14 = !{!"omnipotent char", !15, i64 0}
   !15 = !{!"Simple C/C++ TBAA"}
-  !16 = !DILocation(line: 5, column: 17, scope: !7)
-  !17 = distinct !{!17, !10, !18, !19}
-  !18 = !DILocation(line: 8, column: 3, scope: !7)
-  !19 = !{!"llvm.loop.unroll.disable"}
-  !20 = !DILocation(line: 10, column: 10, scope: !7)
-  !21 = !DILocation(line: 10, column: 3, scope: !7)
+  !16 = !DILocation(line: 9, column: 3, scope: !7)
+  !17 = !DILocation(line: 7, column: 12, scope: !7)
+  !18 = !DILocation(line: 7, column: 19, scope: !7)
+  !19 = !DILocation(line: 7, column: 17, scope: !7)
+  !20 = !DILocation(line: 7, column: 10, scope: !7)
+  !21 = !DILocation(line: 6, column: 17, scope: !7)
+  !22 = distinct !{!22, !10, !23, !24}
+  !23 = !DILocation(line: 8, column: 3, scope: !7)
+  !24 = !{!"llvm.loop.unroll.disable"}
 
 ...
 ---
-name:            test
+name:            main
 alignment:       8
 exposesReturnsTwice: false
 legalized:       false
@@ -98,30 +109,26 @@ failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
 registers:
-  - { id: 0, class: gpr64all, preferred-register: '' }
+  - { id: 0, class: gpr64common, preferred-register: '' }
   - { id: 1, class: gpr64sp, preferred-register: '' }
-  - { id: 2, class: gpr64sp, preferred-register: '' }
-  - { id: 3, class: gpr64sp, preferred-register: '' }
+  - { id: 2, class: gpr64all, preferred-register: '' }
+  - { id: 3, class: gpr64all, preferred-register: '' }
   - { id: 4, class: gpr64all, preferred-register: '' }
   - { id: 5, class: gpr64all, preferred-register: '' }
   - { id: 6, class: gpr64all, preferred-register: '' }
-  - { id: 7, class: gpr64common, preferred-register: '' }
-  - { id: 8, class: gpr64all, preferred-register: '' }
-  - { id: 9, class: gpr64all, preferred-register: '' }
-  - { id: 10, class: gpr64sp, preferred-register: '' }
-  - { id: 11, class: gpr64, preferred-register: '' }
-  - { id: 12, class: gpr32, preferred-register: '' }
-  - { id: 13, class: gpr32sp, preferred-register: '' }
-  - { id: 14, class: gpr32sp, preferred-register: '' }
-  - { id: 15, class: gpr64all, preferred-register: '' }
-  - { id: 16, class: gpr64all, preferred-register: '' }
-  - { id: 17, class: gpr32, preferred-register: '' }
-  - { id: 18, class: gpr64sp, preferred-register: '' }
-  - { id: 19, class: gpr64sp, preferred-register: '' }
-  - { id: 20, class: gpr64, preferred-register: '' }
-  - { id: 21, class: gpr32, preferred-register: '' }
-liveins:
-  - { reg: '$x0', virtual-reg: '%7' }
+  - { id: 7, class: gpr32, preferred-register: '' }
+  - { id: 8, class: gpr64common, preferred-register: '' }
+  - { id: 9, class: fpr64, preferred-register: '' }
+  - { id: 10, class: gpr64common, preferred-register: '' }
+  - { id: 11, class: fpr64, preferred-register: '' }
+  - { id: 12, class: fpr64, preferred-register: '' }
+  - { id: 13, class: gpr64common, preferred-register: '' }
+  - { id: 14, class: gpr64sp, preferred-register: '' }
+  - { id: 15, class: gpr64, preferred-register: '' }
+  - { id: 16, class: gpr64common, preferred-register: '' }
+  - { id: 17, class: fpr64, preferred-register: '' }
+  - { id: 18, class: gpr32, preferred-register: '' }
+liveins:         []
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -147,51 +154,101 @@ callSites:       []
 constants:       []
 machineFunctionInfo: {}
 body:             |
-  bb.0 (%ir-block.1):
-    successors: %bb.1(0x80000000)
-    liveins: $x0
+  bb.0 (%ir-block.0):
+    successors: %bb.2(0x80000000)
   
-    %7:gpr64common = COPY $x0
-    %10:gpr64sp = ADDXri %7, 4, 0, debug-location !10
-    %0:gpr64all = COPY %10, debug-location !10
-    %11:gpr64 = MOVi64imm -990
-    %8:gpr64all = COPY %11
-    %12:gpr32 = MOVi32imm 99
-    %9:gpr64all = SUBREG_TO_REG 0, killed %12, %subreg.sub_32
-    %16:gpr64all = IMPLICIT_DEF
-  
-  bb.1 (%ir-block.3):
-    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
-  
-    %1:gpr64sp = PHI %0, %bb.0, %5, %bb.1
-    %2:gpr64sp = PHI %8, %bb.0, %4, %bb.1
-    %3:gpr64sp = PHI %9, %bb.0, %6, %bb.1, debug-location !11
-    %101:gpr64sp = PHI %0, %bb.0, %105, %bb.1
-    %102:gpr64sp = PHI %8, %bb.0, %104, %bb.1
-    %13:gpr32sp = COPY %2.sub_32, debug-location !11
-    %14:gpr32sp = ADDWri killed %13, 1000, 0, debug-location !11
-    %15:gpr64all = INSERT_SUBREG %16, killed %14, %subreg.sub_32, debug-location !11
-    %17:gpr32 = COPY %15.sub_32, debug-location !11
-    early-clobber %18:gpr64sp = STRWpost killed %17, %1, 4, debug-location !11 :: (store 4 into %ir.4, !tbaa !12)
-    %19:gpr64sp = nsw ADDXri %2, 10, 0, debug-location !16
-    %4:gpr64all = COPY %19, debug-location !16
-    %5:gpr64all = COPY %18, debug-location !16
-    %20:gpr64 = SUBSXri %3, 1, 0, implicit-def $nzcv, debug-location !10
-    %6:gpr64all = COPY %20, debug-location !10
-    %113:gpr32sp = COPY %102.sub_32, debug-location !11
-    %114:gpr32sp = ADDWri killed %113, 1000, 0, debug-location !11
-    %115:gpr64all = INSERT_SUBREG %16, killed %114, %subreg.sub_32, debug-location !11
-    %117:gpr32 = COPY %115.sub_32, debug-location !11
-    early-clobber %118:gpr64sp = STRWpost killed %117, %101, 4, debug-location !11 :: (store 4 into %ir.4, !tbaa !12)
-    %119:gpr64sp = nsw ADDXri %102, 10, 0, debug-location !16
-    %104:gpr64all = COPY %119, debug-location !16
-    %105:gpr64all = COPY %118, debug-location !16
-    Bcc 1, %bb.1, implicit $nzcv, debug-location !10
+    %6:gpr64all = COPY $xzr
+    %4:gpr64all = COPY %6
+    %7:gpr32 = MOVi32imm 5
+    %5:gpr64all = SUBREG_TO_REG 0, killed %7, %subreg.sub_32
+    %8:gpr64common = MOVaddr target-flags(aarch64-page) @b, target-flags(aarch64-pageoff, aarch64-nc) @b
+    %10:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    %13:gpr64common = MOVaddr target-flags(aarch64-page) @a, target-flags(aarch64-pageoff, aarch64-nc) @a
+    %1008:gpr64common = MOVaddr target-flags(aarch64-page) @b, target-flags(aarch64-pageoff, aarch64-nc) @b
+    %1010:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    %1013:gpr64common = MOVaddr target-flags(aarch64-page) @a, target-flags(aarch64-pageoff, aarch64-nc) @a
     B %bb.2, debug-location !10
   
-  bb.2 (%ir-block.13):
-    %21:gpr32 = LDRWui %7, 99, debug-location !20 :: (load 4 from %ir.14, !tbaa !12)
-    $w0 = COPY %21, debug-location !21
-    RET_ReallyLR implicit $w0, debug-location !21
+  bb.1 (%ir-block.1):
+    %16:gpr64common = ADRP target-flags(aarch64-page) @a + 4000, debug-location !11
+    %17:fpr64 = LDRDui killed %16, target-flags(aarch64-pageoff, aarch64-nc) @a + 4000, debug-location !11 :: (dereferenceable load 8 from `double* getelementptr inbounds ([1000 x double], [1000 x double]* @a, i64 0, i64 500)`, !tbaa !12)
+    %18:gpr32 = FCVTZSUWDr killed %17, debug-location !11
+    $w0 = COPY %18, debug-location !16
+    RET_ReallyLR implicit $w0, debug-location !16
+  
+  bb.2 (%ir-block.4):
+    successors: %bb.2(0x7c000000), %bb.1(0x04000000)
+  
+    %0:gpr64common = PHI %4, %bb.0, %2, %bb.2
+    %1:gpr64sp = PHI %5, %bb.0, %3, %bb.2, debug-location !17
+    %100:gpr64common = PHI %4, %bb.0, %102, %bb.2
+    %9:fpr64 = LDRDroX %8, %0, 0, 0, debug-location !17 :: (load 8 from %ir.8, !tbaa !12)
+    %11:fpr64 = LDRDroX %10, %0, 0, 0, debug-location !18 :: (load 8 from %ir.11, !tbaa !12)
+    %12:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %11, killed %9, debug-location !19
+    STRDroX killed %12, %13, %0, 0, 0, debug-location !20 :: (store 8 into %ir.15, !tbaa !12)
+    %14:gpr64sp = nuw nsw ADDXri %0, 8, 0, debug-location !21
+    %2:gpr64all = COPY %14, debug-location !21
+    %15:gpr64 = SUBSXri %1, 1, 0, implicit-def $nzcv, debug-location !10
+    %3:gpr64all = COPY %15, debug-location !10
+    %109:fpr64 = LDRDroX %1008, %100, 0, 0, debug-location !17 :: (load 8 from %ir.8, !tbaa !12)
+    %111:fpr64 = LDRDroX %1010, %100, 0, 0, debug-location !18 :: (load 8 from %ir.11, !tbaa !12)
+    %112:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1120:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1121:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1122:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1123:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1124:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1125:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1126:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1127:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1128:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1129:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1130:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1131:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1200:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1201:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1202:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1203:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1204:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1205:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1206:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1207:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1208:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1209:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1210:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1211:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1212:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1213:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1214:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1215:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1216:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1217:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1218:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1219:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1220:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1221:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1222:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1223:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1224:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1225:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1226:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1227:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1228:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1229:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1230:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1231:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1232:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1233:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1234:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1235:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1236:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1237:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1238:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    %1239:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %111, %109, debug-location !19
+    STRDroX %112, %1013, %100, 0, 0, debug-location !20 :: (store 8 into %ir.15, !tbaa !12)
+    %114:gpr64sp = nuw nsw ADDXri %100, 8, 0, debug-location !21
+    %102:gpr64all = COPY %114, debug-location !21
+    Bcc 1, %bb.2, implicit $nzcv, debug-location !10
+    B %bb.1, debug-location !10
 
 ...

@@ -4,11 +4,11 @@
 #CHECK:(mrt
 #CHECK:  II = 3
 
-#CHECK:       FLA          FLB          EXA          EXB          EAGA         EAGB         PRX          BR           
-#CHECK:---------------------------------------------------------------------------------------------------------------------
-#CHECK:       0            0            SUBSXri  (1) COPY     (6) 0            0            0            0            
-#CHECK:       STRDroX  (1) fFADDDrr (4) ADDXri   (7) COPY     (1) STRDroX  (1) 0            0            0            
-#CHECK:       0            0            COPY     (7) COPY     (1) fLDRDroX (7) fLDRDroX (7) 0            0            
+#CHECK:       FLA          FLB          EXA          EXB          EAGA         EAGB         PRX          BR           LSU1         LSU2         FLA_C        FLB_C        EXA_C        EXB_C        EAGA_C       EAGB_C       
+#CHECK:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK:       0            0            SUBSXri  (1) COPY     (6) 0            0            0            0            0            0            0            0            0            0            0            0            
+#CHECK:       STRDroX  (1) fFADDDrr (4) ADDXri   (7) COPY     (1) STRDroX  (1) 0            0            0            STRDroX  (1) STRDroX  (1) 0            0            0            0            fLDRDroX (7) fLDRDroX (7) 
+#CHECK:       0            0            COPY     (7) COPY     (1) fLDRDroX (7) fLDRDroX (7) 0            0            fLDRDroX (7) fLDRDroX (7) 0            0            0            0            0            0            
 #CHECK:)
 
 --- |

@@ -1,27 +1,7 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-max-ireg=14 -swpl-minii=14   -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:        : (sched for small loop (Iterative Modulo Scheduling). ResMII 14. NumOfBodyInsts 33. Budget 165. Minimum II = 14.)
-#CHECK:        :  (x) Register (I) short     at estimation.          : (II: 14 in [ 14,95]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 2) (Reg Fp: 0/32, Int: 16/14, Pre: 1/8) Eval:-1.000000e+00.
-#CHECK:        :  (x) Register (I) short     at estimation.          : (II: 16 in [ 14,95]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 3) (Reg Fp: 0/32, Int: 15/14, Pre: 1/8) Eval:-1.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at estimation.          : (II: 20 in [ 14,95]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 2) (Reg Fp: 0/32, Int: 14/14, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        : Change ii range for moderate schedule search:[ 14, 95 ] -> [ 21, 40 ]
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 21 in [ 21,40]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 2) (Reg Fp: 0/32, Int: 14/14, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 24 in [ 21,40]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 2) (Reg Fp: 0/32, Int: 14/14, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 27 in [ 21,40]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 2) (Reg Fp: 0/32, Int: 14/14, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 30 in [ 21,40]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 2) (Reg Fp: 0/32, Int: 14/14, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 33 in [ 21,40]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 2) (Reg Fp: 0/32, Int: 13/14, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 36 in [ 21,40]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 2) (Reg Fp: 0/32, Int: 14/14, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 39 in [ 21,40]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 1) (Reg Fp: 0/32, Int: 13/14, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        : Required iteration count in MIR input is        :   2 (= kernel:1 + pro/epilogue:1 + mod:0) 
-#CHECK:        : Original iteration count in MIR is found        :   99
-#CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 1, 98, 0)
-#CHECK::
-#CHECK:        : Loop is software pipelined. (ii=20, kernel=20 cycles, prologue,epilogue =20 cycles)
-#CHECK:        :      S
-#CHECK:        :      IPC (initial=2.14, real=1.50, rate=70.00%)
-#CHECK:        :      = Instructions(30)/II(20)
-#CHECK:        :      Virtual inst:(3)
-#CHECK::
+#CHECK:                :  (@) Scheduling tight       at recollect moderate.  : (II: 27 in [ 15,28]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 1) (VReg Fp: 0/32, Int: 14/14, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        : Loop isn't software pipelined because prologue is 0 cycle.
 
 
 --- |

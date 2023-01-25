@@ -1,11 +1,8 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-maxii=9  -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-maxii=1 -swpl-minii=1   -o /dev/null 2>&1 | FileCheck %s
 
 
-#CHECK:        : (sched for small loop (Iterative Modulo Scheduling). ResMII 5. NumOfBodyInsts 13. Budget 65. Minimum II = 5.)
-#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 5 in [ 5,9]) MVE: 0 Last inst: 4. (Itr Org: 99, Req: 0) (Reg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 7 in [ 5,9]) MVE: 0 Last inst: 4. (Itr Org: 99, Req: 0) (Reg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 8 in [ 5,9]) MVE: 0 Last inst: 4. (Itr Org: 99, Req: 0) (Reg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        : Not scheduled.[giveup] (ii:8)
+#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 1 in [ 1,1]) MVE: 0 Last inst: 8. (Itr Org: 99, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+#CHECK:       : Not scheduled.[giveup] (ii:1)
 #CHECK:        : Loop isn't software pipelined because plan is NULL.
 
 

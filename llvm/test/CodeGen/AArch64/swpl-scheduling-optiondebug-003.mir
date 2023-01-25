@@ -1,72 +1,73 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-debug-dump-moduloddg=true -o /dev/null 2>&1 | FileCheck %s
-
 #CHECK:-- ModuloDdg dump --
 #CHECK:iterator_interval : 3
 #CHECK:%21:fpr64 = LDRDroX %8:gpr64common, %19:gpr64common, 0, 0, debug-location !17 :: (load (s64) from %ir.uglygep45, !tbaa !12); tp/testprg.c:6:12
 #CHECK:        Pipelines
-#CHECK:                DBG(StmPipeline::print) stage/resource(0): 0/EAGA
-#CHECK:                DBG(StmPipeline::print) stage/resource(1): 0/EAGB
+#CHECK:                  stage/resource(): 0/EAGA, 0/LSU1, 8/EAGA_C
+#CHECK:                  stage/resource(): 0/EAGB, 0/LSU1, 8/EAGB_C
+#CHECK:                  stage/resource(): 0/EAGA, 0/LSU2, 8/EAGA_C
+#CHECK:                  stage/resource(): 0/EAGB, 0/LSU2, 8/EAGB_C
 #CHECK:        Edge to
 #CHECK:                delay  8 : %23:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %22:fpr64, killed %21:fpr64, debug-location !19; tp/testprg.c:6:17
 #CHECK:                delay -59 : STRDroX killed %23:fpr64, %13:gpr64common, %19:gpr64common, 0, 0, debug-location !20 :: (store (s64) into %ir.uglygep1, !tbaa !12); tp/testprg.c:6:10
 #CHECK:%22:fpr64 = LDRDroX %10:gpr64common, %19:gpr64common, 0, 0, debug-location !18 :: (load (s64) from %ir.uglygep23, !tbaa !12); tp/testprg.c:6:19
 #CHECK:        Pipelines
-#CHECK:                DBG(StmPipeline::print) stage/resource(0): 0/EAGA
-#CHECK:                DBG(StmPipeline::print) stage/resource(1): 0/EAGB
+#CHECK:                  stage/resource(): 0/EAGA, 0/LSU1, 8/EAGA_C
+#CHECK:                  stage/resource(): 0/EAGB, 0/LSU1, 8/EAGB_C
+#CHECK:                  stage/resource(): 0/EAGA, 0/LSU2, 8/EAGA_C
+#CHECK:                  stage/resource(): 0/EAGB, 0/LSU2, 8/EAGB_C
 #CHECK:        Edge to
 #CHECK:                delay  8 : %23:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %22:fpr64, killed %21:fpr64, debug-location !19; tp/testprg.c:6:17
 #CHECK:                delay -59 : STRDroX killed %23:fpr64, %13:gpr64common, %19:gpr64common, 0, 0, debug-location !20 :: (store (s64) into %ir.uglygep1, !tbaa !12); tp/testprg.c:6:10
 #CHECK:%23:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %22:fpr64, killed %21:fpr64, debug-location !19; tp/testprg.c:6:17
 #CHECK:        Pipelines
-#CHECK:                DBG(StmPipeline::print) stage/resource(0): 0/FLA
-#CHECK:                DBG(StmPipeline::print) stage/resource(1): 0/FLB
+#CHECK:                  stage/resource(): 0/FLA
+#CHECK:                  stage/resource(): 0/FLB
 #CHECK:        Edge to
 #CHECK:                delay  9 : STRDroX killed %23:fpr64, %13:gpr64common, %19:gpr64common, 0, 0, debug-location !20 :: (store (s64) into %ir.uglygep1, !tbaa !12); tp/testprg.c:6:10
 #CHECK:STRDroX killed %23:fpr64, %13:gpr64common, %19:gpr64common, 0, 0, debug-location !20 :: (store (s64) into %ir.uglygep1, !tbaa !12); tp/testprg.c:6:10
 #CHECK:        Pipelines
-#CHECK:                DBG(StmPipeline::print) stage/resource(0): 0/EAGA, 0/FLA
-#CHECK:                DBG(StmPipeline::print) stage/resource(1): 0/EAGB, 0/FLA
+#CHECK:                  stage/resource(): 0/EAGA, 0/FLA, 0/LSU1, 0/LSU2
+#CHECK:                  stage/resource(): 0/EAGB, 0/FLA, 0/LSU1, 0/LSU2
 #CHECK:        Edge to
 #CHECK:                delay -54 : %21:fpr64 = LDRDroX %8:gpr64common, %19:gpr64common, 0, 0, debug-location !17 :: (load (s64) from %ir.uglygep45, !tbaa !12); tp/testprg.c:6:12
 #CHECK:                delay -54 : %22:fpr64 = LDRDroX %10:gpr64common, %19:gpr64common, 0, 0, debug-location !18 :: (load (s64) from %ir.uglygep23, !tbaa !12); tp/testprg.c:6:19
 #CHECK:%24:gpr64sp = nuw nsw ADDXri %19:gpr64common, 8, 0, debug-location !21; tp/testprg.c:5:17
 #CHECK:        Pipelines
-#CHECK:                DBG(StmPipeline::print) stage/resource(0): 0/EXA
-#CHECK:                DBG(StmPipeline::print) stage/resource(1): 0/EXB
-#CHECK:                DBG(StmPipeline::print) stage/resource(2): 0/EAGA
-#CHECK:                DBG(StmPipeline::print) stage/resource(3): 0/EAGB
+#CHECK:                  stage/resource(): 0/EXA
+#CHECK:                  stage/resource(): 0/EXB
+#CHECK:                  stage/resource(): 0/EAGA
+#CHECK:                  stage/resource(): 0/EAGB
 #CHECK:        Edge to
 #CHECK:                delay  1 : %25:gpr64all = COPY %24:gpr64sp, debug-location !21; tp/testprg.c:5:17
 #CHECK:%25:gpr64all = COPY %24:gpr64sp, debug-location !21; tp/testprg.c:5:17
 #CHECK:        Pipelines
-#CHECK:                DBG(StmPipeline::print) stage/resource(0): 0/EXA
-#CHECK:                DBG(StmPipeline::print) stage/resource(1): 0/EXB
-#CHECK:                DBG(StmPipeline::print) stage/resource(2): 0/EAGA
-#CHECK:                DBG(StmPipeline::print) stage/resource(3): 0/EAGB
+#CHECK:                  stage/resource(): 0/EXA
+#CHECK:                  stage/resource(): 0/EXB
+#CHECK:                  stage/resource(): 0/EAGA
+#CHECK:                  stage/resource(): 0/EAGB
 #CHECK:        Edge to
 #CHECK:                delay  1 : %19:gpr64common = COPY %25:gpr64all
 #CHECK:%26:gpr64 = SUBSXri %20:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !10; tp/testprg.c:5:3
 #CHECK:        Pipelines
-#CHECK:                DBG(StmPipeline::print) stage/resource(0): 0/EXA
-#CHECK:                DBG(StmPipeline::print) stage/resource(1): 0/EXB
-#CHECK:                DBG(StmPipeline::print) stage/resource(2): 0/EAGA
-#CHECK:                DBG(StmPipeline::print) stage/resource(3): 0/EAGB
+#CHECK:                  stage/resource(): 0/EXA
+#CHECK:                  stage/resource(): 0/EXB
 #CHECK:        Edge to
 #CHECK:                delay  1 : %27:gpr64all = COPY %26:gpr64, debug-location !10; tp/testprg.c:5:3
 #CHECK:%27:gpr64all = COPY %26:gpr64, debug-location !10; tp/testprg.c:5:3
 #CHECK:        Pipelines
-#CHECK:                DBG(StmPipeline::print) stage/resource(0): 0/EXA
-#CHECK:                DBG(StmPipeline::print) stage/resource(1): 0/EXB
-#CHECK:                DBG(StmPipeline::print) stage/resource(2): 0/EAGA
-#CHECK:                DBG(StmPipeline::print) stage/resource(3): 0/EAGB
+#CHECK:                  stage/resource(): 0/EXA
+#CHECK:                  stage/resource(): 0/EXB
+#CHECK:                  stage/resource(): 0/EAGA
+#CHECK:                  stage/resource(): 0/EAGB
 #CHECK:        Edge to
 #CHECK:                delay  1 : %20:gpr64sp = COPY %27:gpr64all
 #CHECK:%19:gpr64common = COPY %25:gpr64all
 #CHECK:        Pipelines
-#CHECK:                DBG(StmPipeline::print) stage/resource(0): 0/EXA
-#CHECK:                DBG(StmPipeline::print) stage/resource(1): 0/EXB
-#CHECK:                DBG(StmPipeline::print) stage/resource(2): 0/EAGA
-#CHECK:                DBG(StmPipeline::print) stage/resource(3): 0/EAGB
+#CHECK:                  stage/resource(): 0/EXA
+#CHECK:                  stage/resource(): 0/EXB
+#CHECK:                  stage/resource(): 0/EAGA
+#CHECK:                  stage/resource(): 0/EAGB
 #CHECK:        Edge to
 #CHECK:                delay -2 : %21:fpr64 = LDRDroX %8:gpr64common, %19:gpr64common, 0, 0, debug-location !17 :: (load (s64) from %ir.uglygep45, !tbaa !12); tp/testprg.c:6:12
 #CHECK:                delay -2 : %22:fpr64 = LDRDroX %10:gpr64common, %19:gpr64common, 0, 0, debug-location !18 :: (load (s64) from %ir.uglygep23, !tbaa !12); tp/testprg.c:6:19
@@ -74,10 +75,10 @@
 #CHECK:                delay -2 : %24:gpr64sp = nuw nsw ADDXri %19:gpr64common, 8, 0, debug-location !21; tp/testprg.c:5:17
 #CHECK:%20:gpr64sp = COPY %27:gpr64all
 #CHECK:        Pipelines
-#CHECK:                DBG(StmPipeline::print) stage/resource(0): 0/EXA
-#CHECK:                DBG(StmPipeline::print) stage/resource(1): 0/EXB
-#CHECK:                DBG(StmPipeline::print) stage/resource(2): 0/EAGA
-#CHECK:                DBG(StmPipeline::print) stage/resource(3): 0/EAGB
+#CHECK:                  stage/resource(): 0/EXA
+#CHECK:                  stage/resource(): 0/EXB
+#CHECK:                  stage/resource(): 0/EAGA
+#CHECK:                  stage/resource(): 0/EAGB
 #CHECK:        Edge to
 #CHECK:                delay -2 : %26:gpr64 = SUBSXri %20:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !10; tp/testprg.c:5:3
 
