@@ -653,6 +653,15 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
     convertPrePostIndexInstr(new_bb);
   /// convertNonSSA() を呼び出し、非SSA化と複製したMachineBasicBlockの回収を行う。
   convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);
+
+  ///
+  auto regmap=getOrgReg2NewReg();
+  for (auto &p:LiveOutReg) {
+    // p.first: reg, p.second:vector<MO*>
+    auto newreg=regmap[p.first];
+    liveOuts.insert(newreg);
+  }
+
 }
 
 void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOutReg) {
@@ -785,6 +794,10 @@ void SwplLoop::collectRegs() {
   SwplRegs &regs = getRegs();
   std::sort(regs.begin(), regs.end());
   regs.erase(std::unique(regs.begin(), regs.end()), regs.end());
+}
+
+bool SwplLoop::containsLiveOutReg(Register vreg) {
+  return liveOuts.contains(vreg);
 }
 
 void SwplLoop::deleteNewBodyMBB() {

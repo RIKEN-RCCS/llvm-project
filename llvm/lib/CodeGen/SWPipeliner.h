@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/SwplTargetMachine.h"
 #include "llvm/InitializePasses.h"
+#include <llvm/ADT/SmallSet.h>
 
 namespace llvm {
 
@@ -79,6 +80,7 @@ class SwplLoop {
                                        ///このCopy命令の集合
   SwplRegs Regs;                       ///< 対象ループ内で生成した SwplReg を管理する \note メモリ解放時に利用する
   SwplMems MemsOtherBody;              ///< Body以外で生成された SwplMem を管理する \note メモリ解放時に利用する
+  SmallSet<Register, 30> liveOuts; ///< SWPL適用後に登場する仮想レジスタがLiveOutしているかを確認するための集合
 
 public:
   SwplLoop(){}
@@ -233,6 +235,11 @@ public:
 
   /// メモリ開放するときのためのRegの情報 SwplReg を収集する
   void collectRegs();
+
+
+  /// Clone後の仮想レジスタがLiveOutしているかを確認する
+  bool containsLiveOutReg(Register vreg);
+
 
 private:
   /// SwplLoop::PreviousInsts の作成
@@ -777,6 +784,7 @@ public:
   static SwplTargetMachine *STM;
   static AliasAnalysis *AA;
   static std::string Reason;
+  static SwplLoop *currentLoop;
 
 
   MachineFunction *MF = nullptr;
