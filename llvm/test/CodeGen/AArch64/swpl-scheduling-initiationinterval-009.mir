@@ -1,8 +1,16 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-max-ireg=14 -swpl-minii=15   -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-max-ireg=15 -swpl-minii=8   -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:               :  (@) Scheduling tight       at recollect moderate.  : (II: 28 in [ 16,30]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 1) (VReg Fp: 0/32, Int: 14/14, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:         : Loop isn't software pipelined because prologue is 0 cycle.
-
+#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 16 in [ 10,18]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 1) (VReg Fp: 0/32, Int: 14/15, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 17 in [ 10,18]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 1) (VReg Fp: 0/32, Int: 14/15, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        : Required iteration count in MIR input is        :   2 (= kernel:1 + pro/epilogue:1 + mod:0) 
+#CHECK:        : Original iteration count in MIR is found        :   99
+#CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 1, 98, 0)
+#CHECK:        :
+#CHECK:        : Loop is software pipelined. (ii=9, kernel=9 cycles, prologue,epilogue =9 cycles)
+#CHECK:        :      IPC (initial=3.75, real=3.33, rate=88.89%)
+#CHECK:        :      = Instructions(30)/II(9)
+#CHECK:        :      Virtual inst:(3)
+#CHECK:        :
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'

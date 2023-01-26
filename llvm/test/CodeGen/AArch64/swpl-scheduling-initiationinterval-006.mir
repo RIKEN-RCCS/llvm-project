@@ -1,7 +1,7 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp  -swpl-debug -start-before=aarch64-swpipeliner -swpl-max-ireg=8 -swpl-ii-by-Bsearch=true -swpl-minii=16   -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:        : Change ii range for moderate schedule search:
-#CHECK:		 :  (@) Scheduling tight       at binary search.       : (II: 19 in [ 18,20]) MVE: 2 Last inst: 0. (Itr Org: 4000, Req: 3) (VReg Fp: 8/32, Int: 6/8, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:	             :  (@) Scheduling tight       at binary search.       : (II: 19 in [ 18,20]) MVE: 2 Last inst: 0. (Itr Org: 4000, Req: 3) (VReg Fp: 8/32, Int: 6/8, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Required iteration count in MIR input is        :   3 (= kernel:2 + pro/epilogue:1 + mod:0) 
 #CHECK:        : Original iteration count in MIR is found        :   4000
 #CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 2, 1999, 1)

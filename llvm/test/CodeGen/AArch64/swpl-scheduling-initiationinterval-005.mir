@@ -1,7 +1,7 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp  -swpl-debug -start-before=aarch64-swpipeliner -swpl-max-freg=8 -swpl-ii-by-Bsearch=false -swpl-minii=38   -o /dev/null 2>&1 | FileCheck %s
 
 
-#CHECK:                : Change ii range for moderate schedule search:[ 38, 95 ] -> [ 39, 76 ]
+#CHECK:        : Change ii range for moderate schedule search:[ 38, 95 ] -> [ 39, 76 ]
 #CHECK:        :  (O) Scheduling succeeds    at simply search.       : (II: 46 in [ 39,46]) MVE: 1 Last inst: 0. (Itr Org: 5, Req: 2) (VReg Fp: 5/8, Int: 12/32, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Required iteration count in MIR input is        :   2 (= kernel:1 + pro/epilogue:1 + mod:0) 
 #CHECK:        : Original iteration count in MIR is found        :   5
@@ -9,9 +9,9 @@
 #CHECK:        :
 #CHECK:        : Loop is software pipelined. (ii=46, kernel=46 cycles, prologue,epilogue =46 cycles)
 #CHECK:        :      IPC (initial=1.82, real=1.50, rate=82.61%)
-#CHECK:       :      = Instructions(69)/II(46)
-#CHECK:       :      Virtual inst:(0)
-#CHECK:       :
+#CHECK:         :      = Instructions(69)/II(46)
+#CHECK:         :      Virtual inst:(0)
+#CHECK:         :
 
 
 

@@ -1,9 +1,16 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-minii=10   -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-minii=6   -o /dev/null 2>&1 | FileCheck %s
 
 
-#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 10 in [ 10,95]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 1) (VReg Fp: 0/32, Int: 10/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        : Loop isn't software pipelined because prologue is 0 cycle.
-
+#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 6 in [ 6,95]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 2) (VReg Fp: 0/32, Int: 9/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        : Required iteration count in MIR input is        :   2 (= kernel:1 + pro/epilogue:1 + mod:0) 
+#CHECK:        : Original iteration count in MIR is found        :   99
+#CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 1, 98, 0)
+#CHECK:        :
+#CHECK:        : Loop is software pipelined. (ii=6, kernel=6 cycles, prologue,epilogue =6 cycles)
+#CHECK:        :      IPC (initial=2.00, real=2.00, rate=100.00%)
+#CHECK:        :      = Instructions(12)/II(6)
+#CHECK:         :      Virtual inst:(1)
+#CHECK:        :
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
   source_filename = "/TEST/tp/testprg.c"

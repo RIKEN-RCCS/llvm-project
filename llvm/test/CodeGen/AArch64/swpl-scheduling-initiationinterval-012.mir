@@ -1,7 +1,7 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-max-ireg=10 -swpl-maxii=9 -swpl-minii=8   -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-max-ireg=10 -swpl-maxii=10 -swpl-minii=8   -o /dev/null 2>&1 | FileCheck %s
 
 
-#CHECK:                :  (x) Register (I) short     at estimation.          : (II: 8 in [ 8,9]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (VReg Fp: 10/32, Int: 11/10, Pre: 1/8) Eval:-1.000000e+00.
+#CHECK:        :  (x) Register (I) short     at estimation.          : (II: 9 in [ 8,10]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (VReg Fp: 5/32, Int: 11/10, Pre: 1/8) Eval:-1.000000e+00.
 #CHECK:        : Loop isn't software pipelined because plan is NULL.
 
 --- |
