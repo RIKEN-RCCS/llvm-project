@@ -1,24 +1,20 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-max-ireg=14 -swpl-minii=5 -swpl-maxii=6   -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -start-before=aarch64-swpipeliner  -swpl-debug-dump-plan=true -o /dev/null 2>&1 | FileCheck %s
 
+#CHECK: (plan
+#CHECK:  iteration_interval  = 3
+#CHECK:  n_iteration_copies  = 13
+#CHECK:  n_renaming_versions = 7
+#CHECK:  begin_slot = 999816
+#CHECK:  end_slot   = 999984
+#CHECK:  total_cycles  = 57
+#CHECK:  prolog_cycles = 18
+#CHECK:  kernel_cycles = 21
+#CHECK:  epilog_cycles = 18
 
-#CHECK:         :  (x) Iteration  shortage    at estimation.          : (II: 5 in [ 5,6]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (VReg Fp: 7/32, Int: 13/14, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:         : Extend ii range for iteration shortage:[ 5, 6 ] -> [ 6, 12 ]
-#CHECK:         :  (O) Scheduling succeeds    at recollect effective. : (II: 7 in [ 6,12]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (VReg Fp: 10/32, Int: 11/14, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:         : Required iteration count in MIR input is        :   5 (= kernel:3 + pro/epilogue:2 + mod:0) 
-#CHECK:         : Original iteration count in MIR is found        :   5
-#CHECK:         :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 3, 1, 0)
-#CHECK:         :
-#CHECK:         : Loop is software pipelined. (ii=7, kernel=21 cycles, prologue,epilogue =14 cycles)
-#CHECK:         :      IPC (initial=2.00, real=1.43, rate=71.43%)
-#CHECK:         :      = Instructions(10)/II(7)
-#CHECK:         :      Virtual inst:(0)
-#CHECK:         :
-
-
-
+#CHECK:        ( MachineInstr* : OpcodeName )
 
 --- |
-  ; ModuleID = '/TEST/tp/testprg.c'
+  ; ModuleID = '/TEST/tp/testprg.ll'
   source_filename = "/TEST/tp/testprg.c"
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-unknown-linux-gnu"
@@ -29,7 +25,7 @@
   
   ; Function Attrs: nofree norecurse nounwind
   define dso_local i32 @main() local_unnamed_addr #0 !dbg !7 {
-    call void @llvm.set.loop.iterations.i64(i64 5), !dbg !10
+    call void @llvm.set.loop.iterations.i64(i64 100), !dbg !10
     br label %4, !dbg !10
   
   1:                                                ; preds = %4
@@ -38,22 +34,22 @@
     ret i32 %3, !dbg !16
   
   4:                                                ; preds = %4, %0
-    %5 = phi i64 [ %16, %4 ], [ 0, %0 ]
-    %6 = phi i64 [ 5, %0 ], [ %17, %4 ], !dbg !17
-    %7 = getelementptr i8, i8* bitcast ([1000 x double]* @b to i8*), i64 %5, !dbg !17
-    %8 = bitcast i8* %7 to double*
-    %9 = load double, double* %8, align 8, !dbg !17, !tbaa !12
-    %10 = getelementptr i8, i8* bitcast ([1000 x double]* @c to i8*), i64 %5, !dbg !18
-    %11 = bitcast i8* %10 to double*
-    %12 = load double, double* %11, align 8, !dbg !18, !tbaa !12
-    %13 = fadd fast double %12, %9, !dbg !19
-    %14 = getelementptr i8, i8* bitcast ([1000 x double]* @a to i8*), i64 %5, !dbg !20
-    %15 = bitcast i8* %14 to double*
-    store double %13, double* %15, align 8, !dbg !20, !tbaa !12
-    %16 = add nuw nsw i64 %5, 8, !dbg !21
-    %17 = call i64 @llvm.loop.decrement.reg.i64(i64 %6, i64 1), !dbg !10
-    %18 = icmp ne i64 %17, 0, !dbg !10
-    br i1 %18, label %4, label %1, !dbg !10, !llvm.loop !22
+    %lsr.iv = phi i64 [ %lsr.iv.next, %4 ], [ 0, %0 ]
+    %5 = phi i64 [ 100, %0 ], [ %9, %4 ], !dbg !17
+    %uglygep4 = getelementptr i8, i8* bitcast ([1000 x double]* @b to i8*), i64 %lsr.iv, !dbg !17
+    %uglygep45 = bitcast i8* %uglygep4 to double*
+    %6 = load double, double* %uglygep45, align 8, !dbg !17, !tbaa !12
+    %uglygep2 = getelementptr i8, i8* bitcast ([1000 x double]* @c to i8*), i64 %lsr.iv, !dbg !18
+    %uglygep23 = bitcast i8* %uglygep2 to double*
+    %7 = load double, double* %uglygep23, align 8, !dbg !18, !tbaa !12
+    %8 = fadd fast double %7, %6, !dbg !19
+    %uglygep = getelementptr i8, i8* bitcast ([1000 x double]* @a to i8*), i64 %lsr.iv, !dbg !20
+    %uglygep1 = bitcast i8* %uglygep to double*
+    store double %8, double* %uglygep1, align 8, !dbg !20, !tbaa !12
+    %lsr.iv.next = add nuw nsw i64 %lsr.iv, 8, !dbg !21
+    %9 = call i64 @llvm.loop.decrement.reg.i64(i64 %5, i64 1), !dbg !10
+    %10 = icmp ne i64 %9, 0, !dbg !10
+    br i1 %10, label %4, label %1, !dbg !10, !llvm.loop !22
   }
   
   ; Function Attrs: noduplicate nounwind
@@ -83,20 +79,20 @@
   !7 = distinct !DISubprogram(name: "main", scope: !8, file: !8, line: 4, type: !9, scopeLine: 4, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
   !8 = !DIFile(filename: "tp/testprg.c", directory: "/TEST")
   !9 = !DISubroutineType(types: !2)
-  !10 = !DILocation(line: 6, column: 3, scope: !7)
-  !11 = !DILocation(line: 9, column: 10, scope: !7)
+  !10 = !DILocation(line: 5, column: 3, scope: !7)
+  !11 = !DILocation(line: 8, column: 10, scope: !7)
   !12 = !{!13, !13, i64 0}
   !13 = !{!"double", !14, i64 0}
   !14 = !{!"omnipotent char", !15, i64 0}
   !15 = !{!"Simple C/C++ TBAA"}
-  !16 = !DILocation(line: 9, column: 3, scope: !7)
-  !17 = !DILocation(line: 7, column: 12, scope: !7)
-  !18 = !DILocation(line: 7, column: 19, scope: !7)
-  !19 = !DILocation(line: 7, column: 17, scope: !7)
-  !20 = !DILocation(line: 7, column: 10, scope: !7)
-  !21 = !DILocation(line: 6, column: 17, scope: !7)
+  !16 = !DILocation(line: 8, column: 3, scope: !7)
+  !17 = !DILocation(line: 6, column: 12, scope: !7)
+  !18 = !DILocation(line: 6, column: 19, scope: !7)
+  !19 = !DILocation(line: 6, column: 17, scope: !7)
+  !20 = !DILocation(line: 6, column: 10, scope: !7)
+  !21 = !DILocation(line: 5, column: 17, scope: !7)
   !22 = distinct !{!22, !10, !23, !24}
-  !23 = !DILocation(line: 8, column: 3, scope: !7)
+  !23 = !DILocation(line: 7, column: 3, scope: !7)
   !24 = !{!"llvm.loop.unroll.disable"}
 
 ...
@@ -161,7 +157,7 @@ body:             |
   
     %6:gpr64all = COPY $xzr
     %4:gpr64all = COPY %6
-    %7:gpr32 = MOVi32imm 5
+    %7:gpr32 = MOVi32imm 100
     %5:gpr64all = SUBREG_TO_REG 0, killed %7, %subreg.sub_32
     %8:gpr64common = MOVaddr target-flags(aarch64-page) @b, target-flags(aarch64-pageoff, aarch64-nc) @b
     %10:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
@@ -180,10 +176,10 @@ body:             |
   
     %0:gpr64common = PHI %4, %bb.0, %2, %bb.2
     %1:gpr64sp = PHI %5, %bb.0, %3, %bb.2, debug-location !17
-    %9:fpr64 = LDRDroX %8, %0, 0, 0, debug-location !17 :: (load 8 from %ir.8, !tbaa !12)
-    %11:fpr64 = LDRDroX %10, %0, 0, 0, debug-location !18 :: (load 8 from %ir.11, !tbaa !12)
+    %9:fpr64 = LDRDroX %8, %0, 0, 0, debug-location !17 :: (load 8 from %ir.uglygep45, !tbaa !12)
+    %11:fpr64 = LDRDroX %10, %0, 0, 0, debug-location !18 :: (load 8 from %ir.uglygep23, !tbaa !12)
     %12:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %11, killed %9, debug-location !19
-    STRDroX killed %12, %13, %0, 0, 0, debug-location !20 :: (store 8 into %ir.15, !tbaa !12)
+    STRDroX killed %12, %13, %0, 0, 0, debug-location !20 :: (store 8 into %ir.uglygep1, !tbaa !12)
     %14:gpr64sp = nuw nsw ADDXri %0, 8, 0, debug-location !21
     %2:gpr64all = COPY %14, debug-location !21
     %15:gpr64 = SUBSXri %1, 1, 0, implicit-def $nzcv, debug-location !10

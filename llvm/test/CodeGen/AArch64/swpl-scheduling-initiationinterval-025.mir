@@ -1,21 +1,13 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-max-ireg=14 -swpl-minii=5 -swpl-maxii=6   -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner  -swpl-maxii=6 -swpl-minii=2 -swpl-max-freg=9 -swpl-max-ireg=7  -o /dev/null 2>&1 | FileCheck %s
 
-
-#CHECK:         :  (x) Iteration  shortage    at estimation.          : (II: 5 in [ 5,6]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (VReg Fp: 7/32, Int: 13/14, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:         : Extend ii range for iteration shortage:[ 5, 6 ] -> [ 6, 12 ]
-#CHECK:         :  (O) Scheduling succeeds    at recollect effective. : (II: 7 in [ 6,12]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (VReg Fp: 10/32, Int: 11/14, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:         : Required iteration count in MIR input is        :   5 (= kernel:3 + pro/epilogue:2 + mod:0) 
-#CHECK:         : Original iteration count in MIR is found        :   5
-#CHECK:         :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 3, 1, 0)
-#CHECK:         :
-#CHECK:         : Loop is software pipelined. (ii=7, kernel=21 cycles, prologue,epilogue =14 cycles)
-#CHECK:         :      IPC (initial=2.00, real=1.43, rate=71.43%)
-#CHECK:         :      = Instructions(10)/II(7)
-#CHECK:         :      Virtual inst:(0)
-#CHECK:         :
-
-
-
+#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 2 in [ 2,6]) MVE: 0 Last inst: 2. (Itr Org: 5, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+#CHECK:        :  (x) Iteration  shortage    at estimation.          : (II: 3 in [ 2,6]) MVE: 7 Last inst: 0. (Itr Org: 5, Req: 13) (VReg Fp: 11/9, Int: 19/7, Pre: 1/8) Eval:-1.000000e+00.
+#CHECK:        :  (x) Iteration  shortage    at estimation.          : (II: 5 in [ 2,6]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (VReg Fp: 7/9, Int: 13/7, Pre: 1/8) Eval:-1.000000e+00.
+#CHECK:        : Extend ii range for iteration shortage:[ 2, 6 ] -> [ 6, 12 ]
+#CHECK:        :  (x) Iteration  shortage    at recollect effective. : (II: 6 in [ 6,12]) MVE: 4 Last inst: 0. (Itr Org: 5, Req: 7) (VReg Fp: 7/9, Int: 11/7, Pre: 1/8) Eval:-1.000000e+00.
+#CHECK:        :  (x) Register (I) short     at recollect effective. : (II: 10 in [ 6,12]) MVE: 2 Last inst: 0. (Itr Org: 5, Req: 3) (VReg Fp: 3/9, Int: 9/7, Pre: 1/8) Eval:-1.000000e+00.
+#CHECK:       :  (x) Register (I) short     at recollect effective. : (II: 11 in [ 6,12]) MVE: 2 Last inst: 0. (Itr Org: 5, Req: 3) (VReg Fp: 3/9, Int: 8/7, Pre: 1/8) Eval:-1.000000e+00.
+#CHECK:        : Loop isn't software pipelined because plan is NULL.
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
@@ -73,7 +65,7 @@
   !llvm.module.flags = !{!3, !4, !5}
   !llvm.ident = !{!6}
   
-  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, splitDebugInlining: false, nameTableKind: None)
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "/TEST/tp/testprg.c", directory: "/TEST")
   !2 = !{}
   !3 = !{i32 7, !"Dwarf Version", i32 4}
