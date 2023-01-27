@@ -1,18 +1,17 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-maxii=10 -swpl-minii=10 -swpl-tuning-maxii=true -swpl-debug -o /dev/null 2>&1 | FileCheck %s
 
 
-#CHECK:        : (sched for small loop (Iterative Modulo Scheduling). ResMII 3. NumOfBodyInsts 10. Budget 50. Minimum II = 3.)
-#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 10 in [ 10,12]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 3) (Reg Fp: 3/32, Int: 9/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        : (Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 10. Budget 50. Minimum II = 3.)
+#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 10 in [ 10,12]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 3) (VReg Fp: 3/32, Int: 9/32, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Required iteration count in MIR input is        :   3 (= kernel:2 + pro/epilogue:1 + mod:0) 
 #CHECK:        : Original iteration count in MIR is found        :   100
 #CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 2, 49, 1)
-#CHECK::
-#CHECK:        : Loop is software pipelined. (ii=10, kernel=20 cycles, prologue,epilogue =10 cycles)
-#CHECK:        :      S
+#CHECK:        :
+#CHECK:         : Loop is software pipelined. (ii=10, kernel=20 cycles, prologue,epilogue =10 cycles)
 #CHECK:        :      IPC (initial=1.00, real=1.00, rate=100.00%)
 #CHECK:        :      = Instructions(10)/II(10)
 #CHECK:        :      Virtual inst:(0)
-#CHECK::
+#CHECK:        :
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.ll'

@@ -2,15 +2,15 @@
 
 
 
-#CHECK:        : (sched for small loop (Iterative Modulo Scheduling). ResMII 3. NumOfBodyInsts 10. Budget 50. Minimum II = 3.)
-#CHECK:        :  (X) Too large mve          at estimation.          : (II: 3 in [ 3,95]) MVE: 7 Last inst: 0. (Itr Org: 100, Req: 13) (Reg Fp: 11/32, Int: 19/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (X) Too large mve          at estimation.          : (II: 4 in [ 3,95]) MVE: 5 Last inst: 0. (Itr Org: 100, Req: 9) (Reg Fp: 16/32, Int: 15/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (X) Too large mve          at estimation.          : (II: 8 in [ 3,95]) MVE: 3 Last inst: 0. (Itr Org: 100, Req: 5) (Reg Fp: 10/32, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (X) Too large mve          at estimation.          : (II: 12 in [ 3,95]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 3) (Reg Fp: 3/32, Int: 8/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (X) Too large mve          at estimation.          : (II: 16 in [ 3,95]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 3) (Reg Fp: 3/32, Int: 8/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 20 in [ 3,95]) MVE: 1 Last inst: 0. (Itr Org: 100, Req: 1) (Reg Fp: 3/32, Int: 9/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (X) Too large mve          at binary search.       : (II: 18 in [ 16,20]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 3) (Reg Fp: 3/32, Int: 8/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 19 in [ 18,20]) MVE: 1 Last inst: 0. (Itr Org: 100, Req: 1) (Reg Fp: 3/32, Int: 9/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        : (Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 10. Budget 50. Minimum II = 3.)
+#CHECK:        :  (X) Too large mve          at estimation.          : (II: 3 in [ 3,95]) MVE: 7 Last inst: 0. (Itr Org: 100, Req: 13) (VReg Fp: 11/32, Int: 19/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (X) Too large mve          at estimation.          : (II: 4 in [ 3,95]) MVE: 5 Last inst: 0. (Itr Org: 100, Req: 9) (VReg Fp: 16/32, Int: 15/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (X) Too large mve          at estimation.          : (II: 8 in [ 3,95]) MVE: 3 Last inst: 0. (Itr Org: 100, Req: 5) (VReg Fp: 10/32, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (X) Too large mve          at estimation.          : (II: 12 in [ 3,95]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 3) (VReg Fp: 3/32, Int: 8/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (X) Too large mve          at estimation.          : (II: 16 in [ 3,95]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 3) (VReg Fp: 3/32, Int: 8/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 20 in [ 3,95]) MVE: 1 Last inst: 0. (Itr Org: 100, Req: 1) (VReg Fp: 3/32, Int: 9/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (X) Too large mve          at binary search.       : (II: 18 in [ 16,20]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 3) (VReg Fp: 3/32, Int: 8/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 19 in [ 18,20]) MVE: 1 Last inst: 0. (Itr Org: 100, Req: 1) (VReg Fp: 3/32, Int: 9/32, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Loop isn't software pipelined because prologue is 0 cycle.
 
 --- |
