@@ -164,25 +164,205 @@ static StmPipeline RES_SIMDFP_SVE_OP_015_02 = {
   {0, 1, 7},
   {P_::FLA, P_::FLA, P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_016_01 = {
-  {0, 4, 10, 11, 19}, 
+  {0, 4, 10, 19, 25}, 
   {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
 static StmPipeline RES_SIMDFP_SVE_OP_016_02 = {
-  {0, 4, 10, 10, 19}, 
-  {P_::FLB, P_::FLA, P_::FLA, P_::FLB, P_::FLB}};
+  {0, 4, 10, 19, 25}, 
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_016_03 = {
+  {0, 4, 10, 19, 25}, 
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_016_04 = {
+  {0, 4, 10, 19, 25}, 
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_016_05 = {
+  {0, 4, 10, 19, 25}, 
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_016_06 = {
+  {0, 4, 10, 19, 25}, 
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_016_07 = {
+  {0, 4, 10, 19, 25}, 
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_016_08 = {
+  {0, 4, 10, 19, 25}, 
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_017_01 = {
-  {0, 4, 10, 11, 17, 19, 28},
-  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA}};
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
 static StmPipeline RES_SIMDFP_SVE_OP_017_02 = {
-  {0, 4, 10, 10, 16, 19, 28},
-  {P_::FLB, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLB}};
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_03 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_04 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_05 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_06 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_07 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_08 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_09 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_10 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_11 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_12 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_13 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_14 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_15 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_16 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_018_01 = {
-  {0, 4, 10, 11, 17, 19, 23, 28, 37},
-  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA}};
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
 static StmPipeline RES_SIMDFP_SVE_OP_018_02 = {
-  {0, 4, 10, 10, 16, 19, 22, 28, 37},
-  {P_::FLB, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
-    P_::FLB}};
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_03 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_04 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_05 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_06 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_07 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_08 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_09 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_10 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_11 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_12 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_13 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_14 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_15 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_16 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_17 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_18 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_19 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_20 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_21 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_22 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_23 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_24 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_25 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_26 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_27 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_28 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_29 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_30 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_31 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_32 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_019_01 = {
   {0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
@@ -425,41 +605,22 @@ static StmPipeline RES_SIMDFP_SVE_LD_008_08 = {
 
 static StmPipeline RES_SIMDFP_SVE_LD_009_01 = {
   {0, 0, 0},
-  {P_::EAGB, P_::EAGA, P_::LSU1}};
+  {P_::EAGA, P_::EAGB, P_::LSU1}};
 static StmPipeline RES_SIMDFP_SVE_LD_009_02 = {
   {0, 0, 0},
-  {P_::EAGA, P_::EAGB, P_::LSU1}}; 
-static StmPipeline RES_SIMDFP_SVE_LD_009_03 = {
-  {0, 0, 0},
-  {P_::EAGB, P_::EAGA, P_::LSU2}};
-static StmPipeline RES_SIMDFP_SVE_LD_009_04 = {
-  {0, 0, 0},
-  {P_::EAGA, P_::EAGB, P_::LSU2}};
-
+  {P_::EAGA, P_::EAGB, P_::LSU2}}; 
 static StmPipeline RES_SIMDFP_SVE_LD_010_01 = {
   {0, 0, 1, 1},
   {P_::EAGA, P_::LSU1, P_::EAGA, P_::EAGB}};
 static StmPipeline RES_SIMDFP_SVE_LD_010_02 = {
   {0, 0, 1, 1},
-  {P_::EAGA, P_::LSU1, P_::EAGB, P_::EAGA}};
+  {P_::EAGB, P_::LSU1, P_::EAGA, P_::EAGB}};
 static StmPipeline RES_SIMDFP_SVE_LD_010_03 = {
   {0, 0, 1, 1},
-  {P_::EAGB, P_::LSU1, P_::EAGA, P_::EAGB}};
+  {P_::EAGA, P_::LSU2, P_::EAGA, P_::EAGB}};
 static StmPipeline RES_SIMDFP_SVE_LD_010_04 = {
   {0, 0, 1, 1},
-  {P_::EAGB, P_::LSU1, P_::EAGB, P_::EAGA}};
-static StmPipeline RES_SIMDFP_SVE_LD_010_05 = {
-  {0, 0, 1, 1},
-  {P_::EAGA, P_::LSU2, P_::EAGA, P_::EAGB}};
-static StmPipeline RES_SIMDFP_SVE_LD_010_06 = {
-  {0, 0, 1, 1},
-  {P_::EAGA, P_::LSU2, P_::EAGB, P_::EAGA}};
-static StmPipeline RES_SIMDFP_SVE_LD_010_07 = {
-  {0, 0, 1, 1},
   {P_::EAGB, P_::LSU2, P_::EAGA, P_::EAGB}};
-static StmPipeline RES_SIMDFP_SVE_LD_010_08 = {
-  {0, 0, 1, 1},
-  {P_::EAGB, P_::LSU2, P_::EAGB, P_::EAGA}};
 
 static StmPipeline RES_SIMDFP_SVE_LD_011_01 = {
   {0, 0, 4, 5, 9, 9, 10, 10, 11, 11, 12, 12},
@@ -671,11 +832,39 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
   {MI_SIMDFP_SVE_OP_015,  /// Pipeline:FLA / FLA / FL*  Latency:6 / 6 / [1,2]9  Seq-decode:true
     {{&RES_SIMDFP_SVE_OP_015_01, &RES_SIMDFP_SVE_OP_015_02}, 16, true}},
   {MI_SIMDFP_SVE_OP_016,  /// Pipeline:FL* / (FLA / FL*) x 2  Latency:4 / ([1]6 / [1,2]9) x 2  Seq-decode:true
-    {{&RES_SIMDFP_SVE_OP_016_01, &RES_SIMDFP_SVE_OP_016_02}, 28, true}},
+    {{&RES_SIMDFP_SVE_OP_016_01, &RES_SIMDFP_SVE_OP_016_02,
+      &RES_SIMDFP_SVE_OP_016_03, &RES_SIMDFP_SVE_OP_016_04,
+      &RES_SIMDFP_SVE_OP_016_05, &RES_SIMDFP_SVE_OP_016_06,
+      &RES_SIMDFP_SVE_OP_016_07, &RES_SIMDFP_SVE_OP_016_08},
+    34, true}},
   {MI_SIMDFP_SVE_OP_017,  /// Pipeline:FL* / (FLA / FL*) x 3  Latency:4 / ([1]6 / [1,2]9) x 3  Seq-decode:true
-    {{&RES_SIMDFP_SVE_OP_017_01, &RES_SIMDFP_SVE_OP_017_02}, 37, true}},
+    {{&RES_SIMDFP_SVE_OP_017_01, &RES_SIMDFP_SVE_OP_017_02,
+      &RES_SIMDFP_SVE_OP_017_03, &RES_SIMDFP_SVE_OP_017_04,
+      &RES_SIMDFP_SVE_OP_017_05, &RES_SIMDFP_SVE_OP_017_06,
+      &RES_SIMDFP_SVE_OP_017_07, &RES_SIMDFP_SVE_OP_017_08,
+      &RES_SIMDFP_SVE_OP_017_09, &RES_SIMDFP_SVE_OP_017_10,
+      &RES_SIMDFP_SVE_OP_017_11, &RES_SIMDFP_SVE_OP_017_12,
+      &RES_SIMDFP_SVE_OP_017_13, &RES_SIMDFP_SVE_OP_017_14,
+      &RES_SIMDFP_SVE_OP_017_15, &RES_SIMDFP_SVE_OP_017_16},
+    49, true}},
   {MI_SIMDFP_SVE_OP_018,  /// Pipeline:FL* / (FLA / FL*) x 4  Latency:4 / ([1]6 / [1,2]9) x 4  Seq-decode:true
-    {{&RES_SIMDFP_SVE_OP_018_01, &RES_SIMDFP_SVE_OP_018_02}, 46, true}},
+    {{&RES_SIMDFP_SVE_OP_018_01, &RES_SIMDFP_SVE_OP_018_02,
+      &RES_SIMDFP_SVE_OP_018_03, &RES_SIMDFP_SVE_OP_018_04,
+      &RES_SIMDFP_SVE_OP_018_05, &RES_SIMDFP_SVE_OP_018_06,
+      &RES_SIMDFP_SVE_OP_018_07, &RES_SIMDFP_SVE_OP_018_08,
+      &RES_SIMDFP_SVE_OP_018_09, &RES_SIMDFP_SVE_OP_018_10,
+      &RES_SIMDFP_SVE_OP_018_11, &RES_SIMDFP_SVE_OP_018_12,
+      &RES_SIMDFP_SVE_OP_018_13, &RES_SIMDFP_SVE_OP_018_14,
+      &RES_SIMDFP_SVE_OP_018_15, &RES_SIMDFP_SVE_OP_018_16,
+      &RES_SIMDFP_SVE_OP_018_17, &RES_SIMDFP_SVE_OP_018_18,
+      &RES_SIMDFP_SVE_OP_018_19, &RES_SIMDFP_SVE_OP_018_20,
+      &RES_SIMDFP_SVE_OP_018_21, &RES_SIMDFP_SVE_OP_018_22,
+      &RES_SIMDFP_SVE_OP_018_23, &RES_SIMDFP_SVE_OP_018_24,
+      &RES_SIMDFP_SVE_OP_018_25, &RES_SIMDFP_SVE_OP_018_26,
+      &RES_SIMDFP_SVE_OP_018_27, &RES_SIMDFP_SVE_OP_018_28,
+      &RES_SIMDFP_SVE_OP_018_29, &RES_SIMDFP_SVE_OP_018_30,
+      &RES_SIMDFP_SVE_OP_018_31, &RES_SIMDFP_SVE_OP_018_32},
+    64, true}},
   {MI_SIMDFP_SVE_OP_019,  /// Pipeline:FLA  Latency:80  Blocking:E
     {{&RES_SIMDFP_SVE_OP_019_01}, 80}},
   {MI_SIMDFP_SVE_OP_020,  /// Pipeline:FLA  Latency:154  Blocking:E
@@ -729,14 +918,11 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
       &RES_SIMDFP_SVE_LD_008_07, &RES_SIMDFP_SVE_LD_008_08},
     8, true}},
   {MI_SIMDFP_SVE_LD_009,  /// Pipeline:EAG* /EAG*  Latency:11 / 11
-    {{&RES_SIMDFP_SVE_LD_009_01, &RES_SIMDFP_SVE_LD_009_02,
-      &RES_SIMDFP_SVE_LD_009_03, &RES_SIMDFP_SVE_LD_009_04},
+    {{&RES_SIMDFP_SVE_LD_009_01, &RES_SIMDFP_SVE_LD_009_02},
     11}},
   {MI_SIMDFP_SVE_LD_010,  /// Pipeline:EAG* /EAG*/ EAG*  Latency:1 / [1]11 / [2]11
     {{&RES_SIMDFP_SVE_LD_010_01, &RES_SIMDFP_SVE_LD_010_02,
-      &RES_SIMDFP_SVE_LD_010_03, &RES_SIMDFP_SVE_LD_010_04,
-      &RES_SIMDFP_SVE_LD_010_05, &RES_SIMDFP_SVE_LD_010_06,
-      &RES_SIMDFP_SVE_LD_010_07, &RES_SIMDFP_SVE_LD_010_08},
+      &RES_SIMDFP_SVE_LD_010_03, &RES_SIMDFP_SVE_LD_010_04},
     12}},
   {MI_SIMDFP_SVE_LD_011,  /// Pipeline:EXA + NULL + FLA + FLA + Pipe((EAGA & EAGB), 4)  Latency:1+3+1+4+Pipe(11, 4)
     {{&RES_SIMDFP_SVE_LD_011_01, &RES_SIMDFP_SVE_LD_011_02},
