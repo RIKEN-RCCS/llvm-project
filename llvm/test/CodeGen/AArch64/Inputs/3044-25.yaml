@@ -1,33 +1,36 @@
 # inst-slot-map(Supplement of export-plan):
-# 0,early-clobber %21:gpr64sp, %22:fpr64 = LDRDpost %18:gpr64sp(tied-def 0), 8
-# 1,%23:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %22:fpr64, %19:fpr64
-# 2,%24:gpr64all = COPY %21:gpr64sp
-# 3,%25:gpr64 = SUBSXri %20:gpr64sp, 1, 0, implicit-def $nzcv
-# 4,%26:gpr64all = COPY %25:gpr64
-# 5,%18:gpr64sp = COPY %24:gpr64all
-# 6,%19:fpr64 = COPY %23:fpr64
-# 7,%20:gpr64sp = COPY %26:gpr64all
+# 0,%22:fpr64 = LDURDi %18:gpr64sp, 0
+# 1,%21:gpr64sp = ADDXri %18:gpr64sp, 8, 0
+# 2,%23:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %22:fpr64, %19:fpr64
+# 3,%24:gpr64all = COPY %21:gpr64sp
+# 4,%25:gpr64 = SUBSXri %20:gpr64sp, 1, 0, implicit-def $nzcv
+# 5,%26:gpr64all = COPY %25:gpr64
+# 6,%18:gpr64sp = COPY %24:gpr64all
+# 7,%19:fpr64 = COPY %23:fpr64
+# 8,%20:gpr64sp = COPY %26:gpr64all
 ---
-minimum_iteration_interval: 4
-iteration_interval: 10
+minimum_iteration_interval: 3
+iteration_interval: 13
 n_renaming_versions: 1
 n_iteration_copies: 2
-begin_slot:      999840
+begin_slot:      999752
 slots:
   - id:              0
-    slot:            20
+    slot:            68
   - id:              1
-    slot:            85
+    slot:            148
   - id:              2
-    slot:            84
+    slot:            132
   - id:              3
-    slot:            140
-  - id:              4
-    slot:            149
-  - id:              5
-    slot:            92
-  - id:              6
     slot:            156
+  - id:              4
+    slot:            188
+  - id:              5
+    slot:            196
+  - id:              6
+    slot:            164
   - id:              7
-    slot:            157
+    slot:            204
+  - id:              8
+    slot:            205
 ...

@@ -2,22 +2,12 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-minii=1 -swpl-debug -o /dev/null 2>&1 | FileCheck %s
 
 
-#CHECK:        : (sched for small loop (Iterative Modulo Scheduling). ResMII 5. NumOfBodyInsts 9. Budget 45. Minimum II = 5.)
-#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 1 in [ 1,95]) MVE: 0 Last inst: 8. (Itr Org: 0, Req: 0) (Reg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 5 in [ 1,95]) MVE: 0 Last inst: 8. (Itr Org: 0, Req: 0) (Reg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 9 in [ 1,95]) MVE: 0 Last inst: 8. (Itr Org: 0, Req: 0) (Reg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 13 in [ 1,95]) MVE: 1 Last inst: 0. (Itr Org: 0, Req: 2) (Reg Fp: 0/32, Int: 7/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 11 in [ 9,13]) MVE: 1 Last inst: 0. (Itr Org: 0, Req: 2) (Reg Fp: 0/32, Int: 7/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Run out of budget      at binary search.       : (II: 10 in [ 9,11]) MVE: 0 Last inst: 8. (Itr Org: 0, Req: 0) (Reg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        : Required iteration count in MIR input is        :   2 (= kernel:1 + pro/epilogue:1 + mod:0) 
-#CHECK:        : Original loop iteration is not found.
-#CHECK::
-#CHECK:        : Loop is software pipelined. (ii=11, kernel=11 cycles, prologue,epilogue =11 cycles)
-#CHECK:        :      S
-#CHECK:        :      IPC (initial=9.00, real=0.82, rate=9.09%)
-#CHECK:        :      = Instructions(9)/II(11)
-#CHECK:        :      Virtual inst:(0)
-#CHECK::
+#CHECK:        : (Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 9. Budget 45. Minimum II = 3.)
+#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 1 in [ 1,95]) MVE: 0 Last inst: 8. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 5 in [ 1,95]) MVE: 0 Last inst: 8. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 9 in [ 1,95]) MVE: 1 Last inst: 0. (Itr Org: 0, Req: 1) (VReg Fp: 0/32, Int: 7/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 7 in [ 5,9]) MVE: 1 Last inst: 0. (Itr Org: 0, Req: 1) (VReg Fp: 0/32, Int: 7/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Run out of budget      at binary search.       : (II: 6 in [ 5,7]) MVE: 0 Last inst: 8. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'

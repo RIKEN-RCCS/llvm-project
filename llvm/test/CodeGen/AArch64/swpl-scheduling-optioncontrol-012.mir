@@ -1,12 +1,11 @@
-
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-maxii=200 -swpl-debug -o /dev/null 2>&1 | FileCheck %s
-
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-budget-ratio-threshold=10 -swpl-debug -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:        : (Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 9. Budget 45. Minimum II = 3.)
-#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 3 in [ 3,200]) MVE: 0 Last inst: 8. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 7 in [ 3,200]) MVE: 1 Last inst: 0. (Itr Org: 0, Req: 1) (VReg Fp: 0/32, Int: 7/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 3 in [ 3,95]) MVE: 0 Last inst: 8. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 7 in [ 3,95]) MVE: 1 Last inst: 0. (Itr Org: 0, Req: 1) (VReg Fp: 0/32, Int: 7/32, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        :  (x) Run out of budget      at binary search.       : (II: 5 in [ 3,7]) MVE: 0 Last inst: 8. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
 #CHECK:        :  (x) Run out of budget      at binary search.       : (II: 6 in [ 5,7]) MVE: 0 Last inst: 8. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
   source_filename = "/TEST/tp/testprg.c"

@@ -1,18 +1,17 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-mve-limit=20 -swpl-debug -o /dev/null 2>&1 | FileCheck %s
 
 
-#CHECK:        : (sched for small loop (Iterative Modulo Scheduling). ResMII 3. NumOfBodyInsts 10. Budget 50. Minimum II = 3.)
-#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 3 in [ 3,95]) MVE: 7 Last inst: 0. (Itr Org: 100, Req: 13) (Reg Fp: 11/32, Int: 19/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        : (Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 10. Budget 50. Minimum II = 3.)
+#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 3 in [ 3,95]) MVE: 7 Last inst: 0. (Itr Org: 100, Req: 13) (VReg Fp: 11/32, Int: 19/32, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Required iteration count in MIR input is        :   13 (= kernel:7 + pro/epilogue:6 + mod:0) 
 #CHECK:        : Original iteration count in MIR is found        :   100
 #CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 7, 13, 3)
-#CHECK::
+#CHECK:        :
 #CHECK:        : Loop is software pipelined. (ii=3, kernel=21 cycles, prologue,epilogue =18 cycles)
-#CHECK:        :      S
 #CHECK:        :      IPC (initial=3.33, real=3.33, rate=100.00%)
 #CHECK:        :      = Instructions(10)/II(3)
 #CHECK:        :      Virtual inst:(0)
-#CHECK::
+#CHECK:        :
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.ll'
