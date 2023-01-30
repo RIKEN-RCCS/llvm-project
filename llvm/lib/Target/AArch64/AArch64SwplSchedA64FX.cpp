@@ -110,13 +110,13 @@ static StmPipeline RES_INT_ST_002_02 = {
 static StmPipeline RES_INT_ST_002_03 = {
   {0, 0, 0, 0, 0},
   {P_::EAGA, P_::FLA, P_::EAGB, P_::LSU1, P_::LSU2}};
-static StmPipeline RES_INT_002_04 = {
+static StmPipeline RES_INT_ST_002_04 = {
   {0, 0, 0, 0, 0},
   {P_::EAGB, P_::FLA, P_::EXA, P_::LSU1, P_::LSU2}};
-static StmPipeline RES_INT_002_05 = {
+static StmPipeline RES_INT_ST_002_05 = {
   {0, 0, 0, 0, 0},
   {P_::EAGB, P_::FLA, P_::EXB, P_::LSU1, P_::LSU2}};
-static StmPipeline RES_INT_002_06 = {
+static StmPipeline RES_INT_ST_002_06 = {
   {0, 0, 0, 0, 0},
   {P_::EAGB, P_::FLA, P_::EAGA, P_::LSU1, P_::LSU2}};
 
