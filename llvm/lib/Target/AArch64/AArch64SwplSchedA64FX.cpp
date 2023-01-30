@@ -101,6 +101,24 @@ static StmPipeline RES_INT_LD_002_04 = {{0, 0, 5}, {P_::EAGB,P_::LSU2,P_::EAGB_C
 /// INT_ST
 static StmPipeline RES_INT_ST_001_01 = {{0, 0, 0, 0}, {P_::EAGA, P_::EXA, P_::LSU1, P_::LSU2}};
 static StmPipeline RES_INT_ST_001_02 = {{0, 0, 0, 0}, {P_::EAGB, P_::EXA, P_::LSU1, P_::LSU2}};
+static StmPipeline RES_INT_ST_002_01 = {
+  {0, 0, 0, 0, 0},
+  {P_::EAGA, P_::FLA, P_::EXA, P_::LSU1, P_::LSU2}};
+static StmPipeline RES_INT_ST_002_02 = {
+  {0, 0, 0, 0, 0},
+  {P_::EAGA, P_::FLA, P_::EXB, P_::LSU1, P_::LSU2}};
+static StmPipeline RES_INT_ST_002_03 = {
+  {0, 0, 0, 0, 0},
+  {P_::EAGA, P_::FLA, P_::EAGB, P_::LSU1, P_::LSU2}};
+static StmPipeline RES_INT_002_04 = {
+  {0, 0, 0, 0, 0},
+  {P_::EAGB, P_::FLA, P_::EXA, P_::LSU1, P_::LSU2}};
+static StmPipeline RES_INT_002_05 = {
+  {0, 0, 0, 0, 0},
+  {P_::EAGB, P_::FLA, P_::EXB, P_::LSU1, P_::LSU2}};
+static StmPipeline RES_INT_002_06 = {
+  {0, 0, 0, 0, 0},
+  {P_::EAGB, P_::FLA, P_::EAGA, P_::LSU1, P_::LSU2}};
 
 /// SIMDFP_SVE_OP
 static StmPipeline RES_SIMDFP_SVE_OP_001_01 = {{0}, {P_::FLA}};
@@ -800,6 +818,11 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
       &RES_INT_LD_002_03, &RES_INT_LD_002_04}, 5}},
   {MI_INT_ST_001,  /// Pipeline:EAG*, EXA  Latency:NA, NA
     {{&RES_INT_ST_001_01, &RES_INT_ST_001_02}, LATENCY_NA}},
+  {MI_INT_ST_002,  /// Pipeline:EAG*, FLA / EX*| EAG*  Latency:NA,NA / 1
+    {{&RES_INT_ST_002_01, &RES_INT_ST_002_02,
+      &RES_INT_ST_002_03, &RES_INT_ST_002_04,
+      &RES_INT_ST_002_05, &RES_INT_ST_002_06},
+    LATENCY_NA}},
   {MI_SIMDFP_SVE_OP_001,  /// Pipeline:FL*  Latency:9
     {{&RES_SIMDFP_SVE_OP_001_01, &RES_SIMDFP_SVE_OP_001_02}, 9}},
   {MI_SIMDFP_SVE_OP_002,  /// Pipeline:FL*  Latency:4
@@ -1008,14 +1031,17 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::LDRSWroX, MI_INT_LD_002},
   {AArch64::LDRSWui, MI_INT_LD_002},
   {AArch64::LDRWroX, MI_INT_LD_002},
+  {AArch64::LDRWpost, MI_INT_LD_001},
   {AArch64::LDURSWi, MI_INT_LD_002},
 
+  {AArch64::STRWpost, MI_INT_ST_002},
   {AArch64::STRWroX, MI_INT_ST_001},
   {AArch64::STRWui, MI_INT_ST_001},
   {AArch64::STRXroX, MI_INT_ST_001},
   {AArch64::STRXui, MI_INT_ST_001},
   
   // SIMD&FP
+  {AArch64::ADDv4i32, MI_SIMDFP_SVE_OP_004},
   {AArch64::DUPi32, MI_SIMDFP_SVE_OP_004},
   {AArch64::DUPi64, MI_SIMDFP_SVE_OP_004},
   {AArch64::DUPv2i32lane, MI_SIMDFP_SVE_OP_004},
@@ -1085,6 +1111,7 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::FSUBv4f32, MI_SIMDFP_SVE_OP_001},
   {AArch64::INSvi32lane, MI_SIMDFP_SVE_OP_004},
   {AArch64::INSvi64lane, MI_SIMDFP_SVE_OP_004},
+  {AArch64::MULv4i32, MI_SIMDFP_SVE_OP_001},
   {AArch64::SCVTFUWDri, MI_SIMDFP_SVE_OP_011},
   {AArch64::SCVTFUWSri, MI_SIMDFP_SVE_OP_011},
   {AArch64::ZIP1v2i32, MI_SIMDFP_SVE_OP_004},
