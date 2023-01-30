@@ -1041,7 +1041,7 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::STRXui, MI_INT_ST_001},
   
   // SIMD&FP
-  {AArch64::ADDv4i32, MI_SIMDFP_SVE_OP_004},
+  {AArch64::ADDv4i32, MI_SIMDFP_SVE_OP_002},
   {AArch64::DUPi32, MI_SIMDFP_SVE_OP_004},
   {AArch64::DUPi64, MI_SIMDFP_SVE_OP_004},
   {AArch64::DUPv2i32lane, MI_SIMDFP_SVE_OP_004},
