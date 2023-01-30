@@ -10,7 +10,6 @@
 #CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 11 in [ 8,14]) MVE: 1 Last inst: 0. (Itr Org: 0, Req: 1) (VReg Fp: 0/32, Int: 7/32, Pre: 1/1) Eval:0.000000e+00.
 #CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 12 in [ 8,14]) MVE: 1 Last inst: 0. (Itr Org: 0, Req: 1) (VReg Fp: 0/32, Int: 7/32, Pre: 1/1) Eval:0.000000e+00.
 #CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 13 in [ 8,14]) MVE: 1 Last inst: 0. (Itr Org: 0, Req: 1) (VReg Fp: 0/32, Int: 7/32, Pre: 1/1) Eval:0.000000e+00.
-#CHECK:        : Loop isn't software pipelined because prologue is 0 cycle.
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'

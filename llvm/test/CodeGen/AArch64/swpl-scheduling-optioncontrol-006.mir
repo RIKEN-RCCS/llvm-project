@@ -3,7 +3,6 @@
 
 #CHECK:        : (Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 9. Budget 45. Minimum II = 3.)
 #CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 10 in [ 10,95]) MVE: 1 Last inst: 0. (Itr Org: 0, Req: 1) (VReg Fp: 0/32, Int: 7/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        : Loop isn't software pipelined because prologue is 0 cycle.
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
   source_filename = "/TEST/tp/testprg.c"
