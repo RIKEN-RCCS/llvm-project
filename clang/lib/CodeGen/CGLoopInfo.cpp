@@ -43,6 +43,9 @@ MDNode *LoopInfo::createPipeliningMetadata(const LoopAttributes &Attrs,
   else if (Attrs.PipelineInitiationInterval != 0)
     Enabled = true;
 
+  if (Attrs.PipelineEnabled)
+    Enabled = true;
+
   if (Enabled != true) {
     SmallVector<Metadata *, 4> NewLoopProperties;
     if (Enabled == false) {
@@ -59,6 +62,11 @@ MDNode *LoopInfo::createPipeliningMetadata(const LoopAttributes &Attrs,
   SmallVector<Metadata *, 4> Args;
   Args.push_back(nullptr);
   Args.append(LoopProperties.begin(), LoopProperties.end());
+
+  if (Attrs.PipelineEnabled == LoopAttributes::Enable) {
+    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.pipeline.enable")};
+    Args.push_back(MDNode::get(Ctx, Vals));
+  }
 
   if (Attrs.PipelineInitiationInterval > 0) {
     Metadata *Vals[] = {
@@ -452,7 +460,7 @@ LoopAttributes::LoopAttributes(bool IsParallel)
       VectorizeScalable(LoopAttributes::Unspecified), InterleaveCount(0),
       UnrollCount(0), UnrollAndJamCount(0),
       DistributeEnable(LoopAttributes::Unspecified), PipelineDisabled(false),
-      PipelineInitiationInterval(0), MustProgress(false) {}
+      PipelineInitiationInterval(0), MustProgress(false), PipelineEnabled(false) {}
 
 void LoopAttributes::clear() {
   IsParallel = false;
@@ -469,6 +477,7 @@ void LoopAttributes::clear() {
   PipelineDisabled = false;
   PipelineInitiationInterval = 0;
   MustProgress = false;
+  PipelineEnabled = false;
 }
 
 LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
@@ -487,6 +496,7 @@ LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
       Attrs.VectorizeScalable == LoopAttributes::Unspecified &&
       Attrs.InterleaveCount == 0 && Attrs.UnrollCount == 0 &&
       Attrs.UnrollAndJamCount == 0 && !Attrs.PipelineDisabled &&
+      !Attrs.PipelineEnabled &&
       Attrs.PipelineInitiationInterval == 0 &&
       Attrs.VectorizePredicateEnable == LoopAttributes::Unspecified &&
       Attrs.VectorizeEnable == LoopAttributes::Unspecified &&
@@ -543,6 +553,7 @@ void LoopInfo::finish() {
     AfterJam.VectorizePredicateEnable = Attrs.VectorizePredicateEnable;
     AfterJam.UnrollCount = Attrs.UnrollCount;
     AfterJam.PipelineDisabled = Attrs.PipelineDisabled;
+    AfterJam.PipelineEnabled = Attrs.PipelineEnabled;
     AfterJam.PipelineInitiationInterval = Attrs.PipelineInitiationInterval;
 
     // If this loop is subject of an unroll-and-jam by the parent loop, and has
@@ -660,7 +671,9 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
         setDistributeState(false);
         break;
       case LoopHintAttr::PipelineDisabled:
+      case LoopHintAttr::PipelineEnabled:
         setPipelineDisabled(true);
+        setPipelineEnabled(false);
         break;
       case LoopHintAttr::UnrollCount:
       case LoopHintAttr::UnrollAndJamCount:
@@ -689,11 +702,15 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::Distribute:
         setDistributeState(true);
         break;
+      case LoopHintAttr::PipelineDisabled:
+      case LoopHintAttr::PipelineEnabled:
+        setPipelineDisabled(false);
+        setPipelineEnabled(true);
+        break;
       case LoopHintAttr::UnrollCount:
       case LoopHintAttr::UnrollAndJamCount:
       case LoopHintAttr::VectorizeWidth:
       case LoopHintAttr::InterleaveCount:
-      case LoopHintAttr::PipelineDisabled:
       case LoopHintAttr::PipelineInitiationInterval:
         llvm_unreachable("Options cannot enabled.");
         break;
@@ -716,6 +733,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::InterleaveCount:
       case LoopHintAttr::Distribute:
       case LoopHintAttr::PipelineDisabled:
+      case LoopHintAttr::PipelineEnabled:
       case LoopHintAttr::PipelineInitiationInterval:
         llvm_unreachable("Options cannot be used to assume mem safety.");
         break;
@@ -737,6 +755,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::InterleaveCount:
       case LoopHintAttr::Distribute:
       case LoopHintAttr::PipelineDisabled:
+      case LoopHintAttr::PipelineEnabled:
       case LoopHintAttr::PipelineInitiationInterval:
       case LoopHintAttr::VectorizePredicate:
         llvm_unreachable("Options cannot be used with 'full' hint.");
@@ -780,6 +799,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::Interleave:
       case LoopHintAttr::Distribute:
       case LoopHintAttr::PipelineDisabled:
+      case LoopHintAttr::PipelineEnabled:
         llvm_unreachable("Options cannot be assigned a value.");
         break;
       }
