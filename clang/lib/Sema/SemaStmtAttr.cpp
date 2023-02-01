@@ -163,7 +163,9 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
       else if (StateLoc->Ident->isStr("full"))
         State = LoopHintAttr::Full;
       else if (StateLoc->Ident->isStr("enable")) {
-        Option = LoopHintAttr::PipelineEnabled;
+        if (Option == LoopHintAttr::PipelineDisabled) {
+          Option = LoopHintAttr::PipelineEnabled;
+        }
         State = LoopHintAttr::Enable;
       } else
         llvm_unreachable("bad loop hint argument");
