@@ -2116,7 +2116,7 @@ public:
   /// \param [in] tmi Information for the SwplTransformMIR
   /// \param [in] MF MachineFunction
   virtual void physRegAllocLoop(SwplTransformedMIRInfo *tmi,
-                                const MachineFunction &MF) const {
+                                MachineFunction &MF) const {
     return;
   }
 

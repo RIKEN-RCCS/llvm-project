@@ -45,6 +45,33 @@ using namespace swpl;
 static cl::opt<bool> DebugSwplRegAlloc("swpl-debug-reg-alloc",cl::init(false), cl::ReallyHidden);
 
 /**
+ * @brief 仮想/物理レジスタ間のCOPY命令を作成する
+ * @param [in]     MF MachineFunction
+ * @param [in]     dl デバッグ情報の位置
+ * @param [in,out] k_pre_mis kernel pre処理用のMI
+ * @param [in]     vreg 仮想レジスタ番号
+ * @param [in]     preg 物理レジスタ番号
+ */
+static void addCopyMI(MachineFunction &MF,
+                      DebugLoc dl,
+                      vector<MachineInstr*> &k_pre_mis,
+                      unsigned vreg, unsigned preg) {
+  if( DebugSwplRegAlloc ) {
+    dbgs() << " Copy " << printReg(vreg, SWPipeliner::TRI)
+           << " to " << printReg(preg, SWPipeliner::TRI) << "\n";
+  }
+
+  assert(vreg && preg);
+  // 仮想レジスタから物理レジスタへのCOPY命令作成
+  llvm::MachineInstr *copy =
+      BuildMI(MF, dl,SWPipeliner::TII->get(TargetOpcode::COPY))
+      .addReg(preg, RegState::Define | RegState::Renamable).addReg(vreg);
+  k_pre_mis.push_back(copy);
+
+  return;
+}
+
+/**
  * @brief  物理レジスタ割り付け対象外の仮想レジスタ一覧を作成する
  * @param  [in]     mi llvm::MachineInstr
  * @param  [in]     mo llvm::MachineOperand
@@ -54,30 +81,36 @@ static cl::opt<bool> DebugSwplRegAlloc("swpl-debug-reg-alloc",cl::init(false), c
  */
 static void createExcludeVReg(MachineInstr *mi, MachineOperand &mo,
                               unordered_set<unsigned> &ex_vreg, unsigned reg) {
-  if (!Register::isVirtualRegister(reg)) {
-    // 仮想レジスタでない
+  if ((!Register::isVirtualRegister(reg)) ||
+      (ex_vreg.find(reg) != ex_vreg.end())) {
+    // 仮想レジスタでない or 除外リストに追加済み なら何もしない
     return;
   }
 
-  assert(mi);
-  if (mo.getSubReg() != 0) {
+  if (SWPipeliner::currentLoop->containsLiveOutReg(reg)) {
+    // SWPL適用後の段階でLiveOutしている仮想レジスタなら除外リストに追加
+    if( DebugSwplRegAlloc ) {
+      dbgs() << "Excluded LiveOut. reg="
+             << printReg(reg, SWPipeliner::TRI) << "\n";
+    }
+    ex_vreg.insert(reg);
+  } else if (mo.getSubReg() != 0) {
     // sub-registerを持つレジスタなら除外リストに追加
     if( DebugSwplRegAlloc ) {
-      dbgs() << "Excluded subreg.   MachineOperand: ";
-      mo.print(dbgs());
-      dbgs() << "\n";
+      dbgs() << "Excluded subreg. reg="
+             << printReg(reg, SWPipeliner::TRI) << "\n";
     }
     ex_vreg.insert(reg);
   } else if (mo.isTied()) {
     // tied-defなら除外リストに追加
     if( DebugSwplRegAlloc ) {
-      dbgs() << "Excluded tied-def.   MachineOperand: ";
-      mo.print(dbgs());
-      dbgs() << "\n";
+      dbgs() << "Excluded tied-def. reg="
+             << printReg(reg, SWPipeliner::TRI) << "\n";
     }
     ex_vreg.insert(reg);
   } else {
     // 対象のオペランドなら除外リストに追加
+    assert(mi);
     switch (mi->getOpcode()) {
     case TargetOpcode::EXTRACT_SUBREG:
     case TargetOpcode::INSERT_SUBREG:
@@ -85,9 +118,7 @@ static void createExcludeVReg(MachineInstr *mi, MachineOperand &mo,
     case TargetOpcode::SUBREG_TO_REG:
       if( DebugSwplRegAlloc ) {
         dbgs() << "Excluded operand: " << mi->getOpcode()
-                << ", MachineOperand: ";
-        mo.print(dbgs());
-        dbgs() << "\n";
+               << ", reg=" << printReg(reg, SWPipeliner::TRI) << "\n";
       }
       ex_vreg.insert(reg);
       break;
@@ -224,12 +255,11 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl, unsigned tota
     bool allocated = false;
 
     // 以下の仮想レジスタは、物理レジスタ割り付け対象としない
-    // ・無効な仮想レジスタ（「無効な仮想レジスタ」ってなに？）
+    // ・仮想レジスタ番号が 0
+    // ・isVirtualRegister()の返却値がfalseである
     // ・ブロック内に定義or参照のどちらかしかない
-    // ・参照→定義の順に出現する仮想レジスタ
     if ((itr_cur->vreg == 0) || (!Register::isVirtualRegister(itr_cur->vreg)) ||
-        (itr_cur->num_def < 0) || (itr_cur->num_use < 0) ||
-        (itr_cur->num_use < itr_cur->num_def) ) {
+        (itr_cur->num_def < 0) || (itr_cur->num_use < 0)) {
       if( DebugSwplRegAlloc ) {
         dbgs() << " This vreg is not subject to RA as it may be livein/liveout. ("
                << printReg(itr_cur->vreg, SWPipeliner::TRI) << ")\n";
@@ -291,9 +321,15 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl, unsigned tota
 
 /**
  * @brief  レジスタ情報を基にMachineOperand::setReg()を呼び出す
+ * @param  [in]     MF MachineFunction
+ * @param  [in]     dl デバッグ情報の位置
+ * @param  [in]     k_pre_mis kernel pre処理用のMI
  * @param  [in,out] reginfo 割り当て済みレジスタ情報
  */
-static void callSetReg(SwplRegAllocInfoTbl &rai_tbl) {
+static void callSetReg(MachineFunction &MF,
+                       DebugLoc dl,
+                       vector<MachineInstr*> &k_pre_mis,
+                       SwplRegAllocInfoTbl &rai_tbl) {
   for (size_t i = 0; i < rai_tbl.length(); i++) {
     RegAllocInfo *rinfo = rai_tbl.getWithIdx(i);
     // 仮想レジスタと物理レジスタが有効な値でない限り何もしない
@@ -302,6 +338,21 @@ static void callSetReg(SwplRegAllocInfoTbl &rai_tbl) {
     // 当該物理レジスタを使用するMachineOperandすべてにsetReg()する
     for (vector<MachineOperand*>::iterator itr_mo = rinfo->vreg_mo.begin(),
          itr_end = rinfo->vreg_mo.end(); itr_mo != itr_end; ++itr_mo) {
+      if ((rinfo->num_use < rinfo->num_def) && ((*itr_mo)->isDef())) {
+        /*
+         * MBBをまたがるレジスタへの対処
+         *   bb.10.for.body1:
+         *     %11 = COPY %10
+         *   bb.5.for.body1: (kernel loop)
+         *     $x1 = COPY %11             <- $x1を定義するCOPYを追加する
+         *     $x2(%12) = ADD $x1(%11), 1 <- %11の参照には物理レジスタを割り付ける
+         *     %11 = COPY $x2(%12)        <- %11の定義には物理レジスタを割り付けない
+         *   bb.11.for.body1:
+         *     %13 = ADD %11, 1
+         */
+        addCopyMI(MF, dl, k_pre_mis, rinfo->vreg, rinfo->preg);
+        continue;
+      }
       (*itr_mo)->setReg(rinfo->preg);
       (*itr_mo)->setIsRenamable(true);
     }
@@ -344,9 +395,9 @@ static void dumpKernelInstrs(const MachineFunction &MF,
  * @note   カーネルループのみが対象。spillが発生する場合は再スケジュール。
  */
 void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
-                                        const MachineFunction &MF) const {
-  const MachineInstr *firstMI = nullptr;
-  const MachineInstr *lastMI  = nullptr;
+                                        MachineFunction &MF) const {
+  DebugLoc firstDL;
+  DebugLoc lastDL;
   unordered_set<unsigned> exclude_vreg;
 
   /// kernel部のMachineInstrを対象とする
@@ -356,8 +407,8 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
     MachineInstr *mi = tmi->mis[i];
     if (mi == nullptr)
       continue;
-    if (firstMI == nullptr)
-      firstMI = mi;
+    if (total_mi == 0)
+      firstDL = mi->getDebugLoc();
     ++total_mi;
 
     // MIのオペランド数でループ
@@ -385,8 +436,8 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
     if (mi == nullptr)
       continue;
     ++num_mi;
-    if (lastMI==nullptr && num_mi==total_mi)
-      lastMI = tmi->mis[num_mi];
+    if (num_mi==total_mi)
+      lastDL = mi->getDebugLoc();
 
     // MIのオペランド数でループ
     for (MachineOperand& mo:mi->operands()) {
@@ -418,7 +469,7 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
   }
 
   // setReg()呼び出し
-  callSetReg(*(tmi->swplRAITbl));
+  callSetReg(MF, firstDL, tmi->kernel_pre_mis, *(tmi->swplRAITbl));
 
   if( DebugSwplRegAlloc ) {
     dbgs() << "complete callSetReg()\n";
