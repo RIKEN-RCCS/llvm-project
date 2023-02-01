@@ -1,4 +1,5 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner -swpl-max-freg=2 --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1   -start-before=aarch64-swpipeliner -swpl-max-freg=2 -pass-remarks-output=%t.yaml  -o /dev/null  > %t; \
+#RUN: cat   %t.yaml  | FileCheck %s
 
 #CHECK:--- !Analysis
 #CHECK:Pass:            aarch64-swpipeliner
