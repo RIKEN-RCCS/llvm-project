@@ -101,6 +101,24 @@ static StmPipeline RES_INT_LD_002_04 = {{0, 0, 5}, {P_::EAGB,P_::LSU2,P_::EAGB_C
 /// INT_ST
 static StmPipeline RES_INT_ST_001_01 = {{0, 0, 0, 0}, {P_::EAGA, P_::EXA, P_::LSU1, P_::LSU2}};
 static StmPipeline RES_INT_ST_001_02 = {{0, 0, 0, 0}, {P_::EAGB, P_::EXA, P_::LSU1, P_::LSU2}};
+static StmPipeline RES_INT_ST_002_01 = {
+  {0, 0, 0, 0, 0},
+  {P_::EAGA, P_::FLA, P_::EXA, P_::LSU1, P_::LSU2}};
+static StmPipeline RES_INT_ST_002_02 = {
+  {0, 0, 0, 0, 0},
+  {P_::EAGA, P_::FLA, P_::EXB, P_::LSU1, P_::LSU2}};
+static StmPipeline RES_INT_ST_002_03 = {
+  {0, 0, 0, 0, 0},
+  {P_::EAGA, P_::FLA, P_::EAGB, P_::LSU1, P_::LSU2}};
+static StmPipeline RES_INT_ST_002_04 = {
+  {0, 0, 0, 0, 0},
+  {P_::EAGB, P_::FLA, P_::EXA, P_::LSU1, P_::LSU2}};
+static StmPipeline RES_INT_ST_002_05 = {
+  {0, 0, 0, 0, 0},
+  {P_::EAGB, P_::FLA, P_::EXB, P_::LSU1, P_::LSU2}};
+static StmPipeline RES_INT_ST_002_06 = {
+  {0, 0, 0, 0, 0},
+  {P_::EAGB, P_::FLA, P_::EAGA, P_::LSU1, P_::LSU2}};
 
 /// SIMDFP_SVE_OP
 static StmPipeline RES_SIMDFP_SVE_OP_001_01 = {{0}, {P_::FLA}};
@@ -164,25 +182,205 @@ static StmPipeline RES_SIMDFP_SVE_OP_015_02 = {
   {0, 1, 7},
   {P_::FLA, P_::FLA, P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_016_01 = {
-  {0, 4, 10, 11, 19}, 
+  {0, 4, 10, 19, 25}, 
   {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
 static StmPipeline RES_SIMDFP_SVE_OP_016_02 = {
-  {0, 4, 10, 10, 19}, 
-  {P_::FLB, P_::FLA, P_::FLA, P_::FLB, P_::FLB}};
+  {0, 4, 10, 19, 25}, 
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_016_03 = {
+  {0, 4, 10, 19, 25}, 
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_016_04 = {
+  {0, 4, 10, 19, 25}, 
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_016_05 = {
+  {0, 4, 10, 19, 25}, 
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_016_06 = {
+  {0, 4, 10, 19, 25}, 
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_016_07 = {
+  {0, 4, 10, 19, 25}, 
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_016_08 = {
+  {0, 4, 10, 19, 25}, 
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_017_01 = {
-  {0, 4, 10, 11, 17, 19, 28},
-  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA}};
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
 static StmPipeline RES_SIMDFP_SVE_OP_017_02 = {
-  {0, 4, 10, 10, 16, 19, 28},
-  {P_::FLB, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLB}};
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_03 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_04 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_05 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_06 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_07 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_08 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_09 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_10 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_11 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_12 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_13 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_14 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_15 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_017_16 = {
+  {0, 4, 10, 19, 25, 34, 40}, 
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_018_01 = {
-  {0, 4, 10, 11, 17, 19, 23, 28, 37},
-  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA}};
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
 static StmPipeline RES_SIMDFP_SVE_OP_018_02 = {
-  {0, 4, 10, 10, 16, 19, 22, 28, 37},
-  {P_::FLB, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
-    P_::FLB}};
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_03 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_04 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_05 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_06 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_07 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_08 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_09 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_10 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_11 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_12 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_13 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_14 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_15 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_16 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_17 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_18 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_19 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_20 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_21 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_22 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_23 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_24 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_25 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_26 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_27 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_28 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_29 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_30 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_31 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_018_32 = {
+  {0, 4, 10, 19, 25, 34, 40, 49, 55},
+  {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
+    P_::FLA, P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_019_01 = {
   {0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
@@ -231,6 +429,48 @@ static StmPipeline RES_SIMDFP_SVE_OP_020_01 = {
     P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
     P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
     P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_021_01 = {{0, 6}, {P_::FLB, P_::FLB_C}};
+static StmPipeline RES_SIMDFP_SVE_OP_022_01 = {
+  {0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
+    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_023_01 = {
+  {0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
+    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+    32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+    48, 49, 50, 51},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
+static StmPipeline RES_SIMDFP_SVE_OP_024_01 = {
+  {0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
+    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+    32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+    48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
+    64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
+    80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95,
+    96, 97},
+  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
+    P_::FLA, P_::FLA
+    }};
 
 /// SIMDFP_SVE_LD
 static StmPipeline RES_SIMDFP_SVE_LD_001_01 = {
@@ -383,41 +623,22 @@ static StmPipeline RES_SIMDFP_SVE_LD_008_08 = {
 
 static StmPipeline RES_SIMDFP_SVE_LD_009_01 = {
   {0, 0, 0},
-  {P_::EAGB, P_::EAGA, P_::LSU1}};
+  {P_::EAGA, P_::EAGB, P_::LSU1}};
 static StmPipeline RES_SIMDFP_SVE_LD_009_02 = {
   {0, 0, 0},
-  {P_::EAGA, P_::EAGB, P_::LSU1}}; 
-static StmPipeline RES_SIMDFP_SVE_LD_009_03 = {
-  {0, 0, 0},
-  {P_::EAGB, P_::EAGA, P_::LSU2}};
-static StmPipeline RES_SIMDFP_SVE_LD_009_04 = {
-  {0, 0, 0},
-  {P_::EAGA, P_::EAGB, P_::LSU2}};
-
+  {P_::EAGA, P_::EAGB, P_::LSU2}}; 
 static StmPipeline RES_SIMDFP_SVE_LD_010_01 = {
   {0, 0, 1, 1},
   {P_::EAGA, P_::LSU1, P_::EAGA, P_::EAGB}};
 static StmPipeline RES_SIMDFP_SVE_LD_010_02 = {
   {0, 0, 1, 1},
-  {P_::EAGA, P_::LSU1, P_::EAGB, P_::EAGA}};
+  {P_::EAGB, P_::LSU1, P_::EAGA, P_::EAGB}};
 static StmPipeline RES_SIMDFP_SVE_LD_010_03 = {
   {0, 0, 1, 1},
-  {P_::EAGB, P_::LSU1, P_::EAGA, P_::EAGB}};
+  {P_::EAGA, P_::LSU2, P_::EAGA, P_::EAGB}};
 static StmPipeline RES_SIMDFP_SVE_LD_010_04 = {
   {0, 0, 1, 1},
-  {P_::EAGB, P_::LSU1, P_::EAGB, P_::EAGA}};
-static StmPipeline RES_SIMDFP_SVE_LD_010_05 = {
-  {0, 0, 1, 1},
-  {P_::EAGA, P_::LSU2, P_::EAGA, P_::EAGB}};
-static StmPipeline RES_SIMDFP_SVE_LD_010_06 = {
-  {0, 0, 1, 1},
-  {P_::EAGA, P_::LSU2, P_::EAGB, P_::EAGA}};
-static StmPipeline RES_SIMDFP_SVE_LD_010_07 = {
-  {0, 0, 1, 1},
   {P_::EAGB, P_::LSU2, P_::EAGA, P_::EAGB}};
-static StmPipeline RES_SIMDFP_SVE_LD_010_08 = {
-  {0, 0, 1, 1},
-  {P_::EAGB, P_::LSU2, P_::EAGB, P_::EAGA}};
 
 static StmPipeline RES_SIMDFP_SVE_LD_011_01 = {
   {0, 0, 4, 5, 9, 9, 10, 10, 11, 11, 12, 12},
@@ -427,6 +648,72 @@ static StmPipeline RES_SIMDFP_SVE_LD_011_02 = {
   {0, 0, 4, 5, 9, 9, 10, 10, 11, 11, 12, 12},
   {P_::EXA, P_::LSU2, P_::FLA, P_::FLA, P_::EAGA, P_::EAGB, P_::EAGA,
     P_::EAGB, P_::EAGA, P_::EAGB, P_::EAGA, P_::EAGB}};
+static StmPipeline RES_SIMDFP_SVE_LD_012_01 = {
+  {0, 0, 0, 1},
+  {P_::EAGA, P_::EAGB, P_::LSU1, P_::EAGA}};
+static StmPipeline RES_SIMDFP_SVE_LD_012_02 = {
+  {0, 0, 0, 1},
+  {P_::EAGA, P_::EAGB, P_::LSU1, P_::EAGB}};
+static StmPipeline RES_SIMDFP_SVE_LD_012_03 = {
+  {0, 0, 0, 1},
+  {P_::EAGA, P_::EAGB, P_::LSU2, P_::EAGA}};
+static StmPipeline RES_SIMDFP_SVE_LD_012_04 = {
+  {0, 0, 0, 1},
+  {P_::EAGA, P_::EAGB, P_::LSU2, P_::EAGB}};
+static StmPipeline RES_SIMDFP_SVE_LD_013_01 = {
+  {0, 0, 0, 1, 2},
+  {P_::EAGA, P_::EAGB, P_::LSU1, P_::EAGA, P_::EAGA}};
+static StmPipeline RES_SIMDFP_SVE_LD_013_02 = {
+  {0, 0, 0, 1, 1},
+  {P_::EAGA, P_::EAGB, P_::LSU1, P_::EAGA, P_::EAGB}};
+static StmPipeline RES_SIMDFP_SVE_LD_013_03 = {
+  {0, 0, 0, 1, 1},
+  {P_::EAGA, P_::EAGB, P_::LSU1, P_::EAGB, P_::EAGA}};
+static StmPipeline RES_SIMDFP_SVE_LD_013_04 = {
+  {0, 0, 0, 1, 2},
+  {P_::EAGA, P_::EAGB, P_::LSU1, P_::EAGB, P_::EAGB}};
+static StmPipeline RES_SIMDFP_SVE_LD_013_05 = {
+  {0, 0, 0, 1, 2},
+  {P_::EAGA, P_::EAGB, P_::LSU2, P_::EAGA, P_::EAGA}};
+static StmPipeline RES_SIMDFP_SVE_LD_013_06 = {
+  {0, 0, 0, 1, 1},
+  {P_::EAGA, P_::EAGB, P_::LSU2, P_::EAGA, P_::EAGB}};
+static StmPipeline RES_SIMDFP_SVE_LD_013_07 = {
+  {0, 0, 0, 1, 1},
+  {P_::EAGA, P_::EAGB, P_::LSU2, P_::EAGB, P_::EAGA}};
+static StmPipeline RES_SIMDFP_SVE_LD_013_08 = {
+  {0, 0, 0, 1, 2},
+  {P_::EAGA, P_::EAGB, P_::LSU2, P_::EAGB, P_::EAGB}};
+static StmPipeline RES_SIMDFP_SVE_LD_014_01 = {
+  {0, 0, 0, 1, 1},
+  {P_::EAGA, P_::EAGB, P_::LSU1, P_::EAGA, P_::EAGB}};
+static StmPipeline RES_SIMDFP_SVE_LD_014_02 = {
+  {0, 0, 0, 1, 1},
+  {P_::EAGA, P_::EAGB, P_::LSU2, P_::EAGA, P_::EAGB}};
+static StmPipeline RES_SIMDFP_SVE_LD_015_01 = {
+  {0, 0, 1, 1, 2, 2},
+  {P_::EAGA, P_::LSU1, P_::EAGA, P_::EAGB, P_::EAGA, P_::EAGB}};
+static StmPipeline RES_SIMDFP_SVE_LD_015_02 = {
+  {0, 0, 1, 1, 2, 2},
+  {P_::EAGB, P_::LSU1, P_::EAGA, P_::EAGB, P_::EAGA, P_::EAGB}};
+static StmPipeline RES_SIMDFP_SVE_LD_015_03 = {
+  {0, 0, 1, 1, 2, 2},
+  {P_::EAGA, P_::LSU2, P_::EAGA, P_::EAGB, P_::EAGA, P_::EAGB}};
+static StmPipeline RES_SIMDFP_SVE_LD_015_04 = {
+  {0, 0, 1, 1, 2, 2},
+  {P_::EAGB, P_::LSU2, P_::EAGA, P_::EAGB, P_::EAGA, P_::EAGB}};
+static StmPipeline RES_SIMDFP_SVE_LD_016_01 = {
+  {0, 0, 0, 1, 1, 2},
+  {P_::EAGA, P_::EAGB, P_::LSU1, P_::EAGA, P_::EAGB, P_::EAGA}};
+static StmPipeline RES_SIMDFP_SVE_LD_016_02 = {
+  {0, 0, 0, 1, 1, 2},
+  {P_::EAGA, P_::EAGB, P_::LSU1, P_::EAGA, P_::EAGB, P_::EAGB}};
+static StmPipeline RES_SIMDFP_SVE_LD_016_03 = {
+  {0, 0, 0, 1, 1, 2},
+  {P_::EAGA, P_::EAGB, P_::LSU2, P_::EAGA, P_::EAGB, P_::EAGA}};
+static StmPipeline RES_SIMDFP_SVE_LD_016_04 = {
+  {0, 0, 0, 1, 1, 2},
+  {P_::EAGA, P_::EAGB, P_::LSU2, P_::EAGA, P_::EAGB, P_::EAGB}};
 
 /// SIMDFP_SVE_ST
 static StmPipeline RES_SIMDFP_SVE_ST_001_01 = {
@@ -531,6 +818,11 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
       &RES_INT_LD_002_03, &RES_INT_LD_002_04}, 5}},
   {MI_INT_ST_001,  /// Pipeline:EAG*, EXA  Latency:NA, NA
     {{&RES_INT_ST_001_01, &RES_INT_ST_001_02}, LATENCY_NA}},
+  {MI_INT_ST_002,  /// Pipeline:EAG*, FLA / EX*| EAG*  Latency:NA,NA / 1
+    {{&RES_INT_ST_002_01, &RES_INT_ST_002_02,
+      &RES_INT_ST_002_03, &RES_INT_ST_002_04,
+      &RES_INT_ST_002_05, &RES_INT_ST_002_06},
+    LATENCY_NA}},
   {MI_SIMDFP_SVE_OP_001,  /// Pipeline:FL*  Latency:9
     {{&RES_SIMDFP_SVE_OP_001_01, &RES_SIMDFP_SVE_OP_001_02}, 9}},
   {MI_SIMDFP_SVE_OP_002,  /// Pipeline:FL*  Latency:4
@@ -563,15 +855,51 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
   {MI_SIMDFP_SVE_OP_015,  /// Pipeline:FLA / FLA / FL*  Latency:6 / 6 / [1,2]9  Seq-decode:true
     {{&RES_SIMDFP_SVE_OP_015_01, &RES_SIMDFP_SVE_OP_015_02}, 16, true}},
   {MI_SIMDFP_SVE_OP_016,  /// Pipeline:FL* / (FLA / FL*) x 2  Latency:4 / ([1]6 / [1,2]9) x 2  Seq-decode:true
-    {{&RES_SIMDFP_SVE_OP_016_01, &RES_SIMDFP_SVE_OP_016_02}, 28, true}},
+    {{&RES_SIMDFP_SVE_OP_016_01, &RES_SIMDFP_SVE_OP_016_02,
+      &RES_SIMDFP_SVE_OP_016_03, &RES_SIMDFP_SVE_OP_016_04,
+      &RES_SIMDFP_SVE_OP_016_05, &RES_SIMDFP_SVE_OP_016_06,
+      &RES_SIMDFP_SVE_OP_016_07, &RES_SIMDFP_SVE_OP_016_08},
+    34, true}},
   {MI_SIMDFP_SVE_OP_017,  /// Pipeline:FL* / (FLA / FL*) x 3  Latency:4 / ([1]6 / [1,2]9) x 3  Seq-decode:true
-    {{&RES_SIMDFP_SVE_OP_017_01, &RES_SIMDFP_SVE_OP_017_02}, 37, true}},
+    {{&RES_SIMDFP_SVE_OP_017_01, &RES_SIMDFP_SVE_OP_017_02,
+      &RES_SIMDFP_SVE_OP_017_03, &RES_SIMDFP_SVE_OP_017_04,
+      &RES_SIMDFP_SVE_OP_017_05, &RES_SIMDFP_SVE_OP_017_06,
+      &RES_SIMDFP_SVE_OP_017_07, &RES_SIMDFP_SVE_OP_017_08,
+      &RES_SIMDFP_SVE_OP_017_09, &RES_SIMDFP_SVE_OP_017_10,
+      &RES_SIMDFP_SVE_OP_017_11, &RES_SIMDFP_SVE_OP_017_12,
+      &RES_SIMDFP_SVE_OP_017_13, &RES_SIMDFP_SVE_OP_017_14,
+      &RES_SIMDFP_SVE_OP_017_15, &RES_SIMDFP_SVE_OP_017_16},
+    49, true}},
   {MI_SIMDFP_SVE_OP_018,  /// Pipeline:FL* / (FLA / FL*) x 4  Latency:4 / ([1]6 / [1,2]9) x 4  Seq-decode:true
-    {{&RES_SIMDFP_SVE_OP_018_01, &RES_SIMDFP_SVE_OP_018_02}, 46, true}},
+    {{&RES_SIMDFP_SVE_OP_018_01, &RES_SIMDFP_SVE_OP_018_02,
+      &RES_SIMDFP_SVE_OP_018_03, &RES_SIMDFP_SVE_OP_018_04,
+      &RES_SIMDFP_SVE_OP_018_05, &RES_SIMDFP_SVE_OP_018_06,
+      &RES_SIMDFP_SVE_OP_018_07, &RES_SIMDFP_SVE_OP_018_08,
+      &RES_SIMDFP_SVE_OP_018_09, &RES_SIMDFP_SVE_OP_018_10,
+      &RES_SIMDFP_SVE_OP_018_11, &RES_SIMDFP_SVE_OP_018_12,
+      &RES_SIMDFP_SVE_OP_018_13, &RES_SIMDFP_SVE_OP_018_14,
+      &RES_SIMDFP_SVE_OP_018_15, &RES_SIMDFP_SVE_OP_018_16,
+      &RES_SIMDFP_SVE_OP_018_17, &RES_SIMDFP_SVE_OP_018_18,
+      &RES_SIMDFP_SVE_OP_018_19, &RES_SIMDFP_SVE_OP_018_20,
+      &RES_SIMDFP_SVE_OP_018_21, &RES_SIMDFP_SVE_OP_018_22,
+      &RES_SIMDFP_SVE_OP_018_23, &RES_SIMDFP_SVE_OP_018_24,
+      &RES_SIMDFP_SVE_OP_018_25, &RES_SIMDFP_SVE_OP_018_26,
+      &RES_SIMDFP_SVE_OP_018_27, &RES_SIMDFP_SVE_OP_018_28,
+      &RES_SIMDFP_SVE_OP_018_29, &RES_SIMDFP_SVE_OP_018_30,
+      &RES_SIMDFP_SVE_OP_018_31, &RES_SIMDFP_SVE_OP_018_32},
+    64, true}},
   {MI_SIMDFP_SVE_OP_019,  /// Pipeline:FLA  Latency:80  Blocking:E
     {{&RES_SIMDFP_SVE_OP_019_01}, 80}},
   {MI_SIMDFP_SVE_OP_020,  /// Pipeline:FLA  Latency:154  Blocking:E
     {{&RES_SIMDFP_SVE_OP_020_01}, 154}},
+  {MI_SIMDFP_SVE_OP_021,  /// Pipeline:FLB  Latency:6
+    {{&RES_SIMDFP_SVE_OP_021_01}, 6}},
+  {MI_SIMDFP_SVE_OP_022,  /// Pipeline:FLA  Latency:29  Blocking:E
+    {{&RES_SIMDFP_SVE_OP_022_01}, 29}},
+  {MI_SIMDFP_SVE_OP_023,  /// Pipeline:FLA  Latency:52  Blocking:E
+    {{&RES_SIMDFP_SVE_OP_023_01}, 52}},
+  {MI_SIMDFP_SVE_OP_024,  /// Pipeline:FLA  Latency:98  Blocking:E
+    {{&RES_SIMDFP_SVE_OP_024_01}, 98}},
   {MI_SIMDFP_SVE_LD_001,  /// Pipeline:EAG*, FLA  Latency:11
     {{&RES_SIMDFP_SVE_LD_001_01, &RES_SIMDFP_SVE_LD_001_02,
       &RES_SIMDFP_SVE_LD_001_03, &RES_SIMDFP_SVE_LD_001_04},
@@ -613,18 +941,35 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
       &RES_SIMDFP_SVE_LD_008_07, &RES_SIMDFP_SVE_LD_008_08},
     8, true}},
   {MI_SIMDFP_SVE_LD_009,  /// Pipeline:EAG* /EAG*  Latency:11 / 11
-    {{&RES_SIMDFP_SVE_LD_009_01, &RES_SIMDFP_SVE_LD_009_02,
-      &RES_SIMDFP_SVE_LD_009_03, &RES_SIMDFP_SVE_LD_009_04},
+    {{&RES_SIMDFP_SVE_LD_009_01, &RES_SIMDFP_SVE_LD_009_02},
     11}},
   {MI_SIMDFP_SVE_LD_010,  /// Pipeline:EAG* /EAG*/ EAG*  Latency:1 / [1]11 / [2]11
     {{&RES_SIMDFP_SVE_LD_010_01, &RES_SIMDFP_SVE_LD_010_02,
-      &RES_SIMDFP_SVE_LD_010_03, &RES_SIMDFP_SVE_LD_010_04,
-      &RES_SIMDFP_SVE_LD_010_05, &RES_SIMDFP_SVE_LD_010_06,
-      &RES_SIMDFP_SVE_LD_010_07, &RES_SIMDFP_SVE_LD_010_08},
+      &RES_SIMDFP_SVE_LD_010_03, &RES_SIMDFP_SVE_LD_010_04},
     12}},
   {MI_SIMDFP_SVE_LD_011,  /// Pipeline:EXA + NULL + FLA + FLA + Pipe((EAGA & EAGB), 4)  Latency:1+3+1+4+Pipe(11, 4)
     {{&RES_SIMDFP_SVE_LD_011_01, &RES_SIMDFP_SVE_LD_011_02},
     23}},
+  {MI_SIMDFP_SVE_LD_012,  /// Pipeline:EAG* / EAG* / EAG*  Latency:11 / 11 / 11
+    {{&RES_SIMDFP_SVE_LD_012_01, &RES_SIMDFP_SVE_LD_012_02,
+      &RES_SIMDFP_SVE_LD_012_03, &RES_SIMDFP_SVE_LD_012_04},
+    12}},
+  {MI_SIMDFP_SVE_LD_013,  /// Pipeline:EAG* / EAG* / EAG* / EAG*  Latency:11 / 11 / 11 / 1
+    {{&RES_SIMDFP_SVE_LD_013_01, &RES_SIMDFP_SVE_LD_013_02,
+      &RES_SIMDFP_SVE_LD_013_03, &RES_SIMDFP_SVE_LD_013_04,
+      &RES_SIMDFP_SVE_LD_013_05, &RES_SIMDFP_SVE_LD_013_06},
+    12}},
+  {MI_SIMDFP_SVE_LD_014,  /// Pipeline:EAG* / EAG* / EAG* / EAG*  Latency:11 / 11 / 11 / 11
+    {{&RES_SIMDFP_SVE_LD_014_01, &RES_SIMDFP_SVE_LD_014_02},
+    12}},
+  {MI_SIMDFP_SVE_LD_015,  /// Pipeline:EAG* / (EAG*) x 4  Latency:1 / [1/2/3/4](11) x 4
+    {{&RES_SIMDFP_SVE_LD_015_01, &RES_SIMDFP_SVE_LD_015_02,
+      &RES_SIMDFP_SVE_LD_015_03, &RES_SIMDFP_SVE_LD_015_04},
+    13}},
+  {MI_SIMDFP_SVE_LD_016,  /// Pipeline:EAG* / EAG* / EAG* / EAG* / EAG*  Latency:11 / 11 / 11 / 11 / 1
+    {{&RES_SIMDFP_SVE_LD_016_01, &RES_SIMDFP_SVE_LD_016_02,
+      &RES_SIMDFP_SVE_LD_016_03, &RES_SIMDFP_SVE_LD_016_04},
+    12}},
   {MI_SIMDFP_SVE_ST_001,  /// Pipeline:EAG*, FLA  Latency:NA,NA
     {{&RES_SIMDFP_SVE_ST_001_01, &RES_SIMDFP_SVE_ST_001_02}, LATENCY_NA}},
   {MI_SIMDFP_SVE_ST_002,  /// Pipeline:EAG*, FLA / EX*| EAG*  Latency:NA,NA / 1
@@ -663,6 +1008,7 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::ADDXri, MI_INT_OP_001},
   {AArch64::ADDXrr, MI_INT_OP_001},
   {AArch64::ANDSWri, MI_INT_OP_002},
+  {AArch64::ANDWri, MI_INT_OP_001},
   {AArch64::ANDXri, MI_INT_OP_001},
   {AArch64::CCMPXr, MI_INT_OP_003},
   {AArch64::CSELWr, MI_INT_OP_002},
@@ -671,6 +1017,7 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::MSUBWrrr, MI_INT_OP_008},
   {AArch64::ORRWri, MI_INT_OP_001},
   {AArch64::ORRWrr, MI_INT_OP_001},
+  {AArch64::ORRXri, MI_INT_OP_001},
   {AArch64::PRFMui, MI_INT_OP_005},
   {AArch64::PRFUMi, MI_INT_OP_005},
   {AArch64::SUBSXri, MI_INT_OP_002},
@@ -684,16 +1031,20 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::LDRSWroX, MI_INT_LD_002},
   {AArch64::LDRSWui, MI_INT_LD_002},
   {AArch64::LDRWroX, MI_INT_LD_002},
+  {AArch64::LDRWpost, MI_INT_LD_001},
   {AArch64::LDURSWi, MI_INT_LD_002},
 
+  {AArch64::STRWpost, MI_INT_ST_002},
   {AArch64::STRWroX, MI_INT_ST_001},
   {AArch64::STRWui, MI_INT_ST_001},
   {AArch64::STRXroX, MI_INT_ST_001},
   {AArch64::STRXui, MI_INT_ST_001},
   
   // SIMD&FP
+  {AArch64::ADDv4i32, MI_SIMDFP_SVE_OP_002},
   {AArch64::DUPi32, MI_SIMDFP_SVE_OP_004},
   {AArch64::DUPi64, MI_SIMDFP_SVE_OP_004},
+  {AArch64::DUPv2i32lane, MI_SIMDFP_SVE_OP_004},
   {AArch64::DUPv2i64lane, MI_SIMDFP_SVE_OP_004},
   {AArch64::EXTv16i8, MI_SIMDFP_SVE_OP_004},
   {AArch64::FABSDr, MI_SIMDFP_SVE_OP_002},
@@ -703,6 +1054,7 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::FADDPv4f32, MI_SIMDFP_SVE_OP_015},
   {AArch64::FADDDrr, MI_SIMDFP_SVE_OP_001},
   {AArch64::FADDSrr, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FADDv2f32, MI_SIMDFP_SVE_OP_001},
   {AArch64::FADDv2f64, MI_SIMDFP_SVE_OP_001},
   {AArch64::FADDv4f32, MI_SIMDFP_SVE_OP_001},
   {AArch64::FCMPDri, MI_SIMDFP_SVE_OP_002},
@@ -712,8 +1064,14 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::FCSELDrrr, MI_SIMDFP_SVE_OP_002},
   {AArch64::FCSELSrrr, MI_SIMDFP_SVE_OP_002},
   {AArch64::FCVTDSr, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FCVTLv2i32, MI_SIMDFP_SVE_OP_021},
+  {AArch64::FCVTLv4i32, MI_SIMDFP_SVE_OP_021},
   {AArch64::FCVTSDr, MI_SIMDFP_SVE_OP_001},
   {AArch64::FDIVDrr, MI_SIMDFP_SVE_OP_009},
+  {AArch64::FDIVSrr, MI_SIMDFP_SVE_OP_022},
+  {AArch64::FDIVv2f32, MI_SIMDFP_SVE_OP_022},
+  {AArch64::FDIVv2f64, MI_SIMDFP_SVE_OP_009},
+  {AArch64::FDIVv4f32, MI_SIMDFP_SVE_OP_022},
   {AArch64::FMADDDrrr, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMADDSrrr, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMAXNMDrr, MI_SIMDFP_SVE_OP_002},
@@ -726,23 +1084,40 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::FMLAv2i64_indexed, MI_SIMDFP_SVE_OP_006},
   {AArch64::FMLAv4f32, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMLAv4i32_indexed, MI_SIMDFP_SVE_OP_006},
+  {AArch64::FMLSv1i32_indexed, MI_SIMDFP_SVE_OP_006},
+  {AArch64::FMLSv2f32, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FMLSv2i32_indexed, MI_SIMDFP_SVE_OP_006},
+  {AArch64::FMLSv4f32, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMSUBDrrr, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMSUBSrrr, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMULDrr, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMULSrr, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMULv1i32_indexed, MI_SIMDFP_SVE_OP_006},
   {AArch64::FMULv1i64_indexed, MI_SIMDFP_SVE_OP_006},
+  {AArch64::FMULv2f32, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMULv2f64, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FMULv2i32_indexed, MI_SIMDFP_SVE_OP_006},
   {AArch64::FMULv4f32, MI_SIMDFP_SVE_OP_001},
   {AArch64::FNEGDr, MI_SIMDFP_SVE_OP_002},
   {AArch64::FSQRTDr, MI_SIMDFP_SVE_OP_009},
+  {AArch64::FSQRTSr, MI_SIMDFP_SVE_OP_022},
+  {AArch64::FSQRTv2f32, MI_SIMDFP_SVE_OP_022},
+  {AArch64::FSQRTv2f64, MI_SIMDFP_SVE_OP_009},
+  {AArch64::FSQRTv4f32, MI_SIMDFP_SVE_OP_022},
   {AArch64::FSUBDrr, MI_SIMDFP_SVE_OP_001},
   {AArch64::FSUBSrr, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FSUBv2f32, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FSUBv2f64, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FSUBv4f32, MI_SIMDFP_SVE_OP_001},
   {AArch64::INSvi32lane, MI_SIMDFP_SVE_OP_004},
   {AArch64::INSvi64lane, MI_SIMDFP_SVE_OP_004},
+  {AArch64::MULv4i32, MI_SIMDFP_SVE_OP_001},
   {AArch64::SCVTFUWDri, MI_SIMDFP_SVE_OP_011},
   {AArch64::SCVTFUWSri, MI_SIMDFP_SVE_OP_011},
+  {AArch64::ZIP1v2i32, MI_SIMDFP_SVE_OP_004},
   {AArch64::ZIP1v2i64, MI_SIMDFP_SVE_OP_004},
+  {AArch64::ZIP1v4i32, MI_SIMDFP_SVE_OP_004},
+  {AArch64::ZIP2v2i32, MI_SIMDFP_SVE_OP_004},
 
   {AArch64::LD1i32, MI_SIMDFP_SVE_LD_007},
   {AArch64::LD1i32_POST, MI_SIMDFP_SVE_LD_008},
@@ -752,6 +1127,14 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::LD1Rv2d_POST, MI_SIMDFP_SVE_LD_006},
   {AArch64::LD1Rv2s, MI_SIMDFP_SVE_LD_003},
   {AArch64::LD1Rv2s_POST, MI_SIMDFP_SVE_LD_006},
+  {AArch64::LD3Threev2s_POST, MI_SIMDFP_SVE_LD_013},
+  {AArch64::LD3Threev4s, MI_SIMDFP_SVE_LD_012},
+  {AArch64::LD3Threev4s_POST, MI_SIMDFP_SVE_LD_013},
+  {AArch64::LD4Fourv2d, MI_SIMDFP_SVE_LD_014},
+  {AArch64::LD4Fourv2d_POST, MI_SIMDFP_SVE_LD_016},
+  {AArch64::LD4Fourv2s, MI_SIMDFP_SVE_LD_014},
+  {AArch64::LD4Fourv4s, MI_SIMDFP_SVE_LD_014},
+  {AArch64::LD4Fourv4s_POST, MI_SIMDFP_SVE_LD_016},
   {AArch64::LDRDpost, MI_SIMDFP_SVE_LD_002},
   {AArch64::LDRDpre, MI_SIMDFP_SVE_LD_002},
   {AArch64::LDRDui, MI_SIMDFP_SVE_LD_002},
@@ -776,6 +1159,7 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::STRDpost, MI_SIMDFP_SVE_ST_002},
   {AArch64::STRDroX, MI_SIMDFP_SVE_ST_001},
   {AArch64::STRDui, MI_SIMDFP_SVE_ST_002},
+  {AArch64::STRQpost, MI_SIMDFP_SVE_ST_002},
   {AArch64::STRQroX, MI_SIMDFP_SVE_ST_001},
   {AArch64::STRQui, MI_SIMDFP_SVE_ST_001},
   {AArch64::STRSpost, MI_SIMDFP_SVE_ST_002},
@@ -833,18 +1217,23 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::FMINNM_ZPZZ_UNDEF_D, MI_SIMDFP_SVE_OP_002},
   {AArch64::FMINNM_ZPZZ_UNDEF_S, MI_SIMDFP_SVE_OP_002},
   {AArch64::FMLA_ZPmZZ_D, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FMLA_ZPmZZ_S, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMLA_ZPZZZ_UNDEF_D, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMLA_ZPZZZ_UNDEF_S, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMLS_ZPZZZ_UNDEF_D, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMLS_ZPZZZ_UNDEF_S, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FMSB_ZPmZZ_S, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMUL_ZPZI_UNDEF_D, MI_SIMDFP_SVE_OP_003},
   {AArch64::FMUL_ZPZI_UNDEF_S, MI_SIMDFP_SVE_OP_003},
   {AArch64::FMUL_ZPZZ_UNDEF_D, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FMUL_ZPZZ_UNDEF_S, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMUL_ZZZ_D, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMUL_ZZZ_S, MI_SIMDFP_SVE_OP_001},
   {AArch64::FNEG_ZPmZ_UNDEF_D, MI_SIMDFP_SVE_OP_002},
   {AArch64::FNMLS_ZPZZZ_UNDEF_D, MI_SIMDFP_SVE_OP_001},
   {AArch64::FNMLS_ZPZZZ_UNDEF_S, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FRSQRTE_ZZ_S, MI_SIMDFP_SVE_OP_002},
+  {AArch64::FSUB_ZPZZ_UNDEF_S, MI_SIMDFP_SVE_OP_001},
   {AArch64::FSUB_ZZZ_D, MI_SIMDFP_SVE_OP_001},
   {AArch64::FSUB_ZZZ_S, MI_SIMDFP_SVE_OP_001},
   {AArch64::LSL_ZZI_D, MI_SIMDFP_SVE_OP_002},
@@ -890,6 +1279,7 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::LD1D, MI_SIMDFP_SVE_LD_001},
   {AArch64::LD1D_IMM, MI_SIMDFP_SVE_LD_001},
   {AArch64::LD1RD_IMM, MI_SIMDFP_SVE_LD_001},
+  {AArch64::LD1RW_IMM, MI_SIMDFP_SVE_LD_001},
   {AArch64::LD1SW_D, MI_SIMDFP_SVE_LD_001},
   {AArch64::LD1SW_D_IMM, MI_SIMDFP_SVE_LD_001},
   {AArch64::LD1W, MI_SIMDFP_SVE_LD_001},
@@ -900,6 +1290,10 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::LD2D_IMM, MI_SIMDFP_SVE_LD_009},
   {AArch64::LD2W, MI_SIMDFP_SVE_LD_010},
   {AArch64::LD2W_IMM, MI_SIMDFP_SVE_LD_009},
+  {AArch64::LD4D, MI_SIMDFP_SVE_LD_015},
+  {AArch64::LD4D_IMM, MI_SIMDFP_SVE_LD_014},
+  {AArch64::LD4W, MI_SIMDFP_SVE_LD_015},
+  {AArch64::LD4W_IMM, MI_SIMDFP_SVE_LD_014},
   
   {AArch64::SST1D_SCALED, MI_SIMDFP_SVE_ST_003},
   {AArch64::SST1W_D_SCALED, MI_SIMDFP_SVE_ST_003},
@@ -1033,7 +1427,7 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchRes(
     }
   }
 
-  // FDIV命令,FSQRT命令の判断
+  // FDIV命令,FSQRT命令(<T> = D)の判断
   if (Opcode == AArch64::FDIV_ZPZZ_UNDEF_D || Opcode == AArch64::FSQRT_ZPmZ_UNDEF_D){
     switch (AArch64SwplSchedA64FX::VectorLength) {
     case 128:
@@ -1042,6 +1436,18 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchRes(
       return MI_SIMDFP_SVE_OP_019;
     default:
       return MI_SIMDFP_SVE_OP_020;
+    }
+  }
+
+  // FDIV命令,FSQRT命令(<T> = S)の判断
+  if (Opcode == AArch64::FDIV_ZPZZ_UNDEF_S || Opcode == AArch64::FSQRT_ZPmZ_UNDEF_S){
+    switch (AArch64SwplSchedA64FX::VectorLength) {
+    case 128:
+      return MI_SIMDFP_SVE_OP_022;
+    case 256:
+      return MI_SIMDFP_SVE_OP_023;
+    default:
+      return MI_SIMDFP_SVE_OP_024;
     }
   }
   

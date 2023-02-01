@@ -1,0 +1,587 @@
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource-filter="FSQRT_ZPmZ_UNDEF_S|FDIV_ZPZZ_UNDEF_S" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %270:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_UNDEF_S %95:zpr, %74:ppr_3b, killed %257:zpr
+#CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+24
+#CHECK-NEXT:  latency: 98
+#CHECK-NEXT:  seqDecode: false
+#CHECK-NEXT:  stage/resource(): 0/FLA, 1/FLA, 2/FLA, 3/FLA, 4/FLA, 5/FLA, 6/FLA, 7/FLA, 8/FLA, 9/FLA, 10/FLA, 11/FLA, 12/FLA, 13/FLA, 14/FLA, 15/FLA, 16/FLA, 17/FLA, 18/FLA, 19/FLA, 20/FLA, 21/FLA, 22/FLA, 23/FLA, 24/FLA, 25/FLA, 26/FLA, 27/FLA, 28/FLA, 29/FLA, 30/FLA, 31/FLA, 32/FLA, 33/FLA, 34/FLA, 35/FLA, 36/FLA, 37/FLA, 38/FLA, 39/FLA, 40/FLA, 41/FLA, 42/FLA, 43/FLA, 44/FLA, 45/FLA, 46/FLA, 47/FLA, 48/FLA, 49/FLA, 50/FLA, 51/FLA, 52/FLA, 53/FLA, 54/FLA, 55/FLA, 56/FLA, 57/FLA, 58/FLA, 59/FLA, 60/FLA, 61/FLA, 62/FLA, 63/FLA, 64/FLA, 65/FLA, 66/FLA, 67/FLA, 68/FLA, 69/FLA, 70/FLA, 71/FLA, 72/FLA, 73/FLA, 74/FLA, 75/FLA, 76/FLA, 77/FLA, 78/FLA, 79/FLA, 80/FLA, 81/FLA, 82/FLA, 83/FLA, 84/FLA, 85/FLA, 86/FLA, 87/FLA, 88/FLA, 89/FLA, 90/FLA, 91/FLA, 92/FLA, 93/FLA, 94/FLA, 95/FLA, 96/FLA, 97/FLA
+
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %278:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_UNDEF_S %74:ppr_3b, killed %266:zpr, %270:zpr
+#CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+24
+#CHECK-NEXT:  latency: 98
+#CHECK-NEXT:  seqDecode: false
+#CHECK-NEXT:  stage/resource(): 0/FLA, 1/FLA, 2/FLA, 3/FLA, 4/FLA, 5/FLA, 6/FLA, 7/FLA, 8/FLA, 9/FLA, 10/FLA, 11/FLA, 12/FLA, 13/FLA, 14/FLA, 15/FLA, 16/FLA, 17/FLA, 18/FLA, 19/FLA, 20/FLA, 21/FLA, 22/FLA, 23/FLA, 24/FLA, 25/FLA, 26/FLA, 27/FLA, 28/FLA, 29/FLA, 30/FLA, 31/FLA, 32/FLA, 33/FLA, 34/FLA, 35/FLA, 36/FLA, 37/FLA, 38/FLA, 39/FLA, 40/FLA, 41/FLA, 42/FLA, 43/FLA, 44/FLA, 45/FLA, 46/FLA, 47/FLA, 48/FLA, 49/FLA, 50/FLA, 51/FLA, 52/FLA, 53/FLA, 54/FLA, 55/FLA, 56/FLA, 57/FLA, 58/FLA, 59/FLA, 60/FLA, 61/FLA, 62/FLA, 63/FLA, 64/FLA, 65/FLA, 66/FLA, 67/FLA, 68/FLA, 69/FLA, 70/FLA, 71/FLA, 72/FLA, 73/FLA, 74/FLA, 75/FLA, 76/FLA, 77/FLA, 78/FLA, 79/FLA, 80/FLA, 81/FLA, 82/FLA, 83/FLA, 84/FLA, 85/FLA, 86/FLA, 87/FLA, 88/FLA, 89/FLA, 90/FLA, 91/FLA, 92/FLA, 93/FLA, 94/FLA, 95/FLA, 96/FLA, 97/FLA
+
+--- |
+  ; ModuleID = 'nbody.cpp'
+  source_filename = "nbody.cpp"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-hurd-gnu"
+  
+  %struct.Acceleration = type { float, float, float }
+  
+  ; Function Attrs: argmemonly mustprogress nofree noinline nosync nounwind writeonly uwtable vscale_range(4,4)
+  define dso_local void @_Z18nbody_compiler_SoAiP12Acceleration(i32 noundef %n, ptr nocapture noundef writeonly %acc) local_unnamed_addr #0 {
+  entry:
+    %0 = zext i32 %n to i64
+    %vla = alloca float, i64 %0, align 4
+    %vla1 = alloca float, i64 %0, align 4
+    %cmp22 = icmp sgt i32 %n, 0
+    br i1 %cmp22, label %for.body.preheader, label %for.cond.cleanup
+  
+  for.body.preheader:                               ; preds = %entry
+    %min.iters.check = icmp ult i32 %n, 64
+    br i1 %min.iters.check, label %for.body.preheader63, label %vector.ph
+  
+  vector.ph:                                        ; preds = %for.body.preheader
+    %n.vec = and i64 %0, 4294967232
+    %1 = lshr i64 %0, 6
+    %2 = shl i64 %1, 8
+    %3 = add nsw i64 %2, -256
+    %4 = lshr i64 %3, 8
+    %5 = add nuw nsw i64 %4, 1
+    %6 = call i64 @llvm.start.loop.iterations.i64(i64 %5)
+    br label %vector.body
+  
+  vector.body:                                      ; preds = %vector.body, %vector.ph
+    %lsr.iv76 = phi i64 [ %lsr.iv.next77, %vector.body ], [ 0, %vector.ph ]
+    %vec.phi = phi <vscale x 4 x float> [ zeroinitializer, %vector.ph ], [ %24, %vector.body ]
+    %vec.phi28 = phi <vscale x 4 x float> [ zeroinitializer, %vector.ph ], [ %25, %vector.body ]
+    %vec.phi29 = phi <vscale x 4 x float> [ zeroinitializer, %vector.ph ], [ %26, %vector.body ]
+    %vec.phi30 = phi <vscale x 4 x float> [ zeroinitializer, %vector.ph ], [ %27, %vector.body ]
+    %vec.phi31 = phi <vscale x 4 x float> [ zeroinitializer, %vector.ph ], [ %32, %vector.body ]
+    %vec.phi32 = phi <vscale x 4 x float> [ zeroinitializer, %vector.ph ], [ %33, %vector.body ]
+    %vec.phi33 = phi <vscale x 4 x float> [ zeroinitializer, %vector.ph ], [ %34, %vector.body ]
+    %vec.phi34 = phi <vscale x 4 x float> [ zeroinitializer, %vector.ph ], [ %35, %vector.body ]
+    %7 = phi i64 [ %6, %vector.ph ], [ %36, %vector.body ]
+    %uglygep78 = getelementptr i8, ptr %vla, i64 %lsr.iv76
+    %wide.load = load <vscale x 4 x float>, ptr %uglygep78, align 4, !tbaa !4
+    %uglygep82 = getelementptr i8, ptr %uglygep78, i64 64
+    %wide.load35 = load <vscale x 4 x float>, ptr %uglygep82, align 4, !tbaa !4
+    %uglygep81 = getelementptr i8, ptr %uglygep78, i64 128
+    %wide.load36 = load <vscale x 4 x float>, ptr %uglygep81, align 4, !tbaa !4
+    %uglygep79 = getelementptr i8, ptr %vla, i64 %lsr.iv76
+    %uglygep80 = getelementptr i8, ptr %uglygep79, i64 192
+    %wide.load37 = load <vscale x 4 x float>, ptr %uglygep80, align 4, !tbaa !4
+    %8 = fsub fast <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), %wide.load
+    %9 = fsub fast <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), %wide.load35
+    %10 = fsub fast <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), %wide.load36
+    %11 = fsub fast <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), %wide.load37
+    %uglygep83 = getelementptr i8, ptr %vla1, i64 %lsr.iv76
+    %wide.load38 = load <vscale x 4 x float>, ptr %uglygep83, align 4, !tbaa !4
+    %uglygep87 = getelementptr i8, ptr %uglygep83, i64 64
+    %wide.load39 = load <vscale x 4 x float>, ptr %uglygep87, align 4, !tbaa !4
+    %uglygep86 = getelementptr i8, ptr %uglygep83, i64 128
+    %wide.load40 = load <vscale x 4 x float>, ptr %uglygep86, align 4, !tbaa !4
+    %uglygep84 = getelementptr i8, ptr %vla1, i64 %lsr.iv76
+    %uglygep85 = getelementptr i8, ptr %uglygep84, i64 192
+    %wide.load41 = load <vscale x 4 x float>, ptr %uglygep85, align 4, !tbaa !4
+    %12 = fsub fast <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), %wide.load38
+    %13 = fsub fast <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), %wide.load39
+    %14 = fsub fast <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), %wide.load40
+    %15 = fsub fast <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), %wide.load41
+    %16 = tail call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> %8)
+    %17 = tail call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> %9)
+    %18 = tail call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> %10)
+    %19 = tail call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> %11)
+    %20 = fdiv fast <vscale x 4 x float> %8, %16
+    %21 = fdiv fast <vscale x 4 x float> %9, %17
+    %22 = fdiv fast <vscale x 4 x float> %10, %18
+    %23 = fdiv fast <vscale x 4 x float> %11, %19
+    %24 = fsub fast <vscale x 4 x float> %vec.phi, %20
+    %25 = fsub fast <vscale x 4 x float> %vec.phi28, %21
+    %26 = fsub fast <vscale x 4 x float> %vec.phi29, %22
+    %27 = fsub fast <vscale x 4 x float> %vec.phi30, %23
+    %28 = fdiv fast <vscale x 4 x float> %12, %16
+    %29 = fdiv fast <vscale x 4 x float> %13, %17
+    %30 = fdiv fast <vscale x 4 x float> %14, %18
+    %31 = fdiv fast <vscale x 4 x float> %15, %19
+    %32 = fsub fast <vscale x 4 x float> %vec.phi31, %28
+    %33 = fsub fast <vscale x 4 x float> %vec.phi32, %29
+    %34 = fsub fast <vscale x 4 x float> %vec.phi33, %30
+    %35 = fsub fast <vscale x 4 x float> %vec.phi34, %31
+    %lsr.iv.next77 = add nuw nsw i64 %lsr.iv76, 256
+    %36 = call i64 @llvm.loop.decrement.reg.i64(i64 %7, i64 1)
+    %37 = icmp ne i64 %36, 0
+    br i1 %37, label %vector.body, label %middle.block, !llvm.loop !8
+  
+  middle.block:                                     ; preds = %vector.body
+    %bin.rdx44 = fadd fast <vscale x 4 x float> %33, %32
+    %bin.rdx45 = fadd fast <vscale x 4 x float> %34, %bin.rdx44
+    %bin.rdx46 = fadd fast <vscale x 4 x float> %35, %bin.rdx45
+    %38 = tail call fast float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> %bin.rdx46)
+    %bin.rdx = fadd fast <vscale x 4 x float> %25, %24
+    %bin.rdx42 = fadd fast <vscale x 4 x float> %26, %bin.rdx
+    %bin.rdx43 = fadd fast <vscale x 4 x float> %27, %bin.rdx42
+    %39 = tail call fast float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> %bin.rdx43)
+    %cmp.n = icmp eq i64 %n.vec, %0
+    br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader63
+  
+  for.body.preheader63:                             ; preds = %for.body.preheader, %middle.block
+    %indvars.iv.ph = phi i64 [ %n.vec, %middle.block ], [ 0, %for.body.preheader ]
+    %ax.025.ph = phi float [ %39, %middle.block ], [ 0.000000e+00, %for.body.preheader ]
+    %ay.024.ph = phi float [ %38, %middle.block ], [ 0.000000e+00, %for.body.preheader ]
+    %40 = shl nuw nsw i64 %indvars.iv.ph, 2
+    %uglygep = getelementptr i8, ptr %vla1, i64 %40
+    %uglygep72 = getelementptr i8, ptr %vla, i64 %40
+    %41 = sub i64 %0, %indvars.iv.ph
+    %42 = call i64 @llvm.start.loop.iterations.i64(i64 %41)
+    br label %for.body
+  
+  for.cond.cleanup:                                 ; preds = %for.body, %middle.block, %entry
+    %ay.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %38, %middle.block ], [ %sub7, %for.body ]
+    %ax.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %39, %middle.block ], [ %sub5, %for.body ]
+    %idxprom10 = sext i32 %n to i64
+    %arrayidx11 = getelementptr inbounds %struct.Acceleration, ptr %acc, i64 %idxprom10
+    store float %ax.0.lcssa, ptr %arrayidx11, align 4, !tbaa.struct !11
+    %ref.tmp.sroa.4.0.arrayidx11.sroa_idx = getelementptr inbounds i8, ptr %arrayidx11, i64 4
+    store float %ay.0.lcssa, ptr %ref.tmp.sroa.4.0.arrayidx11.sroa_idx, align 4, !tbaa.struct !12
+    %ref.tmp.sroa.5.0.arrayidx11.sroa_idx = getelementptr inbounds i8, ptr %arrayidx11, i64 8
+    store float 0.000000e+00, ptr %ref.tmp.sroa.5.0.arrayidx11.sroa_idx, align 4, !tbaa.struct !13
+    ret void
+  
+  for.body:                                         ; preds = %for.body.preheader63, %for.body
+    %lsr.iv73 = phi ptr [ %uglygep72, %for.body.preheader63 ], [ %uglygep74, %for.body ]
+    %lsr.iv = phi ptr [ %uglygep, %for.body.preheader63 ], [ %uglygep71, %for.body ]
+    %ax.025 = phi float [ %sub5, %for.body ], [ %ax.025.ph, %for.body.preheader63 ]
+    %ay.024 = phi float [ %sub7, %for.body ], [ %ay.024.ph, %for.body.preheader63 ]
+    %43 = phi i64 [ %42, %for.body.preheader63 ], [ %47, %for.body ]
+    %44 = load float, ptr %lsr.iv73, align 4, !tbaa !4
+    %sub = fsub fast float 1.000000e+00, %44
+    %45 = load float, ptr %lsr.iv, align 4, !tbaa !4
+    %sub4 = fsub fast float 1.000000e+00, %45
+    %46 = tail call fast float @llvm.sqrt.f32(float %sub)
+    %mul = fdiv fast float %sub, %46
+    %sub5 = fsub fast float %ax.025, %mul
+    %mul6 = fdiv fast float %sub4, %46
+    %sub7 = fsub fast float %ay.024, %mul6
+    %uglygep71 = getelementptr i8, ptr %lsr.iv, i64 4
+    %uglygep74 = getelementptr i8, ptr %lsr.iv73, i64 4
+    %47 = call i64 @llvm.loop.decrement.reg.i64(i64 %43, i64 1)
+    %48 = icmp ne i64 %47, 0
+    br i1 %48, label %for.body, label %for.cond.cleanup, !llvm.loop !14
+  }
+  
+  ; Function Attrs: mustprogress nocallback nofree nosync nounwind readnone speculatable willreturn
+  declare float @llvm.sqrt.f32(float) #1
+  
+  ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
+  declare <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float>) #2
+  
+  ; Function Attrs: nocallback nofree nosync nounwind readnone willreturn
+  declare float @llvm.vector.reduce.fadd.nxv4f32(float, <vscale x 4 x float>) #3
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i64 @llvm.start.loop.iterations.i64(i64) #4
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #4
+  
+  attributes #0 = { argmemonly mustprogress nofree noinline nosync nounwind writeonly uwtable vscale_range(4,4) "approx-func-fp-math"="true" "frame-pointer"="non-leaf" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" }
+  attributes #1 = { mustprogress nocallback nofree nosync nounwind readnone speculatable willreturn }
+  attributes #2 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+  attributes #3 = { nocallback nofree nosync nounwind readnone willreturn }
+  attributes #4 = { nocallback noduplicate nofree nosync nounwind willreturn }
+  
+  !llvm.module.flags = !{!0, !1, !2}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 7, !"uwtable", i32 2}
+  !2 = !{i32 7, !"frame-pointer", i32 1}
+  !4 = !{!5, !5, i64 0}
+  !5 = !{!"float", !6, i64 0}
+  !6 = !{!"omnipotent char", !7, i64 0}
+  !7 = !{!"Simple C++ TBAA"}
+  !8 = distinct !{!8, !9, !10}
+  !9 = !{!"llvm.loop.mustprogress"}
+  !10 = !{!"llvm.loop.isvectorized", i32 1}
+  !11 = !{i64 0, i64 4, !4, i64 4, i64 4, !4, i64 8, i64 4, !4}
+  !12 = !{i64 0, i64 4, !4, i64 4, i64 4, !4}
+  !13 = !{i64 0, i64 4, !4}
+  !14 = distinct !{!14, !9, !15, !10}
+  !15 = !{!"llvm.loop.unroll.runtime.disable"}
+
+...
+---
+name:            _Z18nbody_compiler_SoAiP12Acceleration
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gpr64, preferred-register: '' }
+  - { id: 1, class: gpr64common, preferred-register: '' }
+  - { id: 2, class: gpr64common, preferred-register: '' }
+  - { id: 3, class: gpr64, preferred-register: '' }
+  - { id: 4, class: gpr64all, preferred-register: '' }
+  - { id: 5, class: gpr64common, preferred-register: '' }
+  - { id: 6, class: zpr, preferred-register: '' }
+  - { id: 7, class: zpr, preferred-register: '' }
+  - { id: 8, class: zpr, preferred-register: '' }
+  - { id: 9, class: zpr, preferred-register: '' }
+  - { id: 10, class: zpr, preferred-register: '' }
+  - { id: 11, class: zpr, preferred-register: '' }
+  - { id: 12, class: zpr, preferred-register: '' }
+  - { id: 13, class: zpr, preferred-register: '' }
+  - { id: 14, class: gpr64sp, preferred-register: '' }
+  - { id: 15, class: zpr, preferred-register: '' }
+  - { id: 16, class: zpr, preferred-register: '' }
+  - { id: 17, class: zpr, preferred-register: '' }
+  - { id: 18, class: zpr, preferred-register: '' }
+  - { id: 19, class: zpr, preferred-register: '' }
+  - { id: 20, class: zpr, preferred-register: '' }
+  - { id: 21, class: zpr, preferred-register: '' }
+  - { id: 22, class: zpr, preferred-register: '' }
+  - { id: 23, class: gpr64all, preferred-register: '' }
+  - { id: 24, class: gpr64all, preferred-register: '' }
+  - { id: 25, class: fpr32, preferred-register: '' }
+  - { id: 26, class: fpr32, preferred-register: '' }
+  - { id: 27, class: gpr64, preferred-register: '' }
+  - { id: 28, class: fpr32, preferred-register: '' }
+  - { id: 29, class: fpr32, preferred-register: '' }
+  - { id: 30, class: gpr64all, preferred-register: '' }
+  - { id: 31, class: gpr64all, preferred-register: '' }
+  - { id: 32, class: gpr64all, preferred-register: '' }
+  - { id: 33, class: fpr32, preferred-register: '' }
+  - { id: 34, class: fpr32, preferred-register: '' }
+  - { id: 35, class: gpr64sp, preferred-register: '' }
+  - { id: 36, class: gpr64sp, preferred-register: '' }
+  - { id: 37, class: fpr32, preferred-register: '' }
+  - { id: 38, class: fpr32, preferred-register: '' }
+  - { id: 39, class: gpr64sp, preferred-register: '' }
+  - { id: 40, class: fpr32, preferred-register: '' }
+  - { id: 41, class: fpr32, preferred-register: '' }
+  - { id: 42, class: gpr64all, preferred-register: '' }
+  - { id: 43, class: gpr64all, preferred-register: '' }
+  - { id: 44, class: gpr64all, preferred-register: '' }
+  - { id: 45, class: gpr32common, preferred-register: '' }
+  - { id: 46, class: gpr64, preferred-register: '' }
+  - { id: 47, class: fpr32, preferred-register: '' }
+  - { id: 48, class: gpr32, preferred-register: '' }
+  - { id: 49, class: gpr64common, preferred-register: '' }
+  - { id: 50, class: gpr64common, preferred-register: '' }
+  - { id: 51, class: gpr64common, preferred-register: '' }
+  - { id: 52, class: gpr64, preferred-register: '' }
+  - { id: 53, class: gpr64common, preferred-register: '' }
+  - { id: 54, class: gpr64, preferred-register: '' }
+  - { id: 55, class: gpr64common, preferred-register: '' }
+  - { id: 56, class: gpr32, preferred-register: '' }
+  - { id: 57, class: gpr64all, preferred-register: '' }
+  - { id: 58, class: fpr32, preferred-register: '' }
+  - { id: 59, class: gpr64all, preferred-register: '' }
+  - { id: 60, class: gpr32, preferred-register: '' }
+  - { id: 61, class: gpr64all, preferred-register: '' }
+  - { id: 62, class: zpr, preferred-register: '' }
+  - { id: 63, class: gpr64common, preferred-register: '' }
+  - { id: 64, class: gpr64, preferred-register: '' }
+  - { id: 65, class: gpr64sp, preferred-register: '' }
+  - { id: 66, class: gpr64common, preferred-register: '' }
+  - { id: 67, class: gpr64common, preferred-register: '' }
+  - { id: 68, class: gpr64sp, preferred-register: '' }
+  - { id: 69, class: gpr64all, preferred-register: '' }
+  - { id: 70, class: gpr64common, preferred-register: '' }
+  - { id: 71, class: ppr_3b, preferred-register: '' }
+  - { id: 72, class: zpr, preferred-register: '' }
+  - { id: 73, class: gpr64common, preferred-register: '' }
+  - { id: 74, class: ppr_3b, preferred-register: '' }
+  - { id: 75, class: zpr, preferred-register: '' }
+  - { id: 76, class: gpr64common, preferred-register: '' }
+  - { id: 77, class: zpr, preferred-register: '' }
+  - { id: 78, class: gpr64common, preferred-register: '' }
+  - { id: 79, class: zpr, preferred-register: '' }
+  - { id: 80, class: ppr_3b, preferred-register: '' }
+  - { id: 81, class: zpr, preferred-register: '' }
+  - { id: 82, class: zpr, preferred-register: '' }
+  - { id: 83, class: zpr, preferred-register: '' }
+  - { id: 84, class: zpr, preferred-register: '' }
+  - { id: 85, class: gpr64common, preferred-register: '' }
+  - { id: 86, class: zpr, preferred-register: '' }
+  - { id: 87, class: zpr, preferred-register: '' }
+  - { id: 88, class: zpr, preferred-register: '' }
+  - { id: 89, class: zpr, preferred-register: '' }
+  - { id: 90, class: zpr, preferred-register: '' }
+  - { id: 91, class: zpr, preferred-register: '' }
+  - { id: 92, class: zpr, preferred-register: '' }
+  - { id: 93, class: zpr, preferred-register: '' }
+  - { id: 94, class: zpr, preferred-register: '' }
+  - { id: 95, class: zpr, preferred-register: '' }
+  - { id: 96, class: zpr, preferred-register: '' }
+  - { id: 97, class: zpr, preferred-register: '' }
+  - { id: 98, class: zpr, preferred-register: '' }
+  - { id: 99, class: zpr, preferred-register: '' }
+  - { id: 100, class: zpr, preferred-register: '' }
+  - { id: 101, class: zpr, preferred-register: '' }
+  - { id: 102, class: zpr, preferred-register: '' }
+  - { id: 103, class: zpr, preferred-register: '' }
+  - { id: 104, class: zpr, preferred-register: '' }
+  - { id: 105, class: zpr, preferred-register: '' }
+  - { id: 106, class: gpr64sp, preferred-register: '' }
+  - { id: 107, class: gpr64, preferred-register: '' }
+  - { id: 108, class: zpr, preferred-register: '' }
+  - { id: 109, class: ppr_3b, preferred-register: '' }
+  - { id: 110, class: zpr, preferred-register: '' }
+  - { id: 111, class: zpr, preferred-register: '' }
+  - { id: 112, class: zpr, preferred-register: '' }
+  - { id: 113, class: zpr, preferred-register: '' }
+  - { id: 114, class: zpr, preferred-register: '' }
+  - { id: 115, class: zpr, preferred-register: '' }
+  - { id: 116, class: zpr, preferred-register: '' }
+  - { id: 117, class: gpr64, preferred-register: '' }
+  - { id: 118, class: gpr64, preferred-register: '' }
+  - { id: 119, class: gpr64, preferred-register: '' }
+  - { id: 120, class: gpr64, preferred-register: '' }
+  - { id: 121, class: gpr64, preferred-register: '' }
+  - { id: 122, class: gpr64sp, preferred-register: '' }
+  - { id: 123, class: fpr32, preferred-register: '' }
+  - { id: 124, class: fpr32, preferred-register: '' }
+  - { id: 125, class: fpr32, preferred-register: '' }
+  - { id: 126, class: gpr64sp, preferred-register: '' }
+  - { id: 127, class: fpr32, preferred-register: '' }
+  - { id: 128, class: fpr32, preferred-register: '' }
+  - { id: 129, class: fpr32, preferred-register: '' }
+  - { id: 130, class: fpr32, preferred-register: '' }
+  - { id: 131, class: gpr64, preferred-register: '' }
+  - { id: 132, class: gpr32, preferred-register: '' }
+  - { id: 133, class: gpr64common, preferred-register: '' }
+  - { id: 134, class: gpr32, preferred-register: '' }
+liveins:
+  - { reg: '$w0', virtual-reg: '%45' }
+  - { reg: '$x1', virtual-reg: '%46' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: vla, type: variable-sized, offset: 0, alignment: 1, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: 0, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 1, name: vla1, type: variable-sized, offset: 0, alignment: 1, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: 0, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x50000000), %bb.8(0x30000000)
+    liveins: $w0, $x1
+  
+    %46:gpr64 = COPY $x1
+    %45:gpr32common = COPY $w0
+    %48:gpr32 = ORRWrs $wzr, %45, 0
+    %0:gpr64 = SUBREG_TO_REG 0, killed %48, %subreg.sub_32
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %49:gpr64common = UBFMXri %0, 62, 61
+    %50:gpr64common = nuw ADDXri %49, 15, 0
+    %51:gpr64common = ANDXri killed %50, 7966
+    %52:gpr64 = COPY $sp
+    %53:gpr64common = SUBXrr %52, %51
+    $sp = COPY %53
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %54:gpr64 = COPY $sp
+    %55:gpr64common = SUBXrr %54, %51
+    $sp = COPY %55
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    dead $wzr = SUBSWri %45, 1, 0, implicit-def $nzcv
+    Bcc 10, %bb.1, implicit $nzcv
+  
+  bb.8:
+    successors: %bb.6(0x80000000)
+  
+    %47:fpr32 = FMOVS0
+    B %bb.6
+  
+  bb.1.for.body.preheader:
+    successors: %bb.9(0x40000000), %bb.2(0x40000000)
+  
+    dead $wzr = SUBSWri %45, 64, 0, implicit-def $nzcv
+    Bcc 2, %bb.2, implicit $nzcv
+  
+  bb.9:
+    successors: %bb.5(0x80000000)
+  
+    %58:fpr32 = FMOVS0
+    %59:gpr64all = COPY $xzr
+    %57:gpr64all = COPY %59
+    B %bb.5
+  
+  bb.2.vector.ph:
+    successors: %bb.3(0x80000000)
+  
+    %1:gpr64common = COPY %53
+    %2:gpr64common = COPY %55
+    %63:gpr64common = ANDXri %0, 7833
+    %3:gpr64 = COPY %63
+    %65:gpr64sp = ANDXri %49, 7705
+    %66:gpr64common = SUBXri killed %65, 256, 0
+    %67:gpr64common = UBFMXri killed %66, 8, 63
+    %68:gpr64sp = nuw nsw ADDXri killed %67, 1, 0
+    %62:zpr = DUP_ZI_S 0, 0
+    %69:gpr64all = COPY $xzr
+    %61:gpr64all = COPY %69
+    %4:gpr64all = COPY %68
+    %71:ppr_3b = PTRUE_B 31
+    %73:gpr64common = MOVi64imm 16
+    %74:ppr_3b = PTRUE_S 31
+    %76:gpr64common = MOVi64imm 32
+    %78:gpr64common = MOVi64imm 48
+    %95:zpr = IMPLICIT_DEF
+    %97:zpr = IMPLICIT_DEF
+    %99:zpr = IMPLICIT_DEF
+    %101:zpr = IMPLICIT_DEF
+  
+  bb.3.vector.body:
+    successors: %bb.3(0x7c000000), %bb.4(0x04000000)
+  
+    %5:gpr64common = PHI %61, %bb.2, %23, %bb.3
+    %6:zpr = PHI %62, %bb.2, %15, %bb.3
+    %7:zpr = PHI %62, %bb.2, %16, %bb.3
+    %8:zpr = PHI %62, %bb.2, %17, %bb.3
+    %9:zpr = PHI %62, %bb.2, %18, %bb.3
+    %10:zpr = PHI %62, %bb.2, %19, %bb.3
+    %11:zpr = PHI %62, %bb.2, %20, %bb.3
+    %12:zpr = PHI %62, %bb.2, %21, %bb.3
+    %13:zpr = PHI %62, %bb.2, %22, %bb.3
+    %14:gpr64sp = PHI %4, %bb.2, %24, %bb.3
+    %70:gpr64common = ADDXrr %53, %5
+    %72:zpr = LD1B %71, %1, %5 :: (load unknown-size from %ir.uglygep78, align 4, !tbaa !4)
+    %75:zpr = LD1W %74, %70, %73 :: (load unknown-size from %ir.uglygep82, align 4, !tbaa !4)
+    %77:zpr = LD1W %74, %70, %76 :: (load unknown-size from %ir.uglygep81, align 4, !tbaa !4)
+    %79:zpr = LD1W %74, %70, %78 :: (load unknown-size from %ir.uglygep80, align 4, !tbaa !4)
+    %81:zpr = nnan ninf nsz arcp contract afn reassoc FSUBR_ZPZI_UNDEF_S %74, killed %72, 1
+    %82:zpr = nnan ninf nsz arcp contract afn reassoc FSUBR_ZPZI_UNDEF_S %74, killed %75, 1
+    %83:zpr = nnan ninf nsz arcp contract afn reassoc FSUBR_ZPZI_UNDEF_S %74, killed %77, 1
+    %84:zpr = nnan ninf nsz arcp contract afn reassoc FSUBR_ZPZI_UNDEF_S %74, killed %79, 1
+    %85:gpr64common = ADDXrr %55, %5
+    %86:zpr = LD1B %71, %2, %5 :: (load unknown-size from %ir.uglygep83, align 4, !tbaa !4)
+    %87:zpr = LD1W %74, %85, %73 :: (load unknown-size from %ir.uglygep87, align 4, !tbaa !4)
+    %88:zpr = LD1W %74, %85, %76 :: (load unknown-size from %ir.uglygep86, align 4, !tbaa !4)
+    %89:zpr = LD1W %74, %85, %78 :: (load unknown-size from %ir.uglygep85, align 4, !tbaa !4)
+    %90:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZPZI_UNDEF_S %74, killed %86, 1
+    %91:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZPZI_UNDEF_S %74, killed %87, 1
+    %92:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZPZI_UNDEF_S %74, killed %88, 1
+    %93:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZPZI_UNDEF_S %74, killed %89, 1
+    %94:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_UNDEF_S %95, %74, killed %81
+    %96:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_UNDEF_S %97, %74, killed %82
+    %98:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_UNDEF_S %99, %74, killed %83
+    %100:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_UNDEF_S %101, %74, killed %84
+    %15:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZZZ_S %6, %94
+    %16:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZZZ_S %7, %96
+    %17:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZZZ_S %8, %98
+    %18:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZZZ_S %9, %100
+    %102:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_UNDEF_S %74, killed %90, %94
+    %103:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_UNDEF_S %74, killed %91, %96
+    %104:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_UNDEF_S %74, killed %92, %98
+    %105:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_UNDEF_S %74, killed %93, %100
+    %19:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %10, killed %102
+    %20:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %11, killed %103
+    %21:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %12, killed %104
+    %22:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %13, killed %105
+    %106:gpr64sp = nuw nsw ADDXri %5, 256, 0
+    %23:gpr64all = COPY %106
+    %107:gpr64 = SUBSXri %14, 1, 0, implicit-def $nzcv
+    %24:gpr64all = COPY %107
+    Bcc 1, %bb.3, implicit $nzcv
+    B %bb.4
+  
+  bb.4.middle.block:
+    successors: %bb.6(0x40000000), %bb.5(0x40000000)
+  
+    %108:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %20, %19
+    %110:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %21, killed %108
+    %111:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %22, killed %110
+    %112:zpr = FADDV_VPZ_S %74, killed %111
+    %25:fpr32 = COPY %112.ssub
+    %113:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %16, %15
+    %114:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %17, killed %113
+    %115:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %18, killed %114
+    %116:zpr = FADDV_VPZ_S %74, killed %115
+    %26:fpr32 = COPY %116.ssub
+    dead $xzr = SUBSXrr %63, %0, implicit-def $nzcv
+    Bcc 0, %bb.6, implicit $nzcv
+    B %bb.5
+  
+  bb.5.for.body.preheader63:
+    successors: %bb.7(0x80000000)
+  
+    %27:gpr64 = PHI %57, %bb.9, %3, %bb.4
+    %28:fpr32 = PHI %58, %bb.9, %26, %bb.4
+    %29:fpr32 = PHI %58, %bb.9, %25, %bb.4
+    %118:gpr64 = nuw nsw UBFMXri %27, 62, 61
+    %119:gpr64 = ADDXrr %55, %118
+    %30:gpr64all = COPY %119
+    %120:gpr64 = ADDXrr %53, %118
+    %31:gpr64all = COPY %120
+    %121:gpr64 = SUBXrr %0, %27
+    %32:gpr64all = COPY %121
+    %124:fpr32 = FMOVSi 112
+    B %bb.7
+  
+  bb.6.for.cond.cleanup:
+    %33:fpr32 = PHI %47, %bb.8, %25, %bb.4, %41, %bb.7
+    %34:fpr32 = PHI %47, %bb.8, %26, %bb.4, %40, %bb.7
+    %132:gpr32 = MOVi32imm 12
+    %133:gpr64common = SMADDLrrr %45, killed %132, %46
+    STRSui %34, %133, 0 :: (store (s32) into %ir.arrayidx11)
+    STRSui %33, %133, 1 :: (store (s32) into %ir.ref.tmp.sroa.4.0.arrayidx11.sroa_idx)
+    %134:gpr32 = COPY $wzr
+    STRWui %134, %133, 2 :: (store (s32) into %ir.ref.tmp.sroa.5.0.arrayidx11.sroa_idx)
+    RET_ReallyLR
+  
+  bb.7.for.body:
+    successors: %bb.7(0x7c000000), %bb.6(0x04000000)
+  
+    %35:gpr64sp = PHI %31, %bb.5, %43, %bb.7
+    %36:gpr64sp = PHI %30, %bb.5, %42, %bb.7
+    %37:fpr32 = PHI %28, %bb.5, %40, %bb.7
+    %38:fpr32 = PHI %29, %bb.5, %41, %bb.7
+    %39:gpr64sp = PHI %32, %bb.5, %44, %bb.7
+    early-clobber %122:gpr64sp, %123:fpr32 = LDRSpost %35, 4 :: (load (s32) from %ir.lsr.iv73, !tbaa !4)
+    %125:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBSrr %124, killed %123
+    early-clobber %126:gpr64sp, %127:fpr32 = LDRSpost %36, 4 :: (load (s32) from %ir.lsr.iv, !tbaa !4)
+    %128:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBSrr killed %127, %124
+    %129:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSQRTSr killed %125
+    %40:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBSrr %37, %129
+    %130:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FDIVSrr killed %128, %129
+    %41:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %38, killed %130
+    %42:gpr64all = COPY %126
+    %43:gpr64all = COPY %122
+    %131:gpr64 = SUBSXri %39, 1, 0, implicit-def $nzcv
+    %44:gpr64all = COPY %131
+    Bcc 1, %bb.7, implicit $nzcv
+    B %bb.6
+
+...

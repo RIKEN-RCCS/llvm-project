@@ -2,10 +2,40 @@
 
 #CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %173:zpr = FADDV_VPZ_S %33:ppr_3b, killed %169:zpr
 #CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+18
-#CHECK-NEXT:  latency: 46
+#CHECK-NEXT:  latency: 64
 #CHECK-NEXT:  seqDecode: true
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 11/FLA, 17/FLA, 19/FLA, 23/FLA, 28/FLA, 37/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 10/FLB, 16/FLA, 19/FLB, 22/FLA, 28/FLB, 37/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLB
 
 --- |
   ; ModuleID = '/TSVC_2/src_sep_optnone/s352.c'
