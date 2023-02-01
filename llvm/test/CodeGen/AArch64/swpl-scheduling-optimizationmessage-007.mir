@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner -swpl-max-preg=1  -pass-remarks=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner -swpl-max-preg=1   -pass-remarks-missed=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:remark: <unknown>:0:0: SVE instruction latency is calculated at 512bit.
 #CHECK:remark: <unknown>:0:0: Trial at iteration-interval=81. This loop cannot be software pipelined because of shortage of predicate registers.
