@@ -1,0 +1,225 @@
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner   --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck %s
+
+#CHECK:--- !Analysis
+#CHECK:Pass:            aarch64-swpipeliner
+#CHECK:Name:            NotSoftwarePipleined
+#CHECK:DebugLoc:        { File: 'tp/testprg.c', Line: 6, Column: 3 }
+#CHECK:Function:        main
+#CHECK:Args:
+#CHECK:  - String:          'Trial at iteration-interval='
+#CHECK:  - iteration_interval: '3'
+#CHECK:  - String:          '. This loop is not software pipelined because the iteration count is smaller than '
+#CHECK:  - required_iteration: '13'
+#CHECK:  - String:          ' and the software pipelining does not improve the performance.'
+#CHECK:...
+#CHECK:--- !Analysis
+#CHECK:Pass:            aarch64-swpipeliner
+#CHECK:Name:            NotSoftwarePipleined
+#CHECK:DebugLoc:        { File: 'tp/testprg.c', Line: 6, Column: 3 }
+#CHECK:Function:        main
+#CHECK:Args:
+#CHECK:  - String:          'Trial at iteration-interval='
+#CHECK:  - iteration_interval: '4'
+#CHECK:  - String:          '. This loop is not software pipelined because the iteration count is smaller than '
+#CHECK:  - required_iteration: '9'
+#CHECK:  - String:          ' and the software pipelining does not improve the performance.'
+#CHECK:...
+#CHECK:--- !Analysis
+#CHECK:Pass:            aarch64-swpipeliner
+#CHECK:Name:            NotSoftwarePipleined
+#CHECK:DebugLoc:        { File: 'tp/testprg.c', Line: 6, Column: 3 }
+#CHECK:Function:        main
+#CHECK:Args:
+#CHECK:   - String:          'Trial at iteration-interval='
+#CHECK:  - iteration_interval: '8'
+#CHECK:  - String:          '. This loop is not software pipelined because the iteration count is smaller than '
+#CHECK:  - required_iteration: '5'
+#CHECK:  - String:          ' and the software pipelining does not improve the performance.'
+#CHECK:...
+#CHECK:--- !Analysis
+#CHECK:Pass:            aarch64-swpipeliner
+#CHECK:Name:            NotSoftwarePipleined
+#CHECK:DebugLoc:        { File: 'tp/testprg.c', Line: 6, Column: 3 }
+#CHECK:Function:        main
+#CHECK:Args:
+#CHECK:  - String:          'Trial at iteration-interval='
+#CHECK:  - iteration_interval: '9'
+#CHECK:  - String:          '. This loop is not software pipelined because the iteration count is smaller than '
+#CHECK:  - required_iteration: '5'
+#CHECK:  - String:          ' and the software pipelining does not improve the performance.'
+#CHECK:...
+--- |
+  ; ModuleID = '/TEST/tp/testprg.c'
+  source_filename = "/TEST/tp/testprg.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+  
+  @b = dso_local local_unnamed_addr global [1000 x double] zeroinitializer, align 8
+  @c = dso_local local_unnamed_addr global [1000 x double] zeroinitializer, align 8
+  @a = dso_local local_unnamed_addr global [1000 x double] zeroinitializer, align 8
+  
+  ; Function Attrs: nofree norecurse nounwind
+  define dso_local i32 @main() local_unnamed_addr #0 !dbg !7 {
+    call void @llvm.set.loop.iterations.i64(i64 4), !dbg !10
+    br label %4, !dbg !10
+  
+  1:                                                ; preds = %4
+    %2 = load double, double* getelementptr inbounds ([1000 x double], [1000 x double]* @a, i64 0, i64 500), align 8, !dbg !11, !tbaa !12
+    %3 = fptosi double %2 to i32, !dbg !11
+    ret i32 %3, !dbg !16
+  
+  4:                                                ; preds = %4, %0
+    %5 = phi i64 [ %16, %4 ], [ 0, %0 ]
+    %6 = phi i64 [ 4, %0 ], [ %17, %4 ], !dbg !17
+    %7 = getelementptr i8, i8* bitcast ([1000 x double]* @b to i8*), i64 %5, !dbg !17
+    %8 = bitcast i8* %7 to double*
+    %9 = load double, double* %8, align 8, !dbg !17, !tbaa !12
+    %10 = getelementptr i8, i8* bitcast ([1000 x double]* @c to i8*), i64 %5, !dbg !18
+    %11 = bitcast i8* %10 to double*
+    %12 = load double, double* %11, align 8, !dbg !18, !tbaa !12
+    %13 = fadd fast double %12, %9, !dbg !19
+    %14 = getelementptr i8, i8* bitcast ([1000 x double]* @a to i8*), i64 %5, !dbg !20
+    %15 = bitcast i8* %14 to double*
+    store double %13, double* %15, align 8, !dbg !20, !tbaa !12
+    %16 = add nuw nsw i64 %5, 8, !dbg !21
+    %17 = call i64 @llvm.loop.decrement.reg.i64(i64 %6, i64 1), !dbg !10
+    %18 = icmp ne i64 %17, 0, !dbg !10
+    br i1 %18, label %4, label %1, !dbg !10, !llvm.loop !22
+  }
+  
+  ; Function Attrs: noduplicate nounwind
+  declare void @llvm.set.loop.iterations.i64(i64) #1
+  
+  ; Function Attrs: noduplicate nounwind
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+  
+  attributes #0 = { nofree norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" "use-soft-float"="false" }
+  attributes #1 = { noduplicate nounwind }
+  attributes #2 = { nounwind }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5}
+  !llvm.ident = !{!6}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "/TEST/tp/testprg.c", directory: "/TEST")
+  !2 = !{}
+  !3 = !{i32 7, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 4}
+  !6 = !{!"clang version 11.0.0 "}
+  !7 = distinct !DISubprogram(name: "main", scope: !8, file: !8, line: 4, type: !9, scopeLine: 4, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+  !8 = !DIFile(filename: "tp/testprg.c", directory: "/TEST")
+  !9 = !DISubroutineType(types: !2)
+  !10 = !DILocation(line: 6, column: 3, scope: !7)
+  !11 = !DILocation(line: 9, column: 10, scope: !7)
+  !12 = !{!13, !13, i64 0}
+  !13 = !{!"double", !14, i64 0}
+  !14 = !{!"omnipotent char", !15, i64 0}
+  !15 = !{!"Simple C/C++ TBAA"}
+  !16 = !DILocation(line: 9, column: 3, scope: !7)
+  !17 = !DILocation(line: 7, column: 12, scope: !7)
+  !18 = !DILocation(line: 7, column: 19, scope: !7)
+  !19 = !DILocation(line: 7, column: 17, scope: !7)
+  !20 = !DILocation(line: 7, column: 10, scope: !7)
+  !21 = !DILocation(line: 6, column: 17, scope: !7)
+  !22 = distinct !{!22, !10, !23, !24}
+  !23 = !DILocation(line: 8, column: 3, scope: !7)
+  !24 = !{!"llvm.loop.unroll.disable"}
+
+...
+---
+name:            main
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gpr64common, preferred-register: '' }
+  - { id: 1, class: gpr64sp, preferred-register: '' }
+  - { id: 2, class: gpr64all, preferred-register: '' }
+  - { id: 3, class: gpr64all, preferred-register: '' }
+  - { id: 4, class: gpr64all, preferred-register: '' }
+  - { id: 5, class: gpr64all, preferred-register: '' }
+  - { id: 6, class: gpr64all, preferred-register: '' }
+  - { id: 7, class: gpr32, preferred-register: '' }
+  - { id: 8, class: gpr64common, preferred-register: '' }
+  - { id: 9, class: fpr64, preferred-register: '' }
+  - { id: 10, class: gpr64common, preferred-register: '' }
+  - { id: 11, class: fpr64, preferred-register: '' }
+  - { id: 12, class: fpr64, preferred-register: '' }
+  - { id: 13, class: gpr64common, preferred-register: '' }
+  - { id: 14, class: gpr64sp, preferred-register: '' }
+  - { id: 15, class: gpr64, preferred-register: '' }
+  - { id: 16, class: gpr64common, preferred-register: '' }
+  - { id: 17, class: fpr64, preferred-register: '' }
+  - { id: 18, class: gpr32, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.2(0x80000000)
+  
+    %6:gpr64all = COPY $xzr
+    %4:gpr64all = COPY %6
+    %7:gpr32 = MOVi32imm 4
+    %5:gpr64all = SUBREG_TO_REG 0, killed %7, %subreg.sub_32
+    %8:gpr64common = MOVaddr target-flags(aarch64-page) @b, target-flags(aarch64-pageoff, aarch64-nc) @b
+    %10:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    %13:gpr64common = MOVaddr target-flags(aarch64-page) @a, target-flags(aarch64-pageoff, aarch64-nc) @a
+    B %bb.2, debug-location !10
+  
+  bb.1 (%ir-block.1):
+    %16:gpr64common = ADRP target-flags(aarch64-page) @a + 4000, debug-location !11
+    %17:fpr64 = LDRDui killed %16, target-flags(aarch64-pageoff, aarch64-nc) @a + 4000, debug-location !11 :: (dereferenceable load 8 from `double* getelementptr inbounds ([1000 x double], [1000 x double]* @a, i64 0, i64 500)`, !tbaa !12)
+    %18:gpr32 = FCVTZSUWDr killed %17, debug-location !11
+    $w0 = COPY %18, debug-location !16
+    RET_ReallyLR implicit $w0, debug-location !16
+  
+  bb.2 (%ir-block.4):
+    successors: %bb.2(0x7c000000), %bb.1(0x04000000)
+  
+    %0:gpr64common = PHI %4, %bb.0, %2, %bb.2
+    %1:gpr64sp = PHI %5, %bb.0, %3, %bb.2, debug-location !17
+    %9:fpr64 = LDRDroX %8, %0, 0, 0, debug-location !17 :: (load 8 from %ir.8, !tbaa !12)
+    %11:fpr64 = LDRDroX %10, %0, 0, 0, debug-location !18 :: (load 8 from %ir.11, !tbaa !12)
+    %12:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %11, killed %9, debug-location !19
+    STRDroX killed %12, %13, %0, 0, 0, debug-location !20 :: (store 8 into %ir.15, !tbaa !12)
+    %14:gpr64sp = nuw nsw ADDXri %0, 8, 0, debug-location !21
+    %2:gpr64all = COPY %14, debug-location !21
+    %15:gpr64 = SUBSXri %1, 1, 0, implicit-def $nzcv, debug-location !10
+    %3:gpr64all = COPY %15, debug-location !10
+    Bcc 1, %bb.2, implicit $nzcv, debug-location !10
+    B %bb.1, debug-location !10
+
+...
