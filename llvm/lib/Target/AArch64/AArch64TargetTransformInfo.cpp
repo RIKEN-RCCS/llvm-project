@@ -3206,13 +3206,16 @@ static int enableLoopSWP(const Loop* L, bool &exists) {
 
 bool llvm::enableSWP(const Loop *L) {
   bool exists=false;
+  bool enabled=false;
   assert(L!=nullptr);
-  if (EnableSWP) {
-    bool r=enableLoopSWP(L, exists);
-    if (exists) return r;
-    return true;
-  }
-  return false;
+  if (EnableSWP)
+    enabled=true;
+  
+  bool r=enableLoopSWP(L, exists);
+  if (exists)
+    enabled = r;
+  
+  return enabled;
 }
 
 bool AArch64TTIImpl::preferPredicateOverEpilogue(
