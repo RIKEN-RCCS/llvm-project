@@ -3167,12 +3167,10 @@ bool AArch64TTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
  * @param [out] exists llvm.loop.pipeline.enable/disableが指定されていればtrueとなる
  * @retval true llvm.loop.pipeline.enableが指定されている
  * @retval false llvm.loop.pipeline.disableが指定されている
- * @note 複数指定されている場合は最後の指定を有効とする
  */
 static int enableLoopSWP(const Loop* L, bool &exists) {
 
   exists=false;
-  bool enabled = false;
   MDNode *LoopID = L->getLoopID();
   if (LoopID == nullptr)
     return false;
@@ -3193,15 +3191,15 @@ static int enableLoopSWP(const Loop* L, bool &exists) {
 
     if (S->getString()=="llvm.loop.pipeline.disable") {
       exists=true;
-      enabled = false;
+      return false;
     }
 
     if (S->getString()=="llvm.loop.pipeline.enable") {
       exists=true;
-      enabled = true;
+      return true;
     }
   }
-  return enabled;
+  return false;
 }
 
 bool llvm::enableSWP(const Loop *L) {
