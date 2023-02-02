@@ -16,9 +16,13 @@ void test(int *List, int Length, int Value) {
     List[i] = Value;
   }
 
+#pragma clang loop pipeline(enable)
+  for (int i = 0; i < Length; i++) {
+    List[i] = Value;
+  }
+
 /* expected-error {{expected ')'}} */ #pragma clang loop pipeline(disable
-/* expected-error {{invalid argument; expected 'disable'}} */ #pragma clang loop pipeline(enable)
-/* expected-error {{invalid argument; expected 'disable'}} */ #pragma clang loop pipeline(error)
+/* expected-error {{invalid argument; expected 'enable' or 'disable'}} */ #pragma clang loop pipeline(error)
 /* expected-error {{expected '('}} */ #pragma clang loop pipeline disable
 /* expected-error {{missing argument; expected an integer value}} */ #pragma clang loop pipeline_initiation_interval()
 /* expected-error {{use of undeclared identifier 'error'}} */ #pragma clang loop pipeline_initiation_interval(error)
