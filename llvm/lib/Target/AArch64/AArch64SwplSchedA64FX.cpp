@@ -920,7 +920,7 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
   {MI_SIMDFP_SVE_OP_026,  /// Pipeline:FL* / FLA / FL*  Latency:4 / [1]6 / [1,2]9  Seq-decode:true
     {{&RES_SIMDFP_SVE_OP_026_01, &RES_SIMDFP_SVE_OP_026_02,
       &RES_SIMDFP_SVE_OP_026_03, &RES_SIMDFP_SVE_OP_026_04},
-    10, true}},
+    19, true}},
   {MI_SIMDFP_SVE_LD_001,  /// Pipeline:EAG*, FLA  Latency:11
     {{&RES_SIMDFP_SVE_LD_001_01, &RES_SIMDFP_SVE_LD_001_02,
       &RES_SIMDFP_SVE_LD_001_03, &RES_SIMDFP_SVE_LD_001_04},
