@@ -625,9 +625,12 @@ void SwplTransformMIR::prepareMIs() {
   for (auto *sinst: Loop.getBodyInsts()) {
     unsigned slot;
     if (firstMI==nullptr) firstMI=sinst->getMI();
-    if (firstMI->mayLoadOrStore() && firstMI->getNumMemOperands()) {
-      // firstMI->dropMemRefs(MF);
-      for (auto *mmo:firstMI->memoperands()) {
+    MachineInstr *mi=sinst->getMI();
+    if (mi->mayLoadOrStore() && mi->getNumMemOperands()) {
+      // G_LD/STはMMO必須のため、安易な削除ではなく、MOVolatileの設定をすることにした
+      // MIR上は、MMOに"volatile"が表示ｓ
+      // mi->dropMemRefs(MF);
+      for (auto *mmo:mi->memoperands()) {
         mmo->setFlags(MachineMemOperand::Flags::MOVolatile);
       }
     }
