@@ -54,12 +54,12 @@
 
 using namespace llvm;
 
-// Start Metro
+
 static cl::opt<bool>
     DisableHWLOOP("disable-hwloop",
                                 cl::desc("Disable the HardwareLoop Insertion pass"),
                                 cl::init(false), cl::ReallyHidden);
-// End Metro
+
 
 static cl::opt<bool> EnableCCMP("aarch64-enable-ccmp",
                                 cl::desc("Enable the CCMP formation pass"),
@@ -635,11 +635,10 @@ bool AArch64PassConfig::addPreISel() {
     addPass(createGlobalMergePass(TM, 4095, OnlyOptimizeForSize,
                                   MergeExternalByDefault));
   }
-// Start Metro
+
   if (TM->getTargetCPU().equals_insensitive("a64fx") && (TM->getOptLevel() != CodeGenOpt::None) && !DisableHWLOOP) {
     addPass(createHardwareLoopsPass());
   }
-// End Metro
   return false;
 }
 

@@ -317,6 +317,7 @@ public:
 
   // getter
   const MachineInstr *getMI() const { return MI; }
+  MachineInstr *getMI()  { return MI; }
   SwplLoop *getLoop() { return Loop; }
   // 以下のメンバは、持ちまわる必要がないかもしれない
   const SwplRegs &getUseRegs() const { return UseRegs; }

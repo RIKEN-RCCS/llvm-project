@@ -326,13 +326,6 @@ void SwplTransformMIR::convertPlan2MIR() {
 
   TMI.doVReg = getVReg(*induction_reg, do_vreg_versions);
 
-  /**
-   * @note
-   * getCoefficientでcoefficientがi4max以下であるチェックはしているが、
-   * (n_copies+1)*coefficientがi4maxを越える場合を考慮していない。
-   * bct化されている場合、coefficientは実質的にunroll展開数を表すため、
-   * i4maxを越えている事はない。
-   */
   assert (TMI.coefficient > 0);
 //  assert (min_n_iterations >= 2);
 }
@@ -627,11 +620,17 @@ void SwplTransformMIR::prepareMIs() {
   /// (1) shiftConvertIteration2Version() :命令挿入位置（コピー毎の移動値）を計算する
   int n_shift = shiftConvertIteration2Version(TMI.nVersions, TMI.nCopies);
 
-  const MachineInstr*firstMI=nullptr;
+  MachineInstr*firstMI=nullptr;
   /* PROLOGUE,KERNEL,EPILOGUE部分 */
   for (auto *sinst: Loop.getBodyInsts()) {
     unsigned slot;
     if (firstMI==nullptr) firstMI=sinst->getMI();
+    if (firstMI->mayLoadOrStore() && firstMI->getNumMemOperands()) {
+      // firstMI->dropMemRefs(MF);
+      for (auto *mmo:firstMI->memoperands()) {
+        mmo->setFlags(MachineMemOperand::Flags::MOVolatile);
+      }
+    }
 
     /// (2) relativeInstSlot() 命令の相対位置を計算する
     slot = relativeInstSlot(sinst);
