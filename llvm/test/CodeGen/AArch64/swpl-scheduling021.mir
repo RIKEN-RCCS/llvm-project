@@ -3,76 +3,88 @@
 #CHECK:DBG(SwplDdg::print) SwplDdg. 
 #CHECK:### SwplDdg: 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %23:gpr64sp = COPY %31:gpr64all
-#CHECK:### to  : %25:gpr32sp = COPY %23.sub_32:gpr64sp, debug-location !11; tp/testprg.c:7:10
+#CHECK:### from: %24:gpr64sp = COPY %33:gpr64all
+#CHECK:### to  : %26:gpr32sp = COPY %24.sub_32:gpr64sp, debug-location !11; tp/testprg.c:7:10
 #CHECK:### distance:1 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %25:gpr32sp = COPY %23.sub_32:gpr64sp, debug-location !11; tp/testprg.c:7:10
-#CHECK:### to  : %26:gpr32sp = ADDWri killed %25:gpr32sp, 1000, 0, debug-location !11; tp/testprg.c:7:10
+#CHECK:### from: %26:gpr32sp = COPY %24.sub_32:gpr64sp, debug-location !11; tp/testprg.c:7:10
+#CHECK:### to  : %27:gpr32sp = ADDWri killed %26:gpr32sp, 1000, 0, debug-location !11; tp/testprg.c:7:10
 #CHECK:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %26:gpr32sp = ADDWri killed %25:gpr32sp, 1000, 0, debug-location !11; tp/testprg.c:7:10
-#CHECK:### to  : %27:gpr64all = INSERT_SUBREG %16:gpr64all(tied-def 0), killed %26:gpr32sp, %subreg.sub_32, debug-location !11; tp/testprg.c:7:10
+#CHECK:### from: %27:gpr32sp = ADDWri killed %26:gpr32sp, 1000, 0, debug-location !11; tp/testprg.c:7:10
+#CHECK:### to  : %28:gpr64all = INSERT_SUBREG %17:gpr64all(tied-def 0), %27:gpr32sp, %subreg.sub_32, debug-location !11; tp/testprg.c:7:10
 #CHECK:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %27:gpr64all = INSERT_SUBREG %16:gpr64all(tied-def 0), killed %26:gpr32sp, %subreg.sub_32, debug-location !11; tp/testprg.c:7:10
-#CHECK:### to  : %28:gpr32 = COPY %27.sub_32:gpr64all, debug-location !11; tp/testprg.c:7:10
+#CHECK:### from: %28:gpr64all = INSERT_SUBREG %17:gpr64all(tied-def 0), %27:gpr32sp, %subreg.sub_32, debug-location !11; tp/testprg.c:7:10
+#CHECK:### to  : %29:gpr64all = INSERT_SUBREG %28:gpr64all(tied-def 0), killed %27:gpr32sp, %subreg.sub_32, debug-location !11; tp/testprg.c:7:10
 #CHECK:### distance:0 delay:0
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %28:gpr32 = COPY %27.sub_32:gpr64all, debug-location !11; tp/testprg.c:7:10
-#CHECK:### to  : early-clobber %29:gpr64sp = STRWpost killed %28:gpr32, %22:gpr64sp(tied-def 0), 4, debug-location !11 :: (store (s32) into %ir.4, !tbaa !12); tp/testprg.c:7:10
+#CHECK:### from: %27:gpr32sp = ADDWri killed %26:gpr32sp, 1000, 0, debug-location !11; tp/testprg.c:7:10
+#CHECK:### to  : %29:gpr64all = INSERT_SUBREG %28:gpr64all(tied-def 0), killed %27:gpr32sp, %subreg.sub_32, debug-location !11; tp/testprg.c:7:10
 #CHECK:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %22:gpr64sp = COPY %32:gpr64all
-#CHECK:### to  : early-clobber %29:gpr64sp = STRWpost killed %28:gpr32, %22:gpr64sp(tied-def 0), 4, debug-location !11 :: (store (s32) into %ir.4, !tbaa !12); tp/testprg.c:7:10
+#CHECK:### from: %29:gpr64all = INSERT_SUBREG %28:gpr64all(tied-def 0), killed %27:gpr32sp, %subreg.sub_32, debug-location !11; tp/testprg.c:7:10
+#CHECK:### to  : %30:gpr32 = COPY %29.sub_32:gpr64all, debug-location !11; tp/testprg.c:7:10
+#CHECK:### distance:0 delay:0
+
+#CHECK:### SwplEdge: 
+#CHECK:### from: %30:gpr32 = COPY %29.sub_32:gpr64all, debug-location !11; tp/testprg.c:7:10
+#CHECK:### to  : early-clobber %31:gpr64sp = STRWpost killed %30:gpr32, %23:gpr64sp(tied-def 0), 4, debug-location !11 :: (store (s32) into %ir.4, !tbaa !12); tp/testprg.c:7:10
+#CHECK:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK:### from: %23:gpr64sp = COPY %34:gpr64all
+#CHECK:### to  : early-clobber %31:gpr64sp = STRWpost killed %30:gpr32, %23:gpr64sp(tied-def 0), 4, debug-location !11 :: (store (s32) into %ir.4, !tbaa !12); tp/testprg.c:7:10
 #CHECK:### distance:1 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %23:gpr64sp = COPY %31:gpr64all
-#CHECK:### to  : %30:gpr64sp = nsw ADDXri %23:gpr64sp, 10, 0, debug-location !16; tp/testprg.c:5:17
+#CHECK:### from: %24:gpr64sp = COPY %33:gpr64all
+#CHECK:### to  : %32:gpr64sp = nsw ADDXri %24:gpr64sp, 10, 0, debug-location !16; tp/testprg.c:5:17
 #CHECK:### distance:1 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %30:gpr64sp = nsw ADDXri %23:gpr64sp, 10, 0, debug-location !16; tp/testprg.c:5:17
-#CHECK:### to  : %31:gpr64all = COPY %30:gpr64sp, debug-location !16; tp/testprg.c:5:17
+#CHECK:### from: %32:gpr64sp = nsw ADDXri %24:gpr64sp, 10, 0, debug-location !16; tp/testprg.c:5:17
+#CHECK:### to  : %33:gpr64all = COPY %32:gpr64sp, debug-location !16; tp/testprg.c:5:17
 #CHECK:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: early-clobber %29:gpr64sp = STRWpost killed %28:gpr32, %22:gpr64sp(tied-def 0), 4, debug-location !11 :: (store (s32) into %ir.4, !tbaa !12); tp/testprg.c:7:10
-#CHECK:### to  : %32:gpr64all = COPY %29:gpr64sp, debug-location !16; tp/testprg.c:5:17
+#CHECK:### from: early-clobber %31:gpr64sp = STRWpost killed %30:gpr32, %23:gpr64sp(tied-def 0), 4, debug-location !11 :: (store (s32) into %ir.4, !tbaa !12); tp/testprg.c:7:10
+#CHECK:### to  : %34:gpr64all = COPY %31:gpr64sp, debug-location !16; tp/testprg.c:5:17
 #CHECK:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %24:gpr64sp = COPY %34:gpr64all
-#CHECK:### to  : %33:gpr64 = SUBSXri %24:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !10; tp/testprg.c:5:3
+#CHECK:### from: %25:gpr64sp = COPY %36:gpr64all
+#CHECK:### to  : %35:gpr64 = SUBSXri %25:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !10; tp/testprg.c:5:3
 #CHECK:### distance:1 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %33:gpr64 = SUBSXri %24:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !10; tp/testprg.c:5:3
-#CHECK:### to  : %34:gpr64all = COPY %33:gpr64, debug-location !10; tp/testprg.c:5:3
+#CHECK:### from: %35:gpr64 = SUBSXri %25:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !10; tp/testprg.c:5:3
+#CHECK:### to  : %36:gpr64all = COPY %35:gpr64, debug-location !10; tp/testprg.c:5:3
 #CHECK:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %32:gpr64all = COPY %29:gpr64sp, debug-location !16; tp/testprg.c:5:17
-#CHECK:### to  : %22:gpr64sp = COPY %32:gpr64all
+#CHECK:### from: %34:gpr64all = COPY %31:gpr64sp, debug-location !16; tp/testprg.c:5:17
+#CHECK:### to  : %23:gpr64sp = COPY %34:gpr64all
 #CHECK:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %31:gpr64all = COPY %30:gpr64sp, debug-location !16; tp/testprg.c:5:17
-#CHECK:### to  : %23:gpr64sp = COPY %31:gpr64all
+#CHECK:### from: %33:gpr64all = COPY %32:gpr64sp, debug-location !16; tp/testprg.c:5:17
+#CHECK:### to  : %24:gpr64sp = COPY %33:gpr64all
 #CHECK:### distance:0 delay:1
+
 #CHECK:### SwplEdge: 
-#CHECK:### from: %34:gpr64all = COPY %33:gpr64, debug-location !10; tp/testprg.c:5:3
-#CHECK:### to  : %24:gpr64sp = COPY %34:gpr64all
+#CHECK:### from: %36:gpr64all = COPY %35:gpr64, debug-location !10; tp/testprg.c:5:3
+#CHECK:### to  : %25:gpr64sp = COPY %36:gpr64all
 #CHECK:### distance:0 delay:1
+
 
 #CHECK:=========================================
-#CHECK:%25:gpr32sp = COPY %23.sub_32:gpr64sp, debug-location !11; tp/testprg.c:7:10
+#CHECK:%26:gpr32sp = COPY %24.sub_32:gpr64sp, debug-location !11; tp/testprg.c:7:10
 #CHECK:successor_inst : ADDWri (not placed)
 #CHECK: begin_cycle          : 124999
 #CHECK: SIP.slot             : 999996
@@ -137,7 +149,7 @@
   !llvm.module.flags = !{!3, !4, !5}
   !llvm.ident = !{!6}
   
-  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, splitDebugInlining: false, nameTableKind: None)
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "/TEST/tp/testprg.c", directory: "/TEST")
   !2 = !{}
   !3 = !{i32 7, !"Dwarf Version", i32 4}
@@ -188,6 +200,7 @@ registers:
   - { id: 13, class: gpr32sp, preferred-register: '' }
   - { id: 14, class: gpr32sp, preferred-register: '' }
   - { id: 15, class: gpr64all, preferred-register: '' }
+  - { id: 115, class: gpr64all, preferred-register: '' }
   - { id: 16, class: gpr64all, preferred-register: '' }
   - { id: 17, class: gpr32, preferred-register: '' }
   - { id: 18, class: gpr64sp, preferred-register: '' }
@@ -242,7 +255,8 @@ body:             |
     %3:gpr64sp = PHI %9, %bb.0, %6, %bb.1, debug-location !11
     %13:gpr32sp = COPY %2.sub_32, debug-location !11
     %14:gpr32sp = ADDWri killed %13, 1000, 0, debug-location !11
-    %15:gpr64all = INSERT_SUBREG %16, killed %14, %subreg.sub_32, debug-location !11
+    %115:gpr64all = INSERT_SUBREG %16, %14, %subreg.sub_32, debug-location !11
+    %15:gpr64all = INSERT_SUBREG %115, killed %14, %subreg.sub_32, debug-location !11
     %17:gpr32 = COPY %15.sub_32, debug-location !11
     early-clobber %18:gpr64sp = STRWpost killed %17, %1, 4, debug-location !11 :: (store 4 into %ir.4, !tbaa !12)
     %19:gpr64sp = nsw ADDXri %2, 10, 0, debug-location !16

@@ -139,30 +139,34 @@
 
 
 #CHECK:=========================================
-#CHECK:%57:gpr32 = MADDWrrr killed %56:gpr32, killed %54:gpr32, $wzr, debug-location !17; /TEST/tp/testprg.c:7:19
-#CHECK:successor_inst : STRHHui (not placed)
-#CHECK:unset (DependConstrained  ) : LDRHHui
- #CHECK:begin_cycle          : 124999
- #CHECK:SIP.slot             : 999997
- #CHECK:SIP.slot.calcCycle() : 124999
- #CHECK:iteration_interval = 4
+#CHECK:%54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
+#CHECK:successor_inst : MADDWrrr ( cycle:124989, latecycle:124988, delay:1 )
+#CHECK:successor_inst : STRHHui ( cycle:124995, latecycle:125094, delay:-99 )
+#CHECK:successor_inst : STRHHui ( cycle:124996, latecycle:125095, delay:-99 )
+#CHECK:unset (DependConstrained  ) : ADDXrr
+#CHECK: begin_cycle          : 124988
+#CHECK: SIP.slot             : 999908
+#CHECK: SIP.slot.calcCycle() : 124988
+#CHECK: iteration_interval = 5
 
 #CHECK:       FLA       FLB       EXA       EXB       EAGA      EAGB      PRX       BR        LSU1      LSU2      FLA_C     FLB_C     EXA_C     EXB_C     EAGA_C    EAGB_C    
 #CHECK:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#CHECK:       0         0         UBFMXri   0         0         0         0         0         0         0         0         0         0         0         0         0         
-#CHECK:       0         0         0         ADDXrr    0         0         0         0         0         0         0         0         0         0         0         0         
-#CHECK:       0         0         0         ADDXrr    0         0         0         LDRHHui   0         0         0         0         0         0         0         0         
+#CHECK:       0         0         UBFMXri   0         0         0         0         STRHHui   0         0         0         0         0         0         0         0         
+#CHECK:       0         0         0         ADDXrr    0         0         0         STRHHui   0         0         0         0         0         0         0         0         
+#CHECK:       0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         
+#CHECK:       0         0         0         0         0         0         0         LDRHHui   0         0         0         0         0         0         0         0         
 #CHECK:       0         0         MADDWrrr  0         0         0         0         0         0         0         0         0         0         0         0         0         
 
-#CHECK:	(999968)	--0--		--1--		--2--		--3--		UBFMXri		--5--		--6--		--7--	
-#CHECK:	(999976)	--0--		--1--		--2--		--3--		--4--		ADDXrr		--6--		--7--	
-#CHECK:	(999984)	--0--		--1--		--2--		--3--		LDRHHui		ADDXrr		--6--		--7--	
-#CHECK:	(999992)	--0--		--1--		--2--		--3--		--4--		MADDWrrr		--6--		--7--	
+#CHECK:	(999904)	--0--		--1--		--2--		--3--		LDRHHui		--5--		--6--		--7--	
+#CHECK:	(999912)	--0--		--1--		--2--		--3--		MADDWrrr		--5--		--6--		--7--	
+#CHECK:	(999920)	--0--		--1--		--2--		--3--		UBFMXri		--5--		--6--		--7--	
+#CHECK:	(999928)	--0--		--1--		--2--		--3--		--4--		ADDXrr		--6--		--7--	
+#CHECK:	(999936)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999944)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999952)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999960)	--0--		--1--		--2--		--3--		--4--		--5--		STRHHui		--7--	
+#CHECK:	(999968)	--0--		--1--		--2--		--3--		STRHHui		--5--		--6--		--7--	
 #CHECK:=========================================
-
-
-
-
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'

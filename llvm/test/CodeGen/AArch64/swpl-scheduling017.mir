@@ -66,6 +66,7 @@
 #CHECK:### from: %31:gpr64all = COPY %30:gpr64sp, debug-location !16; tp/testprg.c:5:17
 #CHECK:### to  : %23:gpr64sp = COPY %31:gpr64all
 #CHECK:### distance:0 delay:1
+
 #CHECK:### SwplEdge: 
 #CHECK:### from: %34:gpr64all = COPY %33:gpr64, debug-location !10; tp/testprg.c:5:3
 #CHECK:### to  : %24:gpr64sp = COPY %34:gpr64all
@@ -88,7 +89,6 @@
 
 #CHECK:	(999992)	--0--		--1--		--2--		--3--		COPY		--5--		--6--		--7--	
 #CHECK:=========================================
-
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
   source_filename = "/TEST/tp/testprg.c"
