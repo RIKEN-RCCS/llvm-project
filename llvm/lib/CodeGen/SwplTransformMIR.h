@@ -27,7 +27,7 @@ private:
   /// 変換結果の移動先
   enum BLOCK {  PRO_MOVE,  PROLOGUE,  KERNEL,  EPILOGUE,  EPI_MOVE};
   /// MIR出力タイミング
-  enum DumpMIRID {BEFORE=1, AFTER=2, AFTER_SSA=4, LAST=8};
+  enum DumpMIRID {BEFORE=1, AFTER=2, AFTER_SSA=4, LAST=8, SLOT_BEFORE=16};
 
 
   SwplPlan &Plan; ///< 処理対象のスケジュールプラン
