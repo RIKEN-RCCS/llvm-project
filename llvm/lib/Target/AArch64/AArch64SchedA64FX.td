@@ -4,7 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// Start Metro
+//
 //===----------------------------------------------------------------------===//
 //
 // This file defines the scheduling model for the Fujitsu A64FX processors.
@@ -2496,7 +2496,7 @@ def : InstRW<[A64FXWrite_SWP, WriteAtomic, SCHED_V8_SWP_00],
 def : InstRW<[A64FXWrite_STUR, WriteAtomic, SCHED_V8_ST_00],
             (instrs STLLRB, STLLRH, STLLRW, STLLRX)>;
 
-// Start Metro
+
 
 def XXXXXX : SchedWriteRes<[A64FXGI03]> {
   let Latency = 13;
@@ -4131,8 +4131,8 @@ def : InstRW<[A64FXWrite_3Cyc_NGI1, SCHED_SVE_MISC_01], (instrs WRFFR)>;
 // [539]   "zip2        $Zd, $Zn, $Zm";
 //@@@ def : InstRW<[A64FXWrite_6Cyc_GI2, SCHED_SVE_OP_12], (instrs ZIP2_ZZZ_B, ZIP2_ZZZ_D, ZIP2_ZZZ_H, ZIP2_ZZZ_S)>;
 
-// End Metro
+
 
 } // SchedModel = A64FXModel
 
-// End Metro
+

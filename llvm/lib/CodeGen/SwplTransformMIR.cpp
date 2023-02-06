@@ -53,6 +53,7 @@ bool SwplTransformMIR::transformMIR() {
   }
 
   if (DumpMIR & (int)BEFORE) dumpMIR(BEFORE);
+  if (DumpMIR & (int)SLOT_BEFORE) dumpMIR(SLOT_BEFORE);
 
   /// (1) convertPlan2MIR()でSwplPlanの情報をTMIに移し変える
   convertPlan2MIR();
@@ -326,22 +327,14 @@ void SwplTransformMIR::convertPlan2MIR() {
 
   TMI.doVReg = getVReg(*induction_reg, do_vreg_versions);
 
-  /**
-   * @note
-   * getCoefficientでcoefficientがi4max以下であるチェックはしているが、
-   * (n_copies+1)*coefficientがi4maxを越える場合を考慮していない。
-   * bct化されている場合、coefficientは実質的にunroll展開数を表すため、
-   * i4maxを越えている事はない。
-   */
   assert (TMI.coefficient > 0);
 //  assert (min_n_iterations >= 2);
 }
 
 MachineInstr *SwplTransformMIR::createMIFromInst(const SwplInst &inst, size_t version) {
 
-  /* 新規言の生成 */
   /// (1) 引数：instを元に、MachineInstrを生成する
-  const auto*org_MI = inst.getMI();  /* オリジナルの言 */
+  const auto*org_MI = inst.getMI();  /* オリジナル */
   assert(org_MI);
   auto *new_MI=MF.CloneMachineInstr(org_MI); /* コピー */
   LLVM_DEBUG(dbgs() << "SwplTransformMIR::createMIFromInst() begin\n");
@@ -627,11 +620,20 @@ void SwplTransformMIR::prepareMIs() {
   /// (1) shiftConvertIteration2Version() :命令挿入位置（コピー毎の移動値）を計算する
   int n_shift = shiftConvertIteration2Version(TMI.nVersions, TMI.nCopies);
 
-  const MachineInstr*firstMI=nullptr;
+  MachineInstr*firstMI=nullptr;
   /* PROLOGUE,KERNEL,EPILOGUE部分 */
   for (auto *sinst: Loop.getBodyInsts()) {
     unsigned slot;
     if (firstMI==nullptr) firstMI=sinst->getMI();
+    MachineInstr *mi=sinst->getMI();
+    if (mi->mayLoadOrStore() && mi->getNumMemOperands()) {
+      // G_LD/STはMMO必須のため、安易な削除ではなく、MOVolatileの設定をすることにした
+      // MIR上は、MMOに"volatile"が表示される
+      // mi->dropMemRefs(MF);
+      for (auto *mmo:mi->memoperands()) {
+        mmo->setFlags(MachineMemOperand::Flags::MOVolatile);
+      }
+    }
 
     /// (2) relativeInstSlot() 命令の相対位置を計算する
     slot = relativeInstSlot(sinst);
@@ -1029,6 +1031,12 @@ void SwplTransformMIR::dumpMIR(DumpMIRID id) const {
   case AFTER:title="AFTER:"; break;
   case AFTER_SSA:title="AFTER_SSA:"; break;
   case LAST:title="LAST:"; break;
+  case SLOT_BEFORE:title="SLOT_BEFORE:";
+    dbgs() << title << "\n";
+    for (auto *inst:Loop.getBodyInsts()) {
+      dbgs()  << *(inst->getMI());
+    }
+    return;
   }
   /// 対象のMachineFunctionに属するMIRをすべて出力する
   dbgs() << title << "\n";

@@ -3671,7 +3671,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     switch (IntNo) {
     default:
       break;
-// Start Metro
+
     case Intrinsic::start_loop_iterations: {
       // assert：入力が３つ（chain、Intrinsic-ID、回転数）であること
       assert(Node->getNumOperands() == 3 && "unexpected parameter in start_loop_iterations.");
@@ -3688,7 +3688,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       CurDAG->RemoveDeadNode(Node);
       return;
     }
-// End Metro
+
     case Intrinsic::aarch64_ldaxp:
     case Intrinsic::aarch64_ldxp: {
       unsigned Op =
@@ -4026,7 +4026,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         return;
       }
       break;
-// Start Metro
+
     case Intrinsic::loop_decrement_reg: {
       // 以下のように展開する。
       // before: i64,ch = llvm.loop.decrement.reg t31:2, TargetConstant:i64<166>, t17, Constant:i64<1>
@@ -4067,7 +4067,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, N);
       return;
     }
-// End Metro
+
     case Intrinsic::aarch64_ld64b:
       SelectLoad(Node, 8, AArch64::LD64B, AArch64::x8sub_0);
       return;
@@ -4495,7 +4495,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       }
       break;
     }
-// Start Metro
+
     case Intrinsic::set_loop_iterations: {
       // A64FXにおいてはset_loop_iterationsに該当する命令は存在しない。
       // 回転数を特定のレジスタに格納し、HWLoop命令が参照する、
@@ -4520,7 +4520,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       CurDAG->RemoveDeadNode(Node);
       return;
     }
-// End Metro
+
     }
     break;
   }

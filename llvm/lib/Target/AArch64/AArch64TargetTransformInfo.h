@@ -378,7 +378,7 @@ public:
                                  VectorType *SubTp,
                                  ArrayRef<const Value *> Args = None);
 
-// Start Metro
+
 
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
       AssumptionCache &AC,
@@ -388,7 +388,7 @@ public:
   bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
                   DominatorTree *DT, AssumptionCache *AC,
                   TargetLibraryInfo *LibInfo);
-// End Metro
+
 
   /// @}
 };
