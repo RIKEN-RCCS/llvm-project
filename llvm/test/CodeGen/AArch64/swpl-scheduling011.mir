@@ -1,182 +1,182 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-debug-dump-plan  -swpl-debug-ddg -swpl-debug-dump-scheduling-every-inst -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %50:gpr64common = COPY %60:gpr64all
-#CHECK:### to  : %52:gpr64 = UBFMXri %50:gpr64common, 63, 62, debug-location !15; /TEST/tp/testprg.c:7:14
-#CHECK:### distance:1 delay:1
+#CHECK-NEXT:### from: %50:gpr64common = COPY %60:gpr64all
+#CHECK-NEXT:### to  : %52:gpr64 = UBFMXri %50:gpr64common, 63, 62, debug-location !15; /TEST/tp/testprg.c:7:14
+#CHECK-NEXT:### distance:1 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %52:gpr64 = UBFMXri %50:gpr64common, 63, 62, debug-location !15; /TEST/tp/testprg.c:7:14
-#CHECK:### to  : %53:gpr64common = ADDXrr %16:gpr64common, %52:gpr64, debug-location !15; /TEST/tp/testprg.c:7:14
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %52:gpr64 = UBFMXri %50:gpr64common, 63, 62, debug-location !15; /TEST/tp/testprg.c:7:14
+#CHECK-NEXT:### to  : %53:gpr64common = ADDXrr %16:gpr64common, %52:gpr64, debug-location !15; /TEST/tp/testprg.c:7:14
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %53:gpr64common = ADDXrr %16:gpr64common, %52:gpr64, debug-location !15; /TEST/tp/testprg.c:7:14
-#CHECK:### to  : %54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %53:gpr64common = ADDXrr %16:gpr64common, %52:gpr64, debug-location !15; /TEST/tp/testprg.c:7:14
+#CHECK-NEXT:### to  : %54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
+#CHECK-NEXT### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %52:gpr64 = UBFMXri %50:gpr64common, 63, 62, debug-location !15; /TEST/tp/testprg.c:7:14
-#CHECK:### to  : %55:gpr64common = ADDXrr %20:gpr64common, %52:gpr64, debug-location !16; /TEST/tp/testprg.c:7:21
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %52:gpr64 = UBFMXri %50:gpr64common, 63, 62, debug-location !15; /TEST/tp/testprg.c:7:14
+#CHECK-NEXT:### to  : %55:gpr64common = ADDXrr %20:gpr64common, %52:gpr64, debug-location !16; /TEST/tp/testprg.c:7:21
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %55:gpr64common = ADDXrr %20:gpr64common, %52:gpr64, debug-location !16; /TEST/tp/testprg.c:7:21
-#CHECK:### to  : %56:gpr32 = LDRHHui killed %55:gpr64common, 193, debug-location !16 :: (load (s16) from %ir.32, !tbaa !10); /TEST/tp/testprg.c:7:21
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %55:gpr64common = ADDXrr %20:gpr64common, %52:gpr64, debug-location !16; /TEST/tp/testprg.c:7:21
+#CHECK-NEXT:### to  : %56:gpr32 = LDRHHui killed %55:gpr64common, 193, debug-location !16 :: (load (s16) from %ir.32, !tbaa !10); /TEST/tp/testprg.c:7:21
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %56:gpr32 = LDRHHui killed %55:gpr64common, 193, debug-location !16 :: (load (s16) from %ir.32, !tbaa !10); /TEST/tp/testprg.c:7:21
-#CHECK:### to  : %57:gpr32 = MADDWrrr killed %56:gpr32, killed %54:gpr32, $wzr, debug-location !17; /TEST/tp/testprg.c:7:19
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %56:gpr32 = LDRHHui killed %55:gpr64common, 193, debug-location !16 :: (load (s16) from %ir.32, !tbaa !10); /TEST/tp/testprg.c:7:21
+#CHECK-NEXT:### to  : %57:gpr32 = MADDWrrr killed %56:gpr32, killed %54:gpr32, $wzr, debug-location !17; /TEST/tp/testprg.c:7:19
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
-#CHECK:### to  : %57:gpr32 = MADDWrrr killed %56:gpr32, killed %54:gpr32, $wzr, debug-location !17; /TEST/tp/testprg.c:7:19
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
+#CHECK-NEXT:### to  : %57:gpr32 = MADDWrrr killed %56:gpr32, killed %54:gpr32, $wzr, debug-location !17; /TEST/tp/testprg.c:7:19
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %52:gpr64 = UBFMXri %50:gpr64common, 63, 62, debug-location !15; /TEST/tp/testprg.c:7:14
-#CHECK:### to  : %58:gpr64common = ADDXrr %28:gpr64common, %52:gpr64, debug-location !25; /TEST/tp/testprg.c:7:12
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %52:gpr64 = UBFMXri %50:gpr64common, 63, 62, debug-location !15; /TEST/tp/testprg.c:7:14
+#CHECK-NEXT:### to  : %58:gpr64common = ADDXrr %28:gpr64common, %52:gpr64, debug-location !25; /TEST/tp/testprg.c:7:12
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %57:gpr32 = MADDWrrr killed %56:gpr32, killed %54:gpr32, $wzr, debug-location !17; /TEST/tp/testprg.c:7:19
-#CHECK:### to  : STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
-#CHECK:### distance:0 delay:5
+#CHECK-NEXT:### from: %57:gpr32 = MADDWrrr killed %56:gpr32, killed %54:gpr32, $wzr, debug-location !17; /TEST/tp/testprg.c:7:19
+#CHECK-NEXT:### to  : STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
+#CHECK-NEXT:### distance:0 delay:5
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %58:gpr64common = ADDXrr %28:gpr64common, %52:gpr64, debug-location !25; /TEST/tp/testprg.c:7:12
-#CHECK:### to  : STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %58:gpr64common = ADDXrr %28:gpr64common, %52:gpr64, debug-location !25; /TEST/tp/testprg.c:7:12
+#CHECK-NEXT:### to  : STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %58:gpr64common = ADDXrr %28:gpr64common, %52:gpr64, debug-location !25; /TEST/tp/testprg.c:7:12
-#CHECK:### to  : STRHHui %0:gpr32, %58:gpr64common, 194, debug-location !18 :: (store (s16) into %ir.38, !tbaa !10); /TEST/tp/testprg.c:8:12
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %58:gpr64common = ADDXrr %28:gpr64common, %52:gpr64, debug-location !25; /TEST/tp/testprg.c:7:12
+#CHECK-NEXT:### to  : STRHHui %0:gpr32, %58:gpr64common, 194, debug-location !18 :: (store (s16) into %ir.38, !tbaa !10); /TEST/tp/testprg.c:8:12
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %50:gpr64common = COPY %60:gpr64all
-#CHECK:### to  : %59:gpr64sp = nuw nsw ADDXri %50:gpr64common, 2, 0, debug-location !26; /TEST/tp/testprg.c:6:17
-#CHECK:### distance:1 delay:1
+#CHECK-NEXT:### from: %50:gpr64common = COPY %60:gpr64all
+#CHECK-NEXT:### to  : %59:gpr64sp = nuw nsw ADDXri %50:gpr64common, 2, 0, debug-location !26; /TEST/tp/testprg.c:6:17
+#CHECK-NEXT:### distance:1 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %59:gpr64sp = nuw nsw ADDXri %50:gpr64common, 2, 0, debug-location !26; /TEST/tp/testprg.c:6:17
-#CHECK:### to  : %60:gpr64all = COPY %59:gpr64sp, debug-location !26; /TEST/tp/testprg.c:6:17
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %59:gpr64sp = nuw nsw ADDXri %50:gpr64common, 2, 0, debug-location !26; /TEST/tp/testprg.c:6:17
+#CHECK-NEXT:### to  : %60:gpr64all = COPY %59:gpr64sp, debug-location !26; /TEST/tp/testprg.c:6:17
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %51:gpr64sp = COPY %62:gpr64all
-#CHECK:### to  : %61:gpr64 = SUBSXri %51:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !14; /TEST/tp/testprg.c:6:3
-#CHECK:### distance:1 delay:1
+#CHECK-NEXT:### from: %51:gpr64sp = COPY %62:gpr64all
+#CHECK-NEXT:### to  : %61:gpr64 = SUBSXri %51:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !14; /TEST/tp/testprg.c:6:3
+#CHECK-NEXT:### distance:1 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %61:gpr64 = SUBSXri %51:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !14; /TEST/tp/testprg.c:6:3
-#CHECK:### to  : %62:gpr64all = COPY %61:gpr64, debug-location !14; /TEST/tp/testprg.c:6:3
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %61:gpr64 = SUBSXri %51:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !14; /TEST/tp/testprg.c:6:3
+#CHECK-NEXT:### to  : %62:gpr64all = COPY %61:gpr64, debug-location !14; /TEST/tp/testprg.c:6:3
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %60:gpr64all = COPY %59:gpr64sp, debug-location !26; /TEST/tp/testprg.c:6:17
-#CHECK:### to  : %50:gpr64common = COPY %60:gpr64all
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %60:gpr64all = COPY %59:gpr64sp, debug-location !26; /TEST/tp/testprg.c:6:17
+#CHECK-NEXT:### to  : %50:gpr64common = COPY %60:gpr64all
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %62:gpr64all = COPY %61:gpr64, debug-location !14; /TEST/tp/testprg.c:6:3
-#CHECK:### to  : %51:gpr64sp = COPY %62:gpr64all
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %62:gpr64all = COPY %61:gpr64, debug-location !14; /TEST/tp/testprg.c:6:3
+#CHECK-NEXT:### to  : %51:gpr64sp = COPY %62:gpr64all
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
-#CHECK:### to  : STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
-#CHECK:### distance:20 delay:1
+#CHECK-NEXT:### from: %54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
+#CHECK-NEXT:### to  : STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
+#CHECK-NEXT:### distance:20 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
-#CHECK:### to  : STRHHui %0:gpr32, %58:gpr64common, 194, debug-location !18 :: (store (s16) into %ir.38, !tbaa !10); /TEST/tp/testprg.c:8:12
-#CHECK:### distance:20 delay:1
+#CHECK-NEXT:### from: %54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
+#CHECK-NEXT:### to  : STRHHui %0:gpr32, %58:gpr64common, 194, debug-location !18 :: (store (s16) into %ir.38, !tbaa !10); /TEST/tp/testprg.c:8:12
+#CHECK-NEXT:### distance:20 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %56:gpr32 = LDRHHui killed %55:gpr64common, 193, debug-location !16 :: (load (s16) from %ir.32, !tbaa !10); /TEST/tp/testprg.c:7:21
-#CHECK:### to  : STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
-#CHECK:### distance:20 delay:1
+#CHECK-NEXT:### from: %56:gpr32 = LDRHHui killed %55:gpr64common, 193, debug-location !16 :: (load (s16) from %ir.32, !tbaa !10); /TEST/tp/testprg.c:7:21
+#CHECK-NEXT:### to  : STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
+#CHECK-NEXT:### distance:20 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %56:gpr32 = LDRHHui killed %55:gpr64common, 193, debug-location !16 :: (load (s16) from %ir.32, !tbaa !10); /TEST/tp/testprg.c:7:21
-#CHECK:### to  : STRHHui %0:gpr32, %58:gpr64common, 194, debug-location !18 :: (store (s16) into %ir.38, !tbaa !10); /TEST/tp/testprg.c:8:12
-#CHECK:### distance:20 delay:1
+#CHECK-NEXT:### from: %56:gpr32 = LDRHHui killed %55:gpr64common, 193, debug-location !16 :: (load (s16) from %ir.32, !tbaa !10); /TEST/tp/testprg.c:7:21
+#CHECK-NEXT:### to  : STRHHui %0:gpr32, %58:gpr64common, 194, debug-location !18 :: (store (s16) into %ir.38, !tbaa !10); /TEST/tp/testprg.c:8:12
+#CHECK-NEXT:### distance:20 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
-#CHECK:### to  : %54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
-#CHECK:### distance:20 delay:6
+#CHECK-NEXT:### from: STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
+#CHECK-NEXT:### to  : %54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
+#CHECK-NEXT:### distance:20 delay:6
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
-#CHECK:### to  : %56:gpr32 = LDRHHui killed %55:gpr64common, 193, debug-location !16 :: (load (s16) from %ir.32, !tbaa !10); /TEST/tp/testprg.c:7:21
-#CHECK:### distance:20 delay:6
+#CHECK-NEXT:### from: STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
+#CHECK-NEXT:### to  : %56:gpr32 = LDRHHui killed %55:gpr64common, 193, debug-location !16 :: (load (s16) from %ir.32, !tbaa !10); /TEST/tp/testprg.c:7:21
+#CHECK-NEXT:### distance:20 delay:6
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
-#CHECK:### to  : STRHHui %0:gpr32, %58:gpr64common, 194, debug-location !18 :: (store (s16) into %ir.38, !tbaa !10); /TEST/tp/testprg.c:8:12
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
+#CHECK-NEXT:### to  : STRHHui %0:gpr32, %58:gpr64common, 194, debug-location !18 :: (store (s16) into %ir.38, !tbaa !10); /TEST/tp/testprg.c:8:12
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: STRHHui %0:gpr32, %58:gpr64common, 194, debug-location !18 :: (store (s16) into %ir.38, !tbaa !10); /TEST/tp/testprg.c:8:12
-#CHECK:### to  : %54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
-#CHECK:### distance:20 delay:6
+#CHECK-NEXT:### from: STRHHui %0:gpr32, %58:gpr64common, 194, debug-location !18 :: (store (s16) into %ir.38, !tbaa !10); /TEST/tp/testprg.c:8:12
+#CHECK-NEXT:### to  : %54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
+#CHECK-NEXT:### distance:20 delay:6
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: STRHHui %0:gpr32, %58:gpr64common, 194, debug-location !18 :: (store (s16) into %ir.38, !tbaa !10); /TEST/tp/testprg.c:8:12
-#CHECK:### to  : %56:gpr32 = LDRHHui killed %55:gpr64common, 193, debug-location !16 :: (load (s16) from %ir.32, !tbaa !10); /TEST/tp/testprg.c:7:21
-#CHECK:### distance:20 delay:6
+#CHECK-NEXT:### from: STRHHui %0:gpr32, %58:gpr64common, 194, debug-location !18 :: (store (s16) into %ir.38, !tbaa !10); /TEST/tp/testprg.c:8:12
+#CHECK-NEXT:### to  : %56:gpr32 = LDRHHui killed %55:gpr64common, 193, debug-location !16 :: (load (s16) from %ir.32, !tbaa !10); /TEST/tp/testprg.c:7:21
+#CHECK-NEXT:### distance:20 delay:6
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: STRHHui %0:gpr32, %58:gpr64common, 194, debug-location !18 :: (store (s16) into %ir.38, !tbaa !10); /TEST/tp/testprg.c:8:12
-#CHECK:### to  : STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
-#CHECK:### distance:1 delay:1
+#CHECK-NEXT:### from: STRHHui %0:gpr32, %58:gpr64common, 194, debug-location !18 :: (store (s16) into %ir.38, !tbaa !10); /TEST/tp/testprg.c:8:12
+#CHECK-NEXT:### to  : STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
+#CHECK-NEXT:### distance:1 delay:1
 
 
 #CHECK:=========================================
 #CHECK:%52:gpr64 = UBFMXri %50:gpr64common, 63, 62, debug-location !15; /TEST/tp/testprg.c:7:14
-#CHECK:successor_inst : ADDXrr (not placed)
-#CHECK:successor_inst : ADDXrr (not placed)
-#CHECK:successor_inst : ADDXrr (not placed)
-#CHECK: begin_cycle          : 124999
-#CHECK: SIP.slot             : 999996
-#CHECK: SIP.slot.calcCycle() : 124999
-#CHECK: iteration_interval = 4
+#CHECK-NEXT:successor_inst : ADDXrr (not placed)
+#CHECK-NEXT:successor_inst : ADDXrr (not placed)
+#CHECK-NEXT:successor_inst : ADDXrr (not placed)
+#CHECK-NEXT: begin_cycle          : 124999
+#CHECK-NEXT: SIP.slot             : 999996
+#CHECK-NEXT: SIP.slot.calcCycle() : 124999
+#CHECK-NEXT: iteration_interval = 4
 
 #CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       LSU1     LSU2     FLA_C    FLB_C    EXA_C    EXB_C    EAGA_C   EAGB_C   
-#CHECK:---------------------------------------------------------------------------------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
-#CHECK:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
-#CHECK:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
-#CHECK:       0        0        UBFMXri  0        0        0        0        0        0        0        0        0        0        0        0        0        
+#CHECK-NEXT:---------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK-NEXT:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
+#CHECK-NEXT:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
+#CHECK-NEXT:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
+#CHECK-NEXT:       0        0        UBFMXri  0        0        0        0        0        0        0        0        0        0        0        0        0        
 
 #CHECK:	(999992)	--0--		--1--		--2--		--3--		UBFMXri		--5--		--6--		--7--	
-#CHECK:	=========================================
+#CHECK-NEXT:	=========================================
 
 #CHECK:=========================================
 #CHECK:%52:gpr64 = UBFMXri %50:gpr64common, 63, 62, debug-location !15; /TEST/tp/testprg.c:7:14
 #CHECK:successor_inst : ADDXrr ( cycle:124998, latecycle:124997, delay:1 )
 #CHECK:successor_inst : ADDXrr (not placed)
 #CHECK:successor_inst : ADDXrr (not placed)
-#CHECK: begin_cycle          : 124997
-#CHECK: SIP.slot             : 999980
-#CHECK: SIP.slot.calcCycle() : 124997
-#CHECK: iteration_interval = 4
+#CHECK-NEXT: begin_cycle          : 124997
+#CHECK-NEXT: SIP.slot             : 999980
+#CHECK-NEXT: SIP.slot.calcCycle() : 124997
+#CHECK-NEXT: iteration_interval = 4
 
 #CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       LSU1     LSU2     FLA_C    FLB_C    EXA_C    EXB_C    EAGA_C   EAGB_C   
-#CHECK:---------------------------------------------------------------------------------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
-#CHECK:       0        0        UBFMXri  0        0        0        0        0        0        0        0        0        0        0        0        0        
-#CHECK:       0        0        0        ADDXrr   0        0        0        0        0        0        0        0        0        0        0        0        
-#CHECK:       0        0        0        0        0        0        0        LDRHHui  0        0        0        0        0        0        0        0        
+#CHECK-NEXT:---------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK-NEXT:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
+#CHECK-NEXT:       0        0        UBFMXri  0        0        0        0        0        0        0        0        0        0        0        0        0        
+#CHECK-NEXT:       0        0        0        ADDXrr   0        0        0        0        0        0        0        0        0        0        0        0        
+#CHECK-NEXT:       0        0        0        0        0        0        0        LDRHHui  0        0        0        0        0        0        0        0        
 
 #CHECK:	(999976)	--0--		--1--		--2--		--3--		UBFMXri		--5--		--6--		--7--	
-#CHECK:	(999984)	--0--		--1--		--2--		--3--		--4--		ADDXrr		--6--		--7--	
-#CHECK:	(999992)	--0--		--1--		--2--		--3--		LDRHHui		--5--		--6--		--7--	
-#CHECK:=========================================
+#CHECK-NEXT:	(999984)	--0--		--1--		--2--		--3--		--4--		ADDXrr		--6--		--7--	
+#CHECK-NEXT:	(999992)	--0--		--1--		--2--		--3--		LDRHHui		--5--		--6--		--7--	
+#CHECK-NEXT:=========================================
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'

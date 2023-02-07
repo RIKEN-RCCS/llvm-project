@@ -1,93 +1,94 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-debug-dump-plan  -swpl-debug-ddg -swpl-debug-dump-scheduling-every-inst -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:DBG(SwplDdg::print) SwplDdg. 
-#CHECK:### SwplDdg: 
-#CHECK:### SwplEdge: 
-#CHECK:### from: %23:gpr64sp = COPY %31:gpr64all
-#CHECK:### to  : %25:gpr32sp = COPY %23.sub_32:gpr64sp, debug-location !11; tp/testprg.c:7:10
-#CHECK:### distance:1 delay:1
+#CHECK-NEXT:### SwplDdg: 
+#CHECK-NEXT:### SwplEdge: 
+#CHECK-NEXT:### from: %23:gpr64sp = COPY %31:gpr64all
+#CHECK-NEXT:### to  : %25:gpr32sp = COPY %23.sub_32:gpr64sp, debug-location !11; tp/testprg.c:7:10
+#CHECK-NEXT:### distance:1 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %25:gpr32sp = COPY %23.sub_32:gpr64sp, debug-location !11; tp/testprg.c:7:10
-#CHECK:### to  : %26:gpr32sp = ADDWri killed %25:gpr32sp, 1000, 0, debug-location !11; tp/testprg.c:7:10
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %25:gpr32sp = COPY %23.sub_32:gpr64sp, debug-location !11; tp/testprg.c:7:10
+#CHECK-NEXT:### to  : %26:gpr32sp = ADDWri killed %25:gpr32sp, 1000, 0, debug-location !11; tp/testprg.c:7:10
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %26:gpr32sp = ADDWri killed %25:gpr32sp, 1000, 0, debug-location !11; tp/testprg.c:7:10
-#CHECK:### to  : %27:gpr64all = INSERT_SUBREG %16:gpr64all(tied-def 0), killed %26:gpr32sp, %subreg.sub_32, debug-location !11; tp/testprg.c:7:10
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %26:gpr32sp = ADDWri killed %25:gpr32sp, 1000, 0, debug-location !11; tp/testprg.c:7:10
+#CHECK-NEXT:### to  : %27:gpr64all = INSERT_SUBREG %16:gpr64all(tied-def 0), killed %26:gpr32sp, %subreg.sub_32, debug-location !11; tp/testprg.c:7:10
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %27:gpr64all = INSERT_SUBREG %16:gpr64all(tied-def 0), killed %26:gpr32sp, %subreg.sub_32, debug-location !11; tp/testprg.c:7:10
-#CHECK:### to  : %28:gpr32 = COPY %27.sub_32:gpr64all, debug-location !11; tp/testprg.c:7:10
-#CHECK:### distance:0 delay:0
+#CHECK-NEXT:### from: %27:gpr64all = INSERT_SUBREG %16:gpr64all(tied-def 0), killed %26:gpr32sp, %subreg.sub_32, debug-location !11; tp/testprg.c:7:10
+#CHECK-NEXT:### to  : %28:gpr32 = COPY %27.sub_32:gpr64all, debug-location !11; tp/testprg.c:7:10
+#CHECK-NEXT:### distance:0 delay:0
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %28:gpr32 = COPY %27.sub_32:gpr64all, debug-location !11; tp/testprg.c:7:10
-#CHECK:### to  : early-clobber %29:gpr64sp = STRWpost killed %28:gpr32, %22:gpr64sp(tied-def 0), 4, debug-location !11 :: (store (s32) into %ir.4, !tbaa !12); tp/testprg.c:7:10
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %28:gpr32 = COPY %27.sub_32:gpr64all, debug-location !11; tp/testprg.c:7:10
+#CHECK-NEXT:### to  : early-clobber %29:gpr64sp = STRWpost killed %28:gpr32, %22:gpr64sp(tied-def 0), 4, debug-location !11 :: (store (s32) into %ir.4, !tbaa !12); tp/testprg.c:7:10
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %22:gpr64sp = COPY %32:gpr64all
-#CHECK:### to  : early-clobber %29:gpr64sp = STRWpost killed %28:gpr32, %22:gpr64sp(tied-def 0), 4, debug-location !11 :: (store (s32) into %ir.4, !tbaa !12); tp/testprg.c:7:10
-#CHECK:### distance:1 delay:1
+#CHECK-NEXT:### from: %22:gpr64sp = COPY %32:gpr64all
+#CHECK-NEXT:### to  : early-clobber %29:gpr64sp = STRWpost killed %28:gpr32, %22:gpr64sp(tied-def 0), 4, debug-location !11 :: (store (s32) into %ir.4, !tbaa !12); tp/testprg.c:7:10
+#CHECK-NEXT:### distance:1 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %23:gpr64sp = COPY %31:gpr64all
-#CHECK:### to  : %30:gpr64sp = nsw ADDXri %23:gpr64sp, 10, 0, debug-location !16; tp/testprg.c:5:17
-#CHECK:### distance:1 delay:1
+#CHECK-NEXT:### from: %23:gpr64sp = COPY %31:gpr64all
+#CHECK-NEXT:### to  : %30:gpr64sp = nsw ADDXri %23:gpr64sp, 10, 0, debug-location !16; tp/testprg.c:5:17
+#CHECK-NEXT:### distance:1 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %30:gpr64sp = nsw ADDXri %23:gpr64sp, 10, 0, debug-location !16; tp/testprg.c:5:17
-#CHECK:### to  : %31:gpr64all = COPY %30:gpr64sp, debug-location !16; tp/testprg.c:5:17
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %30:gpr64sp = nsw ADDXri %23:gpr64sp, 10, 0, debug-location !16; tp/testprg.c:5:17
+#CHECK-NEXT:### to  : %31:gpr64all = COPY %30:gpr64sp, debug-location !16; tp/testprg.c:5:17
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: early-clobber %29:gpr64sp = STRWpost killed %28:gpr32, %22:gpr64sp(tied-def 0), 4, debug-location !11 :: (store (s32) into %ir.4, !tbaa !12); tp/testprg.c:7:10
-#CHECK:### to  : %32:gpr64all = COPY %29:gpr64sp, debug-location !16; tp/testprg.c:5:17
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: early-clobber %29:gpr64sp = STRWpost killed %28:gpr32, %22:gpr64sp(tied-def 0), 4, debug-location !11 :: (store (s32) into %ir.4, !tbaa !12); tp/testprg.c:7:10
+#CHECK-NEXT:### to  : %32:gpr64all = COPY %29:gpr64sp, debug-location !16; tp/testprg.c:5:17
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %24:gpr64sp = COPY %34:gpr64all
-#CHECK:### to  : %33:gpr64 = SUBSXri %24:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !10; tp/testprg.c:5:3
-#CHECK:### distance:1 delay:1
+#CHECK-NEXT:### from: %24:gpr64sp = COPY %34:gpr64all
+#CHECK-NEXT:### to  : %33:gpr64 = SUBSXri %24:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !10; tp/testprg.c:5:3
+#CHECK-NEXT:### distance:1 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %33:gpr64 = SUBSXri %24:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !10; tp/testprg.c:5:3
-#CHECK:### to  : %34:gpr64all = COPY %33:gpr64, debug-location !10; tp/testprg.c:5:3
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %33:gpr64 = SUBSXri %24:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !10; tp/testprg.c:5:3
+#CHECK-NEXT:### to  : %34:gpr64all = COPY %33:gpr64, debug-location !10; tp/testprg.c:5:3
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %32:gpr64all = COPY %29:gpr64sp, debug-location !16; tp/testprg.c:5:17
-#CHECK:### to  : %22:gpr64sp = COPY %32:gpr64all
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %32:gpr64all = COPY %29:gpr64sp, debug-location !16; tp/testprg.c:5:17
+#CHECK-NEXT:### to  : %22:gpr64sp = COPY %32:gpr64all
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %31:gpr64all = COPY %30:gpr64sp, debug-location !16; tp/testprg.c:5:17
-#CHECK:### to  : %23:gpr64sp = COPY %31:gpr64all
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %31:gpr64all = COPY %30:gpr64sp, debug-location !16; tp/testprg.c:5:17
+#CHECK-NEXT:### to  : %23:gpr64sp = COPY %31:gpr64all
+#CHECK-NEXT:### distance:0 delay:1
+
 #CHECK:### SwplEdge: 
-#CHECK:### from: %34:gpr64all = COPY %33:gpr64, debug-location !10; tp/testprg.c:5:3
-#CHECK:### to  : %24:gpr64sp = COPY %34:gpr64all
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %34:gpr64all = COPY %33:gpr64, debug-location !10; tp/testprg.c:5:3
+#CHECK-NEXT:### to  : %24:gpr64sp = COPY %34:gpr64all
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:=========================================
-#CHECK:%25:gpr32sp = COPY %23.sub_32:gpr64sp, debug-location !11; tp/testprg.c:7:10
-#CHECK:successor_inst : ADDWri (not placed)
-#CHECK: begin_cycle          : 124999
-#CHECK: SIP.slot             : 999996
-#CHECK: SIP.slot.calcCycle() : 124999
-#CHECK: iteration_interval = 4
+#CHECK-NEXT:%25:gpr32sp = COPY %23.sub_32:gpr64sp, debug-location !11; tp/testprg.c:7:10
+#CHECK-NEXT:successor_inst : ADDWri (not placed)
+#CHECK-NEXT: begin_cycle          : 124999
+#CHECK-NEXT: SIP.slot             : 999996
+#CHECK-NEXT: SIP.slot.calcCycle() : 124999
+#CHECK-NEXT: iteration_interval = 4
 
 #CHECK:       FLA   FLB   EXA   EXB   EAGA  EAGB  PRX   BR    LSU1  LSU2  FLA_C FLB_C EXA_C EXB_C EAGA_CEAGB_C
-#CHECK:------------------------------------------------------------------------------------------------------
-#CHECK:       0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     
-#CHECK:       0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     
-#CHECK:       0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     
-#CHECK:       0     0     COPY  0     0     0     0     0     0     0     0     0     0     0     0     0     
+#CHECK-NEXT:------------------------------------------------------------------------------------------------------
+#CHECK-NEXT:       0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     
+#CHECK-NEXT:       0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     
+#CHECK-NEXT:       0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     
+#CHECK-NEXT:       0     0     COPY  0     0     0     0     0     0     0     0     0     0     0     0     0     
 
 #CHECK:	(999992)	--0--		--1--		--2--		--3--		COPY		--5--		--6--		--7--	
-#CHECK:=========================================
+#CHECK-NEXT:=========================================
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'

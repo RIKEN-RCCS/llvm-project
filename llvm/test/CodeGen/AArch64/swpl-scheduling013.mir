@@ -1,95 +1,95 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-debug-dump-plan  -swpl-debug-ddg -swpl-debug-dump-scheduling-every-inst -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:DBG(SwplDdg::print) SwplDdg. 
-#CHECK:### SwplDdg: 
-#CHECK:### SwplEdge: 
-#CHECK:### from: %16:gpr64common = COPY %23:gpr64all, debug-location !11; tp/testprg.c:3:18
-#CHECK:### to  : %18:gpr64common = ADDXrr %5:gpr64, %16:gpr64common, debug-location !12; tp/testprg.c:4:12
-#CHECK:### distance:1 delay:1
+#CHECK-NEXT:### SwplDdg: 
+#CHECK-NEXT:### SwplEdge: 
+#CHECK-NEXT:### from: %16:gpr64common = COPY %23:gpr64all, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### to  : %18:gpr64common = ADDXrr %5:gpr64, %16:gpr64common, debug-location !12; tp/testprg.c:4:12
+#CHECK-NEXT:### distance:1 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %18:gpr64common = ADDXrr %5:gpr64, %16:gpr64common, debug-location !12; tp/testprg.c:4:12
-#CHECK:### to  : %19:gpr64all = COPY %18:gpr64common, debug-location !11; tp/testprg.c:3:18
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %18:gpr64common = ADDXrr %5:gpr64, %16:gpr64common, debug-location !12; tp/testprg.c:4:12
+#CHECK-NEXT:### to  : %19:gpr64all = COPY %18:gpr64common, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %18:gpr64common = ADDXrr %5:gpr64, %16:gpr64common, debug-location !12; tp/testprg.c:4:12
-#CHECK:### to  : %20:fpr128 = LDRQui %18:gpr64common, 504, debug-location !12 :: (load (s128) from %ir.8, align 8, !tbaa !13); tp/testprg.c:4:12
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %18:gpr64common = ADDXrr %5:gpr64, %16:gpr64common, debug-location !12; tp/testprg.c:4:12
+#CHECK-NEXT:### to  : %20:fpr128 = LDRQui %18:gpr64common, 504, debug-location !12 :: (load (s128) from %ir.8, align 8, !tbaa !13); tp/testprg.c:4:12
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %20:fpr128 = LDRQui %18:gpr64common, 504, debug-location !12 :: (load (s128) from %ir.8, align 8, !tbaa !13); tp/testprg.c:4:12
-#CHECK:### to  : %21:fpr128 = nnan ninf nsz arcp contract afn reassoc FADDv2f64 killed %20:fpr128, %12:fpr128, debug-location !17; tp/testprg.c:4:19
-#CHECK:### distance:0 delay:8
+#CHECK-NEXT:### from: %20:fpr128 = LDRQui %18:gpr64common, 504, debug-location !12 :: (load (s128) from %ir.8, align 8, !tbaa !13); tp/testprg.c:4:12
+#CHECK-NEXT:### to  : %21:fpr128 = nnan ninf nsz arcp contract afn reassoc FADDv2f64 killed %20:fpr128, %12:fpr128, debug-location !17; tp/testprg.c:4:19
+#CHECK-NEXT:### distance:0 delay:8
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %21:fpr128 = nnan ninf nsz arcp contract afn reassoc FADDv2f64 killed %20:fpr128, %12:fpr128, debug-location !17; tp/testprg.c:4:19
-#CHECK:### to  : STRQui killed %21:fpr128, %18:gpr64common, 500, debug-location !18 :: (store (s128) into %ir.13, align 8, !tbaa !13); tp/testprg.c:4:10
-#CHECK:### distance:0 delay:9
+#CHECK-NEXT:### from: %21:fpr128 = nnan ninf nsz arcp contract afn reassoc FADDv2f64 killed %20:fpr128, %12:fpr128, debug-location !17; tp/testprg.c:4:19
+#CHECK-NEXT:### to  : STRQui killed %21:fpr128, %18:gpr64common, 500, debug-location !18 :: (store (s128) into %ir.13, align 8, !tbaa !13); tp/testprg.c:4:10
+#CHECK-NEXT:### distance:0 delay:9
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %18:gpr64common = ADDXrr %5:gpr64, %16:gpr64common, debug-location !12; tp/testprg.c:4:12
-#CHECK:### to  : STRQui killed %21:fpr128, %18:gpr64common, 500, debug-location !18 :: (store (s128) into %ir.13, align 8, !tbaa !13); tp/testprg.c:4:10
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %18:gpr64common = ADDXrr %5:gpr64, %16:gpr64common, debug-location !12; tp/testprg.c:4:12
+#CHECK-NEXT:### to  : STRQui killed %21:fpr128, %18:gpr64common, 500, debug-location !18 :: (store (s128) into %ir.13, align 8, !tbaa !13); tp/testprg.c:4:10
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %16:gpr64common = COPY %23:gpr64all, debug-location !11; tp/testprg.c:3:18
-#CHECK:### to  : %22:gpr64sp = nsw ADDXri %16:gpr64common, 16, 0, debug-location !11; tp/testprg.c:3:18
-#CHECK:### distance:1 delay:1
+#CHECK-NEXT:### from: %16:gpr64common = COPY %23:gpr64all, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### to  : %22:gpr64sp = nsw ADDXri %16:gpr64common, 16, 0, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### distance:1 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %22:gpr64sp = nsw ADDXri %16:gpr64common, 16, 0, debug-location !11; tp/testprg.c:3:18
-#CHECK:### to  : %23:gpr64all = COPY %22:gpr64sp, debug-location !11; tp/testprg.c:3:18
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %22:gpr64sp = nsw ADDXri %16:gpr64common, 16, 0, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### to  : %23:gpr64all = COPY %22:gpr64sp, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %17:gpr64sp = COPY %25:gpr64all, debug-location !11; tp/testprg.c:3:18
-#CHECK:### to  : %24:gpr64 = SUBSXri %17:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !11; tp/testprg.c:3:18
-#CHECK:### distance:1 delay:1
+#CHECK-NEXT:### from: %17:gpr64sp = COPY %25:gpr64all, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### to  : %24:gpr64 = SUBSXri %17:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### distance:1 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %24:gpr64 = SUBSXri %17:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !11; tp/testprg.c:3:18
-#CHECK:### to  : %25:gpr64all = COPY %24:gpr64, debug-location !11; tp/testprg.c:3:18
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %24:gpr64 = SUBSXri %17:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### to  : %25:gpr64all = COPY %24:gpr64, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %23:gpr64all = COPY %22:gpr64sp, debug-location !11; tp/testprg.c:3:18
-#CHECK:### to  : %16:gpr64common = COPY %23:gpr64all, debug-location !11; tp/testprg.c:3:18
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %23:gpr64all = COPY %22:gpr64sp, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### to  : %16:gpr64common = COPY %23:gpr64all, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %25:gpr64all = COPY %24:gpr64, debug-location !11; tp/testprg.c:3:18
-#CHECK:### to  : %17:gpr64sp = COPY %25:gpr64all, debug-location !11; tp/testprg.c:3:18
-#CHECK:### distance:0 delay:1
+#CHECK-NEXT:### from: %25:gpr64all = COPY %24:gpr64, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### to  : %17:gpr64sp = COPY %25:gpr64all, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### distance:0 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: %20:fpr128 = LDRQui %18:gpr64common, 504, debug-location !12 :: (load (s128) from %ir.8, align 8, !tbaa !13); tp/testprg.c:4:12
-#CHECK:### to  : STRQui killed %21:fpr128, %18:gpr64common, 500, debug-location !18 :: (store (s128) into %ir.13, align 8, !tbaa !13); tp/testprg.c:4:10
-#CHECK:### distance:4 delay:1
+#CHECK-NEXT:### from: %20:fpr128 = LDRQui %18:gpr64common, 504, debug-location !12 :: (load (s128) from %ir.8, align 8, !tbaa !13); tp/testprg.c:4:12
+#CHECK-NEXT:### to  : STRQui killed %21:fpr128, %18:gpr64common, 500, debug-location !18 :: (store (s128) into %ir.13, align 8, !tbaa !13); tp/testprg.c:4:10
+#CHECK-NEXT:### distance:4 delay:1
 
 #CHECK:### SwplEdge: 
-#CHECK:### from: STRQui killed %21:fpr128, %18:gpr64common, 500, debug-location !18 :: (store (s128) into %ir.13, align 8, !tbaa !13); tp/testprg.c:4:10
-#CHECK:### to  : %20:fpr128 = LDRQui %18:gpr64common, 504, debug-location !12 :: (load (s128) from %ir.8, align 8, !tbaa !13); tp/testprg.c:4:12
-#CHECK:### distance:20 delay:6
+#CHECK-NEXT:### from: STRQui killed %21:fpr128, %18:gpr64common, 500, debug-location !18 :: (store (s128) into %ir.13, align 8, !tbaa !13); tp/testprg.c:4:10
+#CHECK-NEXT:### to  : %20:fpr128 = LDRQui %18:gpr64common, 504, debug-location !12 :: (load (s128) from %ir.8, align 8, !tbaa !13); tp/testprg.c:4:12
+#CHECK-NEXT:### distance:20 delay:6
 
 #CHECK:=========================================
 #CHECK:%20:fpr128 = LDRQui %18:gpr64common, 504, debug-location !12 :: (load (s128) from %ir.8, align 8, !tbaa !13); tp/testprg.c:4:12
-#CHECK:successor_inst : FADDv2f64 (not placed)
-#CHECK:successor_inst : STRQui (not placed)
-#CHECK: begin_cycle          : 124997
-#CHECK: SIP.slot             : 999980
-#CHECK: SIP.slot.calcCycle() : 124997
-#CHECK: iteration_interval = 3
+#CHECK-NEXT:successor_inst : FADDv2f64 (not placed)
+#CHECK-NEXT:successor_inst : STRQui (not placed)
+#CHECK-NEXT: begin_cycle          : 124997
+#CHECK-NEXT: SIP.slot             : 999980
+#CHECK-NEXT: SIP.slot.calcCycle() : 124997
+#CHECK-NEXT: iteration_interval = 3
 
 #CHECK:       FLA     FLB     EXA     EXB     EAGA    EAGB    PRX     BR      LSU1    LSU2    FLA_C   FLB_C   EXA_C   EXB_C   EAGA_C  EAGB_C  
-#CHECK:----------------------------------------------------------------------------------------------------------------------------------------
-#CHECK:       0       0       0       0       0       0       0       0       0       0       0       0       fLDRQui 0       0       0       
-#CHECK:       0       0       ADDXrr  0       0       0       0       0       0       0       0       0       0       0       fLDRQui 0       
-#CHECK:       0       0       fLDRQui COPY    fLDRQui 0       0       0       fLDRQui 0       0       0       0       0       0       0       
+#CHECK-NEXT:----------------------------------------------------------------------------------------------------------------------------------------
+#CHECK-NEXT:       0       0       0       0       0       0       0       0       0       0       0       0       fLDRQui 0       0       0       
+#CHECK-NEXT:       0       0       ADDXrr  0       0       0       0       0       0       0       0       0       0       0       fLDRQui 0       
+#CHECK-NEXT:       0       0       fLDRQui COPY    fLDRQui 0       0       0       fLDRQui 0       0       0       0       0       0       0       
 
 #CHECK:	(999968)	--0--		--1--		--2--		--3--		ADDXrr		--5--		--6--		--7--	
-#CHECK:	(999976)	--0--		--1--		--2--		--3--		LDRQui		COPY		--6--		--7--	
-#CHECK:=========================================
+#CHECK-NEXT:	(999976)	--0--		--1--		--2--		--3--		LDRQui		COPY		--6--		--7--	
+#CHECK-NEXT:=========================================
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
