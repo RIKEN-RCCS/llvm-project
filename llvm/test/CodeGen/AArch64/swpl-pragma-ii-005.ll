@@ -1,5 +1,5 @@
-; RUN: llc < %s -O1 -mcpu=a64fx -fswp -swpl-debug --pass-remarks-filter=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
-;CHECK:Iterative Modulo Scheduling. ResMII 4. NumOfBodyInsts 12. Budget 60. II 2. Minimum II = 4.
+; RUN: llc < %s -O1 -mcpu=a64fx -fswp -swpl-debug --pass-remarks-missed=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+;CHECK:Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 9. Budget 45. II 2. Minimum II = 3.
 ;CHECK:Trial at iteration-interval=2. This loop is not software pipelined because no schedule is obtained.
 ; ModuleID = '2912.c'
 source_filename = "2912.c"

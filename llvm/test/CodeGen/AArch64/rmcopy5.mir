@@ -1,48 +1,48 @@
 # RUN: llc -mcpu=a64fx -O1 -fswp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
-# CHECK: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %96:zpr = COPY %94:zpr, debug-location !17; s128.c:40:19
-# CHECK-NEXT:  before: SST1D_SCALED killed %109:zpr, %34:ppr_3b, killed %110:gpr64sp, %96:zpr, debug-location !28 :: (store unknown-size, align 8, !tbaa !20); s128.c:43:18
-# CHECK-NEXT:  after: SST1D_SCALED killed %109:zpr, %34:ppr_3b, killed %110:gpr64sp, %94:zpr, debug-location !28 :: (store unknown-size, align 8, !tbaa !20); s128.c:43:18
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %99:gpr64sp = COPY %98.dsub:zpr, debug-location !17; s128.c:40:19
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %101:zpr = COPY %100.zsub0:zpr2, debug-location !18; s128.c:41:20
-# CHECK-NEXT:  before: %104:zpr = FSUB_ZZZ_D killed %101:zpr, killed %103:zpr, debug-location !24; s128.c:41:25
-# CHECK-NEXT:  after: %104:zpr = FSUB_ZZZ_D %100.zsub0:zpr2, killed %103:zpr, debug-location !24; s128.c:41:25
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %106:gpr64common = COPY %97.dsub:zpr, debug-location !26; s128.c:43:27
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %108:zpr = COPY %107.zsub0:zpr2, debug-location !26; s128.c:43:27
-# CHECK-NEXT:  before: %109:zpr = FADD_ZZZ_D killed %108:zpr, %104:zpr, debug-location !27; s128.c:43:25
-# CHECK-NEXT:  after: %109:zpr = FADD_ZZZ_D %107.zsub0:zpr2, %104:zpr, debug-location !27; s128.c:43:25
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %113:gpr64all = COPY %112:gpr64sp, debug-location !16; s128.c:39:40
-# CHECK-NEXT:  before: %93:gpr64common = PHI %23:gpr64all, %bb.1, %113:gpr64all, %bb.2, debug-location !16; s128.c:39:40
-# CHECK-NEXT:  after: %93:gpr64common = PHI %23:gpr64all, %bb.1, %112:gpr64sp, %bb.2, debug-location !16; s128.c:39:40
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %115:gpr64all = COPY %114:gpr64, debug-location !16; s128.c:39:40
-# CHECK-NEXT:  before: %95:gpr64sp = PHI %1:gpr64all, %bb.1, %115:gpr64all, %bb.2, debug-location !17; s128.c:40:19
-# CHECK-NEXT:  after: %95:gpr64sp = PHI %1:gpr64all, %bb.1, %114:gpr64, %bb.2, debug-location !17; s128.c:40:19
-# CHECK-NEXT:  removed!
-# CHECK: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %208:gpr64all = COPY %207:gpr64sp, debug-location !43; s128.c:39:27
-# CHECK-NEXT:  before: %198:gpr64common = PHI %56:gpr64all, %bb.3, %208:gpr64all, %bb.6
-# CHECK-NEXT:  after: %198:gpr64common = PHI %56:gpr64all, %bb.3, %207:gpr64sp, %bb.6
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %210:gpr64all = COPY %209:gpr64sp, debug-location !43; s128.c:39:27
-# CHECK-NEXT:  before: %197:gpr64common = PHI %55:gpr64all, %bb.3, %210:gpr64all, %bb.6
-# CHECK-NEXT:  after: %197:gpr64common = PHI %55:gpr64all, %bb.3, %209:gpr64sp, %bb.6
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %212:gpr64all = COPY %211:gpr64, debug-location !15; s128.c:39:9
-# CHECK-NEXT:  before: %199:gpr64sp = PHI %8:gpr64all, %bb.3, %212:gpr64all, %bb.6, debug-location !18; s128.c:41:20
-# CHECK-NEXT:  after: %199:gpr64sp = PHI %8:gpr64all, %bb.3, %211:gpr64, %bb.6, debug-location !18; s128.c:41:20
-# CHECK-NEXT:  removed!
+#CHECK: DBG(SwplLoop::removeCopy)
+#CHECK-NEXT:  target mi: %96:zpr = COPY %94:zpr, debug-location !17; s128.c:40:19
+#CHECK-NEXT:  before: SST1D_SCALED killed %109:zpr, %34:ppr_3b, killed %110:gpr64sp, %96:zpr, debug-location !28 :: (store unknown-size, align 8, !tbaa !20); s128.c:43:18
+#CHECK-NEXT:  after: SST1D_SCALED killed %109:zpr, %34:ppr_3b, killed %110:gpr64sp, %94:zpr, debug-location !28 :: (store unknown-size, align 8, !tbaa !20); s128.c:43:18
+#CHECK-NEXT:  removed!
+#CHECK: DBG(SwplLoop::removeCopy)
+#CHECK-NEXT:  target mi: %99:gpr64sp = COPY %98.dsub:zpr, debug-location !17; s128.c:40:19
+#CHECK: DBG(SwplLoop::removeCopy)
+#CHECK-NEXT:  target mi: %101:zpr = COPY %100.zsub0:zpr2, debug-location !18; s128.c:41:20
+#CHECK-NEXT:  before: %104:zpr = FSUB_ZZZ_D killed %101:zpr, killed %103:zpr, debug-location !24; s128.c:41:25
+#CHECK-NEXT:  after: %104:zpr = FSUB_ZZZ_D %100.zsub0:zpr2, killed %103:zpr, debug-location !24; s128.c:41:25
+#CHECK-NEXT:  removed!
+#CHECK: DBG(SwplLoop::removeCopy)
+#CHECK-NEXT:  target mi: %106:gpr64common = COPY %97.dsub:zpr, debug-location !26; s128.c:43:27
+#CHECK: DBG(SwplLoop::removeCopy)
+#CHECK-NEXT:  target mi: %108:zpr = COPY %107.zsub0:zpr2, debug-location !26; s128.c:43:27
+#CHECK-NEXT:  before: %109:zpr = FADD_ZZZ_D killed %108:zpr, %104:zpr, debug-location !27; s128.c:43:25
+#CHECK-NEXT:  after: %109:zpr = FADD_ZZZ_D %107.zsub0:zpr2, %104:zpr, debug-location !27; s128.c:43:25
+#CHECK-NEXT:  removed!
+#CHECK: DBG(SwplLoop::removeCopy)
+#CHECK-NEXT:  target mi: %113:gpr64all = COPY %112:gpr64sp, debug-location !16; s128.c:39:40
+#CHECK-NEXT:  before: %93:gpr64common = PHI %23:gpr64all, %bb.1, %113:gpr64all, %bb.2, debug-location !16; s128.c:39:40
+#CHECK-NEXT:  after: %93:gpr64common = PHI %23:gpr64all, %bb.1, %112:gpr64sp, %bb.2, debug-location !16; s128.c:39:40
+#CHECK-NEXT:  removed!
+#CHECK: DBG(SwplLoop::removeCopy)
+#CHECK-NEXT:  target mi: %115:gpr64all = COPY %114:gpr64, debug-location !16; s128.c:39:40
+#CHECK-NEXT:  before: %95:gpr64sp = PHI %1:gpr64all, %bb.1, %115:gpr64all, %bb.2, debug-location !17; s128.c:40:19
+#CHECK-NEXT:  after: %95:gpr64sp = PHI %1:gpr64all, %bb.1, %114:gpr64, %bb.2, debug-location !17; s128.c:40:19
+#CHECK-NEXT:  removed!
+#CHECK: DBG(SwplLoop::removeCopy)
+#CHECK-NEXT:  target mi: %204:gpr64all = COPY %203:gpr64sp, debug-location !43; s128.c:39:27
+#CHECK-NEXT:  before: %194:gpr64common = PHI %56:gpr64all, %bb.3, %204:gpr64all, %bb.6
+#CHECK-NEXT:  after: %194:gpr64common = PHI %56:gpr64all, %bb.3, %203:gpr64sp, %bb.6
+#CHECK-NEXT:  removed!
+#CHECK: DBG(SwplLoop::removeCopy)
+#CHECK-NEXT:  target mi: %206:gpr64all = COPY %205:gpr64sp, debug-location !43; s128.c:39:27
+#CHECK-NEXT:  before: %193:gpr64common = PHI %55:gpr64all, %bb.3, %206:gpr64all, %bb.6
+#CHECK-NEXT:  after: %193:gpr64common = PHI %55:gpr64all, %bb.3, %205:gpr64sp, %bb.6
+#CHECK-NEXT:  removed!
+#CHECK: DBG(SwplLoop::removeCopy)
+#CHECK-NEXT:  target mi: %208:gpr64all = COPY %207:gpr64, debug-location !15; s128.c:39:9
+#CHECK-NEXT:  before: %195:gpr64sp = PHI %8:gpr64all, %bb.3, %208:gpr64all, %bb.6, debug-location !18; s128.c:41:20
+#CHECK-NEXT:  after: %195:gpr64sp = PHI %8:gpr64all, %bb.3, %207:gpr64, %bb.6, debug-location !18; s128.c:41:20
+#CHECK-NEXT:  removed!
 --- |
   ; ModuleID = 's128.c'
   source_filename = "s128.c"
