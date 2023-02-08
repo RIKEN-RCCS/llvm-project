@@ -27,8 +27,9 @@ static cl::opt<bool> DebugLoop("swpl-debug-loop",cl::init(false), cl::ReallyHidd
 static cl::opt<bool> NoUseAA("swpl-no-use-aa",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableConvPrePost("swpl-disable-convert-prepost",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableRmCopy("swpl-disable-rm-copy",cl::init(false), cl::ReallyHidden);
-static cl::opt<bool> DisableSupressCopy("swpl-disable-supress-copy",cl::init(false), cl::ReallyHidden);
-static cl::opt<bool> IgnoreRegClass_SupressCopy("swpl-ignore-class-supress-copy",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> DisableSuppressCopy("swpl-disable-suppress-copy",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool>
+    IgnoreRegClass_SuppressCopy("swpl-ignore-class-suppress-copy",cl::init(false), cl::ReallyHidden);
 
 using BasicBlocks = std::vector<MachineBasicBlock *>;
 using BasicBlocksIterator = std::vector<MachineBasicBlock *>::iterator ;
@@ -502,7 +503,7 @@ static MachineOperand* used_reg(MachineInstr &phi) {
   auto def_r_class=SWPipeliner::MRI->getRegClass(def_r);
   auto own_r_class=SWPipeliner::MRI->getRegClass(own_r);
 
-  if (!IgnoreRegClass_SupressCopy && def_r_class->getID()!=own_r_class->getID()) {
+  if (!IgnoreRegClass_SuppressCopy && def_r_class->getID()!=own_r_class->getID()) {
     if (SWPipeliner::isDebugOutput()) {
       dbgs() << "DEBUG(used_reg): def-class is not use-class:" << phi;
     }
@@ -628,7 +629,8 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     ///   (1)-4. preにin_rからown_rへのCopy命令を挿入する(def_r = Copy own_r)。
     /// own_r/def_rの参照がない場合はCOPY生成不要
     auto *def_op = uses[phi];
-    if (liveout_def || liveout_own || def_op==nullptr || DisableSupressCopy) {
+    if (liveout_def || liveout_own || def_op==nullptr ||
+        DisableSuppressCopy) {
       MachineInstr *c=BuildMI(*body, body->getFirstTerminator(), dbgloc,
                                 SWPipeliner::TII->get(TargetOpcode::COPY), def_r)
                             .addReg(own_r);
