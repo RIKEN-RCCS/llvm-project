@@ -580,14 +580,24 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     const auto *org_phi=NewMI2OrgMI[phi];
     auto org_def_r=org_phi->getOperand(0).getReg();
     auto org_own_r=org_phi->getOperand(own_opix).getReg();
-    const bool liveout_def = LiveOutReg.count(org_def_r)!=0;
-    const bool liveout_own = LiveOutReg.count(org_own_r)!=0;
+    bool liveout_def = LiveOutReg.count(org_def_r)!=0;
+    bool liveout_own = LiveOutReg.count(org_own_r)!=0;
+
     if (liveout_def) {
       auto backup_def_r=def_r;
       def_r=SWPipeliner::MRI->cloneVirtualRegister(def_r);
       MachineInstr *Copy = BuildMI(*body, body->getFirstNonPHI(), dbgloc,SWPipeliner::TII->get(TargetOpcode::COPY), backup_def_r)
               .addReg(def_r);
       NewMI2OrgMI[Copy]=org_phi;
+    }
+    for (auto x:OrgReg2NewReg) {
+      Register r = x.second;
+      if (r.id() == own_r.id()) {
+        if (LiveOutReg.count(x.first)) {
+           liveout_own = true;
+
+        }
+      }
     }
 
 
@@ -624,6 +634,9 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
                             .addReg(own_r);
       NewMI2OrgMI[c]=org_phi;
     } else {
+      if (SWPipeliner::isDebugOutput()) {
+        dbgs() << "DEBUG(convertNonSSA): Suppress the generation of COPY: " << *phi;
+      }
       def_op->setReg(def_r);
     }
 
