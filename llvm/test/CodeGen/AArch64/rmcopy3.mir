@@ -4,105 +4,105 @@
 # CHECK-NEXT:  before: %345:gpr64sp = PHI %204:gpr64all, %bb.5, %364:gpr64sp, %bb.28
 # CHECK-NEXT:  after: %345:gpr64sp = PHI %204:gpr64all, %bb.5, %363:gpr64sp, %bb.28
 # CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
+# CHECK: DBG(SwplLoop::removeCopy)
 # CHECK-NEXT:  target mi: %366:gpr64all = COPY %365:gpr64sp
 # CHECK-NEXT:  before: %343:gpr64sp = PHI %15:gpr64, %bb.5, %366:gpr64all, %bb.28
 # CHECK-NEXT:  after: %343:gpr64sp = PHI %15:gpr64, %bb.5, %365:gpr64sp, %bb.28
 # CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
+# CHECK: DBG(SwplLoop::removeCopy)
 # CHECK-NEXT:  target mi: %368:gpr64all = COPY %367:gpr64sp
 # CHECK-NEXT:  before: %342:gpr64sp = PHI %14:gpr64, %bb.5, %368:gpr64all, %bb.28
 # CHECK-NEXT:  after: %342:gpr64sp = PHI %14:gpr64, %bb.5, %367:gpr64sp, %bb.28
 # CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
+# CHECK: DBG(SwplLoop::removeCopy)
 # CHECK-NEXT:  target mi: %370:gpr64all = COPY %369:gpr64
 # CHECK-NEXT:  before: %346:gpr64sp = PHI %26:gpr64all, %bb.5, %370:gpr64all, %bb.28
 # CHECK-NEXT:  after: %346:gpr64sp = PHI %26:gpr64all, %bb.5, %369:gpr64, %bb.28
 # CHECK-NEXT:  removed!
 # CHECK: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %492:gpr64all = COPY %491:gpr64sp
-# CHECK-NEXT:  before: %485:gpr64sp = PHI %31:gpr64all, %bb.9, %492:gpr64all, %bb.10
-# CHECK-NEXT:  after: %485:gpr64sp = PHI %31:gpr64all, %bb.9, %491:gpr64sp, %bb.10
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %493:gpr64all = COPY %488:gpr64sp
-# CHECK-NEXT:  before: %484:gpr64sp = PHI %32:gpr64all, %bb.9, %493:gpr64all, %bb.10
-# CHECK-NEXT:  after: %484:gpr64sp = PHI %32:gpr64all, %bb.9, %488:gpr64sp, %bb.10
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %495:gpr64all = COPY %494:gpr64
-# CHECK-NEXT:  before: %487:gpr64sp = PHI %33:gpr64all, %bb.9, %495:gpr64all, %bb.10
-# CHECK-NEXT:  after: %487:gpr64sp = PHI %33:gpr64all, %bb.9, %494:gpr64, %bb.10
+# CHECK-NEXT:  target mi: %484:gpr64all = COPY %483:gpr64sp
+# CHECK-NEXT:  before: %477:gpr64sp = PHI %31:gpr64all, %bb.9, %484:gpr64all, %bb.10
+# CHECK-NEXT:  after: %477:gpr64sp = PHI %31:gpr64all, %bb.9, %483:gpr64sp, %bb.10
 # CHECK-NEXT:  removed!
 # CHECK: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %562:gpr64sp = COPY %561:gpr64sp
-# CHECK-NEXT:  before: %543:gpr64sp = PHI %240:gpr64all, %bb.13, %562:gpr64sp, %bb.14
-# CHECK-NEXT:  after: %543:gpr64sp = PHI %240:gpr64all, %bb.13, %561:gpr64sp, %bb.14
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %564:gpr64all = COPY %563:gpr64sp
-# CHECK-NEXT:  before: %541:gpr64sp = PHI %10:gpr64, %bb.13, %564:gpr64all, %bb.14
-# CHECK-NEXT:  after: %541:gpr64sp = PHI %10:gpr64, %bb.13, %563:gpr64sp, %bb.14
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %566:gpr64all = COPY %565:gpr64sp
-# CHECK-NEXT:  before: %540:gpr64sp = PHI %9:gpr64, %bb.13, %566:gpr64all, %bb.14
-# CHECK-NEXT:  after: %540:gpr64sp = PHI %9:gpr64, %bb.13, %565:gpr64sp, %bb.14
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %568:gpr64all = COPY %567:gpr64
-# CHECK-NEXT:  before: %544:gpr64sp = PHI %44:gpr64all, %bb.13, %568:gpr64all, %bb.14
-# CHECK-NEXT:  after: %544:gpr64sp = PHI %44:gpr64all, %bb.13, %567:gpr64, %bb.14
+# CHECK-NEXT:  target mi: %485:gpr64all = COPY %480:gpr64sp
+# CHECK-NEXT:  before: %476:gpr64sp = PHI %32:gpr64all, %bb.9, %485:gpr64all, %bb.10
+# CHECK-NEXT:  after: %476:gpr64sp = PHI %32:gpr64all, %bb.9, %480:gpr64sp, %bb.10
 # CHECK-NEXT:  removed!
 # CHECK: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %690:gpr64all = COPY %689:gpr64sp
-# CHECK-NEXT:  before: %683:gpr64sp = PHI %58:gpr64all, %bb.17, %690:gpr64all, %bb.18
-# CHECK-NEXT:  after: %683:gpr64sp = PHI %58:gpr64all, %bb.17, %689:gpr64sp, %bb.18
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %691:gpr64all = COPY %686:gpr64sp
-# CHECK-NEXT:  before: %682:gpr64sp = PHI %59:gpr64all, %bb.17, %691:gpr64all, %bb.18
-# CHECK-NEXT:  after: %682:gpr64sp = PHI %59:gpr64all, %bb.17, %686:gpr64sp, %bb.18
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %693:gpr64all = COPY %692:gpr64
-# CHECK-NEXT:  before: %685:gpr64sp = PHI %60:gpr64all, %bb.17, %693:gpr64all, %bb.18
-# CHECK-NEXT:  after: %685:gpr64sp = PHI %60:gpr64all, %bb.17, %692:gpr64, %bb.18
+# CHECK-NEXT:  target mi: %487:gpr64all = COPY %486:gpr64
+# CHECK-NEXT:  before: %479:gpr64sp = PHI %33:gpr64all, %bb.9, %487:gpr64all, %bb.10
+# CHECK-NEXT:  after: %479:gpr64sp = PHI %33:gpr64all, %bb.9, %486:gpr64, %bb.10
 # CHECK-NEXT:  removed!
 # CHECK: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %760:gpr64sp = COPY %759:gpr64sp
-# CHECK-NEXT:  before: %741:gpr64sp = PHI %276:gpr64all, %bb.21, %760:gpr64sp, %bb.22
-# CHECK-NEXT:  after: %741:gpr64sp = PHI %276:gpr64all, %bb.21, %759:gpr64sp, %bb.22
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %762:gpr64all = COPY %761:gpr64sp
-# CHECK-NEXT:  before: %739:gpr64sp = PHI %5:gpr64, %bb.21, %762:gpr64all, %bb.22
-# CHECK-NEXT:  after: %739:gpr64sp = PHI %5:gpr64, %bb.21, %761:gpr64sp, %bb.22
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %764:gpr64all = COPY %763:gpr64sp
-# CHECK-NEXT:  before: %738:gpr64sp = PHI %4:gpr64, %bb.21, %764:gpr64all, %bb.22
-# CHECK-NEXT:  after: %738:gpr64sp = PHI %4:gpr64, %bb.21, %763:gpr64sp, %bb.22
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %766:gpr64all = COPY %765:gpr64
-# CHECK-NEXT:  before: %742:gpr64sp = PHI %71:gpr64all, %bb.21, %766:gpr64all, %bb.22
-# CHECK-NEXT:  after: %742:gpr64sp = PHI %71:gpr64all, %bb.21, %765:gpr64, %bb.22
+# CHECK-NEXT:  target mi: %547:gpr64sp = COPY %546:gpr64sp
+# CHECK-NEXT:  before: %528:gpr64sp = PHI %240:gpr64all, %bb.13, %547:gpr64sp, %bb.14
+# CHECK-NEXT:  after: %528:gpr64sp = PHI %240:gpr64all, %bb.13, %546:gpr64sp, %bb.14
 # CHECK-NEXT:  removed!
 # CHECK: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %888:gpr64all = COPY %887:gpr64sp
-# CHECK-NEXT:  before: %881:gpr64sp = PHI %85:gpr64all, %bb.25, %888:gpr64all, %bb.26
-# CHECK-NEXT:  after: %881:gpr64sp = PHI %85:gpr64all, %bb.25, %887:gpr64sp, %bb.26
+# CHECK-NEXT:  target mi: %549:gpr64all = COPY %548:gpr64sp
+# CHECK-NEXT:  before: %526:gpr64sp = PHI %10:gpr64, %bb.13, %549:gpr64all, %bb.14
+# CHECK-NEXT:  after: %526:gpr64sp = PHI %10:gpr64, %bb.13, %548:gpr64sp, %bb.14
 # CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %889:gpr64all = COPY %884:gpr64sp
-# CHECK-NEXT:  before: %880:gpr64sp = PHI %86:gpr64all, %bb.25, %889:gpr64all, %bb.26
-# CHECK-NEXT:  after: %880:gpr64sp = PHI %86:gpr64all, %bb.25, %884:gpr64sp, %bb.26
+# CHECK: DBG(SwplLoop::removeCopy)
+# CHECK-NEXT:  target mi: %551:gpr64all = COPY %550:gpr64sp
+# CHECK-NEXT:  before: %525:gpr64sp = PHI %9:gpr64, %bb.13, %551:gpr64all, %bb.14
+# CHECK-NEXT:  after: %525:gpr64sp = PHI %9:gpr64, %bb.13, %550:gpr64sp, %bb.14
 # CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %891:gpr64all = COPY %890:gpr64
-# CHECK-NEXT:  before: %883:gpr64sp = PHI %87:gpr64all, %bb.25, %891:gpr64all, %bb.26
-# CHECK-NEXT:  after: %883:gpr64sp = PHI %87:gpr64all, %bb.25, %890:gpr64, %bb.26
+# CHECK: DBG(SwplLoop::removeCopy)
+# CHECK-NEXT:  target mi: %553:gpr64all = COPY %552:gpr64
+# CHECK-NEXT:  before: %529:gpr64sp = PHI %44:gpr64all, %bb.13, %553:gpr64all, %bb.14
+# CHECK-NEXT:  after: %529:gpr64sp = PHI %44:gpr64all, %bb.13, %552:gpr64, %bb.14
+# CHECK-NEXT:  removed!
+# CHECK: DBG(SwplLoop::removeCopy)
+# CHECK-NEXT:  target mi: %667:gpr64all = COPY %666:gpr64sp
+# CHECK-NEXT:  before: %660:gpr64sp = PHI %58:gpr64all, %bb.17, %667:gpr64all, %bb.18
+# CHECK-NEXT:  after: %660:gpr64sp = PHI %58:gpr64all, %bb.17, %666:gpr64sp, %bb.18
+# CHECK-NEXT:  removed!
+# CHECK: DBG(SwplLoop::removeCopy)
+# CHECK-NEXT:  target mi: %668:gpr64all = COPY %663:gpr64sp
+# CHECK-NEXT:  before: %659:gpr64sp = PHI %59:gpr64all, %bb.17, %668:gpr64all, %bb.18
+# CHECK-NEXT:  after: %659:gpr64sp = PHI %59:gpr64all, %bb.17, %663:gpr64sp, %bb.18
+# CHECK-NEXT:  removed!
+# CHECK: DBG(SwplLoop::removeCopy)
+# CHECK-NEXT:  target mi: %670:gpr64all = COPY %669:gpr64
+# CHECK-NEXT:  before: %662:gpr64sp = PHI %60:gpr64all, %bb.17, %670:gpr64all, %bb.18
+# CHECK-NEXT:  after: %662:gpr64sp = PHI %60:gpr64all, %bb.17, %669:gpr64, %bb.18
+# CHECK-NEXT:  removed!
+# CHECK: DBG(SwplLoop::removeCopy)
+# CHECK-NEXT:  target mi: %730:gpr64sp = COPY %729:gpr64sp
+# CHECK-NEXT:  before: %711:gpr64sp = PHI %276:gpr64all, %bb.21, %730:gpr64sp, %bb.22
+# CHECK-NEXT:  after: %711:gpr64sp = PHI %276:gpr64all, %bb.21, %729:gpr64sp, %bb.22
+# CHECK-NEXT:  removed!
+# CHECK: DBG(SwplLoop::removeCopy)
+# CHECK-NEXT:  target mi: %732:gpr64all = COPY %731:gpr64sp
+# CHECK-NEXT:  before: %709:gpr64sp = PHI %5:gpr64, %bb.21, %732:gpr64all, %bb.22
+# CHECK-NEXT:  after: %709:gpr64sp = PHI %5:gpr64, %bb.21, %731:gpr64sp, %bb.22
+# CHECK-NEXT:  removed!
+# CHECK: DBG(SwplLoop::removeCopy)
+# CHECK-NEXT:  target mi: %734:gpr64all = COPY %733:gpr64sp
+# CHECK-NEXT:  before: %708:gpr64sp = PHI %4:gpr64, %bb.21, %734:gpr64all, %bb.22
+# CHECK-NEXT:  after: %708:gpr64sp = PHI %4:gpr64, %bb.21, %733:gpr64sp, %bb.22
+# CHECK-NEXT:  removed!
+# CHECK: DBG(SwplLoop::removeCopy)
+# CHECK-NEXT:  target mi: %736:gpr64all = COPY %735:gpr64
+# CHECK-NEXT:  before: %712:gpr64sp = PHI %71:gpr64all, %bb.21, %736:gpr64all, %bb.22
+# CHECK-NEXT:  after: %712:gpr64sp = PHI %71:gpr64all, %bb.21, %735:gpr64, %bb.22
+# CHECK-NEXT:  removed!
+# CHECK: DBG(SwplLoop::removeCopy)
+# CHECK-NEXT:  target mi: %850:gpr64all = COPY %849:gpr64sp
+# CHECK-NEXT:  before: %843:gpr64sp = PHI %85:gpr64all, %bb.25, %850:gpr64all, %bb.26
+# CHECK-NEXT:  after: %843:gpr64sp = PHI %85:gpr64all, %bb.25, %849:gpr64sp, %bb.26
+# CHECK-NEXT:  removed!
+# CHECK: DBG(SwplLoop::removeCopy)
+# CHECK-NEXT:  target mi: %851:gpr64all = COPY %846:gpr64sp
+# CHECK-NEXT:  before: %842:gpr64sp = PHI %86:gpr64all, %bb.25, %851:gpr64all, %bb.26
+# CHECK-NEXT:  after: %842:gpr64sp = PHI %86:gpr64all, %bb.25, %846:gpr64sp, %bb.26
+# CHECK-NEXT:  removed!
+# CHECK: DBG(SwplLoop::removeCopy)
+# CHECK-NEXT:  target mi: %853:gpr64all = COPY %852:gpr64
+# CHECK-NEXT:  before: %845:gpr64sp = PHI %87:gpr64all, %bb.25, %853:gpr64all, %bb.26
+# CHECK-NEXT:  after: %845:gpr64sp = PHI %87:gpr64all, %bb.25, %852:gpr64, %bb.26
 # CHECK-NEXT:  removed!
 --- |
   ; ModuleID = 's232.c'

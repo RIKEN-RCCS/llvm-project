@@ -173,6 +173,7 @@ private:
   static bool isIterationCountConstant(const SwplLoop& c_loop, unsigned* iteration_count);
   static unsigned getBudget(unsigned n_insts);
   static unsigned getMaxIterationInterval(const SwplLoop& loop, unsigned min_ii);
+  static unsigned int getInitiationInterval(const SwplLoop& loop, bool& exists);
 };
 
 

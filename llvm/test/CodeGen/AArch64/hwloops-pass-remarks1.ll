@@ -7,13 +7,6 @@
 ; CHECK-NEXT: Function:        func
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT: - String:          hardware-loop created
-; CHECK: --- !Missed
-; CHECK-NEXT: Pass:            hardware-loops
-; CHECK-NEXT: Name:            HWLoopNested
-; CHECK-NEXT: DebugLoc:        { File: a.c, Line: 7, Column: 5 }
-; CHECK-NEXT: Function:        func
-; CHECK-NEXT: Args:
-; CHECK-NEXT: - String:          'hardware-loop not created: '
 
 ; ModuleID = 'a.c'
 source_filename = "a.c"

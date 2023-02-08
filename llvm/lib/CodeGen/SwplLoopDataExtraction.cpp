@@ -27,6 +27,9 @@ static cl::opt<bool> DebugLoop("swpl-debug-loop",cl::init(false), cl::ReallyHidd
 static cl::opt<bool> NoUseAA("swpl-no-use-aa",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableConvPrePost("swpl-disable-convert-prepost",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableRmCopy("swpl-disable-rm-copy",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> DisableSuppressCopy("swpl-disable-suppress-copy",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool>
+    IgnoreRegClass_SuppressCopy("swpl-ignore-class-suppress-copy",cl::init(false), cl::ReallyHidden);
 
 using BasicBlocks = std::vector<MachineBasicBlock *>;
 using BasicBlocksIterator = std::vector<MachineBasicBlock *>::iterator ;
@@ -488,12 +491,67 @@ void SwplLoop::recollectPhiInsts() {
   }
 }
 
+static MachineOperand* used_reg(MachineInstr &phi) {
+  Register def_r = phi.getOperand(0).getReg();
+  Register own_r;
+  if (phi.getOperand(2).getMBB()==phi.getParent()) {
+    own_r = phi.getOperand(1).getReg();
+  } else {
+    own_r = phi.getOperand(3).getReg();
+  }
+
+  auto def_r_class=SWPipeliner::MRI->getRegClass(def_r);
+  auto own_r_class=SWPipeliner::MRI->getRegClass(own_r);
+
+  if (!IgnoreRegClass_SuppressCopy && def_r_class->getID()!=own_r_class->getID()) {
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DEBUG(used_reg): def-class is not use-class:" << phi;
+    }
+    return nullptr;
+  }
+
+  auto *def_op = SWPipeliner::MRI->getOneDef(own_r);
+
+  // ここではまだSSAなのでdef_opがNULLになることはないはず
+  if (def_op==nullptr) {
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DEBUG(used_reg): MRI->getOneDef(own_r) is nullptr\n";
+    }
+    return nullptr;
+  }
+
+  MachineInstr *start_instr = def_op->getParent();
+  for (auto *I=start_instr->getNextNode();I;I=I->getNextNode()) {
+    for ( auto &o:I->operands()) {
+      if (!o.isReg()) continue;
+      if (o.isDef()) continue;
+      auto r=o.getReg();
+      if (r.id()==own_r.id()) {
+         if (SWPipeliner::isDebugOutput()) {
+           dbgs() << "DEBUG(used_reg): own-reg is used\n";
+         }
+         return nullptr;
+      }
+      if (r.id()==def_r.id()) {
+         if (SWPipeliner::isDebugOutput()) {
+           dbgs() << "DEBUG(used_reg): def-reg is used\n";
+         }
+         return nullptr;
+      }
+    }
+  }
+
+  return def_op;
+}
+
 void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBlock *pre, const DebugLoc &dbgloc,
                              llvm::MachineBasicBlock *org, const SwplScr::UseMap &LiveOutReg) {
   std::vector<MachineInstr*> phis;
 
+  DenseMap<MachineInstr*, MachineOperand*> uses;
   for (auto &phi:body->phis()) {
     phis.push_back(&phi);
+    uses[&phi]=used_reg(phi);
   }
   /// (1). Phi命令を検索し、Phi命令の単位に以下の処理を行う。
   for (auto *phi:phis) {
@@ -502,6 +560,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     llvm::Register def_r=0, Reg=0, own_r=0, in_r=0;
 
     ///   (1)-1. Phiの参照レジスタのうち、自身のMBBで定義されるレジスタ(own_r)とLiveInのレジスタ(in_r)をおさえておく。
+    int own_opix=0;
     def_r = phi->getOperand(0).getReg();
     for (opix=1; opix<num; opix++) {
       Reg = phi->getOperand(opix).getReg();
@@ -511,6 +570,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
       if (mbb==org) {
         assert(own_r == 0);
         own_r = Reg;
+        own_opix = opix-1;
       } else {
         assert(in_r == 0);
         in_r = Reg;
@@ -520,12 +580,25 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     ///      defregはliveoutしているかを確認する。liveoutしていれば、PHIから生成されるCOPYの定義レジスタは新規を利用。
     const auto *org_phi=NewMI2OrgMI[phi];
     auto org_def_r=org_phi->getOperand(0).getReg();
-    if (LiveOutReg.count(org_def_r)!=0) {
+    auto org_own_r=org_phi->getOperand(own_opix).getReg();
+    bool liveout_def = LiveOutReg.count(org_def_r)!=0;
+    bool liveout_own = LiveOutReg.count(org_own_r)!=0;
+
+    if (liveout_def) {
       auto backup_def_r=def_r;
       def_r=SWPipeliner::MRI->cloneVirtualRegister(def_r);
       MachineInstr *Copy = BuildMI(*body, body->getFirstNonPHI(), dbgloc,SWPipeliner::TII->get(TargetOpcode::COPY), backup_def_r)
               .addReg(def_r);
       NewMI2OrgMI[Copy]=org_phi;
+    }
+    for (auto x:OrgReg2NewReg) {
+      Register r = x.second;
+      if (r.id() == own_r.id()) {
+        if (LiveOutReg.count(x.first)) {
+           liveout_own = true;
+
+        }
+      }
     }
 
 
@@ -554,9 +627,20 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     addCopies(Copy);
 
     ///   (1)-4. preにin_rからown_rへのCopy命令を挿入する(def_r = Copy own_r)。
-    MachineInstr *c=BuildMI(*body, body->getFirstTerminator(), dbgloc,SWPipeliner::TII->get(TargetOpcode::COPY), def_r)
-            .addReg(own_r);
-    NewMI2OrgMI[c]=org_phi;
+    /// own_r/def_rの参照がない場合はCOPY生成不要
+    auto *def_op = uses[phi];
+    if (liveout_def || liveout_own || def_op==nullptr ||
+        DisableSuppressCopy) {
+      MachineInstr *c=BuildMI(*body, body->getFirstTerminator(), dbgloc,
+                                SWPipeliner::TII->get(TargetOpcode::COPY), def_r)
+                            .addReg(own_r);
+      NewMI2OrgMI[c]=org_phi;
+    } else {
+      if (SWPipeliner::isDebugOutput()) {
+        dbgs() << "DEBUG(convertNonSSA): Suppress the generation of COPY: " << *phi;
+      }
+      def_op->setReg(def_r);
+    }
 
     ///          OrgMI2NewMIがorgのphiとnewのphiとなっているので、new側をCopy命令に変更する。
     for (auto itr: getOrgMI2NewMI()) {

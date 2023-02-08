@@ -18,6 +18,8 @@
 #include "SwplScr.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Metadata.h"
 
 using namespace llvm;
 using namespace ore; // for NV
@@ -984,6 +986,19 @@ bool SwplPlanSpec::init(unsigned arg_res_mii) {
   }
 
   max_ii = getMaxIterationInterval(loop, min_ii);
+
+  // pragma
+  bool exists = false;
+  unsigned int ii;
+  ii = getInitiationInterval(loop, exists);
+  if (exists) {
+    min_ii = ii;
+    max_ii = ii + 1;
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "II " << ii << ". ";
+    }
+  }
+
   unable_max_ii = min_ii - 1;
   assert(min_ii <= max_ii);
 
@@ -1089,6 +1104,59 @@ unsigned SwplPlanSpec::getMaxIterationInterval(const SwplLoop& loop, unsigned mi
   maxii = std::max(maxii_for_minii, maxii_base);
 
   return maxii;
+}
+
+/// \brief pragma pipeline_initiation_intervalの指定値をメタ情報から取得する
+/// \param [in] loop 対象となるループ情報
+/// \param [in,out] exists pipeline_initiation_intervalが指定されていればtrue
+/// \return メタ情報から取得したIIの値
+unsigned int SwplPlanSpec::getInitiationInterval(const SwplLoop &loop, bool &exists) {
+  exists = false;
+
+  const MachineLoop *ML = loop.getML();
+  if (ML == nullptr)
+    return 0;
+
+  MachineBasicBlock *LBLK = ML->getHeader();
+  if (LBLK == nullptr)
+    return 0;
+
+  const BasicBlock *BBLK = LBLK->getBasicBlock();
+  if (BBLK == nullptr)
+    return 0;
+
+  const Instruction *TI = BBLK->getTerminator();
+  if (TI == nullptr)
+    return 0;
+
+  MDNode *LoopID = TI->getMetadata(LLVMContext::MD_loop);
+  if (LoopID == nullptr)
+    return 0;
+
+  assert(LoopID->getNumOperands() > 0 && "requires atleast one operand");
+  assert(LoopID->getOperand(0) == LoopID && "invalid loop");
+
+  // メタ情報の探索
+  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
+    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
+
+    if (MD == nullptr)
+      continue;
+
+    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+
+    if (S == nullptr)
+      continue;
+
+    if (S->getString() == "llvm.loop.pipeline.initiationinterval") {
+      assert(MD->getNumOperands() == 2 &&
+             "Pipeline initiation interval hint metadata should have two operands.");
+      exists = true;
+      return mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
+    }
+  }
+
+  return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

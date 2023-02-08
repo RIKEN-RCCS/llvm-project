@@ -3162,11 +3162,11 @@ bool AArch64TTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
 }
 
 /**
- * Loopメタ情報からloop swp/noswpの指定状況を取得する
+ * Loopメタ情報からllvm.loop.pipeline.enable/disableの指定状況を取得する
  * @param [in] L
- * @param [out] exists loop swp/noswpが指定されていればtrueとなる
- * @retval true loop swpが指定されている
- * @retval false loop noswpが指定されている
+ * @param [out] exists llvm.loop.pipeline.enable/disableが指定されていればtrueとなる
+ * @retval true llvm.loop.pipeline.enableが指定されている
+ * @retval false llvm.loop.pipeline.disableが指定されている
  */
 static int enableLoopSWP(const Loop* L, bool &exists) {
 
@@ -3193,19 +3193,27 @@ static int enableLoopSWP(const Loop* L, bool &exists) {
       exists=true;
       return false;
     }
+
+    if (S->getString()=="llvm.loop.pipeline.enable") {
+      exists=true;
+      return true;
+    }
   }
   return false;
 }
 
 bool llvm::enableSWP(const Loop *L) {
   bool exists=false;
+  bool enabled=false;
   assert(L!=nullptr);
-  if (EnableSWP) {
-    bool r=enableLoopSWP(L, exists);
-    if (exists) return r;
-    return true;
-  }
-  return false;
+  if (EnableSWP)
+    enabled=true;
+  
+  bool r=enableLoopSWP(L, exists);
+  if (exists)
+    enabled = r;
+  
+  return enabled;
 }
 
 bool AArch64TTIImpl::preferPredicateOverEpilogue(

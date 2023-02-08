@@ -266,8 +266,8 @@ bool HardwareLoops::TryConvertLoop(Loop *L) {
   for (Loop *SL : *L)
     AnyChanged |= TryConvertLoop(SL);
   if (AnyChanged) {
-    reportHWLoopFailure("nested hardware-loops not supported", "HWLoopNested",
-                        ORE, L);
+//    reportHWLoopFailure("nested hardware-loops not supported", "HWLoopNested",
+//                        ORE, L);
     return true; // Stop search.
   }
 
