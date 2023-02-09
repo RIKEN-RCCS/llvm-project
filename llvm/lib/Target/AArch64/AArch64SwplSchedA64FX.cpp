@@ -486,6 +486,12 @@ static StmPipeline RES_SIMDFP_SVE_OP_026_03 = {
 static StmPipeline RES_SIMDFP_SVE_OP_026_04 = {
   {0, 4, 10}, 
   {P_::FLB, P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_027_01 = {
+  {0, 10}, 
+  {P_::FLA, P_::EAGA}};
+static StmPipeline RES_SIMDFP_SVE_OP_027_02 = {
+  {0, 10}, 
+  {P_::FLA, P_::EAGB}};
 
 /// SIMDFP_SVE_LD
 static StmPipeline RES_SIMDFP_SVE_LD_001_01 = {
@@ -921,6 +927,9 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
     {{&RES_SIMDFP_SVE_OP_026_01, &RES_SIMDFP_SVE_OP_026_02,
       &RES_SIMDFP_SVE_OP_026_03, &RES_SIMDFP_SVE_OP_026_04},
     19, true}},
+  {MI_SIMDFP_SVE_OP_027,  /// Pipeline:FLA + NULL ; EAG*  Latency:9+1 ; 15
+    {{&RES_SIMDFP_SVE_OP_027_01, &RES_SIMDFP_SVE_OP_027_02},
+    25}},
   {MI_SIMDFP_SVE_LD_001,  /// Pipeline:EAG*, FLA  Latency:11
     {{&RES_SIMDFP_SVE_LD_001_01, &RES_SIMDFP_SVE_LD_001_02,
       &RES_SIMDFP_SVE_LD_001_03, &RES_SIMDFP_SVE_LD_001_04},
@@ -1048,13 +1057,20 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::SUBXri, MI_INT_OP_001},
   {AArch64::SUBXrr, MI_INT_OP_001},
 
+  {AArch64::LDRHHui, MI_INT_LD_002},
   {AArch64::LDRSWpost, MI_INT_LD_001},
   {AArch64::LDRSWroX, MI_INT_LD_002},
   {AArch64::LDRSWui, MI_INT_LD_002},
-  {AArch64::LDRWroX, MI_INT_LD_002},
   {AArch64::LDRWpost, MI_INT_LD_001},
+  {AArch64::LDRWroX, MI_INT_LD_002},
+  {AArch64::LDRWui, MI_INT_LD_002},
+  {AArch64::LDRXroX, MI_INT_LD_002},
+  {AArch64::LDRXui, MI_INT_LD_002},
+  {AArch64::LDURHHi, MI_INT_LD_002},
   {AArch64::LDURSWi, MI_INT_LD_002},
+  {AArch64::LDURWi, MI_INT_LD_002},
 
+  {AArch64::STRHHui, MI_INT_ST_001},
   {AArch64::STRWpost, MI_INT_ST_002},
   {AArch64::STRWroX, MI_INT_ST_001},
   {AArch64::STRWui, MI_INT_ST_001},
@@ -1090,6 +1106,7 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::FCVTLv2i32, MI_SIMDFP_SVE_OP_021},
   {AArch64::FCVTLv4i32, MI_SIMDFP_SVE_OP_021},
   {AArch64::FCVTSDr, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FCVTZSUXSr, MI_SIMDFP_SVE_OP_027},
   {AArch64::FDIVDrr, MI_SIMDFP_SVE_OP_009},
   {AArch64::FDIVSrr, MI_SIMDFP_SVE_OP_022},
   {AArch64::FDIVv2f32, MI_SIMDFP_SVE_OP_022},
@@ -1135,9 +1152,12 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::INSvi32lane, MI_SIMDFP_SVE_OP_004},
   {AArch64::INSvi64lane, MI_SIMDFP_SVE_OP_004},
   {AArch64::MULv4i32, MI_SIMDFP_SVE_OP_001},
+  {AArch64::MULv8i16, MI_SIMDFP_SVE_OP_001},
   {AArch64::SCVTFUWDri, MI_SIMDFP_SVE_OP_011},
   {AArch64::SCVTFUWSri, MI_SIMDFP_SVE_OP_011},
   {AArch64::SHLv2i64_shift, MI_SIMDFP_SVE_OP_002},
+  {AArch64::UZP1v8i16, MI_SIMDFP_SVE_OP_004},
+  {AArch64::UZP2v8i16, MI_SIMDFP_SVE_OP_004},
   {AArch64::ZIP1v2i32, MI_SIMDFP_SVE_OP_004},
   {AArch64::ZIP1v2i64, MI_SIMDFP_SVE_OP_004},
   {AArch64::ZIP1v4i32, MI_SIMDFP_SVE_OP_004},
@@ -1183,6 +1203,7 @@ std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX:
   {AArch64::ST2Twov2d_POST, MI_SIMDFP_SVE_ST_005},
   {AArch64::ST2Twov4s, MI_SIMDFP_SVE_ST_004},
   {AArch64::ST2Twov4s_POST, MI_SIMDFP_SVE_ST_005},
+  {AArch64::ST2Twov8h, MI_SIMDFP_SVE_ST_004},
   {AArch64::STRDpost, MI_SIMDFP_SVE_ST_002},
   {AArch64::STRDroX, MI_SIMDFP_SVE_ST_001},
   {AArch64::STRDui, MI_SIMDFP_SVE_ST_002},
