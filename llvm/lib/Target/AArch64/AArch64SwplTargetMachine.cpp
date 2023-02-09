@@ -771,6 +771,7 @@ AArch64SwplTargetMachine::generateStmPipelines(const MachineInstr &mi) {
     delete t;
   } else {
     pipelines->push_back(new AArch64StmPipeline());
+    dbgs() << "warning: Unimplemented instruction: " << mi;
   }
   if (DebugStm) {
     for (auto*pipeline:*pipelines) {
@@ -801,7 +802,6 @@ bool AArch64SwplTargetMachine::isImplimented(const MachineInstr&mi) const {
   if (OptionCopyIsVirtual) {
     if (mi.isCopy()) return false;
   }
-
   return ResInfo->getInstResDesc(mi)!=nullptr;
 }
 
