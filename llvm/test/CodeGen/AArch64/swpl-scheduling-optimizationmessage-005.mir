@@ -1,29 +1,34 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner -swpl-max-freg=2 -pass-remarks=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
+#CHECK:remark: <unknown>:0:0: SVE instruction latency is calculated at 512bit.
+#CHECK:remark: tp/testprg.c:5:3: software pipelining (IPC: 3.00, ITR: 2, MVE: 1, II: 4, Stage: 1, (VReg Fp: 0/2, Int: 14/32, Pred: 1/8)), SRA(PReg Fp: 0/0, Int: 0/0, Pred: 0/0)
 #CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=8. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=11. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=15. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=19. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=23. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=27. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=31. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=35. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=39. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=43. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=47. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=51. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=55. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=59. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=63. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=67. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=71. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=75. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=79. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=83. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=87. This loop cannot be software pipelined because of shortage of floating-point registers.
-#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=91. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=12. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=16. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=20. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=24. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=28. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=32. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=36. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=40. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=44. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=48. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=52. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=56. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=60. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=64. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=68. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=72. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=76. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=80. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=84. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=88. This loop cannot be software pipelined because of shortage of floating-point registers.
+#CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=92. This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=94. This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:remark: tp/testprg.c:5:3: This loop is not software pipelined because no schedule is obtained.
+
+
+
 --- |
   ; ModuleID = '/TEST/tp/testprg.ll'
   source_filename = "/TEST/tp/testprg.c"
