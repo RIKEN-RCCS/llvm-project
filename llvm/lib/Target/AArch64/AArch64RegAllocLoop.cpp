@@ -351,7 +351,7 @@ static void dumpKernelInstrs(const MachineFunction &MF,
  * @param  [in]     MF  MachineFunction
  * @note   カーネルループのみが対象。spillが発生する場合は再スケジュール。
  */
-void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
+bool AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
                                         const MachineFunction &MF) const {
   const MachineInstr *firstMI = nullptr;
   const MachineInstr *lastMI  = nullptr;
@@ -408,7 +408,7 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
       if (createLiveRange(mo, reg, *(tmi->swplRAITbl), num_mi,
                           total_mi, exclude_vreg, tmi->doVReg) != 0) {
         dbgs() << "\n  createLiveRange() failed\n";
-        return;
+        return true;
       }
     }
   }
@@ -422,7 +422,7 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
   if (physRegAllocWithLiveRange(*(tmi->swplRAITbl), total_mi) != 0) {
     dbgs() << "\n  physRegAllocWithLiveRange() failed.\n";
     // TODO: 失敗時の動作
-    return;
+    return false;
   }
 
   // setReg()呼び出し
@@ -434,7 +434,7 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
     dumpKernelInstrs(MF, tmi->prologEndIndx, tmi->kernelEndIndx, tmi->mis);
   }
 
-  return;
+  return true;
 }
 
 /**

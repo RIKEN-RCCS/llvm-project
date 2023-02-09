@@ -2115,9 +2115,9 @@ public:
   /// Register allocation for software pipelined loops.
   /// \param [in] tmi Information for the SwplTransformMIR
   /// \param [in] MF MachineFunction
-  virtual void physRegAllocLoop(SwplTransformedMIRInfo *tmi,
+  virtual bool physRegAllocLoop(SwplTransformedMIRInfo *tmi,
                                 const MachineFunction &MF) const {
-    return;
+    return true;
   }
 
 private:
