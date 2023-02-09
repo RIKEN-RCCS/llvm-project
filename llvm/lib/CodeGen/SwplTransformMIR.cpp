@@ -726,7 +726,7 @@ void SwplTransformMIR::outputLoopoptMessage(int n_body_inst) {
   SWPipeliner::Reason = "";
   SWPipeliner::ORE->emit([&]() {
     return MachineOptimizationRemark(DEBUG_TYPE, "SoftwarePipelined",
-                                     Loop.getML()->getStartLoc(), Loop.getML()->getHeader())
+                                     LoopLoc, Loop.getML()->getHeader())
             << msg;
   });
 }
