@@ -553,11 +553,23 @@ bool SwplTrialState::tryNext() {
   // 20回転以上またいだ命令が候補になった場合、
   // まともな結果にならないためやめる.
   if ((SwplSlot::baseSlot(ii) - SIP.slot)/(SWPipeliner::STM->getFetchBandwidth() * ii) > 20) {
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DBG(SwplTrialState::tryNext) "
+             << "gave up scheduling because it was arranged across more than 20 stages.(II="
+             << ii
+             << ")\n";
+    }
     return false;
   }
 
   // 配置が繰り返し行なわれ,SLOTの上下限を越えた場合
   if (SIP.slot == SWPL_ILLEGAL_SLOT) {
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DBG(SwplTrialState::tryNext) "
+             << "gave up scheduling because the upper and lower limits of SLOT have been exceeded.(II="
+             << ii
+             << ")\n";
+    }
     return false;
   }
 
