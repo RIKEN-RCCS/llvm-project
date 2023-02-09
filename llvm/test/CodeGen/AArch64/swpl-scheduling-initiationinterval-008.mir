@@ -1,7 +1,12 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-max-ireg=18 -swpl-minii=4   -o /dev/null 2>&1 | FileCheck %s
 
 
-#CHECK:        :  (@) Scheduling tight       at binary search.       : (II: 8 in [ 7,9]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 2) (VReg Fp: 0/32, Int: 16/18, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        : (Iterative Modulo Scheduling. ResMII 9. NumOfBodyInsts 33. Budget 165. Minimum II = 9.)
+#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 4 in [ 4,95]) MVE: 0 Last inst: 17. (Itr Org: 99, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 12 in [ 4,95]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 1) (VReg Fp: 0/32, Int: 14/18, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Run out of budget      at binary search.       : (II: 8 in [ 4,12]) MVE: 0 Last inst: 1. (Itr Org: 99, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 10 in [ 8,12]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 2) (VReg Fp: 0/32, Int: 15/18, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 9 in [ 8,10]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 2) (VReg Fp: 0/32, Int: 15/18, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Required iteration count in MIR input is        :   2 (= kernel:1 + pro/epilogue:1 + mod:0) 
 #CHECK:        : Original iteration count in MIR is found        :   99
 #CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 1, 98, 0)

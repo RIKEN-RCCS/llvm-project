@@ -1,131 +1,135 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -start-before=aarch64-swpipeliner -swpl-debug-ddg -o /dev/null 2>&1 | FileCheck %s
-#CHECK:from: %23:gpr64common = COPY %33:gpr64all
-#CHECK:to  : %25:gpr64common = ADDXrr %11:gpr64common, %23:gpr64common
-#CHECK:distance:1 delay:1
 
-#CHECK:from: %25:gpr64common = ADDXrr %11:gpr64common, %23:gpr64common
-#CHECK:to  : %26:gpr32 = LDURWi %25:gpr64common, -4
-#CHECK:distance:0 delay:1
+#CHECK:### from: %23:gpr64common = COPY %33:gpr64all
+#CHECK-NEXT:### to  : %25:gpr64common = ADDXrr %11:gpr64common, %23:gpr64common
+#CHECK-NEXT:### distance:1 delay:1
 
-#CHECK:from: %23:gpr64common = COPY %33:gpr64all
-#CHECK:to  : %27:gpr64common = ADDXrr %14:gpr64common, %23:gpr64common
-#CHECK:distance:1 delay:1
+#CHECK:### from: %25:gpr64common = ADDXrr %11:gpr64common, %23:gpr64common
+#CHECK-NEXT:### to  : %26:gpr32 = LDURWi %25:gpr64common, -4 
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %27:gpr64common = ADDXrr %14:gpr64common, %23:gpr64common
-#CHECK:to  : %28:gpr32 = LDRWui %27:gpr64common, 0
-#CHECK:distance:0 delay:1
+#CHECK:### from: %23:gpr64common = COPY %33:gpr64all
+#CHECK-NEXT:### to  : %27:gpr64common = ADDXrr %14:gpr64common, %23:gpr64common
+#CHECK-NEXT:### distance:1 delay:1
 
-#CHECK:from: %26:gpr32 = LDURWi %25:gpr64common, -4
-#CHECK:to  : %29:gpr32 = nsw SUBWrr killed %26:gpr32, killed %28:gpr32
-#CHECK:distance:0 delay:5
+#CHECK:### from: %27:gpr64common = ADDXrr %14:gpr64common, %23:gpr64common
+#CHECK-NEXT:### to  : %28:gpr32 = LDRWui %27:gpr64common, 0 
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %28:gpr32 = LDRWui %27:gpr64common, 0
-#CHECK:to  : %29:gpr32 = nsw SUBWrr killed %26:gpr32, killed %28:gpr32
-#CHECK:distance:0 delay:5
+#CHECK:### from: %26:gpr32 = LDURWi %25:gpr64common, -4 
+#CHECK-NEXT:### to  : %29:gpr32 = nsw SUBWrr killed %26:gpr32, killed %28:gpr32
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %29:gpr32 = nsw SUBWrr killed %26:gpr32, killed %28:gpr32
-#CHECK:to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0
-#CHECK:distance:0 delay:1
+#CHECK:### from: %28:gpr32 = LDRWui %27:gpr64common, 0 
+#CHECK-NEXT:### to  : %29:gpr32 = nsw SUBWrr killed %26:gpr32, killed %28:gpr32
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %23:gpr64common = COPY %33:gpr64all
-#CHECK:to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0
-#CHECK:distance:1 delay:1
+#CHECK:### from: %29:gpr32 = nsw SUBWrr killed %26:gpr32, killed %28:gpr32
+#CHECK-NEXT:### to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %27:gpr64common = ADDXrr %14:gpr64common, %23:gpr64common
-#CHECK:to  : %30:gpr32 = LDRWui %27:gpr64common, 1
-#CHECK:distance:0 delay:1
+#CHECK:### from: %23:gpr64common = COPY %33:gpr64all
+#CHECK-NEXT:### to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 
+#CHECK-NEXT:### distance:1 delay:1
 
-#CHECK:from: %30:gpr32 = LDRWui %27:gpr64common, 1
-#CHECK:to  : %31:gpr32 = nsw MADDWrrr killed %30:gpr32, %8:gpr32, $wzr
-#CHECK:distance:0 delay:5
+#CHECK:### from: %27:gpr64common = ADDXrr %14:gpr64common, %23:gpr64common
+#CHECK-NEXT:### to  : %30:gpr32 = LDRWui %27:gpr64common, 1 
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %31:gpr32 = nsw MADDWrrr killed %30:gpr32, %8:gpr32, $wzr
-#CHECK:to  : STRWui killed %31:gpr32, %25:gpr64common, 2
-#CHECK:distance:0 delay:5
+#CHECK:### from: %30:gpr32 = LDRWui %27:gpr64common, 1 
+#CHECK-NEXT:### to  : %31:gpr32 = nsw MADDWrrr killed %30:gpr32, %8:gpr32, $wzr
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %25:gpr64common = ADDXrr %11:gpr64common, %23:gpr64common
-#CHECK:to  : STRWui killed %31:gpr32, %25:gpr64common, 2
-#CHECK:distance:0 delay:1
+#CHECK:### from: %31:gpr32 = nsw MADDWrrr killed %30:gpr32, %8:gpr32, $wzr
+#CHECK-NEXT:### to  : STRWui killed %31:gpr32, %25:gpr64common, 2 
+#CHECK-NEXT:### distance:0 delay:5
 
-#CHECK:from: %23:gpr64common = COPY %33:gpr64all
-#CHECK:to  : %32:gpr64sp = nuw nsw ADDXri %23:gpr64common, 4, 0
-#CHECK:distance:1 delay:1
+#CHECK:### from: %25:gpr64common = ADDXrr %11:gpr64common, %23:gpr64common
+#CHECK-NEXT:### to  : STRWui killed %31:gpr32, %25:gpr64common, 2 
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %32:gpr64sp = nuw nsw ADDXri %23:gpr64common, 4, 0
-#CHECK:to  : %33:gpr64all = COPY %32:gpr64sp
-#CHECK:distance:0 delay:1
+#CHECK:### from: %23:gpr64common = COPY %33:gpr64all
+#CHECK-NEXT:### to  : %32:gpr64sp = nuw nsw ADDXri %23:gpr64common, 4, 0
+#CHECK-NEXT:### distance:1 delay:1
 
-#CHECK:from: %24:gpr64sp = COPY %35:gpr64all
-#CHECK:to  : %34:gpr64 = SUBSXri %24:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK:distance:1 delay:1
+#CHECK:### from: %32:gpr64sp = nuw nsw ADDXri %23:gpr64common, 4, 0
+#CHECK-NEXT:### to  : %33:gpr64all = COPY %32:gpr64sp
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %34:gpr64 = SUBSXri %24:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK:to  : %35:gpr64all = COPY %34:gpr64
-#CHECK:distance:0 delay:1
+#CHECK:### from: %24:gpr64sp = COPY %35:gpr64all
+#CHECK-NEXT:### to  : %34:gpr64 = SUBSXri %24:gpr64sp, 1, 0, implicit-def $nzcv
+#CHECK-NEXT:### distance:1 delay:1
 
-#CHECK:from: %33:gpr64all = COPY %32:gpr64sp
-#CHECK:to  : %23:gpr64common = COPY %33:gpr64all
-#CHECK:distance:0 delay:1
+#CHECK:### from: %34:gpr64 = SUBSXri %24:gpr64sp, 1, 0, implicit-def $nzcv
+#CHECK-NEXT:### to  : %35:gpr64all = COPY %34:gpr64
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %35:gpr64all = COPY %34:gpr64
-#CHECK:to  : %24:gpr64sp = COPY %35:gpr64all
-#CHECK:distance:0 delay:1
+#CHECK:### from: %33:gpr64all = COPY %32:gpr64sp
+#CHECK-NEXT:### to  : %23:gpr64common = COPY %33:gpr64all
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %26:gpr32 = LDURWi %25:gpr64common, -4
-#CHECK:to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0
-#CHECK:distance:20 delay:1
+#CHECK:### from: %35:gpr64all = COPY %34:gpr64
+#CHECK-NEXT:### to  : %24:gpr64sp = COPY %35:gpr64all
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %26:gpr32 = LDURWi %25:gpr64common, -4
-#CHECK:to  : STRWui killed %31:gpr32, %25:gpr64common, 2
-#CHECK:distance:20 delay:1
+#CHECK:### from: %26:gpr32 = LDURWi %25:gpr64common, -4 
+#CHECK-NEXT:### to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 
+#CHECK-NEXT:### distance:20 delay:1
 
-#CHECK:from: %28:gpr32 = LDRWui %27:gpr64common, 0
-#CHECK:to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0
-#CHECK:distance:20 delay:1
+#CHECK:### from: %26:gpr32 = LDURWi %25:gpr64common, -4 
+#CHECK-NEXT:### to  : STRWui killed %31:gpr32, %25:gpr64common, 2 
+#CHECK-NEXT:### distance:20 delay:1
 
-#CHECK:from: %28:gpr32 = LDRWui %27:gpr64common, 0
-#CHECK:to  : STRWui killed %31:gpr32, %25:gpr64common, 2
-#CHECK:distance:20 delay:1
+#CHECK:### from: %28:gpr32 = LDRWui %27:gpr64common, 0 
+#CHECK-NEXT:### to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 
+#CHECK-NEXT:### distance:20 delay:1
 
-#CHECK:from: STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0
-#CHECK:to  : %26:gpr32 = LDURWi %25:gpr64common, -4
-#CHECK:distance:20 delay:6
+#CHECK:### from: %28:gpr32 = LDRWui %27:gpr64common, 0 
+#CHECK-NEXT:### to  : STRWui killed %31:gpr32, %25:gpr64common, 2 
+#CHECK-NEXT:### distance:20 delay:1
 
-#CHECK:from: STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0
-#CHECK:to  : %28:gpr32 = LDRWui %27:gpr64common, 0
-#CHECK:distance:20 delay:6
+#CHECK:### from: STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 
+#CHECK-NEXT:### to  : %26:gpr32 = LDURWi %25:gpr64common, -4 
+#CHECK-NEXT:### distance:20 delay:6
 
-#CHECK:from: STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0
-#CHECK:to  : %30:gpr32 = LDRWui %27:gpr64common, 1
-#CHECK:distance:20 delay:6
+#CHECK:### from: STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 
+#CHECK-NEXT:### to  : %28:gpr32 = LDRWui %27:gpr64common, 0 
+#CHECK-NEXT:### distance:20 delay:6
 
-#CHECK:from: STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0
-#CHECK:to  : STRWui killed %31:gpr32, %25:gpr64common, 2
-#CHECK:distance:20 delay:1
+#CHECK:### from: STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 
+#CHECK-NEXT:### to  : %30:gpr32 = LDRWui %27:gpr64common, 1 
+#CHECK-NEXT:### distance:20 delay:6
 
-#CHECK:from: %30:gpr32 = LDRWui %27:gpr64common, 1
-#CHECK:to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0
-#CHECK:distance:20 delay:1
+#CHECK:### from: STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 
+#CHECK-NEXT:### to  : STRWui killed %31:gpr32, %25:gpr64common, 2 
+#CHECK-NEXT:### distance:20 delay:1
 
-#CHECK:from: %30:gpr32 = LDRWui %27:gpr64common, 1
-#CHECK:to  : STRWui killed %31:gpr32, %25:gpr64common, 2
-#CHECK:distance:20 delay:1
+#CHECK:### from: %30:gpr32 = LDRWui %27:gpr64common, 1 
+#CHECK-NEXT:### to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 
+#CHECK-NEXT:### distance:20 delay:1
 
-#CHECK:from: STRWui killed %31:gpr32, %25:gpr64common, 2
-#CHECK:to  : %26:gpr32 = LDURWi %25:gpr64common, -4
-#CHECK:distance:3 delay:6
+#CHECK:### from: %30:gpr32 = LDRWui %27:gpr64common, 1 
+#CHECK-NEXT:### to  : STRWui killed %31:gpr32, %25:gpr64common, 2 
+#CHECK-NEXT:### distance:20 delay:1
 
-#CHECK:from: STRWui killed %31:gpr32, %25:gpr64common, 2
-#CHECK:to  : %28:gpr32 = LDRWui %27:gpr64common, 0
-#CHECK:distance:20 delay:6
+#CHECK:### from: STRWui killed %31:gpr32, %25:gpr64common, 2 
+#CHECK-NEXT:### to  : %26:gpr32 = LDURWi %25:gpr64common, -4 
+#CHECK-NEXT:### distance:3 delay:6
 
-#CHECK:from: STRWui killed %31:gpr32, %25:gpr64common, 2
-#CHECK:to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0
-#CHECK:distance:20 delay:1
+#CHECK:### from: STRWui killed %31:gpr32, %25:gpr64common, 2 
+#CHECK-NEXT:### to  : %28:gpr32 = LDRWui %27:gpr64common, 0 
+#CHECK-NEXT:### distance:20 delay:6
 
-#CHECK:from: STRWui killed %31:gpr32, %25:gpr64common, 2
-#CHECK:to  : %30:gpr32 = LDRWui %27:gpr64common, 1
-#CHECK:distance:20 delay:6
+#CHECK:### from: STRWui killed %31:gpr32, %25:gpr64common, 2 
+#CHECK-NEXT:### to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 
+#CHECK-NEXT:### distance:20 delay:1
+
+#CHECK:### from: STRWui killed %31:gpr32, %25:gpr64common, 2 
+#CHECK-NEXT:### to  : %30:gpr32 = LDRWui %27:gpr64common, 1 
+#CHECK-NEXT:### distance:20 delay:6
+
+
+
 --- |
   ; ModuleID = '2937-31.ll'
   source_filename = "2937-31.c"

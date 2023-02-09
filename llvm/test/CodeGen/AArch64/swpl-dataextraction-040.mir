@@ -1,67 +1,70 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -start-before=aarch64-swpipeliner -swpl-debug-ddg -swpl-copy-is-virtual -stop-after=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
-#CHECK: from: %16:gpr64common = COPY %22:gpr64all
-#CHECK:to  : %18:fpr64 = LDRDroX %8:gpr64common, %16:gpr64common, 0, 0 
-#CHECK:distance:1 delay:1
 
-#CHECK:from: %16:gpr64common = COPY %22:gpr64all
-#CHECK:to  : %19:fpr64 = LDRDroX %10:gpr64common, %16:gpr64common, 0, 0 
-#CHECK:distance:1 delay:1
+#CHECK:### from: %16:gpr64common = COPY %22:gpr64all
+#CHECK-NEXT:### to  : %18:fpr64 = LDRDroX %8:gpr64common, %16:gpr64common, 0, 0 
+#CHECK-NEXT:### distance:1 delay:0
 
-#CHECK:from: %18:fpr64 = LDRDroX %8:gpr64common, %16:gpr64common, 0, 0 
-#CHECK:to  : %20:fpr64 = FADDDrr killed %18:fpr64, killed %19:fpr64
-#CHECK:distance:0 delay:8
+#CHECK:### from: %16:gpr64common = COPY %22:gpr64all
+#CHECK-NEXT:### to  : %19:fpr64 = LDRDroX %10:gpr64common, %16:gpr64common, 0, 0 
+#CHECK-NEXT:### distance:1 delay:0
 
-#CHECK:from: %19:fpr64 = LDRDroX %10:gpr64common, %16:gpr64common, 0, 0 
-#CHECK:to  : %20:fpr64 = FADDDrr killed %18:fpr64, killed %19:fpr64
-#CHECK:distance:0 delay:8
+#CHECK:### from: %18:fpr64 = LDRDroX %8:gpr64common, %16:gpr64common, 0, 0 
+#CHECK-NEXT:### to  : %20:fpr64 = FADDDrr killed %18:fpr64, killed %19:fpr64
+#CHECK-NEXT:### distance:0 delay:8
 
-#CHECK:from: %20:fpr64 = FADDDrr killed %18:fpr64, killed %19:fpr64
-#CHECK:to  : STRDroX killed %20:fpr64, %13:gpr64common, %16:gpr64common, 0, 0 
-#CHECK:distance:0 delay:9
+#CHECK:### from: %19:fpr64 = LDRDroX %10:gpr64common, %16:gpr64common, 0, 0 
+#CHECK-NEXT:### to  : %20:fpr64 = FADDDrr killed %18:fpr64, killed %19:fpr64
+#CHECK-NEXT:### distance:0 delay:8
 
-#CHECK:from: %16:gpr64common = COPY %22:gpr64all
-#CHECK:to  : STRDroX killed %20:fpr64, %13:gpr64common, %16:gpr64common, 0, 0 
-#CHECK:distance:1 delay:1
+#CHECK:### from: %20:fpr64 = FADDDrr killed %18:fpr64, killed %19:fpr64
+#CHECK-NEXT:### to  : STRDroX killed %20:fpr64, %13:gpr64common, %16:gpr64common, 0, 0 
+#CHECK-NEXT:### distance:0 delay:9
 
-#CHECK:from: %16:gpr64common = COPY %22:gpr64all
-#CHECK:to  : %21:gpr64sp = nuw nsw ADDXri %16:gpr64common, 8, 0
-#CHECK:distance:1 delay:1
+#CHECK:### from: %16:gpr64common = COPY %22:gpr64all
+#CHECK-NEXT:### to  : STRDroX killed %20:fpr64, %13:gpr64common, %16:gpr64common, 0, 0 
+#CHECK-NEXT:### distance:1 delay:0
 
-#CHECK:from: %21:gpr64sp = nuw nsw ADDXri %16:gpr64common, 8, 0
-#CHECK:to  : %22:gpr64all = COPY %21:gpr64sp
-#CHECK:distance:0 delay:1
+#CHECK:### from: %16:gpr64common = COPY %22:gpr64all
+#CHECK-NEXT:### to  : %21:gpr64sp = nuw nsw ADDXri %16:gpr64common, 8, 0
+#CHECK-NEXT:### distance:1 delay:0
 
-#CHECK:from: %17:gpr64sp = COPY %24:gpr64all
-#CHECK:to  : %23:gpr64 = SUBSXri %17:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK:distance:1 delay:1
+#CHECK:### from: %21:gpr64sp = nuw nsw ADDXri %16:gpr64common, 8, 0
+#CHECK-NEXT:### to  : %22:gpr64all = COPY %21:gpr64sp
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %23:gpr64 = SUBSXri %17:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK:to  : %24:gpr64all = COPY %23:gpr64
-#CHECK:distance:0 delay:1
+#CHECK:### from: %17:gpr64sp = COPY %24:gpr64all
+#CHECK-NEXT:### to  : %23:gpr64 = SUBSXri %17:gpr64sp, 1, 0, implicit-def $nzcv
+#CHECK-NEXT:### distance:1 delay:0
 
-#CHECK:from: %22:gpr64all = COPY %21:gpr64sp
-#CHECK:to  : %16:gpr64common = COPY %22:gpr64all
-#CHECK:distance:0 delay:1
+#CHECK:### from: %23:gpr64 = SUBSXri %17:gpr64sp, 1, 0, implicit-def $nzcv
+#CHECK-NEXT:### to  : %24:gpr64all = COPY %23:gpr64
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %24:gpr64all = COPY %23:gpr64
-#CHECK:to  : %17:gpr64sp = COPY %24:gpr64all
-#CHECK:distance:0 delay:1
+#CHECK:### from: %22:gpr64all = COPY %21:gpr64sp
+#CHECK-NEXT:### to  : %16:gpr64common = COPY %22:gpr64all
+#CHECK-NEXT:### distance:0 delay:0
 
-#CHECK:from: %18:fpr64 = LDRDroX %8:gpr64common, %16:gpr64common, 0, 0 
-#CHECK:to  : STRDroX killed %20:fpr64, %13:gpr64common, %16:gpr64common, 0, 0 
-#CHECK:distance:20 delay:1
+#CHECK:### from: %24:gpr64all = COPY %23:gpr64
+#CHECK-NEXT:### to  : %17:gpr64sp = COPY %24:gpr64all
+#CHECK-NEXT:### distance:0 delay:0
 
-#CHECK:from: %19:fpr64 = LDRDroX %10:gpr64common, %16:gpr64common, 0, 0 
-#CHECK:to  : STRDroX killed %20:fpr64, %13:gpr64common, %16:gpr64common, 0, 0 
-#CHECK:distance:20 delay:1
+#CHECK:### from: %18:fpr64 = LDRDroX %8:gpr64common, %16:gpr64common, 0, 0 
+#CHECK-NEXT:### to  : STRDroX killed %20:fpr64, %13:gpr64common, %16:gpr64common, 0, 0 
+#CHECK-NEXT:### distance:20 delay:1
 
-#CHECK:from: STRDroX killed %20:fpr64, %13:gpr64common, %16:gpr64common, 0, 0 
-#CHECK:to  : %18:fpr64 = LDRDroX %8:gpr64common, %16:gpr64common, 0, 0 
-#CHECK:distance:20 delay:6
+#CHECK:### from: %19:fpr64 = LDRDroX %10:gpr64common, %16:gpr64common, 0, 0 
+#CHECK-NEXT:### to  : STRDroX killed %20:fpr64, %13:gpr64common, %16:gpr64common, 0, 0 
+#CHECK-NEXT:### distance:20 delay:1
 
-#CHECK:from: STRDroX killed %20:fpr64, %13:gpr64common, %16:gpr64common, 0, 0 
-#CHECK:to  : %19:fpr64 = LDRDroX %10:gpr64common, %16:gpr64common, 0, 0 
-#CHECK:distance:20 delay:6
+#CHECK:### from: STRDroX killed %20:fpr64, %13:gpr64common, %16:gpr64common, 0, 0 
+#CHECK-NEXT:### to  : %18:fpr64 = LDRDroX %8:gpr64common, %16:gpr64common, 0, 0 
+#CHECK-NEXT:### distance:20 delay:6
+
+#CHECK:### from: STRDroX killed %20:fpr64, %13:gpr64common, %16:gpr64common, 0, 0 
+#CHECK-NEXT:### to  : %19:fpr64 = LDRDroX %10:gpr64common, %16:gpr64common, 0, 0 
+#CHECK-NEXT:### distance:20 delay:6
+
+
 
 
 
