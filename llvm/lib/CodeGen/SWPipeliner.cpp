@@ -239,6 +239,9 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   // スケジューリング
   SwplPlan* plan = SwplPlan::generatePlan(*ddg);
   if (plan != NULL) {
+    if ( OptionDumpPlan ) {
+      plan->dump( dbgs() );
+    }
     if (plan->getPrologCycles() == 0) {
       remarkMissed("This loop is not software pipelined because the software pipelining does not improve the performance.",
                    *loop->getML());
@@ -247,9 +250,6 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
       }
 
     } else {
-      if ( OptionDumpPlan ) {
-        plan->dump( dbgs() );
-      }
       SwplTransformMIR tran(*MF, *plan, liveOutReg);
       Changed = tran.transformMIR();
     }
