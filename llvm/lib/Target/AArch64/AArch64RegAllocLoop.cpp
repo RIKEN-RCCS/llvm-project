@@ -281,6 +281,14 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl, unsigned tota
         dbgs() << " failed to allocate a physical register for virtual register "
                << printReg(itr_cur->vreg) << "\n";
       }
+      std::string mistr;
+      raw_string_ostream mistream(mistr);
+
+      mistream << "Failed to allocate physical register. VReg="
+               << printReg(itr_cur->vreg, SWPipeliner::TRI, 0, SWPipeliner::MRI)
+               << ':'
+               << printRegClassOrBank(itr_cur->vreg, *SWPipeliner::MRI, SWPipeliner::TRI);
+      SWPipeliner::Reason = mistr;
       ret = -1;
       break;
     }
