@@ -151,6 +151,16 @@ public:
   /// debug dump
   void dump();
 
+  /// 割り当てた最大レジスタ数を返す
+  int countIReg();
+  int countFReg();
+  int countPReg();
+
+  /// 割り当て可能なレジスタ数を返す
+  int availableIRegNumber();
+  int availableFRegNumber();
+  int availablePRegNumber();
+
 private:
 
   /// 生存区間表の行のLiveRangeが重なるかを判定する

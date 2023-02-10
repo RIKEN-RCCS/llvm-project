@@ -723,9 +723,9 @@ void SwplTransformMIR::outputLoopoptMessage(int n_body_inst) {
                           Plan.getNecessaryFreg(), Plan.getMaxFreg(),
                           Plan.getNecessaryIreg(), Plan.getMaxIreg(),
                           Plan.getNecessaryPreg(), Plan.getMaxPreg(),
-                          0, 0,
-                          0, 0,
-                          0, 0
+                          TMI.swplRAITbl->countFReg(), TMI.swplRAITbl->availableFRegNumber(),
+                          TMI.swplRAITbl->countIReg(), TMI.swplRAITbl->availableIRegNumber(),
+                          TMI.swplRAITbl->countPReg(), TMI.swplRAITbl->availablePRegNumber()
                           );
 
   SWPipeliner::Reason = "";
