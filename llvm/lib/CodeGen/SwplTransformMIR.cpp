@@ -62,8 +62,13 @@ bool SwplTransformMIR::transformMIR() {
 
     /// 物理レジスタを割り付ける
     //if (!SWPipeliner::STM->isDisableRegAlloc())
-    if (SWPipeliner::STM->isEnableRegAlloc())
-      SWPipeliner::TII->physRegAllocLoop(&TMI, MF);
+    if (SWPipeliner::STM->isEnableRegAlloc()) {
+      if (!SWPipeliner::TII->physRegAllocLoop(&TMI, MF)) {
+        // 割付失敗
+        return false;
+      }
+
+    }
 
     /// (2) SwplTransformedMIRInfo::isNecessaryTransformMIR()であれば\n
     /// (2-1) SwplScr::prepareCompensationLoop()でループの外を変形する

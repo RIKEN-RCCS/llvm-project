@@ -9,35 +9,18 @@
 // Register Allocation for SWP.
 //
 //===----------------------------------------------------------------------===//
-namespace swpl {
-  class SwplScr;
-  class SwplPlan;
-  class SwplReg;
-  class SwplLoop;
-  class SwplInst;
-  class SwplMem;
-  struct TransformedMIRInfo;
-}
 
 #include "AArch64.h"
-#include "AArch64SwplTargetMachine.h"
 #include "AArch64TargetTransformInfo.h"
 #include "../../CodeGen/SWPipeliner.h"
-#include "../../CodeGen/SwplPlan.h"
-#include "../../CodeGen/SwplScr.h"
 #include "../../CodeGen/SwplTransformMIR.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <unordered_set>
 
-using namespace std;
 using namespace llvm;
-using namespace swpl;
 
 #define DEBUG_TYPE "aarch64-swpipeliner"
 #define UNAVAILABLE_REGS 7
@@ -53,7 +36,7 @@ static cl::opt<bool> DebugSwplRegAlloc("swpl-debug-reg-alloc",cl::init(false), c
  * @note   制約のある命令は、仮対処として、物理レジスタ割り付け対象外とする。
  */
 static void createExcludeVReg(MachineInstr *mi, MachineOperand &mo,
-                              unordered_set<unsigned> &ex_vreg, unsigned reg) {
+                              std::unordered_set<unsigned> &ex_vreg, unsigned reg) {
   if (!Register::isVirtualRegister(reg)) {
     // 仮想レジスタでない
     return;
@@ -114,7 +97,7 @@ static void createExcludeVReg(MachineInstr *mi, MachineOperand &mo,
 static int createLiveRange(MachineOperand &mo, unsigned reg,
                            SwplRegAllocInfoTbl &rai_tbl,
                            int num_mi, int total_mi,
-                           unordered_set<unsigned> &ex_vreg,
+                           std::unordered_set<unsigned> &ex_vreg,
                            Register doVReg) {
   int ret = 0;
 
@@ -240,11 +223,8 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl, unsigned tota
     // 第１候補：空いている物理レジスタから割り付け
     if (!allocated) {
       const TargetRegisterClass *trc = SWPipeliner::MRI->getRegClass(itr_cur->vreg);
-      for (TargetRegisterClass::iterator
-          itr_trc = trc->begin(), itr_end = trc->end();
-          itr_trc != itr_end; ++itr_trc) {
+      for (auto preg:*trc) {
         // 物理レジスタ番号取得
-        unsigned preg = *itr_trc;
 
         // 使ってはいけない物理レジスタは割付けない
         std::array<unsigned, UNAVAILABLE_REGS>::iterator itr_nousePreg;
@@ -281,6 +261,14 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl, unsigned tota
         dbgs() << " failed to allocate a physical register for virtual register "
                << printReg(itr_cur->vreg) << "\n";
       }
+      std::string mistr;
+      raw_string_ostream mistream(mistr);
+
+      mistream << "Failed to allocate physical register. VReg="
+               << printReg(itr_cur->vreg, SWPipeliner::TRI, 0, SWPipeliner::MRI)
+               << ':'
+               << printRegClassOrBank(itr_cur->vreg, *SWPipeliner::MRI, SWPipeliner::TRI);
+      SWPipeliner::Reason = mistr;
       ret = -1;
       break;
     }
@@ -300,10 +288,9 @@ static void callSetReg(SwplRegAllocInfoTbl &rai_tbl) {
     if ((rinfo->vreg == 0) || (rinfo->preg == 0))
       continue;
     // 当該物理レジスタを使用するMachineOperandすべてにsetReg()する
-    for (vector<MachineOperand*>::iterator itr_mo = rinfo->vreg_mo.begin(),
-         itr_end = rinfo->vreg_mo.end(); itr_mo != itr_end; ++itr_mo) {
-      (*itr_mo)->setReg(rinfo->preg);
-      (*itr_mo)->setIsRenamable(true);
+    for (auto *mo : rinfo->vreg_mo) {
+      mo->setReg(rinfo->preg);
+      mo->setIsRenamable(true);
     }
   }
   return;
@@ -343,11 +330,11 @@ static void dumpKernelInstrs(const MachineFunction &MF,
  * @param  [in]     MF  MachineFunction
  * @note   カーネルループのみが対象。spillが発生する場合は再スケジュール。
  */
-void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
+bool AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
                                         const MachineFunction &MF) const {
   const MachineInstr *firstMI = nullptr;
   const MachineInstr *lastMI  = nullptr;
-  unordered_set<unsigned> exclude_vreg;
+  std::unordered_set<unsigned> exclude_vreg;
 
   /// kernel部のMachineInstrを対象とする
   /// まず初めに有効な総MI数を数えつつ、割り付け対象としないレジスタのリストを作成する
@@ -399,8 +386,8 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
       // 各仮想レジスタの生存区間リストを作成する
       if (createLiveRange(mo, reg, *(tmi->swplRAITbl), num_mi,
                           total_mi, exclude_vreg, tmi->doVReg) != 0) {
-        dbgs() << "\n  createLiveRange() failed\n";
-        return;
+        assert(0 && "createLiveRange() failed");
+        return false;
       }
     }
   }
@@ -412,9 +399,8 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
 
   // 物理レジスタ情報を割り当てる
   if (physRegAllocWithLiveRange(*(tmi->swplRAITbl), total_mi) != 0) {
-    dbgs() << "\n  physRegAllocWithLiveRange() failed.\n";
-    // TODO: 失敗時の動作
-    return;
+    // 割り当て失敗
+    return false;
   }
 
   // setReg()呼び出し
@@ -426,7 +412,7 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
     dumpKernelInstrs(MF, tmi->prologEndIndx, tmi->kernelEndIndx, tmi->mis);
   }
 
-  return;
+  return true;
 }
 
 /**
@@ -500,7 +486,7 @@ bool SwplRegAllocInfoTbl::isOverlapLiveRange( RegAllocInfo *reginfo1, RegAllocIn
       if( def2<=i && i<=use2 ) overlap2=true;
     }
       
-    if( overlap1==true && overlap2==true ) {
+    if( overlap1 && overlap2 ) {
       return true;
     }
   }
@@ -540,7 +526,7 @@ void SwplRegAllocInfoTbl::addRegAllocInfo( unsigned vreg,
  * @retval nullptr   指定された仮想レジスタに該当するRegAllocInfoは存在しない
  */
 RegAllocInfo* SwplRegAllocInfoTbl::getWithVReg( unsigned vreg ) {
-  vector<RegAllocInfo>::iterator itr =
+  auto itr =
     find_if(rai_tbl.begin(), rai_tbl.end(),
             [&](RegAllocInfo &info){
               return(info.vreg == vreg);
@@ -570,8 +556,7 @@ unsigned SwplRegAllocInfoTbl::getReusePReg( RegAllocInfo* rai ) {
   // 既に割り当て済みの行を収集し、そのすべての生存区間が重なっていなければ、
   // 再利用可能とする。
   const TargetRegisterClass *trc = SWPipeliner::MRI->getRegClass(rai->vreg);
-  for (TargetRegisterClass::iterator
-         itr = trc->begin(), itr_end = trc->end();
+  for (auto itr = trc->begin(), itr_end = trc->end();
        itr != itr_end; ++itr) {
     unsigned candidate_preg = *itr;
     std::vector<RegAllocInfo*> ranges;

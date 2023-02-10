@@ -20,6 +20,154 @@ class SwplLoop;
 class SwplRegAllocInfo;
 class SwplRegAllocInfoTbl;
 
+/// Swpl-RAで使用する生存区間表の行
+struct RegAllocInfo {
+  unsigned vreg;                        ///< 割り当て済み仮想レジスタ
+  unsigned preg;                        ///< 割り当て済み物理レジスタ
+  int      num_def;                     ///< 仮想レジスタの定義番号
+  int      num_use;                     ///< 仮想レジスタの参照番号
+  int      liverange;                   ///< 生存区間(参照番号-定義番号)
+  unsigned vreg_classid;                ///< 仮想レジスタのレジスタクラスID
+  std::vector<MachineOperand*> vreg_mo; ///< 仮想レジスタのMachineOperand
+  unsigned total_mi;
+
+  /// MachineOperandを追加する
+  /// \param [in,out] mo vreg_moに追加するMachineOperand
+  void addMo( MachineOperand* mo ) {
+    vreg_mo.push_back( mo );
+    return;
+  };
+
+  /// 定義番号を更新する
+  /// また、更新された定義番号を使用して、LiveRangeを再計算する
+  /// \param [in] def 定義番号
+  void updateNumDef( int def ) {
+    num_def = def;
+    liverange = calcLiveRange();
+    return;
+  };
+
+  /// 定義番号を更新する
+  /// また、更新された定義番号を使用して、LiveRangeを再計算する
+  /// 物理レジスタの再利用を禁止するため、参照点は最大値となる
+  /// \param [in] def 定義番号
+  void updateNumDefNoReuse(int def) {
+    num_def = def;
+    liverange = calcLiveRangeNoReuse();
+    return;
+  };
+
+  /// 参照番号を更新する
+  /// また、更新された参照番号を使用して、LiveRangeを再計算する
+  /// \param [in] use 参照番号
+  void updateNumUse( int use ) {
+    num_use = use;
+    liverange = calcLiveRange();
+    return;
+  };
+
+  /// 参照番号を更新する
+  /// また、更新された参照番号を使用して、LiveRangeを再計算する
+  /// 物理レジスタの再利用を禁止するため、参照点は最大値となる
+  /// \param [in] use 参照番号
+  void updateNumUseNoReuse(int use) {
+    num_use = use;
+    liverange = calcLiveRangeNoReuse();
+    return;
+  };
+
+private:
+  /// 定義点と参照点から生存区間を求める
+  /// 仮想レジスタごとの生存区間を求める。
+  /// 定義点、参照点のどちらかが存在しない場合、計算不能として-1を返す。
+  /// \retval 0以上 計算した生存区間
+  /// \retval -1 計算不能
+  int calcLiveRange();
+
+  /// 定義点と参照点から生存区間を求める
+  /// 仮想レジスタごとの生存区間を求める。
+  /// 定義点、参照点のどちらかが存在しない場合、計算不能として-1を返す。
+  /// 定義 < 参照の場合、物理レジスタの再利用を禁止するため、
+  /// 参照点を最大値にする。
+  /// \retval 0以上 計算した生存区間
+  /// \retval -1 計算不能
+  int calcLiveRangeNoReuse();
+};
+
+
+/// Swpl-RAで使用する生存区間表
+class SwplRegAllocInfoTbl {
+
+  std::vector<RegAllocInfo> rai_tbl; ///< Swpl-RAで使用する生存区間表
+  unsigned total_mi;
+  std::map<unsigned , std::vector<unsigned>> regconstrain;
+
+public:
+  SwplRegAllocInfoTbl(unsigned num_of_mi);
+  virtual ~SwplRegAllocInfoTbl() {}
+
+  unsigned length() {
+    return rai_tbl.size();
+  }
+
+  /// RegAllocInfo構造体を追加する
+  /// \param [in] vreg 仮想レジスタ番号
+  /// \param [in] num_def 定義番号
+  /// \param [in] num_use 参照番号
+  /// \param [in] mo llvm::MachineOperand
+  /// \param [in] preg 物理レジスタ番号
+  void addRegAllocInfo( unsigned vreg,
+                       int num_def,
+                       int num_use,
+                       MachineOperand *mo,
+                       unsigned preg=0);
+
+  /// Swpl-RAで使用する生存区間表のうち、vregに該当する行を返す
+  /// \param [in] vreg 仮想レジスタ番号
+  /// \retval 非nullptr 指定された仮想レジスタに該当するRegAllocInfoへのポインタ
+  /// \retval nullptr 指定された仮想レジスタに該当するRegAllocInfoは存在しない
+  RegAllocInfo* getWithVReg( unsigned vreg );
+
+  /// Swpl-RAで使用する生存区間表のうち、indexに該当する行を返す
+  /// \param [in] idx インデックス番号
+  /// \retval 非nullptr 指定されたインデックス番号に該当するRegAllocInfoへのポインタ
+  /// \retval nullptr 指定されたインデックス番号に該当するRegAllocInfoは存在しない
+  RegAllocInfo* getWithIdx( unsigned idx ) {
+    return &(rai_tbl.at(idx));
+  }
+
+  /// レジスタが不足した場合の、再利用可能な物理レジスタ返す
+  /// \param [in] rai 割り当て対象のRegAllocInfo
+  /// \retval 非0 再利用可能な物理レジスタ番号
+  /// \retval 0 再利用可能な物理レジスタは見つからなかった
+  unsigned getReusePReg( RegAllocInfo* rai );
+
+  /// Swpl-RAで使用する生存区間表のうち、pregに該当する行の有無を返す
+  /// \param [in] preg チェック対象の物理レジスタ
+  /// \retval true pregに該当する行あり
+  /// \retval false pregに該当する行なし
+  bool isUsePReg( unsigned preg );
+
+  /// debug dump
+  void dump();
+
+private:
+
+  /// 生存区間表の行のLiveRangeが重なるかを判定する
+  /// \param [in] reginfo1 チェック対象のRegAllocInfo
+  /// \param [in] reginfo2 チェック対象のRegAllocInfo
+  /// \retval true 重なる
+  /// \retval false 重ならない
+  bool isOverlapLiveRange( RegAllocInfo *reginfo1, RegAllocInfo *reginfo2 );
+
+  /// 物理的に重なるレジスタかを判定する
+  /// \param [in] preg1 チェック対象の物理レジスタ
+  /// \param [in] preg2 チェック対象の物理レジスタ
+  /// \retval true 重なる
+  /// \retval false 重なる
+  bool isPRegOverlap( unsigned preg1, unsigned preg2 );
+};
+
 /// 命令列変換情報
 struct SwplTransformedMIRInfo {
   Register originalDoVReg=0; ///<  オリジナルの制御変数（updateDoVRegMIのop1）
@@ -66,6 +214,10 @@ struct SwplTransformedMIRInfo {
   void print();
 
   virtual ~SwplTransformedMIRInfo() {
+    if (swplRAITbl!=nullptr) {
+      delete swplRAITbl;
+      swplRAITbl = nullptr;
+    }
   }
 
   /// SWPL変換が必要かどうかの判定
@@ -189,151 +341,6 @@ public:
 
 };
 
-  /// Swpl-RAで使用する生存区間表の行
-  struct RegAllocInfo {
-    unsigned vreg;                        ///< 割り当て済み仮想レジスタ
-    unsigned preg;                        ///< 割り当て済み物理レジスタ
-    int      num_def;                     ///< 仮想レジスタの定義番号
-    int      num_use;                     ///< 仮想レジスタの参照番号
-    int      liverange;                   ///< 生存区間(参照番号-定義番号)
-    unsigned vreg_classid;                ///< 仮想レジスタのレジスタクラスID
-    std::vector<MachineOperand*> vreg_mo; ///< 仮想レジスタのMachineOperand
-    unsigned total_mi;
-
-    /// MachineOperandを追加する
-    /// \param [in,out] mo vreg_moに追加するMachineOperand
-    void addMo( MachineOperand* mo ) {
-      vreg_mo.push_back( mo );
-      return;
-    };
-
-    /// 定義番号を更新する
-    /// また、更新された定義番号を使用して、LiveRangeを再計算する
-    /// \param [in] def 定義番号
-    void updateNumDef( int def ) {
-      num_def = def;
-      liverange = calcLiveRange();
-      return;
-    };
-
-    /// 定義番号を更新する
-    /// また、更新された定義番号を使用して、LiveRangeを再計算する
-    /// 物理レジスタの再利用を禁止するため、参照点は最大値となる
-    /// \param [in] def 定義番号
-    void updateNumDefNoReuse(int def) {
-      num_def = def;
-      liverange = calcLiveRangeNoReuse();
-      return;
-    };
-
-    /// 参照番号を更新する
-    /// また、更新された参照番号を使用して、LiveRangeを再計算する
-    /// \param [in] use 参照番号
-    void updateNumUse( int use ) {
-      num_use = use;
-      liverange = calcLiveRange();
-      return;
-    };
-
-    /// 参照番号を更新する
-    /// また、更新された参照番号を使用して、LiveRangeを再計算する
-    /// 物理レジスタの再利用を禁止するため、参照点は最大値となる
-    /// \param [in] use 参照番号
-    void updateNumUseNoReuse(int use) {
-      num_use = use;
-      liverange = calcLiveRangeNoReuse();
-      return;
-    };
-
-  private:
-    /// 定義点と参照点から生存区間を求める
-    /// 仮想レジスタごとの生存区間を求める。
-    /// 定義点、参照点のどちらかが存在しない場合、計算不能として-1を返す。
-    /// \retval 0以上 計算した生存区間
-    /// \retval -1 計算不能
-    int calcLiveRange();
-
-    /// 定義点と参照点から生存区間を求める
-    /// 仮想レジスタごとの生存区間を求める。
-    /// 定義点、参照点のどちらかが存在しない場合、計算不能として-1を返す。
-    /// 定義 < 参照の場合、物理レジスタの再利用を禁止するため、
-    /// 参照点を最大値にする。
-    /// \retval 0以上 計算した生存区間
-    /// \retval -1 計算不能
-    int calcLiveRangeNoReuse();
-  };
-
-  /// Swpl-RAで使用する生存区間表
-  class SwplRegAllocInfoTbl {
-
-    std::vector<RegAllocInfo> rai_tbl; ///< Swpl-RAで使用する生存区間表
-    unsigned total_mi;
-    std::map<unsigned , std::vector<unsigned>> regconstrain;
-
-  public:
-    SwplRegAllocInfoTbl(unsigned num_of_mi);
-
-    unsigned length() {
-      return rai_tbl.size();
-    }
-
-    /// RegAllocInfo構造体を追加する
-    /// \param [in] vreg 仮想レジスタ番号
-    /// \param [in] num_def 定義番号
-    /// \param [in] num_use 参照番号
-    /// \param [in] mo llvm::MachineOperand
-    /// \param [in] preg 物理レジスタ番号
-    void addRegAllocInfo( unsigned vreg,
-                          int num_def,
-                          int num_use,
-                          MachineOperand *mo,
-                          unsigned preg=0);
-
-    /// Swpl-RAで使用する生存区間表のうち、vregに該当する行を返す
-    /// \param [in] vreg 仮想レジスタ番号
-    /// \retval 非nullptr 指定された仮想レジスタに該当するRegAllocInfoへのポインタ
-    /// \retval nullptr 指定された仮想レジスタに該当するRegAllocInfoは存在しない
-    RegAllocInfo* getWithVReg( unsigned vreg );
-
-    /// Swpl-RAで使用する生存区間表のうち、indexに該当する行を返す
-    /// \param [in] idx インデックス番号
-    /// \retval 非nullptr 指定されたインデックス番号に該当するRegAllocInfoへのポインタ
-    /// \retval nullptr 指定されたインデックス番号に該当するRegAllocInfoは存在しない
-    RegAllocInfo* getWithIdx( unsigned idx ) {
-      return &(rai_tbl.at(idx));
-    }
-
-    /// レジスタが不足した場合の、再利用可能な物理レジスタ返す
-    /// \param [in] rai 割り当て対象のRegAllocInfo
-    /// \retval 非0 再利用可能な物理レジスタ番号
-    /// \retval 0 再利用可能な物理レジスタは見つからなかった
-    unsigned getReusePReg( RegAllocInfo* rai );
-
-    /// Swpl-RAで使用する生存区間表のうち、pregに該当する行の有無を返す
-    /// \param [in] preg チェック対象の物理レジスタ
-    /// \retval true pregに該当する行あり
-    /// \retval false pregに該当する行なし
-    bool isUsePReg( unsigned preg );
-
-    /// debug dump
-    void dump();
-
-  private:
-
-    /// 生存区間表の行のLiveRangeが重なるかを判定する
-    /// \param [in] reginfo1 チェック対象のRegAllocInfo
-    /// \param [in] reginfo2 チェック対象のRegAllocInfo
-    /// \retval true 重なる
-    /// \retval false 重ならない
-    bool isOverlapLiveRange( RegAllocInfo *reginfo1, RegAllocInfo *reginfo2 );
-
-    /// 物理的に重なるレジスタかを判定する
-    /// \param [in] preg1 チェック対象の物理レジスタ
-    /// \param [in] preg2 チェック対象の物理レジスタ
-    /// \retval true 重なる
-    /// \retval false 重なる
-    bool isPRegOverlap( unsigned preg1, unsigned preg2 );
-  };
 
 }
 #endif
