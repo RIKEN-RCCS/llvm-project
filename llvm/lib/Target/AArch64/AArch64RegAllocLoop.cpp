@@ -223,11 +223,8 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl, unsigned tota
     // 第１候補：空いている物理レジスタから割り付け
     if (!allocated) {
       const TargetRegisterClass *trc = SWPipeliner::MRI->getRegClass(itr_cur->vreg);
-      for (TargetRegisterClass::iterator
-          itr_trc = trc->begin(), itr_end = trc->end();
-          itr_trc != itr_end; ++itr_trc) {
+      for (auto preg:*trc) {
         // 物理レジスタ番号取得
-        unsigned preg = *itr_trc;
 
         // 使ってはいけない物理レジスタは割付けない
         std::array<unsigned, UNAVAILABLE_REGS>::iterator itr_nousePreg;
@@ -291,9 +288,9 @@ static void callSetReg(SwplRegAllocInfoTbl &rai_tbl) {
     if ((rinfo->vreg == 0) || (rinfo->preg == 0))
       continue;
     // 当該物理レジスタを使用するMachineOperandすべてにsetReg()する
-    for (auto itr_mo = rinfo->vreg_mo.begin(), itr_end = rinfo->vreg_mo.end(); itr_mo != itr_end; ++itr_mo) {
-      (*itr_mo)->setReg(rinfo->preg);
-      (*itr_mo)->setIsRenamable(true);
+    for (auto *mo : rinfo->vreg_mo) {
+      mo->setReg(rinfo->preg);
+      mo->setIsRenamable(true);
     }
   }
   return;
@@ -389,8 +386,8 @@ bool AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
       // 各仮想レジスタの生存区間リストを作成する
       if (createLiveRange(mo, reg, *(tmi->swplRAITbl), num_mi,
                           total_mi, exclude_vreg, tmi->doVReg) != 0) {
-        dbgs() << "\n  createLiveRange() failed\n";
-        return true;
+        assert(0 && "createLiveRange() failed");
+        return false;
       }
     }
   }
