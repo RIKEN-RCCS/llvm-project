@@ -30,12 +30,12 @@
 #CHECK:### SwplEdge: 
 #CHECK-NEXT:### from: %56:gpr32 = LDRHHui killed %55:gpr64common, 193, debug-location !16 :: (load (s16) from %ir.32, !tbaa !10); /TEST/tp/testprg.c:7:21
 #CHECK-NEXT:### to  : %57:gpr32 = MADDWrrr killed %56:gpr32, killed %54:gpr32, $wzr, debug-location !17; /TEST/tp/testprg.c:7:19
-#CHECK-NEXT:### distance:0 delay:1
+#CHECK-NEXT:### distance:0 delay:5
 
 #CHECK:### SwplEdge: 
 #CHECK-NEXT:### from: %54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
 #CHECK-NEXT:### to  : %57:gpr32 = MADDWrrr killed %56:gpr32, killed %54:gpr32, $wzr, debug-location !17; /TEST/tp/testprg.c:7:19
-#CHECK-NEXT:### distance:0 delay:1
+#CHECK-NEXT:### distance:0 delay:5
 
 #CHECK:### SwplEdge: 
 #CHECK-NEXT:### from: %52:gpr64 = UBFMXri %50:gpr64common, 63, 62, debug-location !15; /TEST/tp/testprg.c:7:14
@@ -137,45 +137,62 @@
 #CHECK-NEXT:### to  : STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
 #CHECK-NEXT:### distance:1 delay:1
 
+#CHECK:(plan {{[A-Za-z0-9]+}}:
+#CHECK:  iteration_interval  = 6
+#CHECK:  n_iteration_copies  = 10
+#CHECK:  n_renaming_versions = 5
+#CHECK:  begin_slot = 999696
+#CHECK:  end_slot   = 999984
+#CHECK:  total_cycles  = 90
+#CHECK:  prolog_cycles = 30
+#CHECK:  kernel_cycles = 30
+#CHECK:  epilog_cycles = 30
 
-#CHECK:%54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
-#CHECK-NEXT:successor_inst : MADDWrrr (not placed)
-#CHECK-NEXT:successor_inst : STRHHui (not placed)
-#CHECK-NEXT:successor_inst : STRHHui (not placed)
-#CHECK-NEXT:unset (DependConstrained  ) : ADDXrr
-#CHECK-NEXT: begin_cycle          : 124999
-#CHECK-NEXT: SIP.slot             : 999996
-#CHECK-NEXT: SIP.slot.calcCycle() : 124999
-#CHECK-NEXT:iteration_interval = 4
+#CHECK:	( MachineInstr* : OpcodeName )
 
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		({{[A-Za-z0-9]+}}:ADDXrr)		--5--		--6--		--7--	
 
-#CHECK:=========================================
-#CHECK:%57:gpr32 = MADDWrrr killed %56:gpr32, killed %54:gpr32, $wzr, debug-location !17; /TEST/tp/testprg.c:7:19
-#CHECK:successor_inst : STRHHui ( cycle:124995, latecycle:124990, delay:5 )
-#CHECK-NEXT:unset (DependConstrained  ) : LDRHHui
-#CHECK-NEXT:unset (DependConstrained  ) : LDRHHui
-#CHECK-NEXT:begin_cycle          : 124990
-#CHECK:SIP.slot             : 999916
-#CHECK-NEXT:SIP.slot.calcCycle() : 124989
-#CHECK:iteration_interval = 5
+#CHECK:	--0--		--1--		--2--		--3--		({{[A-Za-z0-9]+}}:ADDXrr)		({{[A-Za-z0-9]+}}:LDRQui)		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:ADDXri)		({{[A-Za-z0-9]+}}:LDRQui)	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		({{[A-Za-z0-9]+}}:LDRQui)		({{[A-Za-z0-9]+}}:LDRQui)		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:COPY)		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		({{[A-Za-z0-9]+}}:COPY)	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
 
-#CHECK:       FLA       FLB       EXA       EXB       EAGA      EAGB      PRX       BR        LSU1      LSU2      FLA_C     FLB_C     EXA_C     EXB_C     EAGA_C    EAGB_C    
-#CHECK:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#CHECK:       0         0         UBFMXri   0         0         0         0         STRHHui   0         0         0         0         0         0         0         0         
-#CHECK:       0         0         0         ADDXrr    0         0         0         STRHHui   0         0         0         0         0         0         0         0         
-#CHECK:       0         0         ADDXrr    0         0         0         0         0         0         0         0         0         0         0         0         0         
-#CHECK:       0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         
-#CHECK:       0         0         MADDWrrr  0         0         0         0         0         0         0         0         0         0         0         0         0         
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		({{[A-Za-z0-9]+}}:MULv8i16)		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:MULv8i16)		--7--	
+#CHECK-NEXT	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
 
-#CHECK: (999912)	--0--		--1--		--2--		--3--		MADDWrrr		--5--		--6--		--7--	
-#CHECK-NEXT:	(999920)	--0--		--1--		--2--		--3--		UBFMXri		--5--		--6--		--7--	
-#CHECK-NEXT:	(999928)	--0--		--1--		--2--		--3--		--4--		ADDXrr		--6--		--7--	
-#CHECK-NEXT:	(999936)	--0--		--1--		--2--		--3--		ADDXrr		--5--		--6--		--7--	
-#CHECK-NEXT:	(999944)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
-#CHECK-NEXT:	(999952)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
-#CHECK-NEXT:	(999960)	--0--		--1--		--2--		--3--		--4--		--5--		STRHHui		--7--	
-#CHECK-NEXT:	(999968)	--0--		--1--		--2--		--3--		STRHHui		--5--		--6--		--7--	
-#CHECK-NEXT:=========================================
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	--0--		--1--		--2--		--3--		({{[A-Za-z0-9]+}}:UZP1v8i16)		--5--		--6--		--7--	
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		({{[A-Za-z0-9]+}}:ADDXrr)		--6--		--7--	
+#CHECK-NEXT:	({{[A-Za-z0-9]+}}:REG_SEQUENCE)		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		({{[A-Za-z0-9]+}}:ST2Twov8h)		--6--		({{[A-Za-z0-9]+}}:SUBSXri)	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		({{[A-Za-z0-9]+}}:COPY)		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		({{[A-Za-z0-9]+}}:COPY)		--6--		--7--	
+#CHECK:)
+
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'

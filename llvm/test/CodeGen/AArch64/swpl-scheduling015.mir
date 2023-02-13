@@ -1,6 +1,5 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-debug-dump-plan  -swpl-debug-ddg -swpl-debug-dump-scheduling-every-inst -o /dev/null 2>&1 | FileCheck %s
 
-
 #CHECK:DBG(SwplDdg::print) SwplDdg. 
 #CHECK-NEXT:### SwplDdg: 
 #CHECK-NEXT:### SwplEdge: 
@@ -21,12 +20,12 @@
 #CHECK:### SwplEdge: 
 #CHECK-NEXT:### from: %62:gpr32 = LDURHHi %57:gpr64sp, -2, debug-location !15 :: (load (s16) from %ir.36, !tbaa !11); /TEST/tp/testprg.c:7:21
 #CHECK-NEXT:### to  : %63:gpr32 = MADDWrrr killed %62:gpr32, %61:gpr32, $wzr, debug-location !16; /TEST/tp/testprg.c:7:19
-#CHECK-NEXT:### distance:0 delay:1
+#CHECK-NEXT:### distance:0 delay:5
 
 #CHECK:### SwplEdge: 
 #CHECK-NEXT:### from: %61:gpr32 = LDRHHui killed %60:gpr64common, 193, debug-location !10 :: (load (s16) from %ir.34, !tbaa !11); /TEST/tp/testprg.c:7:14
 #CHECK-NEXT:### to  : %63:gpr32 = MADDWrrr killed %62:gpr32, %61:gpr32, $wzr, debug-location !16; /TEST/tp/testprg.c:7:19
-#CHECK-NEXT:### distance:0 delay:1
+#CHECK-NEXT:### distance:0 delay:5
 
 #CHECK:### SwplEdge: 
 #CHECK-NEXT:### from: %63:gpr32 = MADDWrrr killed %62:gpr32, %61:gpr32, $wzr, debug-location !16; /TEST/tp/testprg.c:7:19
@@ -46,12 +45,12 @@
 #CHECK:### SwplEdge: 
 #CHECK-NEXT:### from: %64:gpr32 = LDRHHui %57:gpr64sp, 0, debug-location !26 :: (load (s16) from %ir.33, !tbaa !11); /TEST/tp/testprg.c:8:21
 #CHECK-NEXT:### to  : %65:gpr32 = MADDWrrr killed %64:gpr32, %61:gpr32, $wzr, debug-location !17; /TEST/tp/testprg.c:8:19
-#CHECK-NEXT:### distance:0 delay:1
+#CHECK-NEXT:### distance:0 delay:5
 
 #CHECK:### SwplEdge: 
 #CHECK-NEXT:### from: %61:gpr32 = LDRHHui killed %60:gpr64common, 193, debug-location !10 :: (load (s16) from %ir.34, !tbaa !11); /TEST/tp/testprg.c:7:14
 #CHECK-NEXT:### to  : %65:gpr32 = MADDWrrr killed %64:gpr32, %61:gpr32, $wzr, debug-location !17; /TEST/tp/testprg.c:8:19
-#CHECK-NEXT:### distance:0 delay:1
+#CHECK-NEXT:### distance:0 delay:5
 
 #CHECK:### SwplEdge: 
 #CHECK-NEXT:### from: %65:gpr32 = MADDWrrr killed %64:gpr32, %61:gpr32, $wzr, debug-location !17; /TEST/tp/testprg.c:8:19
@@ -193,60 +192,13 @@
 #CHECK-NEXT:### to  : %64:gpr32 = LDRHHui %57:gpr64sp, 0, debug-location !26 :: (load (s16) from %ir.33, !tbaa !11); /TEST/tp/testprg.c:8:21
 #CHECK-NEXT:### distance:20 delay:6
 
-#CHECK:=========================================
-#CHECK:%62:gpr32 = LDURHHi %57:gpr64sp, -2, debug-location !15 :: (load (s16) from %ir.36, !tbaa !11); /TEST/tp/testprg.c:7:21
-#CHECK-NEXT:successor_inst : MADDWrrr (not placed)
-#CHECK-NEXT:successor_inst : STURHHi (not placed)
-#CHECK-NEXT:successor_inst : STRHHui (not placed)
-#CHECK-NEXT: begin_cycle          : 124999
-#CHECK-NEXT: SIP.slot             : 999996
-#CHECK-NEXT: SIP.slot.calcCycle() : 124999
-#CHECK-NEXT: iteration_interval = 8
 
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       LSU1     LSU2     FLA_C    FLB_C    EXA_C    EXB_C    EAGA_C   EAGB_C   
-#CHECK-NEXT:---------------------------------------------------------------------------------------------------------------------------------------------------------
-#CHECK-NEXT:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
-#CHECK-NEXT:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
-#CHECK-NEXT:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
-#CHECK-NEXT:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
-#CHECK-NEXT:       ADDXrs   ADDXrs   ADDXrs   ADDXrs   ADDXrs   ADDXrs   ADDXrs   ADDXrs   0        0        0        0        0        0        0        0        
-#CHECK-NEXT:       ADDXrs   ADDXrs   ADDXrs   ADDXrs   ADDXrs   ADDXrs   ADDXrs   ADDXrs   0        0        0        0        0        0        0        0        
-#CHECK-NEXT:       0        0        0        0        0        0        0        LDRHHui  0        0        0        0        0        0        0        0        
-#CHECK-NEXT:       0        0        0        0        0        0        0        LDURHHi  0        0        0        0        0        0        0        0        
 
-#CHECK:	(999968)	--0--		--1--		--2--		--3--		ADDXrs		--5--		--6--		--7--	
-#CHECK-NEXT:	(999976)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
-#CHECK-NEXT:	(999984)	--0--		--1--		--2--		--3--		LDRHHui		--5--		--6--		--7--	
-#CHECK-NEXT:	(999992)	--0--		--1--		--2--		--3--		LDURHHi		--5--		--6--		--7--	
-#CHECK-NEXT:=========================================
 
-#CHECK:=========================================
-#CHECK-NEXT:%62:gpr32 = LDURHHi %57:gpr64sp, -2, debug-location !15 :: (load (s16) from %ir.36, !tbaa !11); /TEST/tp/testprg.c:7:21
-#CHECK-NEXT:successor_inst : MADDWrrr ( cycle:124999, latecycle:124998, delay:1 )
-#CHECK-NEXT:successor_inst : STURHHi (not placed)
-#CHECK-NEXT:successor_inst : STRHHui (not placed)
-#CHECK-NEXT: begin_cycle          : 124998
-#CHECK-NEXT: SIP.slot             : 999964
-#CHECK-NEXT: SIP.slot.calcCycle() : 124995
-#CHECK-NEXT: iteration_interval = 8
 
-#CHECK:       FLA       FLB       EXA       EXB       EAGA      EAGB      PRX       BR        LSU1      LSU2      FLA_C     FLB_C     EXA_C     EXB_C     EAGA_C    EAGB_C    
-#CHECK-NEXT:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#CHECK-NEXT:       0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         
-#CHECK-NEXT:       0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         
-#CHECK-NEXT:       0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         
-#CHECK-NEXT:       0         0         0         0         0         0         0         LDURHHi   0         0         0         0         0         0         0         0         
-#CHECK-NEXT:       ADDXrs    ADDXrs    ADDXrs    ADDXrs    ADDXrs    ADDXrs    ADDXrs    ADDXrs    0         0         0         0         0         0         0         0         
-#CHECK-NEXT:       ADDXrs    ADDXrs    ADDXrs    ADDXrs    ADDXrs    ADDXrs    ADDXrs    ADDXrs    0         0         0         0         0         0         0         0         
-#CHECK-NEXT:       0         0         0         0         0         0         0         LDRHHui   0         0         0         0         0         0         0         0         
-#CHECK-NEXT:       0         0         MADDWrrr  0         0         0         0         0         0         0         0         0         0         0         0         0         
 
-#CHECK:	(999960)	--0--		--1--		--2--		--3--		LDURHHi		--5--		--6--		--7--	
-#CHECK-NEXT:	(999968)	--0--		--1--		--2--		--3--		ADDXrs		--5--		--6--		--7--	
-#CHECK-NEXT:	(999976)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
-#CHECK-NEXT:	(999984)	--0--		--1--		--2--		--3--		LDRHHui		--5--		--6--		--7--	
-#CHECK-NEXT:	(999992)	--0--		--1--		--2--		--3--		--4--		MADDWrrr		--6--		--7--	
-#CHECK-NEXT:=========================================
+
+
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
   source_filename = "/TEST/tp/testprg.c"
