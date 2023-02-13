@@ -1035,20 +1035,24 @@ void SwplRegAllocInfoTbl::countRegs() {
   std::unique_ptr<StmRegKind> regKind;
   for (auto &regAllocInfo:rai_tbl) {
     if (regAllocInfo.vreg==0) {
-      // 元々実レジスタ
+      // SWPL化前から実レジスタが割り付けてある
       regKind.reset(SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, regAllocInfo.preg));
       if (regKind->isCCRegister()) {
-        // 特別なレジスタ
+        // CCレジスタは計算から除外する
         continue;
       }
       if (regKind->isInteger()) {
         auto r = regmap[regAllocInfo.preg];
         if( std::find(nousePhysRegs.begin(), nousePhysRegs.end(), r) != nousePhysRegs.end() ){
-          // 割付されていあるレジスタ
+          // レジスタ割付処理で割付禁止レジスタが、割り付けてあるため、計算から除外する
           continue;
         }
       }
     } else {
+      if (regAllocInfo.preg == 0) {
+        // 実レジスタを割り付けていないので、計算から除外する
+        continue;
+      }
       regKind.reset(SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, regAllocInfo.vreg));
     }
     if (regKind->isInteger()) {
