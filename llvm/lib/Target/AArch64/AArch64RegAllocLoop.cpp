@@ -45,28 +45,110 @@ using namespace swpl;
 static cl::opt<bool> DebugSwplRegAlloc("swpl-debug-reg-alloc",cl::init(false), cl::ReallyHidden);
 
 /**
- * @brief 仮想/物理レジスタ間のCOPY命令を作成する
+ * @brief エピローグ部の仮想レジスタリストを作成する
+ * @param [in]     mi llvm::MachineInstr
+ * @param [in]     num_mi llvm::MachineInstrの通し番号
+ * @param [in,out] ekri_tbl カーネルループ外のレジスタ情報の表
+ */
+static void createVRegListEpi(MachineInstr *mi, unsigned num_mi,
+                              SwplExcKernelRegInfoTbl &ekri_tbl) {
+  assert(mi);
+
+  // MIのオペランド数でループ
+  for (MachineOperand& mo:mi->operands()) {
+    // レジスタオペランド かつ レジスタ番号が 0 でない かつ
+    // 仮想レジスタであればリストに加える
+    unsigned reg = 0;
+    if ((!mo.isReg()) || ((reg = mo.getReg()) == 0) ||
+        (!Register::isVirtualRegister(reg)))
+      continue;
+
+    // 割り当て済みレジスタ情報を当該仮想レジスタで検索
+    auto ri = ekri_tbl.getWithVReg(reg);
+
+    // TODO: 以下、同じような処理が続くため、関数化した方が良い
+    // 当該オペランドが"定義"か
+    if (mo.isDef()) {
+      if (ri != nullptr) {
+        // 同じ仮想レジスタの定義は、複数存在しないことが前提
+        assert(ri->num_def == -1);
+
+        // 当該仮想レジスタは登録済みなのでMI通し番号を更新
+        ri->updateNumDef(num_mi);
+      } else {
+        // 当該仮想レジスタは登録されていないため新規登録
+        ekri_tbl.addExcKernelRegInfo(reg, num_mi, -1);
+      }
+    }
+    // 当該オペランドが"参照"か
+    if (mo.isUse()) {
+      if (ri != nullptr) {
+        if( ri->num_def == -1 ||
+            ri->num_use == -1 ||
+            ri->num_use > ri->num_def ) {
+          // 当該仮想レジスタは登録済みなのでMI通し番号を更新
+          ri->updateNumUse(num_mi);
+        }
+      } else {
+        // 当該仮想レジスタは登録されていないため新規登録
+        ekri_tbl.addExcKernelRegInfo(reg, -1, num_mi);
+      }
+    }
+  }
+
+  return;
+}
+
+/**
+ * @brief 仮想to物理レジスタのCOPY命令を作成する
  * @param [in]     MF MachineFunction
  * @param [in]     dl デバッグ情報の位置
  * @param [in,out] k_pre_mis kernel pre処理用のMI
  * @param [in]     vreg 仮想レジスタ番号
  * @param [in]     preg 物理レジスタ番号
  */
-static void addCopyMI(MachineFunction &MF,
+static void addCopyMIpre(MachineFunction &MF,
                       DebugLoc dl,
                       vector<MachineInstr*> &k_pre_mis,
                       unsigned vreg, unsigned preg) {
+  assert(vreg && preg);
   if( DebugSwplRegAlloc ) {
     dbgs() << " Copy " << printReg(vreg, SWPipeliner::TRI)
            << " to " << printReg(preg, SWPipeliner::TRI) << "\n";
   }
 
-  assert(vreg && preg);
   // 仮想レジスタから物理レジスタへのCOPY命令作成
   llvm::MachineInstr *copy =
-      BuildMI(MF, dl,SWPipeliner::TII->get(TargetOpcode::COPY))
+      BuildMI(MF, dl, SWPipeliner::TII->get(TargetOpcode::COPY))
       .addReg(preg, RegState::Define | RegState::Renamable).addReg(vreg);
   k_pre_mis.push_back(copy);
+
+  return;
+}
+
+/**
+ * @brief 物理to仮想レジスタのCOPY命令を作成する
+ * @param [in]     MF MachineFunction
+ * @param [in]     dl デバッグ情報の位置
+ * @param [in,out] k_post_mis kernel post処理用のMI
+ * @param [in]     vreg 仮想レジスタ番号
+ * @param [in]     preg 物理レジスタ番号
+ */
+static void addCopyMIpost(MachineFunction &MF,
+                          DebugLoc dl,
+                          vector<MachineInstr*> &k_post_mis,
+                          unsigned vreg, unsigned preg) {
+  assert(vreg && preg);
+  if( DebugSwplRegAlloc ) {
+    dbgs() << " Copy " << printReg(preg, SWPipeliner::TRI)
+           << " to " << printReg(vreg, SWPipeliner::TRI) << "\n";
+  }
+
+  // 物理レジスタから仮想レジスタへのCOPY命令作成
+  llvm::MachineInstr *copy =
+      BuildMI(MF, dl, SWPipeliner::TII->get(TargetOpcode::COPY))
+      .addReg(vreg, RegState::Define).addReg(preg, RegState::Renamable);
+  k_post_mis.push_back(copy);
 
   return;
 }
@@ -231,12 +313,15 @@ static int createLiveRange(MachineOperand &mo, unsigned reg,
 /**
  * @brief  生存区間を基に仮想レジスタへ物理レジスタを割り付ける
  * @param  [in,out] reginfo 割り当て済みレジスタ情報
+ * @param  [in]     ekri_tbl カーネル外のレジスタ情報の表
  * @param  [in]     total_mi カーネル部の総MI数
  * @retval 0 正常終了
  * @retval 0以外 異常終了
  * @details レジスタ再利用時の「最も過去」とは、「出現した順に古い方から」という意
  */
-static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl, unsigned total_mi) {
+static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
+                                     SwplExcKernelRegInfoTbl &ekri_tbl,
+                                     unsigned total_mi) {
   int ret = 0;
 
   // 使ってはいけない物理レジスタのリスト
@@ -257,12 +342,14 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl, unsigned tota
     // 以下の仮想レジスタは、物理レジスタ割り付け対象としない
     // ・仮想レジスタ番号が 0
     // ・isVirtualRegister()の返却値がfalseである
-    // ・ブロック内に定義or参照のどちらかしかない
+    // ・ブロック内に定義or参照のどちらかしかない かつ ブロック外にて参照から始まっていない
     if ((itr_cur->vreg == 0) || (!Register::isVirtualRegister(itr_cur->vreg)) ||
-        (itr_cur->num_def < 0) || (itr_cur->num_use < 0)) {
+        (((itr_cur->num_def < 0) || (itr_cur->num_use < 0)) &&
+         (!ekri_tbl.isUseFirstVRegInExcK(itr_cur->vreg)))) {
       if( DebugSwplRegAlloc ) {
-        dbgs() << " This vreg is not subject to RA as it may be livein/liveout. ("
-               << printReg(itr_cur->vreg, SWPipeliner::TRI) << ")\n";
+        dbgs() << " Following register will be not allocated a physcal register. (vreg: "
+               << printReg(itr_cur->vreg, SWPipeliner::TRI) << ", preg: "
+               << printReg(itr_cur->preg, SWPipeliner::TRI) << ")\n";
       }
       continue;
     }
@@ -322,37 +409,39 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl, unsigned tota
 /**
  * @brief  レジスタ情報を基にMachineOperand::setReg()を呼び出す
  * @param  [in]     MF MachineFunction
- * @param  [in]     dl デバッグ情報の位置
- * @param  [in]     k_pre_mis kernel pre処理用のMI
- * @param  [in,out] reginfo 割り当て済みレジスタ情報
+ * @param  [in]     pre_dl カーネルpre処理のデバッグ情報の位置
+ * @param  [in]     post_dl カーネルpost処理のデバッグ情報の位置
+ * @param  [in,out] tmi 命令列変換情報
  */
 static void callSetReg(MachineFunction &MF,
-                       DebugLoc dl,
-                       vector<MachineInstr*> &k_pre_mis,
-                       SwplRegAllocInfoTbl &rai_tbl) {
-  for (size_t i = 0; i < rai_tbl.length(); i++) {
-    RegAllocInfo *rinfo = rai_tbl.getWithIdx(i);
+                       DebugLoc pre_dl,
+                       DebugLoc post_dl,
+                       SwplTransformedMIRInfo *tmi) {
+  assert(tmi);
+  for (size_t i = 0; i < tmi->swplRAITbl->length(); i++) {
+    RegAllocInfo *rinfo = tmi->swplRAITbl->getWithIdx(i);
     // 仮想レジスタと物理レジスタが有効な値でない限り何もしない
     if ((rinfo->vreg == 0) || (rinfo->preg == 0))
       continue;
+
+    /*
+     * MBBをまたがるレジスタへの対処
+     *   bb.10.for.body1:
+     *     %11 = COPY %10
+     *   bb.5.for.body1: (kernel loop)
+     *     $x1 = COPY %11             <- $x1を定義するCOPYを追加する(livein)
+     *     $x2(%12) = ADD $x1(%11), 1
+     *     %12 = COPY $x2(%12)        <- %12を定義するCOPYを追加する(liveout)
+     *   bb.11.for.body1:
+     *     %13 = ADD %12, 1
+     */
+    if ((rinfo->num_def == -1) || (rinfo->num_def > rinfo->num_use))
+      addCopyMIpre(MF, pre_dl, tmi->kernel_pre_mis, rinfo->vreg, rinfo->preg);    // livein
+    if (tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg))
+      addCopyMIpost(MF, post_dl, tmi->kernel_post_mis, rinfo->vreg, rinfo->preg); // liveout
     // 当該物理レジスタを使用するMachineOperandすべてにsetReg()する
     for (vector<MachineOperand*>::iterator itr_mo = rinfo->vreg_mo.begin(),
          itr_end = rinfo->vreg_mo.end(); itr_mo != itr_end; ++itr_mo) {
-      if ((rinfo->num_use < rinfo->num_def) && ((*itr_mo)->isDef())) {
-        /*
-         * MBBをまたがるレジスタへの対処
-         *   bb.10.for.body1:
-         *     %11 = COPY %10
-         *   bb.5.for.body1: (kernel loop)
-         *     $x1 = COPY %11             <- $x1を定義するCOPYを追加する
-         *     $x2(%12) = ADD $x1(%11), 1 <- %11の参照には物理レジスタを割り付ける
-         *     %11 = COPY $x2(%12)        <- %11の定義には物理レジスタを割り付けない
-         *   bb.11.for.body1:
-         *     %13 = ADD %11, 1
-         */
-        addCopyMI(MF, dl, k_pre_mis, rinfo->vreg, rinfo->preg);
-        continue;
-      }
       (*itr_mo)->setReg(rinfo->preg);
       (*itr_mo)->setIsRenamable(true);
     }
@@ -400,6 +489,17 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
   DebugLoc lastDL;
   unordered_set<unsigned> exclude_vreg;
 
+  /// epilogue部の仮想レジスタのリストを作成する
+  tmi->swplEKRITbl = new SwplExcKernelRegInfoTbl();
+  unsigned num_mi = 0;
+  for (size_t i = tmi->kernelEndIndx; i < tmi->epilogEndIndx; ++i) {
+    MachineInstr *mi = tmi->mis[i];
+    if (mi != nullptr) {
+      ++num_mi;
+      createVRegListEpi(mi, num_mi, *(tmi->swplEKRITbl));
+    }
+  }
+
   /// kernel部のMachineInstrを対象とする
   /// まず初めに有効な総MI数を数えつつ、割り付け対象としないレジスタのリストを作成する
   unsigned total_mi = 0;
@@ -430,7 +530,7 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
 
   tmi->swplRAITbl = new SwplRegAllocInfoTbl(total_mi);
 
-  unsigned num_mi = 0;
+  num_mi = 0;
   for (size_t i = tmi->prologEndIndx; i < tmi->kernelEndIndx; ++i) {
     MachineInstr *mi = tmi->mis[i];
     if (mi == nullptr)
@@ -462,19 +562,30 @@ void AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
   }
 
   // 物理レジスタ情報を割り当てる
-  if (physRegAllocWithLiveRange(*(tmi->swplRAITbl), total_mi) != 0) {
+  if (physRegAllocWithLiveRange(*(tmi->swplRAITbl),
+                                *(tmi->swplEKRITbl), total_mi) != 0) {
     dbgs() << "\n  physRegAllocWithLiveRange() failed.\n";
     // TODO: 失敗時の動作
     return;
   }
 
+  if( DebugSwplRegAlloc ) {
+    dbgs() << "complete physRegAllocWithLiveRange()\n";
+  }
+
   // setReg()呼び出し
-  callSetReg(MF, firstDL, tmi->kernel_pre_mis, *(tmi->swplRAITbl));
+  callSetReg(MF, firstDL, lastDL, tmi);
 
   if( DebugSwplRegAlloc ) {
     dbgs() << "complete callSetReg()\n";
     (*tmi->swplRAITbl).dump();
+    (*tmi->swplEKRITbl).dump();
     dumpKernelInstrs(MF, tmi->prologEndIndx, tmi->kernelEndIndx, tmi->mis);
+  }
+
+  if (tmi->swplEKRITbl != nullptr) {
+    delete tmi->swplEKRITbl;
+    tmi->swplEKRITbl = nullptr;
   }
 
   return;
@@ -556,6 +667,74 @@ bool SwplRegAllocInfoTbl::isOverlapLiveRange( RegAllocInfo *reginfo1, RegAllocIn
     }
   }
   return false;
+}
+
+/**
+ * @brief  SwplExcKernelRegInfoTblにExcKernelRegInfoエントリを追加する
+ * @param  [in] vreg 仮想レジスタ番号
+ * @param  [in] num_def 定義番号
+ * @param  [in] num_use 参照番号
+ */
+void SwplExcKernelRegInfoTbl::addExcKernelRegInfo(
+                                     unsigned vreg,
+                                     int num_def,
+                                     int num_use) {
+  ekri_tbl.push_back({vreg, num_def, num_use});
+  return;
+}
+
+/**
+ * @brief  テーブルの中から、指定された仮想レジスタに該当するエントリを返す
+ * @param  [in] vreg 仮想レジスタ番号
+ * @retval 非nullptr 指定された仮想レジスタに該当するExcKernelRegInfoへのポインタ
+ * @retval nullptr   指定された仮想レジスタに該当するExcKernelRegInfoは存在しない
+ */
+ExcKernelRegInfo* SwplExcKernelRegInfoTbl::getWithVReg(unsigned vreg) {
+  vector<ExcKernelRegInfo>::iterator itr =
+    find_if(ekri_tbl.begin(), ekri_tbl.end(),
+            [&](ExcKernelRegInfo &info){
+              return(info.vreg == vreg);
+            });
+  if (itr == ekri_tbl.end())
+    return nullptr;
+
+  return &(*itr);
+}
+
+/**
+ * @brief  指定された仮想レジスタがカーネル外で参照から始まっている行の有無を返す
+ * @param  [in] vreg 仮想レジスタ番号
+ * @retval true 指定された仮想レジスタが参照から始まっている行あり
+ * @retval false 指定された仮想レジスタが参照から始まっている行なし
+ */
+bool SwplExcKernelRegInfoTbl::isUseFirstVRegInExcK(unsigned vreg) {
+  vector<ExcKernelRegInfo>::iterator itr =
+    find_if(ekri_tbl.begin(), ekri_tbl.end(),
+            [&](ExcKernelRegInfo &info){
+              return((info.vreg == vreg) && (info.num_use > -1) &&
+                     ((info.num_def == -1) ||           // 参照のみか
+                      (info.num_def > info.num_use)));  // 定義>参照か
+            });
+  if (itr == ekri_tbl.end())
+    return false;
+
+  return true;
+}
+
+/**
+ * @brief  カーネル外レジスタ情報 SwplExcKernelRegInfoTbl のデバッグプリント
+ */
+void SwplExcKernelRegInfoTbl::dump() {
+  dbgs() << "Virtual registers of the epilogue.\n"
+         << "No.\tvreg\tdef\tuse\n";
+  for (size_t i = 0; i < ekri_tbl.size(); i++) {
+    ExcKernelRegInfo *ri_p = &(ekri_tbl[i]);
+    dbgs() << i << "\t"
+           << printReg(ri_p->vreg, SWPipeliner::TRI) << "\t" // 仮想レジスタ
+           << ri_p->num_def << "\t"      // 仮想レジスタの定義番号
+           << ri_p->num_use << "\n";     // 仮想レジスタの参照番号
+  }
+  return;
 }
 
 /**
@@ -693,7 +872,8 @@ bool SwplRegAllocInfoTbl::isUsePReg( unsigned preg ) {
  * @brief  レジスタ割り当て情報 SwplRegAllocInfoTbl のデバッグプリント
  */
 void SwplRegAllocInfoTbl::dump() {
-  dbgs() << "No.\tvreg\tpreg\tdef\tuse\trange\tclass\tMO\n";
+  dbgs() << "Information of the registers of the kernel. MI=" << total_mi << "\n"
+         << "No.\tvreg\tpreg\tdef\tuse\trange\tclass\tMO\n";
   for (size_t i = 0; i < rai_tbl.size(); i++) {
     RegAllocInfo *ri_p = &(rai_tbl[i]);
     dbgs() << i << "\t"

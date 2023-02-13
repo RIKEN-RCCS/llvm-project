@@ -63,6 +63,7 @@ class StmRegKind;
 class SwplReg;
 class SwplTargetMachine;
 class SwplRegAllocInfoTbl;
+class SwplExcKernelRegInfoTbl;
 struct SwplTransformedMIRInfo;
 
 template <class T> class SmallVectorImpl;
