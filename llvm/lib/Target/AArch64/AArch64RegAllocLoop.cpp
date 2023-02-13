@@ -27,6 +27,17 @@ using namespace llvm;
 
 static cl::opt<bool> DebugSwplRegAlloc("swpl-debug-reg-alloc",cl::init(false), cl::ReallyHidden);
 
+// 使ってはいけない物理レジスタのリスト
+static std::array<unsigned, UNAVAILABLE_REGS> nousePhysRegs {
+    (unsigned)AArch64::SP,   // ゼロレジスタ(XZR)に等しい
+    (unsigned)AArch64::FP,   // X29
+    (unsigned)AArch64::LR,   // X30
+    (unsigned)AArch64::WSP,  // ゼロレジスタ(WZR)に等しい
+    (unsigned)AArch64::W29,  // FP(X29)相当
+    (unsigned)AArch64::W30   // LR(X30)相当
+};
+
+
 /**
  * @brief  物理レジスタ割り付け対象外の仮想レジスタ一覧を作成する
  * @param  [in]     mi llvm::MachineInstr
@@ -190,16 +201,6 @@ static int createLiveRange(MachineOperand &mo, unsigned reg,
  */
 static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl, unsigned total_mi) {
   int ret = 0;
-
-  // 使ってはいけない物理レジスタのリスト
-  std::array<unsigned, UNAVAILABLE_REGS> nousePhysRegs {
-    (unsigned)AArch64::SP,   // ゼロレジスタ(XZR)に等しい
-    (unsigned)AArch64::FP,   // X29
-    (unsigned)AArch64::LR,   // X30
-    (unsigned)AArch64::WSP,  // ゼロレジスタ(WZR)に等しい
-    (unsigned)AArch64::W29,  // FP(X29)相当
-    (unsigned)AArch64::W30   // LR(X30)相当
-  };
 
   // 割り当て済みレジスタ情報でループ
   for (size_t i = 0; i < rai_tbl.length(); i++) {
@@ -930,3 +931,165 @@ SwplRegAllocInfoTbl::SwplRegAllocInfoTbl(unsigned num_of_mi) {
   regconstrain[AArch64::Z30] = { AArch64::B30, AArch64::H30, AArch64::S30, AArch64::D30, AArch64::Z30_HI, AArch64::Q30 };
   regconstrain[AArch64::Z31] = { AArch64::B31, AArch64::H31, AArch64::S31, AArch64::D31, AArch64::Z31_HI, AArch64::Q31 };
 };
+
+static DenseMap<Register, Register> regmap={
+    {AArch64::W0, AArch64::X0},
+    {AArch64::W1, AArch64::X1},
+    {AArch64::W2, AArch64::X2},
+    {AArch64::W3, AArch64::X3},
+    {AArch64::W4, AArch64::X4},
+    {AArch64::W5, AArch64::X5},
+    {AArch64::W6, AArch64::X6},
+    {AArch64::W7, AArch64::X7},
+    {AArch64::W8, AArch64::X8},
+    {AArch64::W9, AArch64::X9},
+    {AArch64::W10, AArch64::X10},
+    {AArch64::W11, AArch64::X11},
+    {AArch64::W12, AArch64::X12},
+    {AArch64::W13, AArch64::X13},
+    {AArch64::W14, AArch64::X14},
+    {AArch64::W15, AArch64::X15},
+    {AArch64::W16, AArch64::X16},
+    {AArch64::W17, AArch64::X17},
+    {AArch64::W18, AArch64::X18},
+    {AArch64::W19, AArch64::X19},
+    {AArch64::W20, AArch64::X20},
+    {AArch64::W21, AArch64::X21},
+    {AArch64::W22, AArch64::X22},
+    {AArch64::W23, AArch64::X23},
+    {AArch64::W24, AArch64::X24},
+    {AArch64::W25, AArch64::X25},
+    {AArch64::W26, AArch64::X26},
+    {AArch64::W27, AArch64::X27},
+    {AArch64::W28, AArch64::X28},
+    {AArch64::WSP, AArch64::SP},
+    {AArch64::WZR, AArch64::XZR},
+
+    {AArch64::X0, AArch64::X0},
+    {AArch64::X1, AArch64::X1},
+    {AArch64::X2, AArch64::X2},
+    {AArch64::X3, AArch64::X3},
+    {AArch64::X4, AArch64::X4},
+    {AArch64::X5, AArch64::X5},
+    {AArch64::X6, AArch64::X6},
+    {AArch64::X7, AArch64::X7},
+    {AArch64::X8, AArch64::X8},
+    {AArch64::X9, AArch64::X9},
+    {AArch64::X10, AArch64::X10},
+    {AArch64::X11, AArch64::X11},
+    {AArch64::X12, AArch64::X12},
+    {AArch64::X13, AArch64::X13},
+    {AArch64::X14, AArch64::X14},
+    {AArch64::X15, AArch64::X15},
+    {AArch64::X16, AArch64::X16},
+    {AArch64::X17, AArch64::X17},
+    {AArch64::X18, AArch64::X18},
+    {AArch64::X19, AArch64::X19},
+    {AArch64::X20, AArch64::X20},
+    {AArch64::X21, AArch64::X21},
+    {AArch64::X22, AArch64::X22},
+    {AArch64::X23, AArch64::X23},
+    {AArch64::X24, AArch64::X24},
+    {AArch64::X25, AArch64::X25},
+    {AArch64::X26, AArch64::X26},
+    {AArch64::X27, AArch64::X27},
+    {AArch64::X28, AArch64::X28},
+    {AArch64::FP , AArch64::FP},
+    {AArch64::LR , AArch64::LR},
+    {AArch64::SP , AArch64::SP},
+    {AArch64::XZR, AArch64::XZR}
+};
+
+void SwplRegAllocInfoTbl::setRangeReg(std::vector<int> *range, RegAllocInfo& regAllocInfo) {
+  if (regAllocInfo.num_def < 0) {
+    for (int i = 1; i <= regAllocInfo.num_use; i++) {
+      range->at(i)++;
+    }
+  } else if (regAllocInfo.num_use > 0 && regAllocInfo.num_def >= regAllocInfo.num_use) {
+    for (int i=1; i<=regAllocInfo.num_use; i++) {
+      range->at(i)++;
+    }
+    for (unsigned i = regAllocInfo.num_def; i <= total_mi ; i++) {
+      range->at(i)++;
+    }
+  } else if (regAllocInfo.num_use < 0) {
+    for (unsigned i = regAllocInfo.num_def; i <= total_mi ; i++) {
+      range->at(i)++;
+    }
+  } else {
+    for (int i = regAllocInfo.num_def; i <= regAllocInfo.num_use; i++) {
+      range->at(i)++;
+    }
+  }
+}
+
+void SwplRegAllocInfoTbl::countRegs() {
+  std::vector<int> ireg;
+  std::vector<int> freg;
+  std::vector<int> preg;
+
+  ireg.resize(total_mi+1);
+  freg.resize(total_mi+1);
+  preg.resize(total_mi+1);
+
+  std::unique_ptr<StmRegKind> regKind;
+  for (auto &regAllocInfo:rai_tbl) {
+    if (regAllocInfo.vreg==0) {
+      // 元々実レジスタ
+      regKind.reset(SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, regAllocInfo.preg));
+      if (regKind->isCCRegister()) {
+        // 特別なレジスタ
+        continue;
+      }
+      if (regKind->isInteger()) {
+        auto r = regmap[regAllocInfo.preg];
+        if( std::find(nousePhysRegs.begin(), nousePhysRegs.end(), r) != nousePhysRegs.end() ){
+          // 割付されていあるレジスタ
+          continue;
+        }
+      }
+    } else {
+      regKind.reset(SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, regAllocInfo.vreg));
+    }
+    if (regKind->isInteger()) {
+      setRangeReg(&ireg, regAllocInfo);
+    } else if (regKind->isFloating()) {
+      setRangeReg(&freg, regAllocInfo);
+    } else if (regKind->isPredicate()) {
+      setRangeReg(&preg, regAllocInfo);
+    } else {
+      llvm_unreachable("unnown reg class");
+    }
+  }
+  // レジスタ割付では、なぜか１から始まるので、以下のforでは0番目を処理しているがほんの少し無駄になっている
+  for (int i:ireg) num_ireg = std::max(num_ireg, i);
+  for (int i:freg) num_freg = std::max(num_freg, i);
+  for (int i:preg) num_preg = std::max(num_preg, i);
+}
+
+int SwplRegAllocInfoTbl::countIReg() {
+  if (num_ireg<0) countRegs();
+  return num_ireg;
+}
+
+int SwplRegAllocInfoTbl::countFReg()  {
+  if (num_freg<0) countRegs();
+  return num_freg;
+}
+
+int SwplRegAllocInfoTbl::countPReg()  {
+  if (num_preg<0) countRegs();
+  return num_preg;
+}
+
+int SwplRegAllocInfoTbl::availableIRegNumber() const {
+  return AArch64::GPR64RegClass.getNumRegs()-UNAVAILABLE_REGS;
+}
+
+int SwplRegAllocInfoTbl::availableFRegNumber() const {
+  return AArch64::FPR64RegClass.getNumRegs();
+}
+
+int SwplRegAllocInfoTbl::availablePRegNumber() const {
+  return AArch64::PPR_3bRegClass.getNumRegs();
+}

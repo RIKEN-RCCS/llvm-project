@@ -101,6 +101,12 @@ class SwplRegAllocInfoTbl {
   std::vector<RegAllocInfo> rai_tbl; ///< Swpl-RAで使用する生存区間表
   unsigned total_mi;
   std::map<unsigned , std::vector<unsigned>> regconstrain;
+  int num_ireg=-1;
+  int num_freg=-1;
+  int num_preg=-1;
+
+  void countRegs();
+  void setRangeReg(std::vector<int>* range, RegAllocInfo& r);
 
 public:
   SwplRegAllocInfoTbl(unsigned num_of_mi);
@@ -157,9 +163,9 @@ public:
   int countPReg();
 
   /// 割り当て可能なレジスタ数を返す
-  int availableIRegNumber();
-  int availableFRegNumber();
-  int availablePRegNumber();
+  int availableIRegNumber() const;
+  int availableFRegNumber() const;
+  int availablePRegNumber() const;
 
 private:
 
