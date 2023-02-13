@@ -569,9 +569,6 @@ void SwplTransformMIR::makeKernelIterationBranch(MachineBasicBlock &MBB) {
     if( rai != nullptr ) {
       preg = rai->preg;
     }
-    // physRegAllocLoop()内で獲得した領域はこの時点で不要となるため解放
-    delete TMI.swplRAITbl;
-    TMI.swplRAITbl = nullptr;
   }
   const auto &debugLoc= TMI.branchDoVRegMI->getDebugLoc();
   MachineInstr *br = SWPipeliner::TII->makeKernelIterationBranch(*SWPipeliner::MRI, MBB, debugLoc, TMI.doVReg,
@@ -723,9 +720,12 @@ void SwplTransformMIR::outputLoopoptMessage(int n_body_inst) {
                           Plan.getNecessaryFreg(), Plan.getMaxFreg(),
                           Plan.getNecessaryIreg(), Plan.getMaxIreg(),
                           Plan.getNecessaryPreg(), Plan.getMaxPreg(),
-                          0, 0,
-                          0, 0,
-                          0, 0
+                          (TMI.swplRAITbl==nullptr?0:TMI.swplRAITbl->countFReg()),
+                          (TMI.swplRAITbl==nullptr?0:TMI.swplRAITbl->availableFRegNumber()),
+                          (TMI.swplRAITbl==nullptr?0:TMI.swplRAITbl->countIReg()),
+                          (TMI.swplRAITbl==nullptr?0:TMI.swplRAITbl->availableIRegNumber()),
+                          (TMI.swplRAITbl==nullptr?0:TMI.swplRAITbl->countPReg()),
+                          (TMI.swplRAITbl==nullptr?0:TMI.swplRAITbl->availablePRegNumber())
                           );
 
   SWPipeliner::Reason = "";
