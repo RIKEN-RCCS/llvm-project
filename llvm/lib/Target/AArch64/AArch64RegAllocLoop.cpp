@@ -437,7 +437,7 @@ static void callSetReg(MachineFunction &MF,
      */
     if ((rinfo->num_def == -1) || (rinfo->num_def > rinfo->num_use))
       addCopyMIpre(MF, pre_dl, tmi->kernel_pre_mis, rinfo->vreg, rinfo->preg);    // livein
-    if (tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg))
+    if ((rinfo->num_def > -1) && (tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg)))
       addCopyMIpost(MF, post_dl, tmi->kernel_post_mis, rinfo->vreg, rinfo->preg); // liveout
     // 当該物理レジスタを使用するMachineOperandすべてにsetReg()する
     for (vector<MachineOperand*>::iterator itr_mo = rinfo->vreg_mo.begin(),
