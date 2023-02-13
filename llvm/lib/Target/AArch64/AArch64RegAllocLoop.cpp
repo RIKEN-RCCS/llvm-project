@@ -932,74 +932,6 @@ SwplRegAllocInfoTbl::SwplRegAllocInfoTbl(unsigned num_of_mi) {
   regconstrain[AArch64::Z31] = { AArch64::B31, AArch64::H31, AArch64::S31, AArch64::D31, AArch64::Z31_HI, AArch64::Q31 };
 };
 
-static DenseMap<Register, Register> regmap={
-    {AArch64::W0, AArch64::X0},
-    {AArch64::W1, AArch64::X1},
-    {AArch64::W2, AArch64::X2},
-    {AArch64::W3, AArch64::X3},
-    {AArch64::W4, AArch64::X4},
-    {AArch64::W5, AArch64::X5},
-    {AArch64::W6, AArch64::X6},
-    {AArch64::W7, AArch64::X7},
-    {AArch64::W8, AArch64::X8},
-    {AArch64::W9, AArch64::X9},
-    {AArch64::W10, AArch64::X10},
-    {AArch64::W11, AArch64::X11},
-    {AArch64::W12, AArch64::X12},
-    {AArch64::W13, AArch64::X13},
-    {AArch64::W14, AArch64::X14},
-    {AArch64::W15, AArch64::X15},
-    {AArch64::W16, AArch64::X16},
-    {AArch64::W17, AArch64::X17},
-    {AArch64::W18, AArch64::X18},
-    {AArch64::W19, AArch64::X19},
-    {AArch64::W20, AArch64::X20},
-    {AArch64::W21, AArch64::X21},
-    {AArch64::W22, AArch64::X22},
-    {AArch64::W23, AArch64::X23},
-    {AArch64::W24, AArch64::X24},
-    {AArch64::W25, AArch64::X25},
-    {AArch64::W26, AArch64::X26},
-    {AArch64::W27, AArch64::X27},
-    {AArch64::W28, AArch64::X28},
-    {AArch64::WSP, AArch64::SP},
-    {AArch64::WZR, AArch64::XZR},
-
-    {AArch64::X0, AArch64::X0},
-    {AArch64::X1, AArch64::X1},
-    {AArch64::X2, AArch64::X2},
-    {AArch64::X3, AArch64::X3},
-    {AArch64::X4, AArch64::X4},
-    {AArch64::X5, AArch64::X5},
-    {AArch64::X6, AArch64::X6},
-    {AArch64::X7, AArch64::X7},
-    {AArch64::X8, AArch64::X8},
-    {AArch64::X9, AArch64::X9},
-    {AArch64::X10, AArch64::X10},
-    {AArch64::X11, AArch64::X11},
-    {AArch64::X12, AArch64::X12},
-    {AArch64::X13, AArch64::X13},
-    {AArch64::X14, AArch64::X14},
-    {AArch64::X15, AArch64::X15},
-    {AArch64::X16, AArch64::X16},
-    {AArch64::X17, AArch64::X17},
-    {AArch64::X18, AArch64::X18},
-    {AArch64::X19, AArch64::X19},
-    {AArch64::X20, AArch64::X20},
-    {AArch64::X21, AArch64::X21},
-    {AArch64::X22, AArch64::X22},
-    {AArch64::X23, AArch64::X23},
-    {AArch64::X24, AArch64::X24},
-    {AArch64::X25, AArch64::X25},
-    {AArch64::X26, AArch64::X26},
-    {AArch64::X27, AArch64::X27},
-    {AArch64::X28, AArch64::X28},
-    {AArch64::FP , AArch64::FP},
-    {AArch64::LR , AArch64::LR},
-    {AArch64::SP , AArch64::SP},
-    {AArch64::XZR, AArch64::XZR}
-};
-
 void SwplRegAllocInfoTbl::setRangeReg(std::vector<int> *range, RegAllocInfo& regAllocInfo) {
   if (regAllocInfo.num_def < 0) {
     for (int i = 1; i <= regAllocInfo.num_use; i++) {
@@ -1042,8 +974,7 @@ void SwplRegAllocInfoTbl::countRegs() {
         continue;
       }
       if (regKind->isInteger()) {
-        auto r = regmap[regAllocInfo.preg];
-        if( std::find(nousePhysRegs.begin(), nousePhysRegs.end(), r) != nousePhysRegs.end() ){
+        if( std::find(nousePhysRegs.begin(), nousePhysRegs.end(), regAllocInfo.preg) != nousePhysRegs.end() ){
           // レジスタ割付処理で割付禁止レジスタが、割り付けてあるため、計算から除外する
           continue;
         }
@@ -1087,7 +1018,8 @@ int SwplRegAllocInfoTbl::countPReg()  {
 }
 
 int SwplRegAllocInfoTbl::availableIRegNumber() const {
-  return AArch64::GPR64RegClass.getNumRegs()-UNAVAILABLE_REGS;
+  // UNAVAILABLE_REGがXおよびWを定義しているため、数は半分にしている
+  return AArch64::GPR64RegClass.getNumRegs()-(UNAVAILABLE_REGS/2);
 }
 
 int SwplRegAllocInfoTbl::availableFRegNumber() const {
