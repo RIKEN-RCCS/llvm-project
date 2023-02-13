@@ -1,0 +1,810 @@
+# RUN: llc %s  -fswp -mcpu=a64fx -start-before=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -swpl-enable-reg-alloc  -o /dev/null 2>&1 | FileCheck %s
+# CHECK: remark: b.c:47:4: software pipelining (IPC: 1.95, ITR: 3, MVE: 2, II: 21, Stage: 3, (VReg Fp: 11/32, Int: 6/32, Pred: 5/8)), SRA(PReg Fp: 9/32, Int: 5/25, Pred: 4/8)
+# CHECK-NXT: remark: b.c:14:4: software pipelining (IPC: 1.95, ITR: 3, MVE: 2, II: 21, Stage: 3, (VReg Fp: 11/32, Int: 16/32, Pred: 7/8)), SRA(PReg Fp: 9/32, Int: 5/25, Pred: 4/8)
+
+--- |
+  ; ModuleID = 'b.c'
+  source_filename = "b.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+  
+  @a = dso_local local_unnamed_addr global [10000 x double] zeroinitializer, align 8
+  @b = dso_local local_unnamed_addr global [10000 x double] zeroinitializer, align 8
+  @c = dso_local local_unnamed_addr global [10000 x double] zeroinitializer, align 8
+  @d = dso_local local_unnamed_addr global [10000 x double] zeroinitializer, align 8
+  @e = dso_local local_unnamed_addr global [10000 x double] zeroinitializer, align 8
+  @f = dso_local local_unnamed_addr global [10000 x double] zeroinitializer, align 8
+  @g = dso_local local_unnamed_addr global [10000 x double] zeroinitializer, align 8
+  @h = dso_local local_unnamed_addr global [10000 x double] zeroinitializer, align 8
+  @i = dso_local local_unnamed_addr global [10000 x double] zeroinitializer, align 8
+  @j = dso_local local_unnamed_addr global [10000 x double] zeroinitializer, align 8
+  
+  ; Function Attrs: nofree norecurse nosync nounwind uwtable vscale_range(4,4)
+  define dso_local void @xxx() local_unnamed_addr #0 !dbg !9 {
+  entry:
+    %0 = call i64 @llvm.start.loop.iterations.i64(i64 1250), !dbg !12
+    br label %vector.body, !dbg !12
+  
+  vector.body:                                      ; preds = %vector.body, %entry
+    %lsr.iv637 = phi i64 [ %lsr.iv.next638, %vector.body ], [ 0, %entry ], !dbg !13
+    %1 = phi i64 [ %0, %entry ], [ %11, %vector.body ], !dbg !14
+    %uglygep639 = getelementptr i8, ptr @a, i64 %lsr.iv637, !dbg !14
+    %wide.load = load <vscale x 2 x double>, ptr %uglygep639, align 8, !dbg !14, !tbaa !15
+    %2 = fcmp fast olt <vscale x 2 x double> %wide.load, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !19
+    %uglygep640 = getelementptr i8, ptr @b, i64 %lsr.iv637, !dbg !20
+    %wide.load527 = load <vscale x 2 x double>, ptr %uglygep640, align 8, !dbg !20, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load527, ptr %uglygep639, i32 8, <vscale x 2 x i1> %2), !dbg !21, !tbaa !15
+    %3 = fcmp fast olt <vscale x 2 x double> %wide.load527, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !22
+    %uglygep641 = getelementptr i8, ptr @c, i64 %lsr.iv637, !dbg !23
+    %wide.load528 = load <vscale x 2 x double>, ptr %uglygep641, align 8, !dbg !23, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load528, ptr %uglygep640, i32 8, <vscale x 2 x i1> %3), !dbg !24, !tbaa !15
+    %4 = fcmp fast olt <vscale x 2 x double> %wide.load528, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !25
+    %uglygep642 = getelementptr i8, ptr @d, i64 %lsr.iv637, !dbg !26
+    %wide.load530 = load <vscale x 2 x double>, ptr %uglygep642, align 8, !dbg !26, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load530, ptr %uglygep641, i32 8, <vscale x 2 x i1> %4), !dbg !27, !tbaa !15
+    %5 = fcmp fast olt <vscale x 2 x double> %wide.load530, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !28
+    %uglygep643 = getelementptr i8, ptr @e, i64 %lsr.iv637, !dbg !29
+    %wide.load533 = load <vscale x 2 x double>, ptr %uglygep643, align 8, !dbg !29, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load533, ptr %uglygep642, i32 8, <vscale x 2 x i1> %5), !dbg !30, !tbaa !15
+    %6 = fcmp fast olt <vscale x 2 x double> %wide.load533, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !31
+    %uglygep644 = getelementptr i8, ptr @f, i64 %lsr.iv637, !dbg !32
+    %wide.load536 = load <vscale x 2 x double>, ptr %uglygep644, align 8, !dbg !32, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load536, ptr %uglygep643, i32 8, <vscale x 2 x i1> %6), !dbg !33, !tbaa !15
+    %7 = fcmp fast olt <vscale x 2 x double> %wide.load536, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !34
+    %uglygep645 = getelementptr i8, ptr @g, i64 %lsr.iv637, !dbg !35
+    %wide.load539 = load <vscale x 2 x double>, ptr %uglygep645, align 8, !dbg !35, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load539, ptr %uglygep644, i32 8, <vscale x 2 x i1> %7), !dbg !36, !tbaa !15
+    %8 = fcmp fast olt <vscale x 2 x double> %wide.load539, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !37
+    %uglygep646 = getelementptr i8, ptr @h, i64 %lsr.iv637, !dbg !38
+    %wide.load542 = load <vscale x 2 x double>, ptr %uglygep646, align 8, !dbg !38, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load542, ptr %uglygep645, i32 8, <vscale x 2 x i1> %8), !dbg !39, !tbaa !15
+    %9 = fcmp fast olt <vscale x 2 x double> %wide.load542, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !40
+    %uglygep647 = getelementptr i8, ptr @i, i64 %lsr.iv637, !dbg !41
+    %wide.load545 = load <vscale x 2 x double>, ptr %uglygep647, align 8, !dbg !41, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load545, ptr %uglygep646, i32 8, <vscale x 2 x i1> %9), !dbg !42, !tbaa !15
+    %10 = fcmp fast olt <vscale x 2 x double> %wide.load545, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !43
+    %uglygep648 = getelementptr i8, ptr @j, i64 %lsr.iv637, !dbg !44
+    %wide.load548 = load <vscale x 2 x double>, ptr %uglygep648, align 8, !dbg !44, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load548, ptr %uglygep647, i32 8, <vscale x 2 x i1> %10), !dbg !45, !tbaa !15
+    %lsr.iv.next638 = add nuw nsw i64 %lsr.iv637, 64, !dbg !13
+    %11 = call i64 @llvm.loop.decrement.reg.i64(i64 %1, i64 1), !dbg !13
+    %12 = icmp ne i64 %11, 0, !dbg !13
+    br i1 %12, label %vector.body, label %vector.body557.preheader, !dbg !13, !llvm.loop !46
+  
+  vector.body557.preheader:                         ; preds = %vector.body
+    %13 = call i64 @llvm.start.loop.iterations.i64(i64 1250), !dbg !51
+    br label %vector.body557, !dbg !51
+  
+  vector.body557:                                   ; preds = %vector.body557.preheader, %vector.body557
+    %lsr.iv625 = phi i64 [ 0, %vector.body557.preheader ], [ %lsr.iv.next626, %vector.body557 ], !dbg !52
+    %14 = phi i64 [ %13, %vector.body557.preheader ], [ %35, %vector.body557 ], !dbg !53
+    %uglygep627 = getelementptr i8, ptr @a, i64 %lsr.iv625, !dbg !53
+    %wide.load559 = load <vscale x 2 x double>, ptr %uglygep627, align 8, !dbg !53, !tbaa !15
+    %15 = fcmp fast olt <vscale x 2 x double> %wide.load559, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !54
+    %uglygep628 = getelementptr i8, ptr @b, i64 %lsr.iv625, !dbg !20
+    %wide.load560 = load <vscale x 2 x double>, ptr %uglygep628, align 8, !dbg !20, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load560, ptr %uglygep627, i32 8, <vscale x 2 x i1> %15), !dbg !55, !tbaa !15
+    %predphi561 = select <vscale x 2 x i1> %15, <vscale x 2 x double> %wide.load560, <vscale x 2 x double> %wide.load559
+    %16 = fcmp fast olt <vscale x 2 x double> %wide.load560, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !56
+    %uglygep629 = getelementptr i8, ptr @c, i64 %lsr.iv625, !dbg !20
+    %wide.load562 = load <vscale x 2 x double>, ptr %uglygep629, align 8, !dbg !20, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load562, ptr %uglygep628, i32 8, <vscale x 2 x i1> %16), !dbg !57, !tbaa !15
+    %predphi563 = select <vscale x 2 x i1> %16, <vscale x 2 x double> %wide.load562, <vscale x 2 x double> %wide.load560
+    %17 = fcmp fast olt <vscale x 2 x double> %wide.load562, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !58
+    %uglygep630 = getelementptr i8, ptr @d, i64 %lsr.iv625, !dbg !20
+    %wide.load564 = load <vscale x 2 x double>, ptr %uglygep630, align 8, !dbg !20, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load564, ptr %uglygep629, i32 8, <vscale x 2 x i1> %17), !dbg !59, !tbaa !15
+    %predphi565 = select <vscale x 2 x i1> %17, <vscale x 2 x double> %wide.load564, <vscale x 2 x double> %wide.load562
+    %18 = fcmp fast olt <vscale x 2 x double> %wide.load564, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !60
+    %uglygep631 = getelementptr i8, ptr @e, i64 %lsr.iv625, !dbg !20
+    %wide.load566 = load <vscale x 2 x double>, ptr %uglygep631, align 8, !dbg !20, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load566, ptr %uglygep630, i32 8, <vscale x 2 x i1> %18), !dbg !61, !tbaa !15
+    %predphi567 = select <vscale x 2 x i1> %18, <vscale x 2 x double> %wide.load566, <vscale x 2 x double> %wide.load564
+    %19 = fcmp fast olt <vscale x 2 x double> %wide.load566, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !62
+    %uglygep632 = getelementptr i8, ptr @f, i64 %lsr.iv625, !dbg !20
+    %wide.load568 = load <vscale x 2 x double>, ptr %uglygep632, align 8, !dbg !20, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load568, ptr %uglygep631, i32 8, <vscale x 2 x i1> %19), !dbg !63, !tbaa !15
+    %predphi569 = select <vscale x 2 x i1> %19, <vscale x 2 x double> %wide.load568, <vscale x 2 x double> %wide.load566
+    %20 = fcmp fast olt <vscale x 2 x double> %wide.load568, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !64
+    %uglygep633 = getelementptr i8, ptr @g, i64 %lsr.iv625, !dbg !20
+    %wide.load570 = load <vscale x 2 x double>, ptr %uglygep633, align 8, !dbg !20, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load570, ptr %uglygep632, i32 8, <vscale x 2 x i1> %20), !dbg !65, !tbaa !15
+    %predphi571 = select <vscale x 2 x i1> %20, <vscale x 2 x double> %wide.load570, <vscale x 2 x double> %wide.load568
+    %21 = fcmp fast olt <vscale x 2 x double> %wide.load570, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !66
+    %uglygep634 = getelementptr i8, ptr @h, i64 %lsr.iv625, !dbg !20
+    %wide.load572 = load <vscale x 2 x double>, ptr %uglygep634, align 8, !dbg !20, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load572, ptr %uglygep633, i32 8, <vscale x 2 x i1> %21), !dbg !67, !tbaa !15
+    %predphi573 = select <vscale x 2 x i1> %21, <vscale x 2 x double> %wide.load572, <vscale x 2 x double> %wide.load570
+    %22 = fcmp fast olt <vscale x 2 x double> %wide.load572, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !68
+    %uglygep635 = getelementptr i8, ptr @i, i64 %lsr.iv625, !dbg !20
+    %wide.load574 = load <vscale x 2 x double>, ptr %uglygep635, align 8, !dbg !20, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load574, ptr %uglygep634, i32 8, <vscale x 2 x i1> %22), !dbg !69, !tbaa !15
+    %predphi575 = select <vscale x 2 x i1> %22, <vscale x 2 x double> %wide.load574, <vscale x 2 x double> %wide.load572
+    %23 = fcmp fast olt <vscale x 2 x double> %wide.load574, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !70
+    %uglygep636 = getelementptr i8, ptr @j, i64 %lsr.iv625, !dbg !20
+    %wide.load576 = load <vscale x 2 x double>, ptr %uglygep636, align 8, !dbg !20, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load576, ptr %uglygep635, i32 8, <vscale x 2 x i1> %23), !dbg !71, !tbaa !15
+    %predphi577 = select <vscale x 2 x i1> %23, <vscale x 2 x double> %wide.load576, <vscale x 2 x double> %wide.load574
+    %24 = fcmp fast olt <vscale x 2 x double> %wide.load576, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !72
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %predphi561, ptr %uglygep636, i32 8, <vscale x 2 x i1> %24), !dbg !73, !tbaa !15
+    %predphi578 = select <vscale x 2 x i1> %24, <vscale x 2 x double> %predphi561, <vscale x 2 x double> %wide.load576
+    %25 = fcmp fast olt <vscale x 2 x double> %predphi561, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !74
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %predphi563, ptr %uglygep627, i32 8, <vscale x 2 x i1> %25), !dbg !75, !tbaa !15
+    %predphi579 = select <vscale x 2 x i1> %25, <vscale x 2 x double> %predphi563, <vscale x 2 x double> %predphi561
+    %26 = fcmp fast olt <vscale x 2 x double> %predphi563, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !76
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %predphi565, ptr %uglygep628, i32 8, <vscale x 2 x i1> %26), !dbg !77, !tbaa !15
+    %27 = fcmp fast olt <vscale x 2 x double> %predphi565, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !78
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %predphi567, ptr %uglygep629, i32 8, <vscale x 2 x i1> %27), !dbg !79, !tbaa !15
+    %28 = fcmp fast olt <vscale x 2 x double> %predphi567, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !80
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %predphi569, ptr %uglygep630, i32 8, <vscale x 2 x i1> %28), !dbg !81, !tbaa !15
+    %29 = fcmp fast olt <vscale x 2 x double> %predphi569, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !82
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %predphi571, ptr %uglygep631, i32 8, <vscale x 2 x i1> %29), !dbg !83, !tbaa !15
+    %30 = fcmp fast olt <vscale x 2 x double> %predphi571, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !84
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %predphi573, ptr %uglygep632, i32 8, <vscale x 2 x i1> %30), !dbg !85, !tbaa !15
+    %31 = fcmp fast olt <vscale x 2 x double> %predphi573, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !86
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %predphi575, ptr %uglygep633, i32 8, <vscale x 2 x i1> %31), !dbg !87, !tbaa !15
+    %32 = fcmp fast olt <vscale x 2 x double> %predphi575, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !88
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %predphi577, ptr %uglygep634, i32 8, <vscale x 2 x i1> %32), !dbg !89, !tbaa !15
+    %33 = fcmp fast olt <vscale x 2 x double> %predphi577, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !90
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %predphi578, ptr %uglygep635, i32 8, <vscale x 2 x i1> %33), !dbg !91, !tbaa !15
+    %34 = fcmp fast olt <vscale x 2 x double> %predphi578, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !92
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %predphi579, ptr %uglygep636, i32 8, <vscale x 2 x i1> %34), !dbg !93, !tbaa !15
+    %lsr.iv.next626 = add nuw nsw i64 %lsr.iv625, 64, !dbg !52
+    %35 = call i64 @llvm.loop.decrement.reg.i64(i64 %14, i64 1), !dbg !52
+    %36 = icmp ne i64 %35, 0, !dbg !52
+    br i1 %36, label %vector.body557, label %vector.body589.preheader, !dbg !52, !llvm.loop !94
+  
+  vector.body589.preheader:                         ; preds = %vector.body557
+    %37 = call i64 @llvm.start.loop.iterations.i64(i64 1250), !dbg !96
+    br label %vector.body589, !dbg !96
+  
+  vector.body589:                                   ; preds = %vector.body589.preheader, %vector.body589
+    %lsr.iv = phi i64 [ 0, %vector.body589.preheader ], [ %lsr.iv.next, %vector.body589 ], !dbg !97
+    %38 = phi i64 [ %37, %vector.body589.preheader ], [ %48, %vector.body589 ], !dbg !98
+    %uglygep = getelementptr i8, ptr @a, i64 %lsr.iv, !dbg !98
+    %wide.load591 = load <vscale x 2 x double>, ptr %uglygep, align 8, !dbg !98, !tbaa !15
+    %39 = fcmp fast olt <vscale x 2 x double> %wide.load591, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !99
+    %uglygep616 = getelementptr i8, ptr @b, i64 %lsr.iv, !dbg !20
+    %wide.load592 = load <vscale x 2 x double>, ptr %uglygep616, align 8, !dbg !20, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load592, ptr %uglygep, i32 8, <vscale x 2 x i1> %39), !dbg !100, !tbaa !15
+    %40 = fcmp fast olt <vscale x 2 x double> %wide.load592, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !101
+    %uglygep617 = getelementptr i8, ptr @c, i64 %lsr.iv, !dbg !102
+    %wide.load593 = load <vscale x 2 x double>, ptr %uglygep617, align 8, !dbg !102, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load593, ptr %uglygep616, i32 8, <vscale x 2 x i1> %40), !dbg !103, !tbaa !15
+    %41 = fcmp fast olt <vscale x 2 x double> %wide.load593, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !104
+    %uglygep618 = getelementptr i8, ptr @d, i64 %lsr.iv, !dbg !105
+    %wide.load596 = load <vscale x 2 x double>, ptr %uglygep618, align 8, !dbg !105, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load596, ptr %uglygep617, i32 8, <vscale x 2 x i1> %41), !dbg !106, !tbaa !15
+    %42 = fcmp fast olt <vscale x 2 x double> %wide.load596, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !107
+    %uglygep619 = getelementptr i8, ptr @e, i64 %lsr.iv, !dbg !108
+    %wide.load599 = load <vscale x 2 x double>, ptr %uglygep619, align 8, !dbg !108, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load599, ptr %uglygep618, i32 8, <vscale x 2 x i1> %42), !dbg !109, !tbaa !15
+    %43 = fcmp fast olt <vscale x 2 x double> %wide.load599, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !110
+    %uglygep620 = getelementptr i8, ptr @f, i64 %lsr.iv, !dbg !111
+    %wide.load602 = load <vscale x 2 x double>, ptr %uglygep620, align 8, !dbg !111, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load602, ptr %uglygep619, i32 8, <vscale x 2 x i1> %43), !dbg !112, !tbaa !15
+    %44 = fcmp fast olt <vscale x 2 x double> %wide.load602, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !113
+    %uglygep621 = getelementptr i8, ptr @g, i64 %lsr.iv, !dbg !114
+    %wide.load605 = load <vscale x 2 x double>, ptr %uglygep621, align 8, !dbg !114, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load605, ptr %uglygep620, i32 8, <vscale x 2 x i1> %44), !dbg !115, !tbaa !15
+    %45 = fcmp fast olt <vscale x 2 x double> %wide.load605, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !116
+    %uglygep622 = getelementptr i8, ptr @h, i64 %lsr.iv, !dbg !117
+    %wide.load608 = load <vscale x 2 x double>, ptr %uglygep622, align 8, !dbg !117, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load608, ptr %uglygep621, i32 8, <vscale x 2 x i1> %45), !dbg !118, !tbaa !15
+    %46 = fcmp fast olt <vscale x 2 x double> %wide.load608, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !119
+    %uglygep623 = getelementptr i8, ptr @i, i64 %lsr.iv, !dbg !120
+    %wide.load611 = load <vscale x 2 x double>, ptr %uglygep623, align 8, !dbg !120, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load611, ptr %uglygep622, i32 8, <vscale x 2 x i1> %46), !dbg !121, !tbaa !15
+    %47 = fcmp fast olt <vscale x 2 x double> %wide.load611, shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+02, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), !dbg !122
+    %uglygep624 = getelementptr i8, ptr @j, i64 %lsr.iv, !dbg !123
+    %wide.load614 = load <vscale x 2 x double>, ptr %uglygep624, align 8, !dbg !123, !tbaa !15
+    tail call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> %wide.load614, ptr %uglygep623, i32 8, <vscale x 2 x i1> %47), !dbg !124, !tbaa !15
+    %lsr.iv.next = add nuw nsw i64 %lsr.iv, 64, !dbg !97
+    %48 = call i64 @llvm.loop.decrement.reg.i64(i64 %38, i64 1), !dbg !97
+    %49 = icmp ne i64 %48, 0, !dbg !97
+    br i1 %49, label %vector.body589, label %for.cond.cleanup269, !dbg !97, !llvm.loop !125
+  
+  for.cond.cleanup269:                              ; preds = %vector.body589
+    ret void, !dbg !127
+  }
+  
+  ; Function Attrs: argmemonly nocallback nofree nosync nounwind willreturn writeonly
+  declare void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double>, ptr, i32 immarg, <vscale x 2 x i1>) #1
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i64 @llvm.start.loop.iterations.i64(i64) #2
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #2
+  
+  attributes #0 = { nofree norecurse nosync nounwind uwtable vscale_range(4,4) "approx-func-fp-math"="true" "frame-pointer"="non-leaf" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" }
+  attributes #1 = { argmemonly nocallback nofree nosync nounwind willreturn writeonly }
+  attributes #2 = { nocallback noduplicate nofree nosync nounwind willreturn }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3, !4, !5, !6, !7}
+  !llvm.ident = !{!8}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 15.0.4 ()", isOptimized: true, runtimeVersion: 0, emissionKind: NoDebug, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "b.c", directory: "/test")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !3 = !{i32 1, !"wchar_size", i32 4}
+  !4 = !{i32 7, !"PIC Level", i32 2}
+  !5 = !{i32 7, !"PIE Level", i32 2}
+  !6 = !{i32 7, !"uwtable", i32 2}
+  !7 = !{i32 7, !"frame-pointer", i32 1}
+  !8 = !{!"clang version 15.0.4 ()"}
+  !9 = distinct !DISubprogram(name: "xxx", scope: !1, file: !1, line: 13, type: !10, scopeLine: 13, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
+  !10 = !DISubroutineType(types: !11)
+  !11 = !{}
+  !12 = !DILocation(line: 14, column: 4, scope: !9)
+  !13 = !DILocation(line: 14, column: 28, scope: !9)
+  !14 = !DILocation(line: 15, column: 10, scope: !9)
+  !15 = !{!16, !16, i64 0}
+  !16 = !{!"double", !17, i64 0}
+  !17 = !{!"omnipotent char", !18, i64 0}
+  !18 = !{!"Simple C/C++ TBAA"}
+  !19 = !DILocation(line: 15, column: 14, scope: !9)
+  !20 = !DILocation(line: 0, scope: !9)
+  !21 = !DILocation(line: 15, column: 24, scope: !9)
+  !22 = !DILocation(line: 16, column: 14, scope: !9)
+  !23 = !DILocation(line: 17, column: 10, scope: !9)
+  !24 = !DILocation(line: 16, column: 24, scope: !9)
+  !25 = !DILocation(line: 17, column: 14, scope: !9)
+  !26 = !DILocation(line: 18, column: 10, scope: !9)
+  !27 = !DILocation(line: 17, column: 24, scope: !9)
+  !28 = !DILocation(line: 18, column: 14, scope: !9)
+  !29 = !DILocation(line: 19, column: 10, scope: !9)
+  !30 = !DILocation(line: 18, column: 24, scope: !9)
+  !31 = !DILocation(line: 19, column: 14, scope: !9)
+  !32 = !DILocation(line: 20, column: 10, scope: !9)
+  !33 = !DILocation(line: 19, column: 24, scope: !9)
+  !34 = !DILocation(line: 20, column: 14, scope: !9)
+  !35 = !DILocation(line: 21, column: 10, scope: !9)
+  !36 = !DILocation(line: 20, column: 24, scope: !9)
+  !37 = !DILocation(line: 21, column: 14, scope: !9)
+  !38 = !DILocation(line: 22, column: 10, scope: !9)
+  !39 = !DILocation(line: 21, column: 24, scope: !9)
+  !40 = !DILocation(line: 22, column: 14, scope: !9)
+  !41 = !DILocation(line: 23, column: 10, scope: !9)
+  !42 = !DILocation(line: 22, column: 24, scope: !9)
+  !43 = !DILocation(line: 23, column: 14, scope: !9)
+  !44 = !DILocation(line: 23, column: 25, scope: !9)
+  !45 = !DILocation(line: 23, column: 24, scope: !9)
+  !46 = distinct !{!46, !12, !47, !48, !49, !50}
+  !47 = !DILocation(line: 24, column: 3, scope: !9)
+  !48 = !{!"llvm.loop.mustprogress"}
+  !49 = !{!"llvm.loop.unroll.disable"}
+  !50 = !{!"llvm.loop.isvectorized", i32 1}
+  !51 = !DILocation(line: 25, column: 4, scope: !9)
+  !52 = !DILocation(line: 25, column: 28, scope: !9)
+  !53 = !DILocation(line: 26, column: 10, scope: !9)
+  !54 = !DILocation(line: 26, column: 14, scope: !9)
+  !55 = !DILocation(line: 26, column: 24, scope: !9)
+  !56 = !DILocation(line: 27, column: 14, scope: !9)
+  !57 = !DILocation(line: 27, column: 24, scope: !9)
+  !58 = !DILocation(line: 28, column: 14, scope: !9)
+  !59 = !DILocation(line: 28, column: 24, scope: !9)
+  !60 = !DILocation(line: 29, column: 14, scope: !9)
+  !61 = !DILocation(line: 29, column: 24, scope: !9)
+  !62 = !DILocation(line: 30, column: 14, scope: !9)
+  !63 = !DILocation(line: 30, column: 24, scope: !9)
+  !64 = !DILocation(line: 31, column: 14, scope: !9)
+  !65 = !DILocation(line: 31, column: 24, scope: !9)
+  !66 = !DILocation(line: 32, column: 14, scope: !9)
+  !67 = !DILocation(line: 32, column: 24, scope: !9)
+  !68 = !DILocation(line: 33, column: 14, scope: !9)
+  !69 = !DILocation(line: 33, column: 24, scope: !9)
+  !70 = !DILocation(line: 34, column: 14, scope: !9)
+  !71 = !DILocation(line: 34, column: 24, scope: !9)
+  !72 = !DILocation(line: 35, column: 14, scope: !9)
+  !73 = !DILocation(line: 35, column: 24, scope: !9)
+  !74 = !DILocation(line: 36, column: 14, scope: !9)
+  !75 = !DILocation(line: 36, column: 24, scope: !9)
+  !76 = !DILocation(line: 37, column: 14, scope: !9)
+  !77 = !DILocation(line: 37, column: 24, scope: !9)
+  !78 = !DILocation(line: 38, column: 14, scope: !9)
+  !79 = !DILocation(line: 38, column: 24, scope: !9)
+  !80 = !DILocation(line: 39, column: 14, scope: !9)
+  !81 = !DILocation(line: 39, column: 24, scope: !9)
+  !82 = !DILocation(line: 40, column: 14, scope: !9)
+  !83 = !DILocation(line: 40, column: 24, scope: !9)
+  !84 = !DILocation(line: 41, column: 14, scope: !9)
+  !85 = !DILocation(line: 41, column: 24, scope: !9)
+  !86 = !DILocation(line: 42, column: 14, scope: !9)
+  !87 = !DILocation(line: 42, column: 24, scope: !9)
+  !88 = !DILocation(line: 43, column: 14, scope: !9)
+  !89 = !DILocation(line: 43, column: 24, scope: !9)
+  !90 = !DILocation(line: 44, column: 14, scope: !9)
+  !91 = !DILocation(line: 44, column: 24, scope: !9)
+  !92 = !DILocation(line: 45, column: 14, scope: !9)
+  !93 = !DILocation(line: 45, column: 24, scope: !9)
+  !94 = distinct !{!94, !51, !95, !48, !49, !50}
+  !95 = !DILocation(line: 46, column: 4, scope: !9)
+  !96 = !DILocation(line: 47, column: 4, scope: !9)
+  !97 = !DILocation(line: 47, column: 28, scope: !9)
+  !98 = !DILocation(line: 48, column: 10, scope: !9)
+  !99 = !DILocation(line: 48, column: 14, scope: !9)
+  !100 = !DILocation(line: 48, column: 24, scope: !9)
+  !101 = !DILocation(line: 49, column: 14, scope: !9)
+  !102 = !DILocation(line: 50, column: 10, scope: !9)
+  !103 = !DILocation(line: 49, column: 24, scope: !9)
+  !104 = !DILocation(line: 50, column: 14, scope: !9)
+  !105 = !DILocation(line: 51, column: 10, scope: !9)
+  !106 = !DILocation(line: 50, column: 24, scope: !9)
+  !107 = !DILocation(line: 51, column: 14, scope: !9)
+  !108 = !DILocation(line: 52, column: 10, scope: !9)
+  !109 = !DILocation(line: 51, column: 24, scope: !9)
+  !110 = !DILocation(line: 52, column: 14, scope: !9)
+  !111 = !DILocation(line: 53, column: 10, scope: !9)
+  !112 = !DILocation(line: 52, column: 24, scope: !9)
+  !113 = !DILocation(line: 53, column: 14, scope: !9)
+  !114 = !DILocation(line: 54, column: 10, scope: !9)
+  !115 = !DILocation(line: 53, column: 24, scope: !9)
+  !116 = !DILocation(line: 54, column: 14, scope: !9)
+  !117 = !DILocation(line: 55, column: 10, scope: !9)
+  !118 = !DILocation(line: 54, column: 24, scope: !9)
+  !119 = !DILocation(line: 55, column: 14, scope: !9)
+  !120 = !DILocation(line: 56, column: 10, scope: !9)
+  !121 = !DILocation(line: 55, column: 24, scope: !9)
+  !122 = !DILocation(line: 56, column: 14, scope: !9)
+  !123 = !DILocation(line: 56, column: 25, scope: !9)
+  !124 = !DILocation(line: 56, column: 24, scope: !9)
+  !125 = distinct !{!125, !96, !126, !48, !49, !50}
+  !126 = !DILocation(line: 57, column: 3, scope: !9)
+  !127 = !DILocation(line: 58, column: 1, scope: !9)
+
+...
+---
+name:            xxx
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gpr64all, preferred-register: '' }
+  - { id: 1, class: gpr64common, preferred-register: '' }
+  - { id: 2, class: gpr64sp, preferred-register: '' }
+  - { id: 3, class: gpr64all, preferred-register: '' }
+  - { id: 4, class: gpr64all, preferred-register: '' }
+  - { id: 5, class: gpr64all, preferred-register: '' }
+  - { id: 6, class: gpr64common, preferred-register: '' }
+  - { id: 7, class: gpr64sp, preferred-register: '' }
+  - { id: 8, class: gpr64all, preferred-register: '' }
+  - { id: 9, class: gpr64all, preferred-register: '' }
+  - { id: 10, class: gpr64all, preferred-register: '' }
+  - { id: 11, class: gpr64common, preferred-register: '' }
+  - { id: 12, class: gpr64sp, preferred-register: '' }
+  - { id: 13, class: gpr64all, preferred-register: '' }
+  - { id: 14, class: gpr64all, preferred-register: '' }
+  - { id: 15, class: gpr64all, preferred-register: '' }
+  - { id: 16, class: gpr64all, preferred-register: '' }
+  - { id: 17, class: gpr32, preferred-register: '' }
+  - { id: 18, class: gpr64common, preferred-register: '' }
+  - { id: 19, class: gpr64common, preferred-register: '' }
+  - { id: 20, class: ppr_3b, preferred-register: '' }
+  - { id: 21, class: zpr, preferred-register: '' }
+  - { id: 22, class: gpr64common, preferred-register: '' }
+  - { id: 23, class: zpr, preferred-register: '' }
+  - { id: 24, class: ppr_3b, preferred-register: '' }
+  - { id: 25, class: ppr_3b, preferred-register: '' }
+  - { id: 26, class: gpr64common, preferred-register: '' }
+  - { id: 27, class: gpr64common, preferred-register: '' }
+  - { id: 28, class: zpr, preferred-register: '' }
+  - { id: 29, class: ppr_3b, preferred-register: '' }
+  - { id: 30, class: gpr64common, preferred-register: '' }
+  - { id: 31, class: gpr64common, preferred-register: '' }
+  - { id: 32, class: zpr, preferred-register: '' }
+  - { id: 33, class: ppr_3b, preferred-register: '' }
+  - { id: 34, class: gpr64common, preferred-register: '' }
+  - { id: 35, class: gpr64common, preferred-register: '' }
+  - { id: 36, class: zpr, preferred-register: '' }
+  - { id: 37, class: ppr_3b, preferred-register: '' }
+  - { id: 38, class: gpr64common, preferred-register: '' }
+  - { id: 39, class: gpr64common, preferred-register: '' }
+  - { id: 40, class: zpr, preferred-register: '' }
+  - { id: 41, class: ppr_3b, preferred-register: '' }
+  - { id: 42, class: gpr64common, preferred-register: '' }
+  - { id: 43, class: gpr64common, preferred-register: '' }
+  - { id: 44, class: zpr, preferred-register: '' }
+  - { id: 45, class: ppr_3b, preferred-register: '' }
+  - { id: 46, class: gpr64common, preferred-register: '' }
+  - { id: 47, class: gpr64common, preferred-register: '' }
+  - { id: 48, class: zpr, preferred-register: '' }
+  - { id: 49, class: ppr_3b, preferred-register: '' }
+  - { id: 50, class: gpr64common, preferred-register: '' }
+  - { id: 51, class: gpr64common, preferred-register: '' }
+  - { id: 52, class: zpr, preferred-register: '' }
+  - { id: 53, class: ppr_3b, preferred-register: '' }
+  - { id: 54, class: gpr64common, preferred-register: '' }
+  - { id: 55, class: gpr64common, preferred-register: '' }
+  - { id: 56, class: zpr, preferred-register: '' }
+  - { id: 57, class: ppr_3b, preferred-register: '' }
+  - { id: 58, class: gpr64common, preferred-register: '' }
+  - { id: 59, class: zpr, preferred-register: '' }
+  - { id: 60, class: gpr64sp, preferred-register: '' }
+  - { id: 61, class: gpr64, preferred-register: '' }
+  - { id: 62, class: gpr64all, preferred-register: '' }
+  - { id: 63, class: gpr64all, preferred-register: '' }
+  - { id: 64, class: gpr32, preferred-register: '' }
+  - { id: 65, class: gpr64common, preferred-register: '' }
+  - { id: 66, class: gpr64common, preferred-register: '' }
+  - { id: 67, class: ppr_3b, preferred-register: '' }
+  - { id: 68, class: zpr, preferred-register: '' }
+  - { id: 69, class: gpr64common, preferred-register: '' }
+  - { id: 70, class: zpr, preferred-register: '' }
+  - { id: 71, class: ppr_3b, preferred-register: '' }
+  - { id: 72, class: ppr_3b, preferred-register: '' }
+  - { id: 73, class: gpr64common, preferred-register: '' }
+  - { id: 74, class: gpr64common, preferred-register: '' }
+  - { id: 75, class: zpr, preferred-register: '' }
+  - { id: 76, class: zpr, preferred-register: '' }
+  - { id: 77, class: ppr_3b, preferred-register: '' }
+  - { id: 78, class: gpr64common, preferred-register: '' }
+  - { id: 79, class: gpr64common, preferred-register: '' }
+  - { id: 80, class: zpr, preferred-register: '' }
+  - { id: 81, class: zpr, preferred-register: '' }
+  - { id: 82, class: ppr_3b, preferred-register: '' }
+  - { id: 83, class: gpr64common, preferred-register: '' }
+  - { id: 84, class: gpr64common, preferred-register: '' }
+  - { id: 85, class: zpr, preferred-register: '' }
+  - { id: 86, class: zpr, preferred-register: '' }
+  - { id: 87, class: ppr_3b, preferred-register: '' }
+  - { id: 88, class: gpr64common, preferred-register: '' }
+  - { id: 89, class: gpr64common, preferred-register: '' }
+  - { id: 90, class: zpr, preferred-register: '' }
+  - { id: 91, class: zpr, preferred-register: '' }
+  - { id: 92, class: ppr_3b, preferred-register: '' }
+  - { id: 93, class: gpr64common, preferred-register: '' }
+  - { id: 94, class: gpr64common, preferred-register: '' }
+  - { id: 95, class: zpr, preferred-register: '' }
+  - { id: 96, class: zpr, preferred-register: '' }
+  - { id: 97, class: ppr_3b, preferred-register: '' }
+  - { id: 98, class: gpr64common, preferred-register: '' }
+  - { id: 99, class: gpr64common, preferred-register: '' }
+  - { id: 100, class: zpr, preferred-register: '' }
+  - { id: 101, class: zpr, preferred-register: '' }
+  - { id: 102, class: ppr_3b, preferred-register: '' }
+  - { id: 103, class: gpr64common, preferred-register: '' }
+  - { id: 104, class: gpr64common, preferred-register: '' }
+  - { id: 105, class: zpr, preferred-register: '' }
+  - { id: 106, class: zpr, preferred-register: '' }
+  - { id: 107, class: ppr_3b, preferred-register: '' }
+  - { id: 108, class: gpr64common, preferred-register: '' }
+  - { id: 109, class: gpr64common, preferred-register: '' }
+  - { id: 110, class: zpr, preferred-register: '' }
+  - { id: 111, class: zpr, preferred-register: '' }
+  - { id: 112, class: ppr_3b, preferred-register: '' }
+  - { id: 113, class: gpr64common, preferred-register: '' }
+  - { id: 114, class: gpr64common, preferred-register: '' }
+  - { id: 115, class: zpr, preferred-register: '' }
+  - { id: 116, class: zpr, preferred-register: '' }
+  - { id: 117, class: ppr_3b, preferred-register: '' }
+  - { id: 118, class: zpr, preferred-register: '' }
+  - { id: 119, class: ppr_3b, preferred-register: '' }
+  - { id: 120, class: zpr, preferred-register: '' }
+  - { id: 121, class: ppr_3b, preferred-register: '' }
+  - { id: 122, class: ppr_3b, preferred-register: '' }
+  - { id: 123, class: ppr_3b, preferred-register: '' }
+  - { id: 124, class: ppr_3b, preferred-register: '' }
+  - { id: 125, class: ppr_3b, preferred-register: '' }
+  - { id: 126, class: ppr_3b, preferred-register: '' }
+  - { id: 127, class: ppr_3b, preferred-register: '' }
+  - { id: 128, class: ppr_3b, preferred-register: '' }
+  - { id: 129, class: ppr_3b, preferred-register: '' }
+  - { id: 130, class: gpr64sp, preferred-register: '' }
+  - { id: 131, class: gpr64, preferred-register: '' }
+  - { id: 132, class: gpr64all, preferred-register: '' }
+  - { id: 133, class: gpr64all, preferred-register: '' }
+  - { id: 134, class: gpr32, preferred-register: '' }
+  - { id: 135, class: gpr64common, preferred-register: '' }
+  - { id: 136, class: gpr64common, preferred-register: '' }
+  - { id: 137, class: ppr_3b, preferred-register: '' }
+  - { id: 138, class: zpr, preferred-register: '' }
+  - { id: 139, class: gpr64common, preferred-register: '' }
+  - { id: 140, class: zpr, preferred-register: '' }
+  - { id: 141, class: ppr_3b, preferred-register: '' }
+  - { id: 142, class: ppr_3b, preferred-register: '' }
+  - { id: 143, class: gpr64common, preferred-register: '' }
+  - { id: 144, class: gpr64common, preferred-register: '' }
+  - { id: 145, class: zpr, preferred-register: '' }
+  - { id: 146, class: ppr_3b, preferred-register: '' }
+  - { id: 147, class: gpr64common, preferred-register: '' }
+  - { id: 148, class: gpr64common, preferred-register: '' }
+  - { id: 149, class: zpr, preferred-register: '' }
+  - { id: 150, class: ppr_3b, preferred-register: '' }
+  - { id: 151, class: gpr64common, preferred-register: '' }
+  - { id: 152, class: gpr64common, preferred-register: '' }
+  - { id: 153, class: zpr, preferred-register: '' }
+  - { id: 154, class: ppr_3b, preferred-register: '' }
+  - { id: 155, class: gpr64common, preferred-register: '' }
+  - { id: 156, class: gpr64common, preferred-register: '' }
+  - { id: 157, class: zpr, preferred-register: '' }
+  - { id: 158, class: ppr_3b, preferred-register: '' }
+  - { id: 159, class: gpr64common, preferred-register: '' }
+  - { id: 160, class: gpr64common, preferred-register: '' }
+  - { id: 161, class: zpr, preferred-register: '' }
+  - { id: 162, class: ppr_3b, preferred-register: '' }
+  - { id: 163, class: gpr64common, preferred-register: '' }
+  - { id: 164, class: gpr64common, preferred-register: '' }
+  - { id: 165, class: zpr, preferred-register: '' }
+  - { id: 166, class: ppr_3b, preferred-register: '' }
+  - { id: 167, class: gpr64common, preferred-register: '' }
+  - { id: 168, class: gpr64common, preferred-register: '' }
+  - { id: 169, class: zpr, preferred-register: '' }
+  - { id: 170, class: ppr_3b, preferred-register: '' }
+  - { id: 171, class: gpr64common, preferred-register: '' }
+  - { id: 172, class: gpr64common, preferred-register: '' }
+  - { id: 173, class: zpr, preferred-register: '' }
+  - { id: 174, class: ppr_3b, preferred-register: '' }
+  - { id: 175, class: gpr64common, preferred-register: '' }
+  - { id: 176, class: zpr, preferred-register: '' }
+  - { id: 177, class: gpr64sp, preferred-register: '' }
+  - { id: 178, class: gpr64, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+  
+    %16:gpr64all = COPY $xzr
+    %15:gpr64all = COPY %16
+    %17:gpr32 = MOVi32imm 1250
+    %0:gpr64all = SUBREG_TO_REG 0, killed %17, %subreg.sub_32
+    %18:gpr64common = MOVaddr target-flags(aarch64-page) @a, target-flags(aarch64-pageoff, aarch64-nc) @a
+    %20:ppr_3b = PTRUE_B 31
+    %22:gpr64common = MOVi64imm 4636737291354636288
+    %23:zpr = DUP_ZR_D %22
+    %24:ppr_3b = PTRUE_D 31
+    %26:gpr64common = MOVaddr target-flags(aarch64-page) @b, target-flags(aarch64-pageoff, aarch64-nc) @b
+    %30:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    %34:gpr64common = MOVaddr target-flags(aarch64-page) @d, target-flags(aarch64-pageoff, aarch64-nc) @d
+    %38:gpr64common = MOVaddr target-flags(aarch64-page) @e, target-flags(aarch64-pageoff, aarch64-nc) @e
+    %42:gpr64common = MOVaddr target-flags(aarch64-page) @f, target-flags(aarch64-pageoff, aarch64-nc) @f
+    %46:gpr64common = MOVaddr target-flags(aarch64-page) @g, target-flags(aarch64-pageoff, aarch64-nc) @g
+    %50:gpr64common = MOVaddr target-flags(aarch64-page) @h, target-flags(aarch64-pageoff, aarch64-nc) @h
+    %54:gpr64common = MOVaddr target-flags(aarch64-page) @i, target-flags(aarch64-pageoff, aarch64-nc) @i
+    %58:gpr64common = MOVaddr target-flags(aarch64-page) @j, target-flags(aarch64-pageoff, aarch64-nc) @j
+  
+  bb.1.vector.body:
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  
+    %1:gpr64common = PHI %15, %bb.0, %3, %bb.1, debug-location !13
+    %2:gpr64sp = PHI %0, %bb.0, %4, %bb.1, debug-location !14
+    %19:gpr64common = ADDXrr %18, %1, debug-location !14
+    %21:zpr = LD1B %20, %18, %1, debug-location !14 :: (load unknown-size from %ir.uglygep639, align 8, !tbaa !15)
+    %25:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %23, killed %21, debug-location !19
+    %27:gpr64common = ADDXrr %26, %1, debug-location !20
+    %28:zpr = LD1B %20, %26, %1, debug-location !20 :: (load unknown-size from %ir.uglygep640, align 8, !tbaa !15)
+    ST1D_IMM %28, killed %25, killed %19, 0, debug-location !21 :: (store unknown-size into %ir.uglygep639, align 8, !tbaa !15)
+    %29:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %23, %28, debug-location !22
+    %31:gpr64common = ADDXrr %30, %1, debug-location !23
+    %32:zpr = LD1B %20, %30, %1, debug-location !23 :: (load unknown-size from %ir.uglygep641, align 8, !tbaa !15)
+    ST1D_IMM %32, killed %29, killed %27, 0, debug-location !24 :: (store unknown-size into %ir.uglygep640, align 8, !tbaa !15)
+    %33:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %23, %32, debug-location !25
+    %35:gpr64common = ADDXrr %34, %1, debug-location !26
+    %36:zpr = LD1B %20, %34, %1, debug-location !26 :: (load unknown-size from %ir.uglygep642, align 8, !tbaa !15)
+    ST1D_IMM %36, killed %33, killed %31, 0, debug-location !27 :: (store unknown-size into %ir.uglygep641, align 8, !tbaa !15)
+    %37:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %23, %36, debug-location !28
+    %39:gpr64common = ADDXrr %38, %1, debug-location !29
+    %40:zpr = LD1B %20, %38, %1, debug-location !29 :: (load unknown-size from %ir.uglygep643, align 8, !tbaa !15)
+    ST1D_IMM %40, killed %37, killed %35, 0, debug-location !30 :: (store unknown-size into %ir.uglygep642, align 8, !tbaa !15)
+    %41:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %23, %40, debug-location !31
+    %43:gpr64common = ADDXrr %42, %1, debug-location !32
+    %44:zpr = LD1B %20, %42, %1, debug-location !32 :: (load unknown-size from %ir.uglygep644, align 8, !tbaa !15)
+    ST1D_IMM %44, killed %41, killed %39, 0, debug-location !33 :: (store unknown-size into %ir.uglygep643, align 8, !tbaa !15)
+    %45:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %23, %44, debug-location !34
+    %47:gpr64common = ADDXrr %46, %1, debug-location !35
+    %48:zpr = LD1B %20, %46, %1, debug-location !35 :: (load unknown-size from %ir.uglygep645, align 8, !tbaa !15)
+    ST1D_IMM %48, killed %45, killed %43, 0, debug-location !36 :: (store unknown-size into %ir.uglygep644, align 8, !tbaa !15)
+    %49:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %23, %48, debug-location !37
+    %51:gpr64common = ADDXrr %50, %1, debug-location !38
+    %52:zpr = LD1B %20, %50, %1, debug-location !38 :: (load unknown-size from %ir.uglygep646, align 8, !tbaa !15)
+    ST1D_IMM %52, killed %49, killed %47, 0, debug-location !39 :: (store unknown-size into %ir.uglygep645, align 8, !tbaa !15)
+    %53:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %23, %52, debug-location !40
+    %55:gpr64common = ADDXrr %54, %1, debug-location !41
+    %56:zpr = LD1B %20, %54, %1, debug-location !41 :: (load unknown-size from %ir.uglygep647, align 8, !tbaa !15)
+    ST1D_IMM %56, killed %53, killed %51, 0, debug-location !42 :: (store unknown-size into %ir.uglygep646, align 8, !tbaa !15)
+    %57:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %23, %56, debug-location !43
+    %59:zpr = LD1B %20, %58, %1, debug-location !44 :: (load unknown-size from %ir.uglygep648, align 8, !tbaa !15)
+    ST1D_IMM killed %59, killed %57, killed %55, 0, debug-location !45 :: (store unknown-size into %ir.uglygep647, align 8, !tbaa !15)
+    %60:gpr64sp = nuw nsw ADDXri %1, 64, 0, debug-location !13
+    %3:gpr64all = COPY %60, debug-location !13
+    %61:gpr64 = SUBSXri %2, 1, 0, implicit-def $nzcv, debug-location !13
+    %4:gpr64all = COPY %61, debug-location !13
+    Bcc 1, %bb.1, implicit $nzcv, debug-location !13
+    B %bb.2, debug-location !13
+  
+  bb.2.vector.body557.preheader:
+    successors: %bb.3(0x80000000)
+  
+    %63:gpr64all = COPY $xzr
+    %62:gpr64all = COPY %63
+    %64:gpr32 = MOVi32imm 1250
+    %5:gpr64all = SUBREG_TO_REG 0, killed %64, %subreg.sub_32
+    %69:gpr64common = MOVi64imm 4636737291354636288
+    %70:zpr = DUP_ZR_D %69
+  
+  bb.3.vector.body557:
+    successors: %bb.3(0x7c000000), %bb.4(0x04000000)
+  
+    %6:gpr64common = PHI %62, %bb.2, %8, %bb.3, debug-location !52
+    %7:gpr64sp = PHI %5, %bb.2, %9, %bb.3, debug-location !53
+    %66:gpr64common = ADDXrr %18, %6, debug-location !53
+    %68:zpr = LD1B %20, %18, %6, debug-location !53 :: (load unknown-size from %ir.uglygep627, align 8, !tbaa !15)
+    %72:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %68, debug-location !54
+    %74:gpr64common = ADDXrr %26, %6, debug-location !20
+    %75:zpr = LD1B %20, %26, %6, debug-location !20 :: (load unknown-size from %ir.uglygep628, align 8, !tbaa !15)
+    ST1D_IMM %75, %72, %66, 0, debug-location !55 :: (store unknown-size into %ir.uglygep627, align 8, !tbaa !15)
+    %76:zpr = SEL_ZPZZ_D %72, %75, %68
+    %77:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %75, debug-location !56
+    %79:gpr64common = ADDXrr %30, %6, debug-location !20
+    %80:zpr = LD1B %20, %30, %6, debug-location !20 :: (load unknown-size from %ir.uglygep629, align 8, !tbaa !15)
+    ST1D_IMM %80, %77, %74, 0, debug-location !57 :: (store unknown-size into %ir.uglygep628, align 8, !tbaa !15)
+    %81:zpr = SEL_ZPZZ_D %77, %80, %75
+    %82:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %80, debug-location !58
+    %84:gpr64common = ADDXrr %34, %6, debug-location !20
+    %85:zpr = LD1B %20, %34, %6, debug-location !20 :: (load unknown-size from %ir.uglygep630, align 8, !tbaa !15)
+    ST1D_IMM %85, %82, %79, 0, debug-location !59 :: (store unknown-size into %ir.uglygep629, align 8, !tbaa !15)
+    %86:zpr = SEL_ZPZZ_D %82, %85, %80
+    %87:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %85, debug-location !60
+    %89:gpr64common = ADDXrr %38, %6, debug-location !20
+    %90:zpr = LD1B %20, %38, %6, debug-location !20 :: (load unknown-size from %ir.uglygep631, align 8, !tbaa !15)
+    ST1D_IMM %90, %87, %84, 0, debug-location !61 :: (store unknown-size into %ir.uglygep630, align 8, !tbaa !15)
+    %91:zpr = SEL_ZPZZ_D %87, %90, %85
+    %92:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %90, debug-location !62
+    %94:gpr64common = ADDXrr %42, %6, debug-location !20
+    %95:zpr = LD1B %20, %42, %6, debug-location !20 :: (load unknown-size from %ir.uglygep632, align 8, !tbaa !15)
+    ST1D_IMM %95, %92, %89, 0, debug-location !63 :: (store unknown-size into %ir.uglygep631, align 8, !tbaa !15)
+    %96:zpr = SEL_ZPZZ_D %92, %95, %90
+    %97:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %95, debug-location !64
+    %99:gpr64common = ADDXrr %46, %6, debug-location !20
+    %100:zpr = LD1B %20, %46, %6, debug-location !20 :: (load unknown-size from %ir.uglygep633, align 8, !tbaa !15)
+    ST1D_IMM %100, %97, %94, 0, debug-location !65 :: (store unknown-size into %ir.uglygep632, align 8, !tbaa !15)
+    %101:zpr = SEL_ZPZZ_D %97, %100, %95
+    %102:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %100, debug-location !66
+    %104:gpr64common = ADDXrr %50, %6, debug-location !20
+    %105:zpr = LD1B %20, %50, %6, debug-location !20 :: (load unknown-size from %ir.uglygep634, align 8, !tbaa !15)
+    ST1D_IMM %105, %102, %99, 0, debug-location !67 :: (store unknown-size into %ir.uglygep633, align 8, !tbaa !15)
+    %106:zpr = SEL_ZPZZ_D %102, %105, %100
+    %107:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %105, debug-location !68
+    %109:gpr64common = ADDXrr %54, %6, debug-location !20
+    %110:zpr = LD1B %20, %54, %6, debug-location !20 :: (load unknown-size from %ir.uglygep635, align 8, !tbaa !15)
+    ST1D_IMM %110, %107, %104, 0, debug-location !69 :: (store unknown-size into %ir.uglygep634, align 8, !tbaa !15)
+    %111:zpr = SEL_ZPZZ_D %107, %110, %105
+    %112:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %110, debug-location !70
+    %114:gpr64common = ADDXrr %58, %6, debug-location !20
+    %115:zpr = LD1B %20, %58, %6, debug-location !20 :: (load unknown-size from %ir.uglygep636, align 8, !tbaa !15)
+    ST1D_IMM %115, %112, %109, 0, debug-location !71 :: (store unknown-size into %ir.uglygep635, align 8, !tbaa !15)
+    %116:zpr = SEL_ZPZZ_D %112, %115, %110
+    %117:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %115, debug-location !72
+    ST1D_IMM %76, %117, %114, 0, debug-location !73 :: (store unknown-size into %ir.uglygep636, align 8, !tbaa !15)
+    %118:zpr = SEL_ZPZZ_D %117, %76, %115
+    %119:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %76, debug-location !74
+    ST1D_IMM %81, %119, %66, 0, debug-location !75 :: (store unknown-size into %ir.uglygep627, align 8, !tbaa !15)
+    %120:zpr = SEL_ZPZZ_D %119, %81, %76
+    %121:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %81, debug-location !76
+    ST1D_IMM %86, killed %121, %74, 0, debug-location !77 :: (store unknown-size into %ir.uglygep628, align 8, !tbaa !15)
+    %122:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %86, debug-location !78
+    ST1D_IMM %91, killed %122, %79, 0, debug-location !79 :: (store unknown-size into %ir.uglygep629, align 8, !tbaa !15)
+    %123:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %91, debug-location !80
+    ST1D_IMM %96, killed %123, %84, 0, debug-location !81 :: (store unknown-size into %ir.uglygep630, align 8, !tbaa !15)
+    %124:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %96, debug-location !82
+    ST1D_IMM %101, killed %124, %89, 0, debug-location !83 :: (store unknown-size into %ir.uglygep631, align 8, !tbaa !15)
+    %125:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %101, debug-location !84
+    ST1D_IMM %106, killed %125, %94, 0, debug-location !85 :: (store unknown-size into %ir.uglygep632, align 8, !tbaa !15)
+    %126:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %106, debug-location !86
+    ST1D_IMM %111, killed %126, %99, 0, debug-location !87 :: (store unknown-size into %ir.uglygep633, align 8, !tbaa !15)
+    %127:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %111, debug-location !88
+    ST1D_IMM %116, killed %127, %104, 0, debug-location !89 :: (store unknown-size into %ir.uglygep634, align 8, !tbaa !15)
+    %128:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %116, debug-location !90
+    ST1D_IMM %118, killed %128, %109, 0, debug-location !91 :: (store unknown-size into %ir.uglygep635, align 8, !tbaa !15)
+    %129:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %70, %118, debug-location !92
+    ST1D_IMM killed %120, killed %129, %114, 0, debug-location !93 :: (store unknown-size into %ir.uglygep636, align 8, !tbaa !15)
+    %130:gpr64sp = nuw nsw ADDXri %6, 64, 0, debug-location !52
+    %8:gpr64all = COPY %130, debug-location !52
+    %131:gpr64 = SUBSXri %7, 1, 0, implicit-def $nzcv, debug-location !52
+    %9:gpr64all = COPY %131, debug-location !52
+    Bcc 1, %bb.3, implicit $nzcv, debug-location !52
+    B %bb.4, debug-location !52
+  
+  bb.4.vector.body589.preheader:
+    successors: %bb.5(0x80000000)
+  
+    %133:gpr64all = COPY $xzr
+    %132:gpr64all = COPY %133
+    %134:gpr32 = MOVi32imm 1250
+    %10:gpr64all = SUBREG_TO_REG 0, killed %134, %subreg.sub_32
+    %139:gpr64common = MOVi64imm 4636737291354636288
+    %140:zpr = DUP_ZR_D %139
+  
+  bb.5.vector.body589:
+    successors: %bb.5(0x7c000000), %bb.6(0x04000000)
+  
+    %11:gpr64common = PHI %132, %bb.4, %13, %bb.5, debug-location !97
+    %12:gpr64sp = PHI %10, %bb.4, %14, %bb.5, debug-location !98
+    %136:gpr64common = ADDXrr %18, %11, debug-location !98
+    %138:zpr = LD1B %20, %18, %11, debug-location !98 :: (load unknown-size from %ir.uglygep, align 8, !tbaa !15)
+    %142:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %140, killed %138, debug-location !99
+    %144:gpr64common = ADDXrr %26, %11, debug-location !20
+    %145:zpr = LD1B %20, %26, %11, debug-location !20 :: (load unknown-size from %ir.uglygep616, align 8, !tbaa !15)
+    ST1D_IMM %145, killed %142, killed %136, 0, debug-location !100 :: (store unknown-size into %ir.uglygep, align 8, !tbaa !15)
+    %146:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %140, %145, debug-location !101
+    %148:gpr64common = ADDXrr %30, %11, debug-location !102
+    %149:zpr = LD1B %20, %30, %11, debug-location !102 :: (load unknown-size from %ir.uglygep617, align 8, !tbaa !15)
+    ST1D_IMM %149, killed %146, killed %144, 0, debug-location !103 :: (store unknown-size into %ir.uglygep616, align 8, !tbaa !15)
+    %150:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %140, %149, debug-location !104
+    %152:gpr64common = ADDXrr %34, %11, debug-location !105
+    %153:zpr = LD1B %20, %34, %11, debug-location !105 :: (load unknown-size from %ir.uglygep618, align 8, !tbaa !15)
+    ST1D_IMM %153, killed %150, killed %148, 0, debug-location !106 :: (store unknown-size into %ir.uglygep617, align 8, !tbaa !15)
+    %154:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %140, %153, debug-location !107
+    %156:gpr64common = ADDXrr %38, %11, debug-location !108
+    %157:zpr = LD1B %20, %38, %11, debug-location !108 :: (load unknown-size from %ir.uglygep619, align 8, !tbaa !15)
+    ST1D_IMM %157, killed %154, killed %152, 0, debug-location !109 :: (store unknown-size into %ir.uglygep618, align 8, !tbaa !15)
+    %158:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %140, %157, debug-location !110
+    %160:gpr64common = ADDXrr %42, %11, debug-location !111
+    %161:zpr = LD1B %20, %42, %11, debug-location !111 :: (load unknown-size from %ir.uglygep620, align 8, !tbaa !15)
+    ST1D_IMM %161, killed %158, killed %156, 0, debug-location !112 :: (store unknown-size into %ir.uglygep619, align 8, !tbaa !15)
+    %162:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %140, %161, debug-location !113
+    %164:gpr64common = ADDXrr %46, %11, debug-location !114
+    %165:zpr = LD1B %20, %46, %11, debug-location !114 :: (load unknown-size from %ir.uglygep621, align 8, !tbaa !15)
+    ST1D_IMM %165, killed %162, killed %160, 0, debug-location !115 :: (store unknown-size into %ir.uglygep620, align 8, !tbaa !15)
+    %166:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %140, %165, debug-location !116
+    %168:gpr64common = ADDXrr %50, %11, debug-location !117
+    %169:zpr = LD1B %20, %50, %11, debug-location !117 :: (load unknown-size from %ir.uglygep622, align 8, !tbaa !15)
+    ST1D_IMM %169, killed %166, killed %164, 0, debug-location !118 :: (store unknown-size into %ir.uglygep621, align 8, !tbaa !15)
+    %170:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %140, %169, debug-location !119
+    %172:gpr64common = ADDXrr %54, %11, debug-location !120
+    %173:zpr = LD1B %20, %54, %11, debug-location !120 :: (load unknown-size from %ir.uglygep623, align 8, !tbaa !15)
+    ST1D_IMM %173, killed %170, killed %168, 0, debug-location !121 :: (store unknown-size into %ir.uglygep622, align 8, !tbaa !15)
+    %174:ppr_3b = nnan ninf nsz arcp contract afn reassoc FCMGT_PPzZZ_D %24, %140, %173, debug-location !122
+    %176:zpr = LD1B %20, %58, %11, debug-location !123 :: (load unknown-size from %ir.uglygep624, align 8, !tbaa !15)
+    ST1D_IMM killed %176, killed %174, killed %172, 0, debug-location !124 :: (store unknown-size into %ir.uglygep623, align 8, !tbaa !15)
+    %177:gpr64sp = nuw nsw ADDXri %11, 64, 0, debug-location !97
+    %13:gpr64all = COPY %177, debug-location !97
+    %178:gpr64 = SUBSXri %12, 1, 0, implicit-def $nzcv, debug-location !97
+    %14:gpr64all = COPY %178, debug-location !97
+    Bcc 1, %bb.5, implicit $nzcv, debug-location !97
+    B %bb.6, debug-location !97
+  
+  bb.6.for.cond.cleanup269:
+    RET_ReallyLR debug-location !127
+
+...
