@@ -70,11 +70,11 @@ static void createVRegListEpi(MachineInstr *mi, unsigned num_mi,
     // 当該オペランドが"定義"か
     if (mo.isDef()) {
       if (ri != nullptr) {
-        // 同じ仮想レジスタの定義は、複数存在しないことが前提
-        assert(ri->num_def == -1);
-
-        // 当該仮想レジスタは登録済みなのでMI通し番号を更新
-        ri->updateNumDef(num_mi);
+        if( ri->num_def == -1 ||
+            ri->num_use == -1 ) {
+          // 当該仮想レジスタは登録済みなのでMI通し番号を更新
+          ri->updateNumDef(num_mi);
+        }
       } else {
         // 当該仮想レジスタは登録されていないため新規登録
         ekri_tbl.addExcKernelRegInfo(reg, num_mi, -1);
