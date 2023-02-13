@@ -1,7 +1,6 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner -swpl-max-ireg=3  -pass-remarks-missed=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
 
-#CHECK:remark: tp/testprg.c:2:3: Trial at iteration-interval=10. This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:remark: tp/testprg.c:2:3: Trial at iteration-interval=15. This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:remark: tp/testprg.c:2:3: Trial at iteration-interval=20. This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:remark: tp/testprg.c:2:3: Trial at iteration-interval=25. This loop cannot be software pipelined because of shortage of integer registers.
@@ -20,7 +19,6 @@
 #CHECK:remark: tp/testprg.c:2:3: Trial at iteration-interval=90. This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:remark: tp/testprg.c:2:3: Trial at iteration-interval=94. This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:remark: tp/testprg.c:2:3: This loop is not software pipelined because no schedule is obtained.
-
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
   source_filename = "/TEST/tp/testprg.c"

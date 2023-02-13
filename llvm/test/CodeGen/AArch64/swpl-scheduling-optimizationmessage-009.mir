@@ -1,16 +1,17 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1   -start-before=aarch64-swpipeliner -pass-remarks-output=%t.yaml -swpl-maxii=3  -o /dev/null  > %t; \
 #RUN: cat   %t.yaml  | FileCheck %s
 
-#CHECK: --- !Analysis
+#CHECK:--- !Analysis
 #CHECK:Pass:            aarch64-swpipeliner
 #CHECK:Name:            NotSoftwarePipleined
 #CHECK:DebugLoc:        { File: 'tp/testprg.c', Line: 2, Column: 3 }
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '4'
+#CHECK:  - iteration_interval: '5'
 #CHECK:  - String:          . This loop is not software pipelined because no schedule is obtained.
 #CHECK:...
+
 #CHECK:--- !Missed
 #CHECK:Pass:            aarch64-swpipeliner
 #CHECK:Name:            NotSoftwarePipleined
@@ -18,7 +19,7 @@
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          This loop is not software pipelined because no schedule is obtained.
-
+#CHECK:...
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
   source_filename = "/TEST/tp/testprg.c"

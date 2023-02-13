@@ -1,7 +1,10 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-minii=4   -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-ii-by-Bsearch=true -swpl-minii=4 -swpl-maxii=7  -o /dev/null 2>&1 | FileCheck %s
 
 
-#CHECK:        :  (x) Run out of budget      at binary search.       : (II: 5 in [ 4,6]) MVE: 0 Last inst: 3. (Itr Org: 99, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+#CHECK:        : (Iterative Modulo Scheduling. ResMII 6. NumOfBodyInsts 23. Budget 115. Minimum II = 6.)
+#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 4 in [ 4,7]) MVE: 0 Last inst: 7. (Itr Org: 99, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 6 in [ 4,7]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 2) (VReg Fp: 0/32, Int: 14/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Run out of budget      at binary search.       : (II: 5 in [ 4,6]) MVE: 0 Last inst: 6. (Itr Org: 99, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
 #CHECK:        : Required iteration count in MIR input is        :   2 (= kernel:1 + pro/epilogue:1 + mod:0) 
 #CHECK:        : Original iteration count in MIR is found        :   99
 #CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 1, 98, 0)
@@ -10,6 +13,7 @@
 #CHECK:        :      IPC (initial=5.25, real=3.50, rate=66.67%)
 #CHECK:        :      = Instructions(21)/II(6)
 #CHECK:        :      Virtual inst:(2)
+#CHECK:        :
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
   source_filename = "/TEST/tp/testprg.c"

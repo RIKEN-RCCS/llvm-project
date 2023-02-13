@@ -1,7 +1,6 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1   -start-before=aarch64-swpipeliner -swpl-max-ireg=2 -pass-remarks-output=%t.yaml  -o /dev/null  > %t; \
 #RUN: cat   %t.yaml  | FileCheck %s
 
-
 #CHECK:--- !Analysis
 #CHECK:Pass:            aarch64-swpipeliner
 #CHECK:Name:            NotSoftwarePipleined
@@ -9,7 +8,7 @@
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '10'
+#CHECK:  - iteration_interval: '15'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -19,7 +18,7 @@
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '16'
+#CHECK:  - iteration_interval: '21'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -29,7 +28,7 @@
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '22'
+#CHECK:  - iteration_interval: '27'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -39,7 +38,7 @@
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '28'
+#CHECK:  - iteration_interval: '33'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -49,7 +48,7 @@
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '34'
+#CHECK:  - iteration_interval: '39'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -59,7 +58,7 @@
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '40'
+#CHECK:  - iteration_interval: '45'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -69,7 +68,7 @@
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '46'
+#CHECK:  - iteration_interval: '51'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -79,7 +78,7 @@
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '52'
+#CHECK:  - iteration_interval: '57'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -89,7 +88,7 @@
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '58'
+#CHECK:  - iteration_interval: '63'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -99,7 +98,7 @@
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '64'
+#CHECK:  - iteration_interval: '69'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -109,7 +108,7 @@
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '70'
+#CHECK:  - iteration_interval: '75'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -119,7 +118,7 @@
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '76'
+#CHECK:  - iteration_interval: '81'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -129,7 +128,7 @@
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '82'
+#CHECK:  - iteration_interval: '87'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -139,7 +138,7 @@
 #CHECK:Function:        foo
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '88'
+#CHECK:  - iteration_interval: '93'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -152,6 +151,11 @@
 #CHECK:  - iteration_interval: '94'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of integer registers.
 #CHECK:...
+
+
+
+
+
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'

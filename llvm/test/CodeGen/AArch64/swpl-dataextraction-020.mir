@@ -1,107 +1,137 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -start-before=aarch64-swpipeliner -swpl-debug-ddg -o /dev/null 2>&1 | FileCheck %s
-#CHECK:from: %21:gpr64common = COPY %29:gpr64all
-#CHECK:to  : %23:gpr64 = LDRXroX %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:1 delay:1
+#RUN: llc %s -mcpu=a64fx -ffj-swp -start-before=aarch64-swpipeliner  -swpl-debug-ddg -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:from: %23:gpr64 = LDRXroX %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:to  : %24:fpr64 = COPY %23:gpr64
-#CHECK:distance:0 delay:5
+#CHECK:DBG(SwplDdg::print) SwplDdg. 
+#CHECK-NEXT:### SwplDdg: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %21:gpr64common = COPY %29:gpr64all
+#CHECK-NEXT:### to  : %23:gpr64 = LDRXroX %11:gpr64common, %21:gpr64common, 0, 0 :: (load (s64) from %ir.uglygep46, !tbaa !1)
+#CHECK-NEXT:### distance:1 delay:1
 
-#CHECK:from: %21:gpr64common = COPY %29:gpr64all
-#CHECK:to  : %25:fpr64 = LDRDroX %14:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:1 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %23:gpr64 = LDRXroX %11:gpr64common, %21:gpr64common, 0, 0 :: (load (s64) from %ir.uglygep46, !tbaa !1)
+#CHECK-NEXT:### to  : %24:fpr64 = COPY %23:gpr64
+#CHECK-NEXT:### distance:0 delay:5
 
-#CHECK:from: %25:fpr64 = LDRDroX %14:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:to  : %26:fpr64 = FMULDrr killed %25:fpr64, killed %24:fpr64
-#CHECK:distance:0 delay:8
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %21:gpr64common = COPY %29:gpr64all
+#CHECK-NEXT:### to  : %25:fpr64 = LDRDroX %14:gpr64common, %21:gpr64common, 0, 0 :: (load (s64) from %ir.uglygep1, !tbaa !1)
+#CHECK-NEXT:### distance:1 delay:1
 
-#CHECK:from: %24:fpr64 = COPY %23:gpr64
-#CHECK:to  : %26:fpr64 = FMULDrr killed %25:fpr64, killed %24:fpr64
-#CHECK:distance:0 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %25:fpr64 = LDRDroX %14:gpr64common, %21:gpr64common, 0, 0 :: (load (s64) from %ir.uglygep1, !tbaa !1)
+#CHECK-NEXT:### to  : %26:fpr64 = FMULDrr killed %25:fpr64, killed %24:fpr64
+#CHECK-NEXT:### distance:0 delay:8
 
-#CHECK:from: %26:fpr64 = FMULDrr killed %25:fpr64, killed %24:fpr64
-#CHECK:to  : %27:fpr64 = COPY %26:fpr64
-#CHECK:distance:0 delay:9
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %24:fpr64 = COPY %23:gpr64
+#CHECK-NEXT:### to  : %26:fpr64 = FMULDrr killed %25:fpr64, killed %24:fpr64
+#CHECK-NEXT:### distance:0 delay:4
 
-#CHECK:from: %26:fpr64 = FMULDrr killed %25:fpr64, killed %24:fpr64
-#CHECK:to  : STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:0 delay:9
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %26:fpr64 = FMULDrr killed %25:fpr64, killed %24:fpr64
+#CHECK-NEXT:### to  : %27:fpr64 = COPY %26:fpr64
+#CHECK-NEXT:### distance:0 delay:9
 
-#CHECK:from: %21:gpr64common = COPY %29:gpr64all
-#CHECK:to  : STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:1 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %26:fpr64 = FMULDrr killed %25:fpr64, killed %24:fpr64
+#CHECK-NEXT:### to  : STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### distance:0 delay:9
 
-#CHECK:from: %27:fpr64 = COPY %26:fpr64
-#CHECK:to  : STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:0 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %21:gpr64common = COPY %29:gpr64all
+#CHECK-NEXT:### to  : STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### distance:1 delay:1
 
-#CHECK:from: %21:gpr64common = COPY %29:gpr64all
-#CHECK:to  : STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:1 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %27:fpr64 = COPY %26:fpr64
+#CHECK-NEXT:### to  : STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### distance:0 delay:4
 
-#CHECK:from: %21:gpr64common = COPY %29:gpr64all
-#CHECK:to  : %28:gpr64sp = nuw nsw ADDXri %21:gpr64common, 8, 0
-#CHECK:distance:1 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %21:gpr64common = COPY %29:gpr64all
+#CHECK-NEXT:### to  : STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### distance:1 delay:1
 
-#CHECK:from: %28:gpr64sp = nuw nsw ADDXri %21:gpr64common, 8, 0
-#CHECK:to  : %29:gpr64all = COPY %28:gpr64sp
-#CHECK:distance:0 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %21:gpr64common = COPY %29:gpr64all
+#CHECK-NEXT:### to  : %28:gpr64sp = nuw nsw ADDXri %21:gpr64common, 8, 0
+#CHECK-NEXT:### distance:1 delay:1
 
-#CHECK:from: %22:gpr64sp = COPY %31:gpr64all
-#CHECK:to  : %30:gpr64 = SUBSXri %22:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK:distance:1 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %28:gpr64sp = nuw nsw ADDXri %21:gpr64common, 8, 0
+#CHECK-NEXT:### to  : %29:gpr64all = COPY %28:gpr64sp
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %30:gpr64 = SUBSXri %22:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK:to  : %31:gpr64all = COPY %30:gpr64
-#CHECK:distance:0 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %22:gpr64sp = COPY %31:gpr64all
+#CHECK-NEXT:### to  : %30:gpr64 = SUBSXri %22:gpr64sp, 1, 0, implicit-def $nzcv
+#CHECK-NEXT:### distance:1 delay:1
 
-#CHECK:from: %29:gpr64all = COPY %28:gpr64sp
-#CHECK:to  : %21:gpr64common = COPY %29:gpr64all
-#CHECK:distance:0 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %30:gpr64 = SUBSXri %22:gpr64sp, 1, 0, implicit-def $nzcv
+#CHECK-NEXT:### to  : %31:gpr64all = COPY %30:gpr64
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %31:gpr64all = COPY %30:gpr64
-#CHECK:to  : %22:gpr64sp = COPY %31:gpr64all
-#CHECK:distance:0 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %29:gpr64all = COPY %28:gpr64sp
+#CHECK-NEXT:### to  : %21:gpr64common = COPY %29:gpr64all
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %23:gpr64 = LDRXroX %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:to  : STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:0 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %31:gpr64all = COPY %30:gpr64
+#CHECK-NEXT:### to  : %22:gpr64sp = COPY %31:gpr64all
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %23:gpr64 = LDRXroX %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:to  : STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:0 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %23:gpr64 = LDRXroX %11:gpr64common, %21:gpr64common, 0, 0 :: (load (s64) from %ir.uglygep46, !tbaa !1)
+#CHECK-NEXT:### to  : STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %25:fpr64 = LDRDroX %14:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:to  : STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:20 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %23:gpr64 = LDRXroX %11:gpr64common, %21:gpr64common, 0, 0 :: (load (s64) from %ir.uglygep46, !tbaa !1)
+#CHECK-NEXT:### to  : STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: %25:fpr64 = LDRDroX %14:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:to  : STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:20 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %25:fpr64 = LDRDroX %14:gpr64common, %21:gpr64common, 0, 0 :: (load (s64) from %ir.uglygep1, !tbaa !1)
+#CHECK-NEXT:### to  : STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:1
 
-#CHECK:from: STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:to  : %23:gpr64 = LDRXroX %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:1 delay:6
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: %25:fpr64 = LDRDroX %14:gpr64common, %21:gpr64common, 0, 0 :: (load (s64) from %ir.uglygep1, !tbaa !1)
+#CHECK-NEXT:### to  : STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:1
 
-#CHECK:from: STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:to  : %25:fpr64 = LDRDroX %14:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:20 delay:6
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### to  : %23:gpr64 = LDRXroX %11:gpr64common, %21:gpr64common, 0, 0 :: (load (s64) from %ir.uglygep46, !tbaa !1)
+#CHECK-NEXT:### distance:1 delay:6
 
-#CHECK:from: STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:to  : STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:0 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### to  : %25:fpr64 = LDRDroX %14:gpr64common, %21:gpr64common, 0, 0 :: (load (s64) from %ir.uglygep1, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:6
 
-#CHECK:from: STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:to  : %23:gpr64 = LDRXroX %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:1 delay:6
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### to  : STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### distance:0 delay:1
 
-#CHECK:from: STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:to  : %25:fpr64 = LDRDroX %14:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:20 delay:6
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### to  : %23:gpr64 = LDRXroX %11:gpr64common, %21:gpr64common, 0, 0 :: (load (s64) from %ir.uglygep46, !tbaa !1)
+#CHECK-NEXT:### distance:1 delay:6
 
-#CHECK:from: STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:to  : STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 
-#CHECK:distance:1 delay:1
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### to  : %25:fpr64 = LDRDroX %14:gpr64common, %21:gpr64common, 0, 0 :: (load (s64) from %ir.uglygep1, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:6
+
+#CHECK:### SwplEdge: {{[A-Za-z0-9]+}}
+#CHECK-NEXT:### from: STRDroX killed %27:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### to  : STRDroX killed %26:fpr64, %11:gpr64common, %21:gpr64common, 0, 0 :: (store (s64) into %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### distance:1 delay:1
+
 --- |
   ; ModuleID = '2937-20.ll'
   source_filename = "2937-20.c"

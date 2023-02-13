@@ -2,7 +2,12 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-minii=10 -swpl-debug -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:        : (Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 9. Budget 45. Minimum II = 3.)
-#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 10 in [ 10,95]) MVE: 1 Last inst: 0. (Itr Org: 0, Req: 1) (VReg Fp: 0/32, Int: 7/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 10 in [ 10,95]) MVE: 0 Last inst: 8. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 14 in [ 10,95]) MVE: 1 Last inst: 0. (Itr Org: 0, Req: 1) (VReg Fp: 0/32, Int: 7/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 12 in [ 10,14]) MVE: 1 Last inst: 0. (Itr Org: 0, Req: 1) (VReg Fp: 0/32, Int: 7/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 11 in [ 10,12]) MVE: 1 Last inst: 0. (Itr Org: 0, Req: 1) (VReg Fp: 0/32, Int: 7/32, Pre: 1/8) Eval:0.000000e+00.
+
+
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
   source_filename = "/TEST/tp/testprg.c"

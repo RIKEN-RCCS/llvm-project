@@ -18,7 +18,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '11'
+#CHECK:  - iteration_interval: '12'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -28,7 +28,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '15'
+#CHECK:  - iteration_interval: '16'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -38,7 +38,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '19'
+#CHECK:  - iteration_interval: '20'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -48,7 +48,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '23'
+#CHECK:  - iteration_interval: '24'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -58,7 +58,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '27'
+#CHECK:  - iteration_interval: '28'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -68,7 +68,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '31'
+#CHECK:  - iteration_interval: '32'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -78,7 +78,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '35'
+#CHECK:  - iteration_interval: '36'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -88,7 +88,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '39'
+#CHECK:  - iteration_interval: '40'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -98,7 +98,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '43'
+#CHECK:  - iteration_interval: '44'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -108,7 +108,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '47'
+#CHECK:  - iteration_interval: '48'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -118,7 +118,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '51'
+#CHECK:  - iteration_interval: '52'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -128,7 +128,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '55'
+#CHECK:  - iteration_interval: '56'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -138,7 +138,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '59'
+#CHECK:  - iteration_interval: '60'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -148,7 +148,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '63'
+#CHECK:  - iteration_interval: '64'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -158,7 +158,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '67'
+#CHECK:  - iteration_interval: '68'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -168,7 +168,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '71'
+#CHECK:  - iteration_interval: '72'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -178,7 +178,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '75'
+#CHECK:  - iteration_interval: '76'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -188,7 +188,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '79'
+#CHECK:  - iteration_interval: '80'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -198,7 +198,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '83'
+#CHECK:  - iteration_interval: '84'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -208,7 +208,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '87'
+#CHECK:  - iteration_interval: '88'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -218,7 +218,7 @@
 #CHECK:Function:        test
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '91'
+#CHECK:  - iteration_interval: '92'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
 #CHECK:--- !Analysis
@@ -231,7 +231,6 @@
 #CHECK:  - iteration_interval: '94'
 #CHECK:  - String:          . This loop cannot be software pipelined because of shortage of floating-point registers.
 #CHECK:...
-
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.ll'

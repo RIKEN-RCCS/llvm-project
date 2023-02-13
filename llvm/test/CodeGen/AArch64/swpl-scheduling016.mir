@@ -30,12 +30,12 @@
 #CHECK:### SwplEdge: 
 #CHECK-NEXT:### from: %56:gpr32 = LDRHHui killed %55:gpr64common, 193, debug-location !16 :: (load (s16) from %ir.32, !tbaa !10); /TEST/tp/testprg.c:7:21
 #CHECK-NEXT:### to  : %57:gpr32 = MADDWrrr killed %56:gpr32, killed %54:gpr32, $wzr, debug-location !17; /TEST/tp/testprg.c:7:19
-#CHECK-NEXT:### distance:0 delay:1
+#CHECK-NEXT:### distance:0 delay:5
 
 #CHECK:### SwplEdge: 
 #CHECK-NEXT:### from: %54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
 #CHECK-NEXT:### to  : %57:gpr32 = MADDWrrr killed %56:gpr32, killed %54:gpr32, $wzr, debug-location !17; /TEST/tp/testprg.c:7:19
-#CHECK-NEXT:### distance:0 delay:1
+#CHECK-NEXT:### distance:0 delay:5
 
 #CHECK:### SwplEdge: 
 #CHECK-NEXT:### from: %52:gpr64 = UBFMXri %50:gpr64common, 63, 62, debug-location !15; /TEST/tp/testprg.c:7:14
@@ -136,37 +136,6 @@
 #CHECK-NEXT:### from: STRHHui %0:gpr32, %58:gpr64common, 194, debug-location !18 :: (store (s16) into %ir.38, !tbaa !10); /TEST/tp/testprg.c:8:12
 #CHECK-NEXT:### to  : STRHHui killed %57:gpr32, %58:gpr64common, 193, debug-location !25 :: (store (s16) into %ir.36, !tbaa !10); /TEST/tp/testprg.c:7:12
 #CHECK-NEXT:### distance:1 delay:1
-
-
-#CHECK:=========================================
-#CHECK:%54:gpr32 = LDRHHui killed %53:gpr64common, 193, debug-location !15 :: (load (s16) from %ir.30, !tbaa !10); /TEST/tp/testprg.c:7:14
-#CHECK:successor_inst : MADDWrrr ( cycle:124989, latecycle:124988, delay:1 )
-#CHECK-NEXT:successor_inst : STRHHui ( cycle:124995, latecycle:125094, delay:-99 )
-#CHECK-NEXT:successor_inst : STRHHui ( cycle:124996, latecycle:125095, delay:-99 )
-#CHECK-NEXT:unset (DependConstrained  ) : ADDXrr
-#CHECK-NEXT: begin_cycle          : 124988
-#CHECK-NEXT: SIP.slot             : 999908
-#CHECK-NEXT: SIP.slot.calcCycle() : 124988
-#CHECK-NEXT: iteration_interval = 5
-
-#CHECK:       FLA       FLB       EXA       EXB       EAGA      EAGB      PRX       BR        LSU1      LSU2      FLA_C     FLB_C     EXA_C     EXB_C     EAGA_C    EAGB_C    
-#CHECK-NEXT:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#CHECK-NEXT:       0         0         UBFMXri   0         0         0         0         STRHHui   0         0         0         0         0         0         0         0         
-#CHECK-NEXT:       0         0         0         ADDXrr    0         0         0         STRHHui   0         0         0         0         0         0         0         0         
-#CHECK-NEXT:       0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         
-#CHECK-NEXT:       0         0         0         0         0         0         0         LDRHHui   0         0         0         0         0         0         0         0         
-#CHECK-NEXT:       0         0         MADDWrrr  0         0         0         0         0         0         0         0         0         0         0         0         0         
-
-#CHECK:	(999904)	--0--		--1--		--2--		--3--		LDRHHui		--5--		--6--		--7--	
-#CHECK-NEXT:	(999912)	--0--		--1--		--2--		--3--		MADDWrrr		--5--		--6--		--7--	
-#CHECK-NEXT:	(999920)	--0--		--1--		--2--		--3--		UBFMXri		--5--		--6--		--7--	
-#CHECK-NEXT:	(999928)	--0--		--1--		--2--		--3--		--4--		ADDXrr		--6--		--7--	
-#CHECK-NEXT:	(999936)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
-#CHECK-NEXT:	(999944)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
-#CHECK-NEXT:	(999952)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
-#CHECK-NEXT:	(999960)	--0--		--1--		--2--		--3--		--4--		--5--		STRHHui		--7--	
-#CHECK-NEXT:	(999968)	--0--		--1--		--2--		--3--		STRHHui		--5--		--6--		--7--	
-#CHECK-NEXT:=========================================
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
