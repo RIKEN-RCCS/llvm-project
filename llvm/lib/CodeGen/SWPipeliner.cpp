@@ -55,6 +55,7 @@ MachineRegisterInfo *SWPipeliner::MRI = nullptr;
 SwplTargetMachine *SWPipeliner::STM = nullptr;
 AliasAnalysis *SWPipeliner::AA = nullptr;
 std::string SWPipeliner::Reason;
+SwplLoop *SWPipeliner::currentLoop = nullptr;
 
 /// loop normalization pass for SWPL
 struct SWPipelinerPre : public MachineFunctionPass {
@@ -233,8 +234,8 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   swplScr.collectLiveOut(liveOutReg);
 
   // データ抽出
-  SwplLoop *loop = SwplLoop::Initialize(L, liveOutReg);
-  SwplDdg *ddg = SwplDdg::Initialize(*loop);
+  currentLoop = SwplLoop::Initialize(L, liveOutReg);
+  SwplDdg *ddg = SwplDdg::Initialize(*currentLoop);
 
   // スケジューリング
   SwplPlan* plan = SwplPlan::generatePlan(*ddg);
@@ -244,7 +245,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     }
     if (plan->getPrologCycles() == 0) {
       remarkMissed("This loop is not software pipelined because the software pipelining does not improve the performance.",
-                   *loop->getML());
+                   *currentLoop->getML());
       if (SWPipeliner::isDebugOutput()) {
         dbgs() << "        : Loop isn't software pipelined because prologue is 0 cycle.\n";
       }
@@ -258,13 +259,14 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     }
     SwplPlan::destroy( plan );
   } else {
-    remarkMissed("This loop is not software pipelined because no schedule is obtained.", *loop->getML());
+    remarkMissed("This loop is not software pipelined because no schedule is obtained.", *currentLoop->getML());
     if (SWPipeliner::isDebugOutput()) {
       dbgs() << "        : Loop isn't software pipelined because plan is NULL.\n";
     }
   }
   delete ddg;
-  delete loop;
+  delete currentLoop;
+  currentLoop = nullptr;
 
   return Changed;
 }
