@@ -18,6 +18,13 @@
 #CHECK-NEXT:  stage/resource(): 0/EXA
 #CHECK-NEXT:  stage/resource(): 0/EXB
 
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: STRDroX killed %376:fpr64, %236:gpr64common, %374:gpr64, 0, 0 :: (store (s64) into %ir.arrayidx17.prol, !tbaa !5)
+#CHECK-NEXT:  ResourceID: SIMDFP_SVE_ST+1
+#CHECK-NEXT:  latency: 1
+#CHECK-NEXT:  seqDecode: false
+#CHECK-NEXT:  stage/resource(): 0/EAGA, 0/FLA, 0/LSU1, 0/LSU2
+#CHECK-NEXT:  stage/resource(): 0/EAGB, 0/FLA, 0/LSU1, 0/LSU2
+
 #CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %377:gpr32 = COPY %369.sub_32:gpr64sp
 #CHECK-NEXT:  ResourceID: INT_OP+1
 #CHECK-NEXT:  latency: 1

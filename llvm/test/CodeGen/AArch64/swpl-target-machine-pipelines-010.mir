@@ -1,4 +1,11 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource-filter="FADDV_VPZ_D" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource-filter="FADDV_VPZ_D|GLD1D" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %876:zpr = GLD1D %127:ppr_3b, %872:gpr64common, %874:zpr :: (load unknown-size, align 8, !tbaa !6)
+#CHECK-NEXT:  ResourceID: SIMDFP_SVE_LD+4
+#CHECK-NEXT:  latency: 20
+#CHECK-NEXT:  seqDecode: false
+#CHECK-NEXT:  stage/resource(): 0/EXA, 0/LSU1, 4/FLA, 8/EAGA, 8/EAGB, 9/EAGA, 9/EAGB
+#CHECK-NEXT:  stage/resource(): 0/EXA, 0/LSU2, 4/FLA, 8/EAGA, 8/EAGB, 9/EAGA, 9/EAGB
 
 #CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %906:zpr = FADDV_VPZ_D %127:ppr_3b, killed %885:zpr
 #CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+17
