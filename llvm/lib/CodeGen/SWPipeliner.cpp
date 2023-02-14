@@ -254,7 +254,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
       SwplTransformMIR tran(*MF, *plan, liveOutReg);
       Changed = tran.transformMIR();
       if (!Changed) {
-        remarkMissed("This loop is not software pipelined because no schedule is obtained.", *loop->getML());
+        remarkMissed("This loop is not software pipelined because no schedule is obtained.", *currentLoop->getML());
       }
     }
     SwplPlan::destroy( plan );

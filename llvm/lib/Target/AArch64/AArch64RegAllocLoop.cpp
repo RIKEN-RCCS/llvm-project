@@ -677,7 +677,7 @@ void SwplExcKernelRegInfoTbl::addExcKernelRegInfo(
  * @retval nullptr   指定された仮想レジスタに該当するExcKernelRegInfoは存在しない
  */
 ExcKernelRegInfo* SwplExcKernelRegInfoTbl::getWithVReg(unsigned vreg) {
-  vector<ExcKernelRegInfo>::iterator itr =
+  std::vector<ExcKernelRegInfo>::iterator itr =
     find_if(ekri_tbl.begin(), ekri_tbl.end(),
             [&](ExcKernelRegInfo &info){
               return(info.vreg == vreg);
@@ -695,7 +695,7 @@ ExcKernelRegInfo* SwplExcKernelRegInfoTbl::getWithVReg(unsigned vreg) {
  * @retval false 指定された仮想レジスタが参照から始まっている行なし
  */
 bool SwplExcKernelRegInfoTbl::isUseFirstVRegInExcK(unsigned vreg) {
-  vector<ExcKernelRegInfo>::iterator itr =
+  std::vector<ExcKernelRegInfo>::iterator itr =
     find_if(ekri_tbl.begin(), ekri_tbl.end(),
             [&](ExcKernelRegInfo &info){
               return((info.vreg == vreg) && (info.num_use > -1) &&
