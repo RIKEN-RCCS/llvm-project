@@ -1,41 +1,17 @@
 #RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource-filter="FADDV_VPZ_S" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %173:zpr = FADDV_VPZ_S %33:ppr_3b, killed %169:zpr
-#CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+18
-#CHECK-NEXT:  latency: 64
+#CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+16
+#CHECK-NEXT:  latency: 34
 #CHECK-NEXT:  seqDecode: true
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLB
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLB
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLB
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLB
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLB
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLB
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLB
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLB
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLB
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLB
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLB
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLB
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLA, 49/FLA, 55/FLB
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLA, 34/FLA, 40/FLB, 49/FLA, 55/FLB
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLA, 49/FLA, 55/FLB
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLA
-#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLB, 34/FLA, 40/FLB, 49/FLA, 55/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLA, 19/FLA, 25/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA, 10/FLB, 19/FLA, 25/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLA, 19/FLA, 25/FLB
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLA
+#CHECK-NEXT:  stage/resource(): 0/FLB, 4/FLA, 10/FLB, 19/FLA, 25/FLB
 
 --- |
   ; ModuleID = '/TSVC_2/src_sep_optnone/s352.c'
@@ -56,7 +32,7 @@
   @bb = external global [256 x [256 x float]], align 64
   @cc = external global [256 x [256 x float]], align 64
   
-  ; Function Attrs: nounwind uwtable vscale_range(4,4)
+  ; Function Attrs: nounwind uwtable vscale_range(1,1)
   define dso_local float @s352(ptr nocapture noundef %func_args) local_unnamed_addr #0 {
   entry:
     %call = tail call i32 @initialise_arrays(ptr noundef nonnull @__func__.s352) #5
@@ -263,7 +239,7 @@
   ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
   declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #4
   
-  attributes #0 = { nounwind uwtable vscale_range(4,4) "approx-func-fp-math"="true" "frame-pointer"="non-leaf" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" }
+  attributes #0 = { nounwind uwtable vscale_range(1,1) "approx-func-fp-math"="true" "frame-pointer"="non-leaf" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" }
   attributes #1 = { "approx-func-fp-math"="true" "frame-pointer"="non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" }
   attributes #2 = { nofree nounwind "approx-func-fp-math"="true" "frame-pointer"="non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" }
   attributes #3 = { nocallback nofree nosync nounwind readnone willreturn }
