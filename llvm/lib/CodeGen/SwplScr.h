@@ -291,6 +291,10 @@ struct SwplTransformedMIRInfo {
       delete swplRAITbl;
       swplRAITbl = nullptr;
     }
+    if (swplEKRITbl!=nullptr) {
+      delete swplEKRITbl;
+      swplEKRITbl = nullptr;
+    }
   }
 
   /// SWPL変換が必要かどうかの判定

@@ -323,13 +323,25 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
     RegAllocInfo *itr_cur =rai_tbl.getWithIdx(i);
     bool allocated = false;
 
-    // 以下の仮想レジスタは、物理レジスタ割り付け対象としない
-    // ・仮想レジスタ番号が 0
-    // ・isVirtualRegister()の返却値がfalseである
-    // ・ブロック内に定義or参照のどちらかしかない かつ ブロック外にて参照から始まっていない
+    /*
+     * 以下の仮想レジスタは、物理レジスタ割り付け対象としない
+     * ・仮想レジスタ番号が 0
+     * ・isVirtualRegister()の返却値がfalseである
+     * ・カーネル内に定義しかない かつ カーネル外にて参照から始まっていない
+     *   ケース１．カーネル内に定義しかない かつ カーネル外にて参照から始まっていない
+     *     bb.5.for.body1: (kernel loop)
+     *       %10 = ADD $x1, 1  <- %10は使われることがないため、割り付け対象としない
+     *     bb.11.for.body1:
+     *       %10 = ADD %11, 1  <- %10が定義から始まっている
+     *   ケース２．カーネル内に定義しかない かつ カーネル外にて参照から始まっている
+     *     bb.5.for.body1: (kernel loop)
+     *       $x2(%10) = ADD $x1, 1  <- 割り付ける
+     *       %10 = COPY $x2         <- liveoutとして物理から仮想へのCOPY命令生成
+     *     bb.11.for.body1:
+     *       %11 = ADD %10, 1  <- %10が参照から始まっている
+     */
     if ((itr_cur->vreg == 0) || (!Register::isVirtualRegister(itr_cur->vreg)) ||
-        (((itr_cur->num_def < 0) || (itr_cur->num_use < 0)) &&
-         (!ekri_tbl.isUseFirstVRegInExcK(itr_cur->vreg)))) {
+        ((itr_cur->num_def < 0) && (!ekri_tbl.isUseFirstVRegInExcK(itr_cur->vreg)))) {
       if( DebugSwplRegAlloc ) {
         dbgs() << " Following register will be not allocated a physcal register. (vreg: "
                << printReg(itr_cur->vreg, SWPipeliner::TRI) << ", preg: "
@@ -469,7 +481,7 @@ static void dumpKernelInstrs(const MachineFunction &MF,
  * @brief  SWPLpass内における仮想レジスタへの物理レジスタ割り付け
  * @param  [in,out] tmi 命令列変換情報
  * @param  [in]     MF  MachineFunction
- * @note   カーネルループのみが対象。spillが発生する場合は再スケジュール。
+ * @note   カーネルループのみが対象。
  */
 bool AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
                                         MachineFunction &MF) const {
@@ -568,11 +580,6 @@ bool AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
     (*tmi->swplRAITbl).dump();
     (*tmi->swplEKRITbl).dump();
     dumpKernelInstrs(MF, tmi->prologEndIndx, tmi->kernelEndIndx, tmi->mis);
-  }
-
-  if (tmi->swplEKRITbl != nullptr) {
-    delete tmi->swplEKRITbl;
-    tmi->swplEKRITbl = nullptr;
   }
 
   return true;
