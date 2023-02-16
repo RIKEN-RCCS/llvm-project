@@ -222,7 +222,7 @@ public:
   /// \param [in] newReg 追加するRegister
   void addOrgReg2NewReg(Register orgReg, Register newReg) { OrgReg2NewReg[orgReg] = newReg; };
   /// SwplLoop::Copies に要素を追加する
-  void addCopies(MachineInstr *copy) { getCopies().push_back(copy); }
+  void addCopies(MachineInstr *copy) { getCopies().push_back(copy); liveOuts.insert(copy->getOperand(0).getReg());}
   /// SwplLoop::Regs に要素を追加する
   void addRegs(SwplReg *reg) { getRegs().push_back(reg); }
 
