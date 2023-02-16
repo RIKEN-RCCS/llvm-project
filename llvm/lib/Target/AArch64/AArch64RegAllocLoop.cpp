@@ -343,7 +343,8 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
      *       %11 = ADD %10, 1  <- %10が参照から始まっている
      */
     if ((itr_cur->vreg == 0) || (!Register::isVirtualRegister(itr_cur->vreg)) ||
-        ((itr_cur->num_def < 0) && (!ekri_tbl.isUseFirstVRegInExcK(itr_cur->vreg)))) {
+        ((itr_cur->num_def > -1) && (itr_cur->num_use == -1) &&
+         (!ekri_tbl.isUseFirstVRegInExcK(itr_cur->vreg)))) {
       if( DebugSwplRegAlloc ) {
         dbgs() << " Following register will be not allocated a physcal register. (vreg: "
                << printReg(itr_cur->vreg, SWPipeliner::TRI) << ", preg: "
