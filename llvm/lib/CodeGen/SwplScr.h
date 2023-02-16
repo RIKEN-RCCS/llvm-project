@@ -24,8 +24,8 @@ class SwplExcKernelRegInfoTbl;
 /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の行
 struct ExcKernelRegInfo {
   unsigned vreg;        ///< 仮想レジスタ
-  int      num_def;     ///< 仮想レジスタの定義番号
-  int      num_use;     ///< 仮想レジスタの参照番号
+  int      num_def;     ///< 仮想レジスタの定義番号(無効値:0以下の値, 有効値:1以上の値)
+  int      num_use;     ///< 仮想レジスタの参照番号(無効値:0以下の値, 有効値:1以上の値)
   unsigned total_mi;    ///< MIの総数
 
   /// 定義番号を更新する
@@ -80,8 +80,8 @@ public:
 struct RegAllocInfo {
   unsigned vreg;                        ///< 割り当て済み仮想レジスタ
   unsigned preg;                        ///< 割り当て済み物理レジスタ
-  int      num_def;                     ///< 仮想レジスタの定義番号
-  int      num_use;                     ///< 仮想レジスタの参照番号
+  int      num_def;                     ///< 仮想レジスタの定義番号(無効値:0以下の値, 有効値:1以上の値)
+  int      num_use;                     ///< 仮想レジスタの参照番号(無効値:0以下の値, 有効値:1以上の値)
   int      liverange;                   ///< 生存区間(参照番号-定義番号)
   unsigned vreg_classid;                ///< 仮想レジスタのレジスタクラスID
   std::vector<MachineOperand*> vreg_mo; ///< 仮想レジスタのMachineOperand

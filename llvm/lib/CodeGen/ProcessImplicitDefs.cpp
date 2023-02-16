@@ -103,6 +103,7 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   MachineBasicBlock::instr_iterator UserMI = MI->getIterator();
   MachineBasicBlock::instr_iterator UserE = MI->getParent()->instr_end();
   bool Found = false;
+  bool Defined = false;
   for (++UserMI; UserMI != UserE; ++UserMI) {
     for (MachineOperand &MO : UserMI->operands()) {
       if (!MO.isReg())
@@ -111,12 +112,14 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
       if (!Register::isPhysicalRegister(UserReg) ||
           !TRI->regsOverlap(Reg, UserReg))
         continue;
+      if (MO.isDef())
+        Defined = true;
       // UserMI uses or redefines Reg. Set <undef> flags on all uses.
       Found = true;
       if (MO.isUse())
         MO.setIsUndef();
     }
-    if (Found)
+    if (Defined)
       break;
   }
 

@@ -28,13 +28,15 @@ using namespace llvm;
 static cl::opt<bool> DebugSwplRegAlloc("swpl-debug-reg-alloc",cl::init(false), cl::ReallyHidden);
 
 // 使ってはいけない物理レジスタのリスト
-static std::array<unsigned, UNAVAILABLE_REGS> nousePhysRegs {
-    (unsigned)AArch64::SP,   // ゼロレジスタ(XZR)に等しい
-    (unsigned)AArch64::FP,   // X29
-    (unsigned)AArch64::LR,   // X30
-    (unsigned)AArch64::WSP,  // ゼロレジスタ(WZR)に等しい
-    (unsigned)AArch64::W29,  // FP(X29)相当
-    (unsigned)AArch64::W30   // LR(X30)相当
+static DenseSet<unsigned> nousePhysRegs {
+    (unsigned)AArch64::XZR,  // ゼロレジスタ
+    (unsigned)AArch64::SP,   // スタックポインタ
+    (unsigned)AArch64::FP,   // フレームポインタ(X29)
+    (unsigned)AArch64::LR,   // リンクレジスタ(X30)
+    (unsigned)AArch64::WZR,  // ゼロレジスタ
+    (unsigned)AArch64::WSP,  // スタックポインタ
+    (unsigned)AArch64::W29,  // フレームポインタ(X29)相当
+    (unsigned)AArch64::W30   // リンクレジスタ(X30)相当
 };
 
 
@@ -357,9 +359,7 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
         // 物理レジスタ番号取得
 
         // 使ってはいけない物理レジスタは割付けない
-        std::array<unsigned, UNAVAILABLE_REGS>::iterator itr_nousePreg;
-        itr_nousePreg = std::find(nousePhysRegs.begin(), nousePhysRegs.end(), preg);        
-        if (itr_nousePreg != nousePhysRegs.end()) continue;
+        if (nousePhysRegs.contains(preg)) continue;
 
         // 当該物理レジスタが割り当て可能なレジスタでなければcontinue
         if ((preg == 0) || (!SWPipeliner::MRI->isAllocatable(preg)))
@@ -639,7 +639,7 @@ bool SwplRegAllocInfoTbl::isOverlapLiveRange( RegAllocInfo *reginfo1, RegAllocIn
   int def2 = reginfo2->num_def;
   int use2 = reginfo2->num_use;
 
-  for(int i=0; i<(int)total_mi; i++) {
+  for(int i=1; i<=(int)total_mi; i++) {    // num_def/num_useは1からカウント開始する
     bool overlap1 = false;
     bool overlap2 = false;
     if(def1>use1) {
@@ -798,7 +798,8 @@ unsigned SwplRegAllocInfoTbl::getReusePReg( RegAllocInfo* rai ) {
        itr != itr_end; ++itr) {
     unsigned candidate_preg = *itr;
     std::vector<RegAllocInfo*> ranges;
-    
+    if (nousePhysRegs.contains(candidate_preg)) continue;
+
     for (size_t j = 0; j < rai_tbl.size(); j++) {
       RegAllocInfo *wk_reginfo = &(rai_tbl[j]);
       if( isPRegOverlap( candidate_preg, wk_reginfo->preg ) ) {
@@ -1212,10 +1213,8 @@ void SwplRegAllocInfoTbl::countRegs() {
         continue;
       }
       if (regKind->isInteger()) {
-        if( std::find(nousePhysRegs.begin(), nousePhysRegs.end(), regAllocInfo.preg) != nousePhysRegs.end() ){
-          // レジスタ割付処理で割付禁止レジスタが、割り付けてあるため、計算から除外する
-          continue;
-        }
+        if (nousePhysRegs.contains(regAllocInfo.preg)) continue;
+        // レジスタ割付処理で割付禁止レジスタが、割り付けてあるため、計算から除外する
       }
     } else {
       if (regAllocInfo.preg == 0) {
