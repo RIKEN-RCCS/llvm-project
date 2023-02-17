@@ -533,6 +533,7 @@ void SwplTransformMIR::insertMIs(MachineBasicBlock& ins,
           }
           inserted = true;
         }
+        ins.push_back(mi);
         if (num_mis==loc_end) {
           /// KERNEL終端なら
           /// 物理レジスタから仮想レジスタへのCOPY命令を挿入する
@@ -544,7 +545,6 @@ void SwplTransformMIR::insertMIs(MachineBasicBlock& ins,
             }
           }
         }
-        ins.push_back(mi);
       }
     }
   } else {

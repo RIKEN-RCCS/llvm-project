@@ -63,6 +63,7 @@ class StmRegKind;
 class SwplReg;
 class SwplTargetMachine;
 class SwplRegAllocInfoTbl;
+class SwplExcKernelRegInfoTbl;
 struct SwplTransformedMIRInfo;
 
 template <class T> class SmallVectorImpl;
@@ -2116,7 +2117,7 @@ public:
   /// \param [in] tmi Information for the SwplTransformMIR
   /// \param [in] MF MachineFunction
   virtual bool physRegAllocLoop(SwplTransformedMIRInfo *tmi,
-                                const MachineFunction &MF) const {
+                                MachineFunction &MF) const {
     return true;
   }
 

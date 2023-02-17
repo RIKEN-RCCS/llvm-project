@@ -19,13 +19,69 @@ namespace llvm {
 class SwplLoop;
 class SwplRegAllocInfo;
 class SwplRegAllocInfoTbl;
+class SwplExcKernelRegInfoTbl;
+
+/// Swpl-RAで使用する、カーネルループ外のレジスタ情報の行
+struct ExcKernelRegInfo {
+  unsigned vreg;        ///< 仮想レジスタ
+  int      num_def;     ///< 仮想レジスタの定義番号(無効値:0以下の値, 有効値:1以上の値)
+  int      num_use;     ///< 仮想レジスタの参照番号(無効値:0以下の値, 有効値:1以上の値)
+  unsigned total_mi;    ///< MIの総数
+
+  /// 定義番号を更新する
+  /// \param [in] def 定義番号
+  void updateNumDef(int def) {
+    num_def = def;
+    return;
+  };
+
+  /// 参照番号を更新する
+  /// \param [in] use 参照番号
+  void updateNumUse(int use) {
+    num_use = use;
+    return;
+  };
+};
+
+/// Swpl-RAで使用する、カーネルループ外のレジスタ情報の表
+class SwplExcKernelRegInfoTbl {
+  std::vector<ExcKernelRegInfo> ekri_tbl;
+
+public:
+  unsigned length() {
+    return ekri_tbl.size();
+  }
+
+  /// ExcKernelRegInfo構造体を追加する
+  /// \param [in] vreg 仮想レジスタ番号
+  /// \param [in] num_def 定義番号
+  /// \param [in] num_use 参照番号
+  void addExcKernelRegInfo(unsigned vreg,
+                           int num_def,
+                           int num_use);
+
+  /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の表の内、vregに該当する行を返す
+  /// \param [in] vreg 仮想レジスタ番号
+  /// \retval 非nullptr 指定された仮想レジスタに該当するExcKernelRegInfoへのポインタ
+  /// \retval nullptr 指定された仮想レジスタに該当するExcKernelRegInfoは存在しない
+  ExcKernelRegInfo* getWithVReg(unsigned vreg);
+
+  /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の表の内、vregが参照から始まっている行の有無を返す
+  /// \param [in] vreg 仮想レジスタ番号
+  /// \retval true 指定された仮想レジスタが参照から始まっている行あり
+  /// \retval false 指定された仮想レジスタが参照から始まっている行なし
+  bool isUseFirstVRegInExcK(unsigned vreg);
+
+  /// debug dump
+  void dump();
+};
 
 /// Swpl-RAで使用する生存区間表の行
 struct RegAllocInfo {
   unsigned vreg;                        ///< 割り当て済み仮想レジスタ
   unsigned preg;                        ///< 割り当て済み物理レジスタ
-  int      num_def;                     ///< 仮想レジスタの定義番号
-  int      num_use;                     ///< 仮想レジスタの参照番号
+  int      num_def;                     ///< 仮想レジスタの定義番号(無効値:0以下の値, 有効値:1以上の値)
+  int      num_use;                     ///< 仮想レジスタの参照番号(無効値:0以下の値, 有効値:1以上の値)
   int      liverange;                   ///< 生存区間(参照番号-定義番号)
   unsigned vreg_classid;                ///< 仮想レジスタのレジスタクラスID
   std::vector<MachineOperand*> vreg_mo; ///< 仮想レジスタのMachineOperand
@@ -226,6 +282,7 @@ struct SwplTransformedMIRInfo {
   MachineBasicBlock*OrgExit=nullptr; ///< オリジナルの出口
 
   SwplRegAllocInfoTbl *swplRAITbl=nullptr; ///< Swpl-RAで使用する生存区間表
+  SwplExcKernelRegInfoTbl *swplEKRITbl=nullptr; ///< Swpl-RAで使用するカーネルループ外のレジスタ情報の表
 
   void print();
 
@@ -233,6 +290,10 @@ struct SwplTransformedMIRInfo {
     if (swplRAITbl!=nullptr) {
       delete swplRAITbl;
       swplRAITbl = nullptr;
+    }
+    if (swplEKRITbl!=nullptr) {
+      delete swplEKRITbl;
+      swplEKRITbl = nullptr;
     }
   }
 

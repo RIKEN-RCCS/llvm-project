@@ -379,7 +379,7 @@ public:
   bool canPipelineLoop(MachineLoop &L) const override;
   int calcEachRegIncrement(const SwplReg *r) const override;
   SwplTargetMachine *getSwplTargetMachine() const override;
-  bool physRegAllocLoop(SwplTransformedMIRInfo *tmi, const MachineFunction &MF) const override;
+  bool physRegAllocLoop(SwplTransformedMIRInfo *tmi, MachineFunction &MF) const override;
 
 
 #define GET_INSTRINFO_HELPER_DECLS
