@@ -115,6 +115,7 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
       if (MO.isDef())
         Defined = true;
       // UserMI uses or redefines Reg. Set <undef> flags on all uses.
+      LLVM_DEBUG(dbgs() << "Physreg user: " << *UserMI);
       Found = true;
       if (MO.isUse())
         MO.setIsUndef();
@@ -125,7 +126,6 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
 
   // If we found the using MI, we can erase the IMPLICIT_DEF.
   if (Found) {
-    LLVM_DEBUG(dbgs() << "Physreg user: " << *UserMI);
     MI->eraseFromParent();
     return;
   }

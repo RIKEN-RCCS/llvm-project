@@ -330,17 +330,10 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
      * ・仮想レジスタ番号が 0
      * ・isVirtualRegister()の返却値がfalseである
      * ・カーネル内に定義しかない かつ カーネル外にて参照から始まっていない
-     *   ケース１．カーネル内に定義しかない かつ カーネル外にて参照から始まっていない
-     *     bb.5.for.body1: (kernel loop)
-     *       %10 = ADD $x1, 1  <- %10は使われることがないため、割り付け対象としない
-     *     bb.11.for.body1:
-     *       %10 = ADD %11, 1  <- %10が定義から始まっている
-     *   ケース２．カーネル内に定義しかない かつ カーネル外にて参照から始まっている
-     *     bb.5.for.body1: (kernel loop)
-     *       $x2(%10) = ADD $x1, 1  <- 割り付ける
-     *       %10 = COPY $x2         <- liveoutとして物理から仮想へのCOPY命令生成
-     *     bb.11.for.body1:
-     *       %11 = ADD %10, 1  <- %10が参照から始まっている
+     *   bb.5.for.body1: (kernel loop)
+     *     %10 = ADD $x1, 1  <- %10はカーネル内外で参照されないため、割り付け対象としない
+     *   bb.11.for.body1: (epilogue)
+     *     %10 = ADD %11, 1
      */
     if ((itr_cur->vreg == 0) || (!Register::isVirtualRegister(itr_cur->vreg)) ||
         ((itr_cur->num_def > -1) && (itr_cur->num_use == -1) &&
