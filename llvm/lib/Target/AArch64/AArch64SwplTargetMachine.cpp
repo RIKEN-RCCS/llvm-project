@@ -553,7 +553,11 @@ struct work_node {
     std::vector<StmResourceId> ptn;
     std::vector<int> cycle;
     StmPatternId patternId=0;
-    gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
+    auto rc = gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
+    if (rc) {
+      if (DebugStm)
+        dbgs() << "DBG(AArch64SwplTargetMachine::gen_pattern): Number of patterns reached limit\n";
+    }
   }
 
   /// 資源の利用パターンを生成する
@@ -563,8 +567,14 @@ struct work_node {
   /// \param [in] ptn 利用資源パターン
   /// \param [in] cycle 開始サイクル
   /// \param [out] stmPipelines 生成結果
-  void gen_pattern(TargetSchedModel&SM, StmPatternId &patternId, std::vector<StmResourceId> ptn, std::vector<int> cycle,
+  /// \retval true 生成パターン数の制限で、一部のパターンのみ生成しました
+  /// \retval false すべてのパターンを生成した
+  bool gen_pattern(TargetSchedModel&SM, StmPatternId &patternId, std::vector<StmResourceId> ptn, std::vector<int> cycle,
                    StmPipelinesImpl &stmPipelines) {
+
+    if (LimitUseResPattern > 0 && patternId >= LimitUseResPattern) {
+      return true;
+    }
     // 引数：ptnはコピーコンストラクタで複製させている。
     if (id!=A64FXRes::PortKind::P_NULL) {
       ptn.push_back(id);
@@ -579,18 +589,15 @@ struct work_node {
         for (auto stage:cycle) {
           t->stages.push_back(stage);
         }
-        return;
+        return false;
       }
     }
     for ( work_node* c : nodes ) {
-      if (LimitUseResPattern > 0 && patternId >= LimitUseResPattern) {
-        if (DebugStm)
-          dbgs() << "DBG(AArch64SwplTargetMachine::gen_pattern): Number of patterns reached limit\n";
-        return;
-      }
       // and-node
-      c->gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
+      auto rc = c->gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
+      if (rc) return true;
     }
+    return false;
   }
 };
 
