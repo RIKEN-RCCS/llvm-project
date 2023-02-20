@@ -505,7 +505,7 @@ static MachineOperand* used_reg(MachineInstr &phi) {
 
   if (!IgnoreRegClass_SuppressCopy && def_r_class->getID()!=own_r_class->getID()) {
     if (SWPipeliner::isDebugOutput()) {
-      dbgs() << "DEBUG(used_reg): def-class is not use-class:" << phi;
+      dbgs() << "DEBUG(used_reg): def-class is not use-class!:" << phi;
     }
     return nullptr;
   }
@@ -528,13 +528,13 @@ static MachineOperand* used_reg(MachineInstr &phi) {
       auto r=o.getReg();
       if (r.id()==own_r.id()) {
          if (SWPipeliner::isDebugOutput()) {
-           dbgs() << "DEBUG(used_reg): own-reg is used\n";
+           dbgs() << "DEBUG(used_reg): own-reg is used!\n";
          }
          return nullptr;
       }
       if (r.id()==def_r.id()) {
          if (SWPipeliner::isDebugOutput()) {
-           dbgs() << "DEBUG(used_reg): def-reg is used\n";
+           dbgs() << "DEBUG(used_reg): def-reg is used!\n";
          }
          return nullptr;
       }
@@ -817,6 +817,8 @@ void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOu
       }
       // MBBから削除する命令の収集
       delete_mi.push_back(&mi);
+    } else {
+      dbgs() << " canRemoveCopy() is false!\n";
     }
   }
   for (auto *mi:delete_mi)
