@@ -289,6 +289,24 @@ public:
   /// \retval true Psedo
   /// \retval false not Pseudo
   virtual bool isPseudo(const MachineInstr& mi) const = 0;
+
+  /// Get instruction-type-ID from instruction
+  /// \param [in] mi Target instruction
+  /// \return instruction-type-ID (ex. AArch64SwplSchedA64FX::INT_OP)
+  virtual unsigned getInstType(const MachineInstr &mi) const = 0;
+
+  /// Returns a string corresponding to instruction-type-ID.
+  /// \param [in] insttypeid instruction-type-ID
+  /// \return string corresponding to instruction-type-ID
+  virtual const char* getInstTypeString(unsigned insttypeid) const = 0;
+
+  /// Calculate penalty by instruction type and dependent register.
+  /// \param [in] prod MI of producer instruction
+  /// \param [in] cons MI of consumer instruction
+  /// \param [in] regs depend reg
+  /// \return penalty by instruction type and dependent register
+  virtual unsigned calcPenaltyByInsttypeAndDependreg(const MachineInstr& prod, const MachineInstr& cons,
+                                                     const llvm::Register& reg) const = 0;
 };
 
 

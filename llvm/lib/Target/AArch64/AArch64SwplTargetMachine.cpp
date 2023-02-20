@@ -719,3 +719,35 @@ void AArch64SwplTargetMachine::print(llvm::raw_ostream &ost, const StmPipeline &
   }
   ost << "\n";
 }
+
+unsigned AArch64SwplTargetMachine::getInstType(const MachineInstr &mi) const {
+  auto id=SwplSched.getRes(mi);
+  return (id&0xfffff000);
+}
+
+const char* AArch64SwplTargetMachine::getInstTypeString(unsigned insttypeid) const {
+  switch(insttypeid) {
+  case AArch64SwplSchedA64FX::INT_OP: return "INT_OP";break;
+  case AArch64SwplSchedA64FX::INT_LD: return "INT_LD"; break;
+  case AArch64SwplSchedA64FX::INT_ST: return "INT_ST"; break;
+  case AArch64SwplSchedA64FX::SIMDFP_SVE_OP: return "SIMDFP_SVE_OP"; break;
+  case AArch64SwplSchedA64FX::SIMDFP_SVE_LD: return "SIMDFP_SVE_LD"; break;
+  case AArch64SwplSchedA64FX::SIMDFP_SVE_ST: return "SIMDFP_SVE_ST"; break;
+  case AArch64SwplSchedA64FX::SVE_CMP_INST: return "SVE_CMP_INST"; break;
+  case AArch64SwplSchedA64FX::PREDICATE_OP: return "PREDICATE_OP"; break;
+  case AArch64SwplSchedA64FX::PREDICATE_LD: return "PREDICATE_LD"; break;
+  case AArch64SwplSchedA64FX::PREDICATE_ST: return "PREDICATE_ST"; break;
+  case 0: return "undefined"; break;
+  default:
+    llvm_unreachable("unknown InstTypeId");
+  }
+}
+
+unsigned AArch64SwplTargetMachine::calcPenaltyByInsttypeAndDependreg(const MachineInstr& prod,
+                                                                     const MachineInstr& cons,
+                                                                     const llvm::Register& reg) const {
+  /// \todo 現在 I/Fのみ。
+  ///       命令種と依存レジスタによるペナルティを算出する処理を実装し、
+  ///       スケジューラがこれを用いてスケジューリングするように実装する。
+  return 0;
+}
