@@ -35,6 +35,7 @@ static cl::opt<unsigned> MaxInstNum("swpl-max-inst-num",cl::init(500), cl::Reall
 static cl::opt<unsigned> MaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyHidden);
 static cl::opt<bool> DisableRegAlloc("swpl-disable-reg-alloc",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableRegAlloc("swpl-enable-reg-alloc",cl::init(false), cl::ReallyHidden);
+static cl::opt<unsigned> LimitUseResPattern("swpl-resource-pattern-limit",cl::init(32), cl::ReallyHidden);
 
 // TargetLoopのMI出力オプション（swpl処理は迂回）
 static cl::opt<bool> OptionDumpTargetLoopOnly("swpl-debug-dump-targetloop-only",cl::init(false), cl::ReallyHidden);
@@ -582,6 +583,11 @@ struct work_node {
       }
     }
     for ( work_node* c : nodes ) {
+      if (LimitUseResPattern > 0 && patternId >= LimitUseResPattern) {
+        if (DebugStm)
+          dbgs() << "DBG(AArch64SwplTargetMachine::gen_pattern): Number of patterns reached limit\n";
+        return;
+      }
       // and-node
       c->gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
     }
@@ -767,11 +773,13 @@ AArch64SwplTargetMachine::generateStmPipelines(const MachineInstr &mi) {
   }
   auto *pipelines=new StmPipelines;
   if (t) {
+    if (DebugStm)
+      dbgs() << "DBG(AArch64SwplTargetMachine::generateStmPipelines): MIR=" << mi;
     t->gen_patterns(SM, *pipelines);
     delete t;
   } else {
     pipelines->push_back(new AArch64StmPipeline());
-    dbgs() << "warning: Unimplemented instruction: " << mi;
+    errs() << "warning: Unimplemented instruction: " << mi;
   }
   if (DebugStm) {
     for (auto*pipeline:*pipelines) {
