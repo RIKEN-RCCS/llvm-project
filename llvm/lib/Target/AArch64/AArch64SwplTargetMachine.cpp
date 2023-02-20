@@ -35,6 +35,7 @@ static cl::opt<unsigned> MaxInstNum("swpl-max-inst-num",cl::init(500), cl::Reall
 static cl::opt<unsigned> MaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyHidden);
 static cl::opt<bool> DisableRegAlloc("swpl-disable-reg-alloc",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableRegAlloc("swpl-enable-reg-alloc",cl::init(false), cl::ReallyHidden);
+static cl::opt<unsigned> LimitUseResPattern("swpl-resource-pattern-limit",cl::init(32), cl::ReallyHidden);
 
 // TargetLoopのMI出力オプション（swpl処理は迂回）
 static cl::opt<bool> OptionDumpTargetLoopOnly("swpl-debug-dump-targetloop-only",cl::init(false), cl::ReallyHidden);
@@ -552,7 +553,11 @@ struct work_node {
     std::vector<StmResourceId> ptn;
     std::vector<int> cycle;
     StmPatternId patternId=0;
-    gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
+    auto rc = gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
+    if (rc) {
+      if (DebugStm)
+        dbgs() << "DBG(AArch64SwplTargetMachine::gen_pattern): Number of patterns reached limit\n";
+    }
   }
 
   /// 資源の利用パターンを生成する
@@ -562,8 +567,14 @@ struct work_node {
   /// \param [in] ptn 利用資源パターン
   /// \param [in] cycle 開始サイクル
   /// \param [out] stmPipelines 生成結果
-  void gen_pattern(TargetSchedModel&SM, StmPatternId &patternId, std::vector<StmResourceId> ptn, std::vector<int> cycle,
+  /// \retval true 生成パターン数の制限で、一部のパターンのみ生成しました
+  /// \retval false すべてのパターンを生成した
+  bool gen_pattern(TargetSchedModel&SM, StmPatternId &patternId, std::vector<StmResourceId> ptn, std::vector<int> cycle,
                    StmPipelinesImpl &stmPipelines) {
+
+    if (LimitUseResPattern > 0 && patternId >= LimitUseResPattern) {
+      return true;
+    }
     // 引数：ptnはコピーコンストラクタで複製させている。
     if (id!=A64FXRes::PortKind::P_NULL) {
       ptn.push_back(id);
@@ -578,13 +589,15 @@ struct work_node {
         for (auto stage:cycle) {
           t->stages.push_back(stage);
         }
-        return;
+        return false;
       }
     }
     for ( work_node* c : nodes ) {
       // and-node
-      c->gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
+      auto rc = c->gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
+      if (rc) return true;
     }
+    return false;
   }
 };
 
@@ -767,11 +780,13 @@ AArch64SwplTargetMachine::generateStmPipelines(const MachineInstr &mi) {
   }
   auto *pipelines=new StmPipelines;
   if (t) {
+    if (DebugStm)
+      dbgs() << "DBG(AArch64SwplTargetMachine::generateStmPipelines): MIR=" << mi;
     t->gen_patterns(SM, *pipelines);
     delete t;
   } else {
     pipelines->push_back(new AArch64StmPipeline());
-    dbgs() << "warning: Unimplemented instruction: " << mi;
+    errs() << "warning: Unimplemented instruction: " << mi;
   }
   if (DebugStm) {
     for (auto*pipeline:*pipelines) {
