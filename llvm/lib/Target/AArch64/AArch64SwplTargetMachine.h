@@ -215,6 +215,24 @@ public:
   /// \retval truer Psedo命令
   /// \retval false Pseudo命令ではない
   bool isPseudo(const MachineInstr& mi) const override;
+
+  /// 命令から命令種のIDを取得する
+  /// \param [in] mi 対象命令
+  /// \return 命令種のID AArch64SwplSchedA64FX::INT_OPなど
+  unsigned getInstType(const MachineInstr &mi) const override;
+
+  /// 命令種のIDに該当する文字列を返す
+  /// \param [in] insttypeid 命令種のID
+  /// \return 命令種のIDに該当する文字列
+  const char* getInstTypeString(unsigned insttypeid) const override;
+
+  /// 命令種と依存レジスタによるペナルティを算出する
+  /// \param [in] prod 先行命令のMI
+  /// \param [in] cons 後続命令のMI
+  /// \param [in] regs 先行命令と後続命令で依存するレジスタ
+  /// \return 命令種と依存レジスタによるペナルティ
+  unsigned calcPenaltyByInsttypeAndDependreg(const MachineInstr& prod, const MachineInstr& cons,
+                                             const llvm::Register& reg) const override;
 };
 
 
