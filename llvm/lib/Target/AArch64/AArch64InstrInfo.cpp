@@ -8651,20 +8651,25 @@ unsigned AArch64InstrInfo::getRegKindId(const MachineRegisterInfo &MRI, Register
         return  AArch64StmRegKind::getIntRegID();
       }
       if (AArch64::FPR128RegClass.contains(reg) ||
-                 AArch64::FPR64RegClass.contains(reg) ||
-                 AArch64::FPR32RegClass.contains(reg) ||
-                 AArch64::FPR16RegClass.contains(reg) ||
-                 AArch64::FPR8RegClass.contains(reg) ||
-                 AArch64::DDRegClass.contains(reg) ||
-                 AArch64::DDDRegClass.contains(reg) ||
-                 AArch64::DDDDRegClass.contains(reg) ||
-                 AArch64::QQRegClass.contains(reg) ||
-                 AArch64::QQQRegClass.contains(reg) ||
-                 AArch64::QQQQRegClass.contains(reg) ||
-                 AArch64::FPR128_loRegClass.contains(reg) ||
-                 AArch64::FPR64_loRegClass.contains(reg) ||
-                 AArch64::FPR16_loRegClass.contains(reg) ||
-                 AArch64::ZPRRegClass.contains(reg)) {
+          AArch64::FPR64RegClass.contains(reg) ||
+          AArch64::FPR32RegClass.contains(reg) ||
+          AArch64::FPR16RegClass.contains(reg) ||
+          AArch64::FPR8RegClass.contains(reg) ||
+          AArch64::DDRegClass.contains(reg) ||
+          AArch64::DDDRegClass.contains(reg) ||
+          AArch64::DDDDRegClass.contains(reg) ||
+          AArch64::QQRegClass.contains(reg) ||
+          AArch64::QQQRegClass.contains(reg) ||
+          AArch64::QQQQRegClass.contains(reg) ||
+          AArch64::FPR128_loRegClass.contains(reg) ||
+          AArch64::FPR64_loRegClass.contains(reg) ||
+          AArch64::FPR16_loRegClass.contains(reg) ||
+          AArch64::ZPRRegClass.contains(reg) ||
+          AArch64::ZPR_3bRegClass.contains(reg) ||
+          AArch64::ZPR_4bRegClass.contains(reg) ||
+          AArch64::ZPR2RegClass.contains(reg) ||
+          AArch64::ZPR3RegClass.contains(reg) ||
+          AArch64::ZPR4RegClass.contains(reg)) {
         return  AArch64StmRegKind::getFloatRegID();
       }
       if (AArch64::PPRRegClass.contains(reg) ||
