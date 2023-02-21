@@ -503,7 +503,7 @@ static MachineOperand* used_reg(MachineInstr &phi) {
   auto def_r_class=SWPipeliner::MRI->getRegClass(def_r);
   auto own_r_class=SWPipeliner::MRI->getRegClass(own_r);
 
-  if (!IgnoreRegClass_SuppressCopy && def_r_class->getID()!=own_r_class->getID()) {
+  if (!SWPipeliner::STM->isEnableRegAlloc() && !IgnoreRegClass_SuppressCopy && def_r_class->getID()!=own_r_class->getID()) {
     if (SWPipeliner::isDebugOutput()) {
       dbgs() << "DEBUG(used_reg): def-class is not use-class!:" << phi;
     }
@@ -791,7 +791,7 @@ void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOu
       if (!umi->isPHI()) use_onlyphi=false;
     }
 
-    if (use_onlyphi ||
+    if (use_onlyphi || SWPipeliner::STM->isEnableRegAlloc() ||
         SWPipeliner::TII->canRemoveCopy(*body, mi, *SWPipeliner::MRI)){
       for (auto *op:target_mo) {
         auto *umi=op->getParent();
