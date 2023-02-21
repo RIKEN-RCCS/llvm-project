@@ -172,13 +172,6 @@ static void createExcludeVReg(MachineInstr *mi, MachineOperand &mo,
              << printReg(reg, SWPipeliner::TRI) << "\n";
     }
     ex_vreg.insert(reg);
-  } else if (mo.getSubReg() != 0) {
-    // sub-registerを持つレジスタなら除外リストに追加
-    if( DebugSwplRegAlloc ) {
-      dbgs() << "Excluded subreg. reg="
-             << printReg(reg, SWPipeliner::TRI) << "\n";
-    }
-    ex_vreg.insert(reg);
   } else if (mo.isTied()) {
     // tied-defなら除外リストに追加
     if( DebugSwplRegAlloc ) {
@@ -436,7 +429,13 @@ static void callSetReg(MachineFunction &MF,
       addCopyMIpost(MF, post_dl, tmi->kernel_post_mis, rinfo->vreg, rinfo->preg); // liveout
     // 当該物理レジスタを使用するMachineOperandすべてにsetReg()する
     for (auto *mo : rinfo->vreg_mo) {
-      mo->setReg(rinfo->preg);
+      auto preg = rinfo->preg;
+      auto subRegIdx = mo->getSubReg();
+      if (subRegIdx != 0) {
+        preg = SWPipeliner::TRI->getSubReg(rinfo->preg, subRegIdx);
+        mo->setSubReg(0);
+      }
+      mo->setReg(preg);
       mo->setIsRenamable(true);
     }
   }
@@ -884,7 +883,7 @@ void SwplRegAllocInfoTbl::dump() {
       MachineOperand *m = ri_p->vreg_mo[l];
       // レジスタオペランドなら出力内容を分かり易くする
       if (m->isReg()) {
-        dbgs() << printReg(m->getReg(), SWPipeliner::TRI);
+        dbgs() << printReg(m->getReg(), SWPipeliner::TRI, m->getSubReg());
       } else {
         m->print(dbgs());
       }
