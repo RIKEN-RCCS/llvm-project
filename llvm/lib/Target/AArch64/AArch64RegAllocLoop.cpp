@@ -300,6 +300,42 @@ static int createLiveRange(MachineOperand &mo, unsigned reg,
 }
 
 /**
+ * @brief Liverangeの延長処理
+ * @param [in,out] tmi 命令列変換情報
+ */
+static void extendLiveRange(SwplTransformedMIRInfo *tmi) {
+  assert(tmi);
+  for (size_t i = 0; i < tmi->swplRAITbl->length(); i++) {
+    RegAllocInfo *rinfo = tmi->swplRAITbl->getWithIdx(i);
+    // 後に呼び出すcallSetReg()内でカーネル終端にCOPY命令を追加する
+    // 条件に合致したレジスタはnum_useを当該COPY命令に設定して
+    // liverangeを伸ばす
+    if ((rinfo->vreg > 0) && (rinfo->preg > 0) &&                         // vreg および preg が 0 より大きい
+        ((rinfo->num_def > -1) &&                                         // (定義がある) &&
+         ((rinfo->num_use == -1) || (rinfo->num_def < rinfo->num_use)) && // (参照がないor定義<参照である) &&
+         ((unsigned)rinfo->num_use < rinfo->total_mi)) &&                 // (参照がカーネル終端未満である)
+        (tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg))) {          // エピローグで参照から始まっている
+      /*
+       *   bb.5.for.body1: (kernel loop)
+       *     $x2(%11) = xxx $x1(%10), 1
+       *     $x3(%12) = xxx $x2(%11), 1
+       *     |
+       *     | この間で$x2が再利用されないよう、liverangeを伸ばす
+       *     |
+       *     %13 = COPY $x2(%11)    <- callSetReg()にてliveout向けCOPYを追加する
+       *   bb.11.for.body1:
+       *     %14 = ADD %13, 1
+       */
+      if( DebugSwplRegAlloc ) {
+        dbgs() << "num_use: " << rinfo->num_use << " to " << rinfo->total_mi << "\n";
+      }
+      rinfo->updateNumUseNoReuse(rinfo->total_mi);
+    }
+  }
+  return;
+}
+
+/**
  * @brief  生存区間を基に仮想レジスタへ物理レジスタを割り付ける
  * @param  [in,out] reginfo 割り当て済みレジスタ情報
  * @param  [in]     ekri_tbl カーネル外のレジスタ情報の表
@@ -548,6 +584,8 @@ bool AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
       }
     }
   }
+
+  extendLiveRange(tmi);
 
   if( DebugSwplRegAlloc ) {
     dbgs() << "complete createLiveRange()\n";
@@ -824,14 +862,7 @@ unsigned SwplRegAllocInfoTbl::getReusePReg( RegAllocInfo* rai ) {
  * @retval false 重複していない
  */
 bool SwplRegAllocInfoTbl::isPRegOverlap( unsigned preg1, unsigned preg2 ) {
-  if( preg1 == preg2 ) return true;
-
-  auto q = regconstrain[preg1];
-  if( std::find(q.begin(), q.end(), preg2) != q.end() ) {
-    return true;
-  }
-
-  return false;
+  return SWPipeliner::TRI->regsOverlap(preg1, preg2);
 }
 
 /**
@@ -843,14 +874,9 @@ bool SwplRegAllocInfoTbl::isPRegOverlap( unsigned preg1, unsigned preg2 ) {
 bool SwplRegAllocInfoTbl::isUsePReg( unsigned preg ) {
   for(unsigned i=0; i<rai_tbl.size(); i++) {
     unsigned usedpreg = rai_tbl[i].preg;
-    if( preg == usedpreg ) return true;
-
-    // 物理的に重複するレジスタも、利用済みとして扱う
-    if( regconstrain.count(usedpreg) > 0 ) {
-      auto q = regconstrain[usedpreg];
-      if( std::find(q.begin(), q.end(), preg) != q.end() )
-        return true;
-    }
+    // 物理的に重複するレジスタは"使用されている"
+    if(isPRegOverlap(usedpreg, preg))
+      return true;
   }
   return false;
 }
@@ -897,271 +923,6 @@ void SwplRegAllocInfoTbl::dump() {
 SwplRegAllocInfoTbl::SwplRegAllocInfoTbl(unsigned num_of_mi) {
   total_mi=num_of_mi;
   rai_tbl={};
-
-  regconstrain[AArch64::W0]  = { AArch64::X0 };
-  regconstrain[AArch64::W1]  = { AArch64::X1 };
-  regconstrain[AArch64::W2]  = { AArch64::X2 };
-  regconstrain[AArch64::W3]  = { AArch64::X3 };
-  regconstrain[AArch64::W4]  = { AArch64::X4 };
-  regconstrain[AArch64::W5]  = { AArch64::X5 };
-  regconstrain[AArch64::W6]  = { AArch64::X6 };
-  regconstrain[AArch64::W7]  = { AArch64::X7 };
-  regconstrain[AArch64::W8]  = { AArch64::X8 };
-  regconstrain[AArch64::W9]  = { AArch64::X9 };
-  regconstrain[AArch64::W10] = { AArch64::X10 };
-  regconstrain[AArch64::W11] = { AArch64::X11 };
-  regconstrain[AArch64::W12] = { AArch64::X12 };
-  regconstrain[AArch64::W13] = { AArch64::X13 };
-  regconstrain[AArch64::W14] = { AArch64::X14 };
-  regconstrain[AArch64::W15] = { AArch64::X15 };
-  regconstrain[AArch64::W16] = { AArch64::X16 };
-  regconstrain[AArch64::W17] = { AArch64::X17 };
-  regconstrain[AArch64::W18] = { AArch64::X18 };
-  regconstrain[AArch64::W19] = { AArch64::X19 };
-  regconstrain[AArch64::W20] = { AArch64::X20 };
-  regconstrain[AArch64::W21] = { AArch64::X21 };
-  regconstrain[AArch64::W22] = { AArch64::X22 };
-  regconstrain[AArch64::W23] = { AArch64::X23 };
-  regconstrain[AArch64::W24] = { AArch64::X24 };
-  regconstrain[AArch64::W25] = { AArch64::X25 };
-  regconstrain[AArch64::W26] = { AArch64::X26 };
-  regconstrain[AArch64::W27] = { AArch64::X27 };
-  regconstrain[AArch64::W28] = { AArch64::X28 };
-  // W29-W30は割り付けに使用されない
-  regconstrain[AArch64::WSP] = { AArch64::SP  };
-  regconstrain[AArch64::WZR] = { AArch64::XZR };
-  
-  regconstrain[AArch64::X0]  = { AArch64::W0 };
-  regconstrain[AArch64::X1]  = { AArch64::W1 };
-  regconstrain[AArch64::X2]  = { AArch64::W2 };
-  regconstrain[AArch64::X3]  = { AArch64::W3 };
-  regconstrain[AArch64::X4]  = { AArch64::W4 };
-  regconstrain[AArch64::X5]  = { AArch64::W5 };
-  regconstrain[AArch64::X6]  = { AArch64::W6 };
-  regconstrain[AArch64::X7]  = { AArch64::W7 };
-  regconstrain[AArch64::X8]  = { AArch64::W8 };
-  regconstrain[AArch64::X9]  = { AArch64::W9 };
-  regconstrain[AArch64::X10] = { AArch64::W10 };
-  regconstrain[AArch64::X11] = { AArch64::W11 };
-  regconstrain[AArch64::X12] = { AArch64::W12 };
-  regconstrain[AArch64::X13] = { AArch64::W13 };
-  regconstrain[AArch64::X14] = { AArch64::W14 };
-  regconstrain[AArch64::X15] = { AArch64::W15 };
-  regconstrain[AArch64::X16] = { AArch64::W16 };
-  regconstrain[AArch64::X17] = { AArch64::W17 };
-  regconstrain[AArch64::X18] = { AArch64::W18 };
-  regconstrain[AArch64::X19] = { AArch64::W19 };
-  regconstrain[AArch64::X20] = { AArch64::W20 };
-  regconstrain[AArch64::X21] = { AArch64::W21 };
-  regconstrain[AArch64::X22] = { AArch64::W22 };
-  regconstrain[AArch64::X23] = { AArch64::W23 };
-  regconstrain[AArch64::X24] = { AArch64::W24 };
-  regconstrain[AArch64::X25] = { AArch64::W25 };
-  regconstrain[AArch64::X26] = { AArch64::W26 };
-  regconstrain[AArch64::X27] = { AArch64::W27 };
-  regconstrain[AArch64::X28] = { AArch64::W28 };
-  regconstrain[AArch64::FP ] = { AArch64::W29 };
-  regconstrain[AArch64::LR ] = { AArch64::W30 };
-  regconstrain[AArch64::SP ] = { AArch64::WSP };
-  regconstrain[AArch64::XZR] = { AArch64::WZR };
-
-  regconstrain[AArch64::B0]  = { AArch64::H0,  AArch64::S0,  AArch64::D0,  AArch64::Q0,  AArch64::Z0_HI,  AArch64::Z0  };
-  regconstrain[AArch64::B1]  = { AArch64::H1,  AArch64::S1,  AArch64::D1,  AArch64::Q1,  AArch64::Z1_HI,  AArch64::Z1  };
-  regconstrain[AArch64::B2]  = { AArch64::H2,  AArch64::S2,  AArch64::D2,  AArch64::Q2,  AArch64::Z2_HI,  AArch64::Z2  };
-  regconstrain[AArch64::B3]  = { AArch64::H3,  AArch64::S3,  AArch64::D3,  AArch64::Q3,  AArch64::Z3_HI,  AArch64::Z3  };
-  regconstrain[AArch64::B4]  = { AArch64::H4,  AArch64::S4,  AArch64::D4,  AArch64::Q4,  AArch64::Z4_HI,  AArch64::Z4  };
-  regconstrain[AArch64::B5]  = { AArch64::H5,  AArch64::S5,  AArch64::D5,  AArch64::Q5,  AArch64::Z5_HI,  AArch64::Z5  };
-  regconstrain[AArch64::B6]  = { AArch64::H6,  AArch64::S6,  AArch64::D6,  AArch64::Q6,  AArch64::Z6_HI,  AArch64::Z6  };
-  regconstrain[AArch64::B7]  = { AArch64::H7,  AArch64::S7,  AArch64::D7,  AArch64::Q7,  AArch64::Z7_HI,  AArch64::Z7  };
-  regconstrain[AArch64::B8]  = { AArch64::H8,  AArch64::S8,  AArch64::D8,  AArch64::Q8,  AArch64::Z8_HI,  AArch64::Z8  };
-  regconstrain[AArch64::B9]  = { AArch64::H9,  AArch64::S9,  AArch64::D9,  AArch64::Q9,  AArch64::Z9_HI,  AArch64::Z9  };
-  regconstrain[AArch64::B10] = { AArch64::H10, AArch64::S10, AArch64::D10, AArch64::Q10, AArch64::Z10_HI, AArch64::Z10 };
-  regconstrain[AArch64::B11] = { AArch64::H11, AArch64::S11, AArch64::D11, AArch64::Q11, AArch64::Z11_HI, AArch64::Z11 };
-  regconstrain[AArch64::B12] = { AArch64::H12, AArch64::S12, AArch64::D12, AArch64::Q12, AArch64::Z12_HI, AArch64::Z12 };
-  regconstrain[AArch64::B13] = { AArch64::H13, AArch64::S13, AArch64::D13, AArch64::Q13, AArch64::Z13_HI, AArch64::Z13 };
-  regconstrain[AArch64::B14] = { AArch64::H14, AArch64::S14, AArch64::D14, AArch64::Q14, AArch64::Z14_HI, AArch64::Z14 };
-  regconstrain[AArch64::B15] = { AArch64::H15, AArch64::S15, AArch64::D15, AArch64::Q15, AArch64::Z15_HI, AArch64::Z15 };
-  regconstrain[AArch64::B16] = { AArch64::H16, AArch64::S16, AArch64::D16, AArch64::Q16, AArch64::Z16_HI, AArch64::Z16 };
-  regconstrain[AArch64::B17] = { AArch64::H17, AArch64::S17, AArch64::D17, AArch64::Q17, AArch64::Z17_HI, AArch64::Z17 };
-  regconstrain[AArch64::B18] = { AArch64::H18, AArch64::S18, AArch64::D18, AArch64::Q18, AArch64::Z18_HI, AArch64::Z18 };
-  regconstrain[AArch64::B19] = { AArch64::H19, AArch64::S19, AArch64::D19, AArch64::Q19, AArch64::Z19_HI, AArch64::Z19 };
-  regconstrain[AArch64::B20] = { AArch64::H20, AArch64::S20, AArch64::D20, AArch64::Q20, AArch64::Z20_HI, AArch64::Z20 };
-  regconstrain[AArch64::B21] = { AArch64::H21, AArch64::S21, AArch64::D21, AArch64::Q21, AArch64::Z21_HI, AArch64::Z21 };
-  regconstrain[AArch64::B22] = { AArch64::H22, AArch64::S22, AArch64::D22, AArch64::Q22, AArch64::Z22_HI, AArch64::Z22 };
-  regconstrain[AArch64::B23] = { AArch64::H23, AArch64::S23, AArch64::D23, AArch64::Q23, AArch64::Z23_HI, AArch64::Z23 };
-  regconstrain[AArch64::B24] = { AArch64::H24, AArch64::S24, AArch64::D24, AArch64::Q24, AArch64::Z24_HI, AArch64::Z24 };
-  regconstrain[AArch64::B25] = { AArch64::H25, AArch64::S25, AArch64::D25, AArch64::Q25, AArch64::Z25_HI, AArch64::Z25 };
-  regconstrain[AArch64::B26] = { AArch64::H26, AArch64::S26, AArch64::D26, AArch64::Q26, AArch64::Z26_HI, AArch64::Z26 };
-  regconstrain[AArch64::B27] = { AArch64::H27, AArch64::S27, AArch64::D27, AArch64::Q27, AArch64::Z27_HI, AArch64::Z27 };
-  regconstrain[AArch64::B28] = { AArch64::H28, AArch64::S28, AArch64::D28, AArch64::Q28, AArch64::Z28_HI, AArch64::Z28 };
-  regconstrain[AArch64::B29] = { AArch64::H29, AArch64::S29, AArch64::D29, AArch64::Q29, AArch64::Z29_HI, AArch64::Z29 };
-  regconstrain[AArch64::B30] = { AArch64::H30, AArch64::S30, AArch64::D30, AArch64::Q30, AArch64::Z30_HI, AArch64::Z30 };
-  regconstrain[AArch64::B31] = { AArch64::H31, AArch64::S31, AArch64::D31, AArch64::Q31, AArch64::Z31_HI, AArch64::Z31 };
-
-  regconstrain[AArch64::S0]  = { AArch64::B0,  AArch64::H0,  AArch64::D0,  AArch64::Q0,  AArch64::Z0_HI,  AArch64::Z0 };
-  regconstrain[AArch64::S1]  = { AArch64::B1,  AArch64::H1,  AArch64::D1,  AArch64::Q1,  AArch64::Z1_HI,  AArch64::Z1 };
-  regconstrain[AArch64::S2]  = { AArch64::B2,  AArch64::H2,  AArch64::D2,  AArch64::Q2,  AArch64::Z2_HI,  AArch64::Z2 };
-  regconstrain[AArch64::S3]  = { AArch64::B3,  AArch64::H3,  AArch64::D3,  AArch64::Q3,  AArch64::Z3_HI,  AArch64::Z3 };
-  regconstrain[AArch64::S4]  = { AArch64::B4,  AArch64::H4,  AArch64::D4,  AArch64::Q4,  AArch64::Z4_HI,  AArch64::Z4 };
-  regconstrain[AArch64::S5]  = { AArch64::B5,  AArch64::H5,  AArch64::D5,  AArch64::Q5,  AArch64::Z5_HI,  AArch64::Z5 };
-  regconstrain[AArch64::S6]  = { AArch64::B6,  AArch64::H6,  AArch64::D6,  AArch64::Q6,  AArch64::Z6_HI,  AArch64::Z6 };
-  regconstrain[AArch64::S7]  = { AArch64::B7,  AArch64::H7,  AArch64::D7,  AArch64::Q7,  AArch64::Z7_HI,  AArch64::Z7 };
-  regconstrain[AArch64::S8]  = { AArch64::B8,  AArch64::H8,  AArch64::D8,  AArch64::Q8,  AArch64::Z8_HI,  AArch64::Z8 };
-  regconstrain[AArch64::S9]  = { AArch64::B9,  AArch64::H9,  AArch64::D9,  AArch64::Q9,  AArch64::Z9_HI,  AArch64::Z9 };
-  regconstrain[AArch64::S10] = { AArch64::B10, AArch64::H10, AArch64::D10, AArch64::Q10, AArch64::Z10_HI, AArch64::Z10 };
-  regconstrain[AArch64::S11] = { AArch64::B11, AArch64::H11, AArch64::D11, AArch64::Q11, AArch64::Z11_HI, AArch64::Z11 };
-  regconstrain[AArch64::S12] = { AArch64::B12, AArch64::H12, AArch64::D12, AArch64::Q12, AArch64::Z12_HI, AArch64::Z12 };
-  regconstrain[AArch64::S13] = { AArch64::B13, AArch64::H13, AArch64::D13, AArch64::Q13, AArch64::Z13_HI, AArch64::Z13 };
-  regconstrain[AArch64::S14] = { AArch64::B14, AArch64::H14, AArch64::D14, AArch64::Q14, AArch64::Z14_HI, AArch64::Z14 };
-  regconstrain[AArch64::S15] = { AArch64::B15, AArch64::H15, AArch64::D15, AArch64::Q15, AArch64::Z15_HI, AArch64::Z15 };
-  regconstrain[AArch64::S16] = { AArch64::B16, AArch64::H16, AArch64::D16, AArch64::Q16, AArch64::Z16_HI, AArch64::Z16 };
-  regconstrain[AArch64::S17] = { AArch64::B17, AArch64::H17, AArch64::D17, AArch64::Q17, AArch64::Z17_HI, AArch64::Z17 };
-  regconstrain[AArch64::S18] = { AArch64::B18, AArch64::H18, AArch64::D18, AArch64::Q18, AArch64::Z18_HI, AArch64::Z18 };
-  regconstrain[AArch64::S19] = { AArch64::B19, AArch64::H19, AArch64::D19, AArch64::Q19, AArch64::Z19_HI, AArch64::Z19 };
-  regconstrain[AArch64::S20] = { AArch64::B20, AArch64::H20, AArch64::D20, AArch64::Q20, AArch64::Z20_HI, AArch64::Z20 };
-  regconstrain[AArch64::S21] = { AArch64::B21, AArch64::H21, AArch64::D21, AArch64::Q21, AArch64::Z21_HI, AArch64::Z21 };
-  regconstrain[AArch64::S22] = { AArch64::B22, AArch64::H22, AArch64::D22, AArch64::Q22, AArch64::Z22_HI, AArch64::Z22 };
-  regconstrain[AArch64::S23] = { AArch64::B23, AArch64::H23, AArch64::D23, AArch64::Q23, AArch64::Z23_HI, AArch64::Z23 };
-  regconstrain[AArch64::S24] = { AArch64::B24, AArch64::H24, AArch64::D24, AArch64::Q24, AArch64::Z24_HI, AArch64::Z24 };
-  regconstrain[AArch64::S25] = { AArch64::B25, AArch64::H25, AArch64::D25, AArch64::Q25, AArch64::Z25_HI, AArch64::Z25 };
-  regconstrain[AArch64::S26] = { AArch64::B26, AArch64::H26, AArch64::D26, AArch64::Q26, AArch64::Z26_HI, AArch64::Z26 };
-  regconstrain[AArch64::S27] = { AArch64::B27, AArch64::H27, AArch64::D27, AArch64::Q27, AArch64::Z27_HI, AArch64::Z27 };
-  regconstrain[AArch64::S28] = { AArch64::B28, AArch64::H28, AArch64::D28, AArch64::Q28, AArch64::Z28_HI, AArch64::Z28 };
-  regconstrain[AArch64::S29] = { AArch64::B29, AArch64::H29, AArch64::D29, AArch64::Q29, AArch64::Z29_HI, AArch64::Z29 };
-  regconstrain[AArch64::S30] = { AArch64::B30, AArch64::H30, AArch64::D30, AArch64::Q30, AArch64::Z30_HI, AArch64::Z30 };
-  regconstrain[AArch64::S31] = { AArch64::B31, AArch64::H31, AArch64::D31, AArch64::Q31, AArch64::Z31_HI, AArch64::Z31 };
-
-  regconstrain[AArch64::D0]  = { AArch64::B0,  AArch64::H0,  AArch64::S0,  AArch64::Q0,  AArch64::Z0_HI,  AArch64::Z0 };
-  regconstrain[AArch64::D1]  = { AArch64::B1,  AArch64::H1,  AArch64::S1,  AArch64::Q1,  AArch64::Z1_HI,  AArch64::Z1 };
-  regconstrain[AArch64::D2]  = { AArch64::B2,  AArch64::H2,  AArch64::S2,  AArch64::Q2,  AArch64::Z2_HI,  AArch64::Z2 };
-  regconstrain[AArch64::D3]  = { AArch64::B3,  AArch64::H3,  AArch64::S3,  AArch64::Q3,  AArch64::Z3_HI,  AArch64::Z3 };
-  regconstrain[AArch64::D4]  = { AArch64::B4,  AArch64::H4,  AArch64::S4,  AArch64::Q4,  AArch64::Z4_HI,  AArch64::Z4 };
-  regconstrain[AArch64::D5]  = { AArch64::B5,  AArch64::H5,  AArch64::S5,  AArch64::Q5,  AArch64::Z5_HI,  AArch64::Z5 };
-  regconstrain[AArch64::D6]  = { AArch64::B6,  AArch64::H6,  AArch64::S6,  AArch64::Q6,  AArch64::Z6_HI,  AArch64::Z6 };
-  regconstrain[AArch64::D7]  = { AArch64::B7,  AArch64::H7,  AArch64::S7,  AArch64::Q7,  AArch64::Z7_HI,  AArch64::Z7 };
-  regconstrain[AArch64::D8]  = { AArch64::B8,  AArch64::H8,  AArch64::S8,  AArch64::Q8,  AArch64::Z8_HI,  AArch64::Z8 };
-  regconstrain[AArch64::D9]  = { AArch64::B9,  AArch64::H9,  AArch64::S9,  AArch64::Q9,  AArch64::Z9_HI,  AArch64::Z9 };
-  regconstrain[AArch64::D10] = { AArch64::B10, AArch64::H10, AArch64::S10, AArch64::Q10, AArch64::Z10_HI, AArch64::Z10 };
-  regconstrain[AArch64::D11] = { AArch64::B11, AArch64::H11, AArch64::S11, AArch64::Q11, AArch64::Z11_HI, AArch64::Z11 };
-  regconstrain[AArch64::D12] = { AArch64::B12, AArch64::H12, AArch64::S12, AArch64::Q12, AArch64::Z12_HI, AArch64::Z12 };
-  regconstrain[AArch64::D13] = { AArch64::B13, AArch64::H13, AArch64::S13, AArch64::Q13, AArch64::Z13_HI, AArch64::Z13 };
-  regconstrain[AArch64::D14] = { AArch64::B14, AArch64::H14, AArch64::S14, AArch64::Q14, AArch64::Z14_HI, AArch64::Z14 };
-  regconstrain[AArch64::D15] = { AArch64::B15, AArch64::H15, AArch64::S15, AArch64::Q15, AArch64::Z15_HI, AArch64::Z15 };
-  regconstrain[AArch64::D16] = { AArch64::B16, AArch64::H16, AArch64::S16, AArch64::Q16, AArch64::Z16_HI, AArch64::Z16 };
-  regconstrain[AArch64::D17] = { AArch64::B17, AArch64::H17, AArch64::S17, AArch64::Q17, AArch64::Z17_HI, AArch64::Z17 };
-  regconstrain[AArch64::D18] = { AArch64::B18, AArch64::H18, AArch64::S18, AArch64::Q18, AArch64::Z18_HI, AArch64::Z18 };
-  regconstrain[AArch64::D19] = { AArch64::B19, AArch64::H19, AArch64::S19, AArch64::Q19, AArch64::Z19_HI, AArch64::Z19 };
-  regconstrain[AArch64::D20] = { AArch64::B20, AArch64::H20, AArch64::S20, AArch64::Q20, AArch64::Z20_HI, AArch64::Z20 };
-  regconstrain[AArch64::D21] = { AArch64::B21, AArch64::H21, AArch64::S21, AArch64::Q21, AArch64::Z21_HI, AArch64::Z21 };
-  regconstrain[AArch64::D22] = { AArch64::B22, AArch64::H22, AArch64::S22, AArch64::Q22, AArch64::Z22_HI, AArch64::Z22 };
-  regconstrain[AArch64::D23] = { AArch64::B23, AArch64::H23, AArch64::S23, AArch64::Q23, AArch64::Z23_HI, AArch64::Z23 };
-  regconstrain[AArch64::D24] = { AArch64::B24, AArch64::H24, AArch64::S24, AArch64::Q24, AArch64::Z24_HI, AArch64::Z24 };
-  regconstrain[AArch64::D25] = { AArch64::B25, AArch64::H25, AArch64::S25, AArch64::Q25, AArch64::Z25_HI, AArch64::Z25 };
-  regconstrain[AArch64::D26] = { AArch64::B26, AArch64::H26, AArch64::S26, AArch64::Q26, AArch64::Z26_HI, AArch64::Z26 };
-  regconstrain[AArch64::D27] = { AArch64::B27, AArch64::H27, AArch64::S27, AArch64::Q27, AArch64::Z27_HI, AArch64::Z27 };
-  regconstrain[AArch64::D28] = { AArch64::B28, AArch64::H28, AArch64::S28, AArch64::Q28, AArch64::Z28_HI, AArch64::Z28 };
-  regconstrain[AArch64::D29] = { AArch64::B29, AArch64::H29, AArch64::S29, AArch64::Q29, AArch64::Z29_HI, AArch64::Z29 };
-  regconstrain[AArch64::D30] = { AArch64::B30, AArch64::H30, AArch64::S30, AArch64::Q30, AArch64::Z30_HI, AArch64::Z30 };
-  regconstrain[AArch64::D31] = { AArch64::B31, AArch64::H31, AArch64::S31, AArch64::Q31, AArch64::Z31_HI, AArch64::Z31 };
-
-  regconstrain[AArch64::Q0]  = { AArch64::B0,  AArch64::H0,  AArch64::S0,  AArch64::D0,  AArch64::Z0_HI,  AArch64::Z0 };
-  regconstrain[AArch64::Q1]  = { AArch64::B1,  AArch64::H1,  AArch64::S1,  AArch64::D1,  AArch64::Z1_HI,  AArch64::Z1 };
-  regconstrain[AArch64::Q2]  = { AArch64::B2,  AArch64::H2,  AArch64::S2,  AArch64::D2,  AArch64::Z2_HI,  AArch64::Z2 };
-  regconstrain[AArch64::Q3]  = { AArch64::B3,  AArch64::H3,  AArch64::S3,  AArch64::D3,  AArch64::Z3_HI,  AArch64::Z3 };
-  regconstrain[AArch64::Q4]  = { AArch64::B4,  AArch64::H4,  AArch64::S4,  AArch64::D4,  AArch64::Z4_HI,  AArch64::Z4 };
-  regconstrain[AArch64::Q5]  = { AArch64::B5,  AArch64::H5,  AArch64::S5,  AArch64::D5,  AArch64::Z5_HI,  AArch64::Z5 };
-  regconstrain[AArch64::Q6]  = { AArch64::B6,  AArch64::H6,  AArch64::S6,  AArch64::D6,  AArch64::Z6_HI,  AArch64::Z6 };
-  regconstrain[AArch64::Q7]  = { AArch64::B7,  AArch64::H7,  AArch64::S7,  AArch64::D7,  AArch64::Z7_HI,  AArch64::Z7 };
-  regconstrain[AArch64::Q8]  = { AArch64::B8,  AArch64::H8,  AArch64::S8,  AArch64::D8,  AArch64::Z8_HI,  AArch64::Z8 };
-  regconstrain[AArch64::Q9]  = { AArch64::B9,  AArch64::H9,  AArch64::S9,  AArch64::D9,  AArch64::Z9_HI,  AArch64::Z9 };
-  regconstrain[AArch64::Q10] = { AArch64::B10, AArch64::H10, AArch64::S10, AArch64::D10, AArch64::Z10_HI, AArch64::Z10 };
-  regconstrain[AArch64::Q11] = { AArch64::B11, AArch64::H11, AArch64::S11, AArch64::D11, AArch64::Z11_HI, AArch64::Z11 };
-  regconstrain[AArch64::Q12] = { AArch64::B12, AArch64::H12, AArch64::S12, AArch64::D12, AArch64::Z12_HI, AArch64::Z12 };
-  regconstrain[AArch64::Q13] = { AArch64::B13, AArch64::H13, AArch64::S13, AArch64::D13, AArch64::Z13_HI, AArch64::Z13 };
-  regconstrain[AArch64::Q14] = { AArch64::B14, AArch64::H14, AArch64::S14, AArch64::D14, AArch64::Z14_HI, AArch64::Z14 };
-  regconstrain[AArch64::Q15] = { AArch64::B15, AArch64::H15, AArch64::S15, AArch64::D15, AArch64::Z15_HI, AArch64::Z15 };
-  regconstrain[AArch64::Q16] = { AArch64::B16, AArch64::H16, AArch64::S16, AArch64::D16, AArch64::Z16_HI, AArch64::Z16 };
-  regconstrain[AArch64::Q17] = { AArch64::B17, AArch64::H17, AArch64::S17, AArch64::D17, AArch64::Z17_HI, AArch64::Z17 };
-  regconstrain[AArch64::Q18] = { AArch64::B18, AArch64::H18, AArch64::S18, AArch64::D18, AArch64::Z18_HI, AArch64::Z18 };
-  regconstrain[AArch64::Q19] = { AArch64::B19, AArch64::H19, AArch64::S19, AArch64::D19, AArch64::Z19_HI, AArch64::Z19 };
-  regconstrain[AArch64::Q20] = { AArch64::B20, AArch64::H20, AArch64::S20, AArch64::D20, AArch64::Z20_HI, AArch64::Z20 };
-  regconstrain[AArch64::Q21] = { AArch64::B21, AArch64::H21, AArch64::S21, AArch64::D21, AArch64::Z21_HI, AArch64::Z21 };
-  regconstrain[AArch64::Q22] = { AArch64::B22, AArch64::H22, AArch64::S22, AArch64::D22, AArch64::Z22_HI, AArch64::Z22 };
-  regconstrain[AArch64::Q23] = { AArch64::B23, AArch64::H23, AArch64::S23, AArch64::D23, AArch64::Z23_HI, AArch64::Z23 };
-  regconstrain[AArch64::Q24] = { AArch64::B24, AArch64::H24, AArch64::S24, AArch64::D24, AArch64::Z24_HI, AArch64::Z24 };
-  regconstrain[AArch64::Q25] = { AArch64::B25, AArch64::H25, AArch64::S25, AArch64::D25, AArch64::Z25_HI, AArch64::Z25 };
-  regconstrain[AArch64::Q26] = { AArch64::B26, AArch64::H26, AArch64::S26, AArch64::D26, AArch64::Z26_HI, AArch64::Z26 };
-  regconstrain[AArch64::Q27] = { AArch64::B27, AArch64::H27, AArch64::S27, AArch64::D27, AArch64::Z27_HI, AArch64::Z27 };
-  regconstrain[AArch64::Q28] = { AArch64::B28, AArch64::H28, AArch64::S28, AArch64::D28, AArch64::Z28_HI, AArch64::Z28 };
-  regconstrain[AArch64::Q29] = { AArch64::B29, AArch64::H29, AArch64::S29, AArch64::D29, AArch64::Z29_HI, AArch64::Z29 };
-  regconstrain[AArch64::Q30] = { AArch64::B30, AArch64::H30, AArch64::S30, AArch64::D30, AArch64::Z30_HI, AArch64::Z30 };
-  regconstrain[AArch64::Q31] = { AArch64::B31, AArch64::H31, AArch64::S31, AArch64::D31, AArch64::Z31_HI, AArch64::Z31 };
-
-  regconstrain[AArch64::Z0_HI]  = { AArch64::B0,  AArch64::H0,  AArch64::S0,  AArch64::D0,  AArch64::Q0,  AArch64::Z0 };
-  regconstrain[AArch64::Z1_HI]  = { AArch64::B1,  AArch64::H1,  AArch64::S1,  AArch64::D1,  AArch64::Q1,  AArch64::Z1 };
-  regconstrain[AArch64::Z2_HI]  = { AArch64::B2,  AArch64::H2,  AArch64::S2,  AArch64::D2,  AArch64::Q2,  AArch64::Z2 };
-  regconstrain[AArch64::Z3_HI]  = { AArch64::B3,  AArch64::H3,  AArch64::S3,  AArch64::D3,  AArch64::Q3,  AArch64::Z3 };
-  regconstrain[AArch64::Z4_HI]  = { AArch64::B4,  AArch64::H4,  AArch64::S4,  AArch64::D4,  AArch64::Q4,  AArch64::Z4 };
-  regconstrain[AArch64::Z5_HI]  = { AArch64::B5,  AArch64::H5,  AArch64::S5,  AArch64::D5,  AArch64::Q5,  AArch64::Z5 };
-  regconstrain[AArch64::Z6_HI]  = { AArch64::B6,  AArch64::H6,  AArch64::S6,  AArch64::D6,  AArch64::Q6,  AArch64::Z6 };
-  regconstrain[AArch64::Z7_HI]  = { AArch64::B7,  AArch64::H7,  AArch64::S7,  AArch64::D7,  AArch64::Q7,  AArch64::Z7 };
-  regconstrain[AArch64::Z8_HI]  = { AArch64::B8,  AArch64::H8,  AArch64::S8,  AArch64::D8,  AArch64::Q8,  AArch64::Z8 };
-  regconstrain[AArch64::Z9_HI]  = { AArch64::B9,  AArch64::H9,  AArch64::S9,  AArch64::D9,  AArch64::Q9,  AArch64::Z9 };
-  regconstrain[AArch64::Z10_HI] = { AArch64::B10, AArch64::H10, AArch64::S10, AArch64::D10, AArch64::Q10, AArch64::Z10 };
-  regconstrain[AArch64::Z11_HI] = { AArch64::B11, AArch64::H11, AArch64::S11, AArch64::D11, AArch64::Q11, AArch64::Z11 };
-  regconstrain[AArch64::Z12_HI] = { AArch64::B12, AArch64::H12, AArch64::S12, AArch64::D12, AArch64::Q12, AArch64::Z12 };
-  regconstrain[AArch64::Z13_HI] = { AArch64::B13, AArch64::H13, AArch64::S13, AArch64::D13, AArch64::Q13, AArch64::Z13 };
-  regconstrain[AArch64::Z14_HI] = { AArch64::B14, AArch64::H14, AArch64::S14, AArch64::D14, AArch64::Q14, AArch64::Z14 };
-  regconstrain[AArch64::Z15_HI] = { AArch64::B15, AArch64::H15, AArch64::S15, AArch64::D15, AArch64::Q15, AArch64::Z15 };
-  regconstrain[AArch64::Z16_HI] = { AArch64::B16, AArch64::H16, AArch64::S16, AArch64::D16, AArch64::Q16, AArch64::Z16 };
-  regconstrain[AArch64::Z17_HI] = { AArch64::B17, AArch64::H17, AArch64::S17, AArch64::D17, AArch64::Q17, AArch64::Z17 };
-  regconstrain[AArch64::Z18_HI] = { AArch64::B18, AArch64::H18, AArch64::S18, AArch64::D18, AArch64::Q18, AArch64::Z18 };
-  regconstrain[AArch64::Z19_HI] = { AArch64::B19, AArch64::H19, AArch64::S19, AArch64::D19, AArch64::Q19, AArch64::Z19 };
-  regconstrain[AArch64::Z20_HI] = { AArch64::B20, AArch64::H20, AArch64::S20, AArch64::D20, AArch64::Q20, AArch64::Z20 };
-  regconstrain[AArch64::Z21_HI] = { AArch64::B21, AArch64::H21, AArch64::S21, AArch64::D21, AArch64::Q21, AArch64::Z21 };
-  regconstrain[AArch64::Z22_HI] = { AArch64::B22, AArch64::H22, AArch64::S22, AArch64::D22, AArch64::Q22, AArch64::Z22 };
-  regconstrain[AArch64::Z23_HI] = { AArch64::B23, AArch64::H23, AArch64::S23, AArch64::D23, AArch64::Q23, AArch64::Z23 };
-  regconstrain[AArch64::Z24_HI] = { AArch64::B24, AArch64::H24, AArch64::S24, AArch64::D24, AArch64::Q24, AArch64::Z24 };
-  regconstrain[AArch64::Z25_HI] = { AArch64::B25, AArch64::H25, AArch64::S25, AArch64::D25, AArch64::Q25, AArch64::Z25 };
-  regconstrain[AArch64::Z26_HI] = { AArch64::B26, AArch64::H26, AArch64::S26, AArch64::D26, AArch64::Q26, AArch64::Z26 };
-  regconstrain[AArch64::Z27_HI] = { AArch64::B27, AArch64::H27, AArch64::S27, AArch64::D27, AArch64::Q27, AArch64::Z27 };
-  regconstrain[AArch64::Z28_HI] = { AArch64::B28, AArch64::H28, AArch64::S28, AArch64::D28, AArch64::Q28, AArch64::Z28 };
-  regconstrain[AArch64::Z29_HI] = { AArch64::B29, AArch64::H29, AArch64::S29, AArch64::D29, AArch64::Q29, AArch64::Z29 };
-  regconstrain[AArch64::Z30_HI] = { AArch64::B30, AArch64::H30, AArch64::S30, AArch64::D30, AArch64::Q30, AArch64::Z30 };
-  regconstrain[AArch64::Z31_HI] = { AArch64::B31, AArch64::H31, AArch64::S31, AArch64::D31, AArch64::Q31, AArch64::Z31 };
-
-  regconstrain[AArch64::Z0]  = { AArch64::B0,  AArch64::H0,  AArch64::S0,  AArch64::D0,  AArch64::Z0_HI,  AArch64::Q0 };
-  regconstrain[AArch64::Z1]  = { AArch64::B1,  AArch64::H1,  AArch64::S1,  AArch64::D1,  AArch64::Z1_HI,  AArch64::Q1 };
-  regconstrain[AArch64::Z2]  = { AArch64::B2,  AArch64::H2,  AArch64::S2,  AArch64::D2,  AArch64::Z2_HI,  AArch64::Q2 };
-  regconstrain[AArch64::Z3]  = { AArch64::B3,  AArch64::H3,  AArch64::S3,  AArch64::D3,  AArch64::Z3_HI,  AArch64::Q3 };
-  regconstrain[AArch64::Z4]  = { AArch64::B4,  AArch64::H4,  AArch64::S4,  AArch64::D4,  AArch64::Z4_HI,  AArch64::Q4 };
-  regconstrain[AArch64::Z5]  = { AArch64::B5,  AArch64::H5,  AArch64::S5,  AArch64::D5,  AArch64::Z5_HI,  AArch64::Q5 };
-  regconstrain[AArch64::Z6]  = { AArch64::B6,  AArch64::H6,  AArch64::S6,  AArch64::D6,  AArch64::Z6_HI,  AArch64::Q6 };
-  regconstrain[AArch64::Z7]  = { AArch64::B7,  AArch64::H7,  AArch64::S7,  AArch64::D7,  AArch64::Z7_HI,  AArch64::Q7 };
-  regconstrain[AArch64::Z8]  = { AArch64::B8,  AArch64::H8,  AArch64::S8,  AArch64::D8,  AArch64::Z8_HI,  AArch64::Q8 };
-  regconstrain[AArch64::Z9]  = { AArch64::B9,  AArch64::H9,  AArch64::S9,  AArch64::D9,  AArch64::Z9_HI,  AArch64::Q9 };
-  regconstrain[AArch64::Z10] = { AArch64::B10, AArch64::H10, AArch64::S10, AArch64::D10, AArch64::Z10_HI, AArch64::Q10 };
-  regconstrain[AArch64::Z11] = { AArch64::B11, AArch64::H11, AArch64::S11, AArch64::D11, AArch64::Z11_HI, AArch64::Q11 };
-  regconstrain[AArch64::Z12] = { AArch64::B12, AArch64::H12, AArch64::S12, AArch64::D12, AArch64::Z12_HI, AArch64::Q12 };
-  regconstrain[AArch64::Z13] = { AArch64::B13, AArch64::H13, AArch64::S13, AArch64::D13, AArch64::Z13_HI, AArch64::Q13 };
-  regconstrain[AArch64::Z14] = { AArch64::B14, AArch64::H14, AArch64::S14, AArch64::D14, AArch64::Z14_HI, AArch64::Q14 };
-  regconstrain[AArch64::Z15] = { AArch64::B15, AArch64::H15, AArch64::S15, AArch64::D15, AArch64::Z15_HI, AArch64::Q15 };
-  regconstrain[AArch64::Z16] = { AArch64::B16, AArch64::H16, AArch64::S16, AArch64::D16, AArch64::Z16_HI, AArch64::Q16 };
-  regconstrain[AArch64::Z17] = { AArch64::B17, AArch64::H17, AArch64::S17, AArch64::D17, AArch64::Z17_HI, AArch64::Q17 };
-  regconstrain[AArch64::Z18] = { AArch64::B18, AArch64::H18, AArch64::S18, AArch64::D18, AArch64::Z18_HI, AArch64::Q18 };
-  regconstrain[AArch64::Z19] = { AArch64::B19, AArch64::H19, AArch64::S19, AArch64::D19, AArch64::Z19_HI, AArch64::Q19 };
-  regconstrain[AArch64::Z20] = { AArch64::B20, AArch64::H20, AArch64::S20, AArch64::D20, AArch64::Z20_HI, AArch64::Q20 };
-  regconstrain[AArch64::Z21] = { AArch64::B21, AArch64::H21, AArch64::S21, AArch64::D21, AArch64::Z21_HI, AArch64::Q21 };
-  regconstrain[AArch64::Z22] = { AArch64::B22, AArch64::H22, AArch64::S22, AArch64::D22, AArch64::Z22_HI, AArch64::Q22 };
-  regconstrain[AArch64::Z23] = { AArch64::B23, AArch64::H23, AArch64::S23, AArch64::D23, AArch64::Z23_HI, AArch64::Q23 };
-  regconstrain[AArch64::Z24] = { AArch64::B24, AArch64::H24, AArch64::S24, AArch64::D24, AArch64::Z24_HI, AArch64::Q24 };
-  regconstrain[AArch64::Z25] = { AArch64::B25, AArch64::H25, AArch64::S25, AArch64::D25, AArch64::Z25_HI, AArch64::Q25 };
-  regconstrain[AArch64::Z26] = { AArch64::B26, AArch64::H26, AArch64::S26, AArch64::D26, AArch64::Z26_HI, AArch64::Q26 };
-  regconstrain[AArch64::Z27] = { AArch64::B27, AArch64::H27, AArch64::S27, AArch64::D27, AArch64::Z27_HI, AArch64::Q27 };
-  regconstrain[AArch64::Z28] = { AArch64::B28, AArch64::H28, AArch64::S28, AArch64::D28, AArch64::Z28_HI, AArch64::Q28 };
-  regconstrain[AArch64::Z29] = { AArch64::B29, AArch64::H29, AArch64::S29, AArch64::D29, AArch64::Z29_HI, AArch64::Q29 };
-  regconstrain[AArch64::Z30] = { AArch64::B30, AArch64::H30, AArch64::S30, AArch64::D30, AArch64::Z30_HI, AArch64::Q30 };
-  regconstrain[AArch64::Z31] = { AArch64::B31, AArch64::H31, AArch64::S31, AArch64::D31, AArch64::Z31_HI, AArch64::Q31 };
 };
 
 void SwplRegAllocInfoTbl::setRangeReg(std::vector<int> *range, RegAllocInfo& regAllocInfo) {
