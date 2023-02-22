@@ -728,17 +728,9 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
 
   pre->addSuccessor(new_bb);
   
-  /// cloneBody() を呼び出し、MachineBasickBlockの複製とレジスタリネーミングを行う。
+  /// cloneBody() を呼び出し、MachineBasickBlockの複製とレジスタリネーミングを行う。(OrgReg2NewRegを生成する)
   cloneBody(new_bb, ob);
-  if (!DisableRmCopy)
-    removeCopy(new_bb, LiveOutReg);
-  /// convertPostPreIndeTo()を呼び出し、post/pre index命令を演算＋load/store命令に変換する
-  if (!DisableConvPrePost)
-    convertPrePostIndexInstr(new_bb);
-  /// convertNonSSA() を呼び出し、非SSA化と複製したMachineBasicBlockの回収を行う。
-  convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);
 
-  ///
   auto regmap=getOrgReg2NewReg();
   for (auto &p:LiveOutReg) {
     // p.first: reg, p.second:vector<MO*>
@@ -746,9 +738,46 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
     liveOuts.insert(newreg);
   }
 
+  if (!DisableRmCopy)
+    removeCopy(new_bb);
+  /// convertPostPreIndeTo()を呼び出し、post/pre index命令を演算＋load/store命令に変換する
+  if (!DisableConvPrePost)
+    convertPrePostIndexInstr(new_bb);
+  /// convertNonSSA() を呼び出し、非SSA化と複製したMachineBasicBlockの回収を行う。
+  /// PHIからCOPYを生成する際、liveOutsにPHIで定義されるvregを追加している。
+  convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);
+
+  normalizeTiedDef(new_bb);
+
 }
 
-void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOutReg) {
+bool SwplLoop::checkUse(const MachineBasicBlock* body, const MachineInstr* tiedInstr, Register tiedReg) const {
+  // 1)liveOutsに存在するか確認する
+  if (liveOuts.contains(tiedReg)) return false;
+  // 2)tiedInstrからMBB最後までチェックする
+  // 3)MBB先頭からtiedInstrまでチェックする
+  return true;
+}
+
+void SwplLoop::normalizeTiedDef(MachineBasicBlock *body) {
+  // tied-defを検索する
+  DenseMap<MachineInstr*, Register> targets;
+
+  for (auto &MI:*body) {
+    for (auto &MO:MI.uses()) {
+      if (!MO.isReg()) continue;
+      if (MO.isTied() && checkUse(body, &MI, MO.getReg())) {
+        targets[&MI]=MO.getReg();
+      }
+    }
+  }
+  for (auto&& [first, second]:targets) {
+    // todo:ここでCOPY挿入！
+    dbgs() << *first;
+  }
+}
+
+void SwplLoop::removeCopy(MachineBasicBlock *body) {
   std::vector<llvm::MachineInstr *> delete_mi;
   std::vector<llvm::MachineOperand *> target_mo;
   for (auto &mi:*body) {
@@ -758,16 +787,15 @@ void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOu
       dbgs() << " target mi: " << mi;
     }
 
+    auto &op0=mi.getOperand(0);
     const auto *org_copy=NewMI2OrgMI.at(&mi);
-    auto org_def_r= org_copy->getOperand(0).getReg();
-    if (LiveOutReg.count(org_def_r)) {
+    if (liveOuts.contains(op0.getReg())) {
       if (SWPipeliner::isDebugOutput()) {
         dbgs() << " org mi: " << org_copy;
         dbgs() << " op0 is liveout!\n";
       }
       continue;
     }
-    auto &op0=mi.getOperand(0);
     if (!mi.getOperand(1).isReg()) {
       if (SWPipeliner::isDebugOutput()) {
         dbgs() << " op1 isnot reg!\n";
