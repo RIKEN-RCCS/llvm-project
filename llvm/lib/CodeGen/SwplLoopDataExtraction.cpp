@@ -791,8 +791,8 @@ void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOu
       if (!umi->isPHI()) use_onlyphi=false;
     }
 
-    if (use_onlyphi || SWPipeliner::STM->isEnableRegAlloc() ||
-        SWPipeliner::TII->canRemoveCopy(*body, mi, *SWPipeliner::MRI)){
+    if (use_onlyphi ||
+        SWPipeliner::TII->canRemoveCopy(*body, mi, *SWPipeliner::MRI, SWPipeliner::STM->isEnableRegAlloc())){
       for (auto *op:target_mo) {
         auto *umi=op->getParent();
         if (SWPipeliner::isDebugOutput()) {
@@ -818,7 +818,9 @@ void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOu
       // MBBから削除する命令の収集
       delete_mi.push_back(&mi);
     } else {
-      dbgs() << " canRemoveCopy() is false!\n";
+      if (SWPipeliner::isDebugOutput()) {
+        dbgs() << " canRemoveCopy() is false!\n";
+      }
     }
   }
   for (auto *mi:delete_mi)
