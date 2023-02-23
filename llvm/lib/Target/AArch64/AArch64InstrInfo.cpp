@@ -8149,6 +8149,10 @@ bool AArch64InstrInfo::canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI,
   auto &op1=MI.getOperand(1);
   Register r0 = op0.getReg();
   Register r1 = op1.getReg();
+  if (enableRegalloc) {
+    if (getRegKindId(MRI, r0) == getRegKindId(MRI, r1)) return true;
+    return false;
+  }
   const auto *r0_class = MRI.getRegClass(r0);
   if (r1.isPhysical()) {
     if (r0_class->contains(r1) && op0.getSubReg() == op1.getSubReg()) return true;
@@ -8158,45 +8162,12 @@ bool AArch64InstrInfo::canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI,
     switch (r0_class->getID()) {
     case AArch64::GPR32RegClassID:
       if (r1_class->getID() == AArch64::GPR64RegClassID && op1.getSubReg()==AArch64::sub_32) return true;
-      if (enableRegalloc) {
-        switch (r1_class->getID()) {
-        case AArch64::GPR64spRegClassID:
-        case AArch64::GPR64allRegClassID:
-          if (op1.getSubReg()==AArch64::sub_32) return true;
-          break;
-        case AArch64::GPR32spRegClassID:
-        case AArch64::GPR32allRegClassID:
-          return true;
-        }
-      }
       break;
     case AArch64::GPR32spRegClassID:
       if (r1_class->getID() == AArch64::GPR64spRegClassID && op1.getSubReg()==AArch64::sub_32) return true;
-      if (enableRegalloc) {
-        switch (r1_class->getID()) {
-        case AArch64::GPR64RegClassID:
-        case AArch64::GPR64allRegClassID:
-          if (op1.getSubReg()==AArch64::sub_32) return true;
-          break;
-        case AArch64::GPR32RegClassID:
-        case AArch64::GPR32allRegClassID:
-          return true;
-        }
-      }
       break;
     case AArch64::GPR32allRegClassID:
       if (r1_class->getID() == AArch64::GPR64allRegClassID && op1.getSubReg()==AArch64::sub_32) return true;
-      if (enableRegalloc) {
-        switch (r1_class->getID()) {
-        case AArch64::GPR64spRegClassID:
-        case AArch64::GPR64RegClassID:
-          if (op1.getSubReg()==AArch64::sub_32) return true;
-          break;
-        case AArch64::GPR32spRegClassID:
-        case AArch64::GPR32RegClassID:
-          return true;
-        }
-      }
       break;
     case AArch64::FPR32RegClassID:
       if (r1_class->getID() == AArch64::FPR64RegClassID && op1.getSubReg()==AArch64::ssub) return true;
