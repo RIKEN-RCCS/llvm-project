@@ -2014,7 +2014,7 @@ public:
 
   /// Can Remove copy-mi
   virtual bool canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI,
-                             const MachineRegisterInfo &MRI) const {
+                             const MachineRegisterInfo &MRI, bool enableRegaloc) const {
     return false;
   }
 

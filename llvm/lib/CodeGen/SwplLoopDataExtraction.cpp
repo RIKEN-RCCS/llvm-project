@@ -503,9 +503,9 @@ static MachineOperand* used_reg(MachineInstr &phi) {
   auto def_r_class=SWPipeliner::MRI->getRegClass(def_r);
   auto own_r_class=SWPipeliner::MRI->getRegClass(own_r);
 
-  if (!IgnoreRegClass_SuppressCopy && def_r_class->getID()!=own_r_class->getID()) {
+  if (!SWPipeliner::STM->isEnableRegAlloc() && !IgnoreRegClass_SuppressCopy && def_r_class->getID()!=own_r_class->getID()) {
     if (SWPipeliner::isDebugOutput()) {
-      dbgs() << "DEBUG(used_reg): def-class is not use-class:" << phi;
+      dbgs() << "DEBUG(used_reg): def-class is not use-class!:" << phi;
     }
     return nullptr;
   }
@@ -528,13 +528,13 @@ static MachineOperand* used_reg(MachineInstr &phi) {
       auto r=o.getReg();
       if (r.id()==own_r.id()) {
          if (SWPipeliner::isDebugOutput()) {
-           dbgs() << "DEBUG(used_reg): own-reg is used\n";
+           dbgs() << "DEBUG(used_reg): own-reg is used!\n";
          }
          return nullptr;
       }
       if (r.id()==def_r.id()) {
          if (SWPipeliner::isDebugOutput()) {
-           dbgs() << "DEBUG(used_reg): def-reg is used\n";
+           dbgs() << "DEBUG(used_reg): def-reg is used!\n";
          }
          return nullptr;
       }
@@ -635,6 +635,12 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
                                 SWPipeliner::TII->get(TargetOpcode::COPY), def_r)
                             .addReg(own_r);
       NewMI2OrgMI[c]=org_phi;
+      if (SWPipeliner::isDebugOutput()) {
+        if (def_op && liveout_def)
+          dbgs() << "DEBUG(convertNonSSA): Generate copy: def-reg is liveout!";
+        else if (def_op && liveout_own)
+          dbgs() << "DEBUG(convertNonSSA): Generate copy: own-reg is liveout!";
+      }
     } else {
       if (SWPipeliner::isDebugOutput()) {
         dbgs() << "DEBUG(convertNonSSA): Suppress the generation of COPY: " << *phi;
@@ -792,7 +798,7 @@ void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOu
     }
 
     if (use_onlyphi ||
-        SWPipeliner::TII->canRemoveCopy(*body, mi, *SWPipeliner::MRI)){
+        SWPipeliner::TII->canRemoveCopy(*body, mi, *SWPipeliner::MRI, SWPipeliner::STM->isEnableRegAlloc())){
       for (auto *op:target_mo) {
         auto *umi=op->getParent();
         if (SWPipeliner::isDebugOutput()) {
@@ -817,6 +823,10 @@ void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOu
       }
       // MBBから削除する命令の収集
       delete_mi.push_back(&mi);
+    } else {
+      if (SWPipeliner::isDebugOutput()) {
+        dbgs() << " canRemoveCopy() is false!\n";
+      }
     }
   }
   for (auto *mi:delete_mi)

@@ -8143,12 +8143,16 @@ AArch64InstrInfo::getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
 }
 
 bool AArch64InstrInfo::canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI,
-                                     const MachineRegisterInfo &MRI) const {
+                                     const MachineRegisterInfo &MRI, bool enableRegalloc) const {
   assert(MI.isCopy());
   auto &op0=MI.getOperand(0);
   auto &op1=MI.getOperand(1);
   Register r0 = op0.getReg();
   Register r1 = op1.getReg();
+  if (enableRegalloc) {
+    if (getRegKindId(MRI, r0) == getRegKindId(MRI, r1)) return true;
+    return false;
+  }
   const auto *r0_class = MRI.getRegClass(r0);
   if (r1.isPhysical()) {
     if (r0_class->contains(r1) && op0.getSubReg() == op1.getSubReg()) return true;
@@ -8651,20 +8655,25 @@ unsigned AArch64InstrInfo::getRegKindId(const MachineRegisterInfo &MRI, Register
         return  AArch64StmRegKind::getIntRegID();
       }
       if (AArch64::FPR128RegClass.contains(reg) ||
-                 AArch64::FPR64RegClass.contains(reg) ||
-                 AArch64::FPR32RegClass.contains(reg) ||
-                 AArch64::FPR16RegClass.contains(reg) ||
-                 AArch64::FPR8RegClass.contains(reg) ||
-                 AArch64::DDRegClass.contains(reg) ||
-                 AArch64::DDDRegClass.contains(reg) ||
-                 AArch64::DDDDRegClass.contains(reg) ||
-                 AArch64::QQRegClass.contains(reg) ||
-                 AArch64::QQQRegClass.contains(reg) ||
-                 AArch64::QQQQRegClass.contains(reg) ||
-                 AArch64::FPR128_loRegClass.contains(reg) ||
-                 AArch64::FPR64_loRegClass.contains(reg) ||
-                 AArch64::FPR16_loRegClass.contains(reg) ||
-                 AArch64::ZPRRegClass.contains(reg)) {
+          AArch64::FPR64RegClass.contains(reg) ||
+          AArch64::FPR32RegClass.contains(reg) ||
+          AArch64::FPR16RegClass.contains(reg) ||
+          AArch64::FPR8RegClass.contains(reg) ||
+          AArch64::DDRegClass.contains(reg) ||
+          AArch64::DDDRegClass.contains(reg) ||
+          AArch64::DDDDRegClass.contains(reg) ||
+          AArch64::QQRegClass.contains(reg) ||
+          AArch64::QQQRegClass.contains(reg) ||
+          AArch64::QQQQRegClass.contains(reg) ||
+          AArch64::FPR128_loRegClass.contains(reg) ||
+          AArch64::FPR64_loRegClass.contains(reg) ||
+          AArch64::FPR16_loRegClass.contains(reg) ||
+          AArch64::ZPRRegClass.contains(reg) ||
+          AArch64::ZPR_3bRegClass.contains(reg) ||
+          AArch64::ZPR_4bRegClass.contains(reg) ||
+          AArch64::ZPR2RegClass.contains(reg) ||
+          AArch64::ZPR3RegClass.contains(reg) ||
+          AArch64::ZPR4RegClass.contains(reg)) {
         return  AArch64StmRegKind::getFloatRegID();
       }
       if (AArch64::PPRRegClass.contains(reg) ||
