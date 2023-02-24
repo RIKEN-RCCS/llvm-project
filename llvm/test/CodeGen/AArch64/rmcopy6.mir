@@ -1,8 +1,10 @@
 # RUN: llc -mcpu=a64fx -O1 -fswp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
 # CHECK: DBG(SwplLoop::removeCopy)
 # CHECK-NEXT:  target mi: %365:gpr32 = COPY %357.sub_32:gpr64sp
+# CHECK-NEXT:  canRemoveCopy() is false!
 # CHECK-NEXT: DBG(SwplLoop::removeCopy)
 # CHECK-NEXT:  target mi: %366:gpr32 = COPY %50.sub_32:gpr64common
+# CHECK-NEXT:  canRemoveCopy() is false!
 # CHECK-NEXT: DBG(SwplLoop::removeCopy)
 # CHECK-NEXT:  target mi: %370:gpr32all = COPY %369:gpr32sp
 # CHECK-NEXT:  op0 is liveout!

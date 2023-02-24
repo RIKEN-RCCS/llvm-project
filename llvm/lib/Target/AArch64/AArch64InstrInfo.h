@@ -336,7 +336,7 @@ public:
                                                   int64_t &VGSized);
 
   bool canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI,
-                     const MachineRegisterInfo &MRI) const override;
+                     const MachineRegisterInfo &MRI, bool enableRegalloc) const override;
 
   bool splitPrePostIndexInstr(MachineBasicBlock &MBB,
                               MachineInstr &MI,

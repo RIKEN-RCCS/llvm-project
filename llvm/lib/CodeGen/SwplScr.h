@@ -156,7 +156,6 @@ class SwplRegAllocInfoTbl {
 
   std::vector<RegAllocInfo> rai_tbl; ///< Swpl-RAで使用する生存区間表
   unsigned total_mi;
-  std::map<unsigned , std::vector<unsigned>> regconstrain;
   int num_ireg=-1;
   int num_freg=-1;
   int num_preg=-1;
