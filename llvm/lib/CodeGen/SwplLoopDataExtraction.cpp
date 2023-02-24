@@ -635,6 +635,12 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
                                 SWPipeliner::TII->get(TargetOpcode::COPY), def_r)
                             .addReg(own_r);
       NewMI2OrgMI[c]=org_phi;
+      if (SWPipeliner::isDebugOutput()) {
+        if (def_op && liveout_def)
+          dbgs() << "DEBUG(convertNonSSA): Generate copy: def-reg is liveout!";
+        else if (def_op && liveout_own)
+          dbgs() << "DEBUG(convertNonSSA): Generate copy: own-reg is liveout!";
+      }
     } else {
       if (SWPipeliner::isDebugOutput()) {
         dbgs() << "DEBUG(convertNonSSA): Suppress the generation of COPY: " << *phi;
