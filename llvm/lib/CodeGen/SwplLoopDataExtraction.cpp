@@ -821,6 +821,9 @@ bool SwplLoop::checkUse(const MachineBasicBlock* body, const MachineInstr* tiedI
           return true;
         }
       }
+      if (SWPipeliner::isDebugOutput()) {
+        dbgs() << "DEBUG(SwplLoop::checkUse): Tied-Reg(" << printReg(tiedReg, SWPipeliner::TRI) << ") is not used\n";
+      }
       return false;
     }
     // 参照があるか調べる
@@ -851,14 +854,14 @@ bool SwplLoop::checkUse(const MachineBasicBlock* body, const MachineInstr* tiedI
 
 void SwplLoop::normalizeTiedDef(MachineBasicBlock *body) {
   // tied-defを検索する
-  DenseMap<MachineInstr*, Register> targets;
+  DenseMap<MachineInstr*, MachineOperand*> targets;
 
   for (auto &MI:*body) {
     for (auto &MO:MI.uses()) {
       if (!MO.isReg()) continue;
       if (!MO.isTied()) continue;
       if( checkUse(body, &MI, MO.getReg())) {
-        targets[&MI]=MO.getReg();
+        targets[&MI]=&MO;
         if (SWPipeliner::isDebugOutput()) {
           dbgs() << "DEBUG(SwplLoop::normalizeTiedDef): Copy is required.: " << MI;
         }
@@ -870,9 +873,19 @@ void SwplLoop::normalizeTiedDef(MachineBasicBlock *body) {
       }
     }
   }
-  for (auto&& [first, second]:targets) {
-    // todo:ここでCOPY挿入！
-    dbgs() << *first;
+  for (auto &p:targets) {
+    auto *mi = p.first;
+    auto *tied_mo = p.second;
+    auto tied_reg = tied_mo->getReg();
+    auto new_reg = SWPipeliner::MRI->cloneVirtualRegister(tied_reg);
+    auto dbgloc = mi->getDebugLoc();
+    MachineInstr *Copy = BuildMI(*body, mi, dbgloc, SWPipeliner::TII->get(TargetOpcode::COPY), new_reg)
+                             .addReg(tied_reg);
+    tied_mo->setReg(new_reg);
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DEBUG(SwplLoop::normalizeTiedDef):\n  generate: " << *Copy;
+      dbgs() << "  chenge op: " << *mi;
+    }
   }
 }
 
