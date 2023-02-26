@@ -81,6 +81,8 @@ class SwplLoop {
   SwplRegs Regs;                       ///< 対象ループ内で生成した SwplReg を管理する \note メモリ解放時に利用する
   SwplMems MemsOtherBody;              ///< Body以外で生成された SwplMem を管理する \note メモリ解放時に利用する
   SmallSet<Register, 30> liveOuts; ///< SWPL適用後に登場する仮想レジスタがLiveOutしているかを確認するための集合
+  DenseMap<MachineOperand*, SmallVector<MachineOperand*, 2>> RenameUseRegs; ///< tied-defがある命令のdefと同じ仮想レジスタがtied-def以外のオペランドに存在する命令
+
 
 public:
   SwplLoop(){}
@@ -302,8 +304,19 @@ private:
   /// tied-defオペランドは定義前参照があるか確認する
   /// \param[in]  body ループボディの MachineBasicBlock
   /// \param[in]  tiedInstr tied-defが存在する命令。検索の起点となる
-  /// \param[in]  tiedReg tied-def属性ｇ
-  bool checkUse(const MachineBasicBlock* body, const MachineInstr* tiedInstr, Register tiedReg) const;
+  /// \param[in]  tiedUseReg tied-def属性ｇ
+  bool checkUse_TiedDefUseReg(const MachineBasicBlock* body, const MachineInstr* tiedInstr, Register tiedUseReg) const;
+
+  /// tied-defが存在する命令のdefレジスタがuseオペランドに出現するか確認する
+  /// \param[in]  tiedInstr tied-defが存在する命令。検索の起点となる
+  bool checkUseOperand(MachineInstr* tiedInstr);
+
+  /// 指定レジスタが指定範囲で参照ｓｄ存在する命令のdefレジスタがuseオペランドに出現するか確認する
+  /// \param[in]  start 探索開始
+  /// \param[in]  end 探索終了
+  /// \param[in]  r 探索レジスタ
+  /// \return use mi
+  const MachineInstr* checkUseReg(const MachineInstr* start, const MachineInstr* end, Register r) const;
 
   /// Register クラスからレジスタIDを表示する
   void printRegID(Register r);
