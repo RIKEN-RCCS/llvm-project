@@ -307,13 +307,6 @@ private:
   bool check_need_copy4TiedUseReg(const MachineBasicBlock* body, const MachineInstr* tiedInstr,
                               Register tiedDefReg, Register tiedUseReg) const;
 
-  /// 指定レジスタが指定範囲で参照ｓｄ存在する命令のdefレジスタがuseオペランドに出現するか確認する
-  /// \param[in]  start 探索開始
-  /// \param[in]  end 探索終了
-  /// \param[in]  r 探索レジスタ
-  /// \return use mi
-  const MachineInstr* checkUseReg(const MachineInstr* start, const MachineInstr* end, Register r) const;
-
   /// Register クラスからレジスタIDを表示する
   void printRegID(Register r);
 

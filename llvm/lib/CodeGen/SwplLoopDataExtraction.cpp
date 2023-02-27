@@ -761,16 +761,6 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
 
 }
 
-const MachineInstr* SwplLoop::checkUseReg(const MachineInstr* start, const MachineInstr* end, Register r) const {
-  for (const auto *I=start; I!=end; I=I->getNextNode()) {
-    if (I==nullptr) I=&*(start->getParent()->getFirstNonDebugInstr());
-    for (const auto &MO:I->uses()) {
-      if (MO.isReg() && MO.getReg() == r) return I;
-    }
-  }
-  return nullptr;
-}
-
 bool SwplLoop::check_need_copy4TiedUseReg(const MachineBasicBlock* body, const MachineInstr* tiedInstr,
                                       Register tiedDefReg, Register tiedUseReg) const {
 
@@ -780,41 +770,30 @@ bool SwplLoop::check_need_copy4TiedUseReg(const MachineBasicBlock* body, const M
     }
     return true;
   }
-  // 1)tiedInstrからMBB最後までチェックする
 
-  // tied-def 参照レジスタと定義レジスタが同じ
-  // tied %r1 = XXX tied-def %r1
+  // 1) tiedInstrの定義参照が同じレジスタ
+
   if (tiedDefReg == tiedUseReg) {
     if (SWPipeliner::isDebugOutput()) {
       dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg("
-             << printReg(tiedUseReg, SWPipeliner::TRI) << ") is def:" << *tiedInstr;
+             << printReg(tiedUseReg, SWPipeliner::TRI) << ") eq tiedDef:" << *tiedInstr;
     }
     return false;
   }
 
-  // tied-def regが同じ命令で定義されているか調べる(tied-defで利用されたレジスタはCOPY不要)
-  // %r1, tied %r2 = XXX tied-reg %r1
-  for (auto &MO: tiedInstr->defs()) {
-    if (!MO.isReg()) continue;
-    auto R = MO.getReg();
-    if (tiedUseReg.id() == R.id()) {
-      // 定義レジスタ
-      if (liveOuts.contains(tiedDefReg)) {
-        if (SWPipeliner::isDebugOutput()) {
-          dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedDefReg("
-                 << printReg(tiedDefReg, SWPipeliner::TRI) << ") is liveout:" << *tiedInstr;
-        }
-        return true;
-      }
-      if (SWPipeliner::isDebugOutput()) {
-        dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg("
-               << printReg(tiedUseReg, SWPipeliner::TRI) << ") is def:" << *tiedInstr;
-      }
-      return false;
+  // 2) liveOutsに存在するか確認する
+  if (liveOuts.contains(tiedUseReg)) {
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg("
+             << printReg(tiedUseReg, SWPipeliner::TRI) << ") is liveout\n";
     }
+    return true;
   }
 
-  for (auto *I=tiedInstr->getNextNode(); I; I=I->getNextNode()) {
+  // 3) MBBをチェックする
+
+  for (auto *I=tiedInstr->getNextNode(); I == tiedInstr; I=I->getNextNode()) {
+    if (I == nullptr) I = &*(tiedInstr->getParent()->getFirstNonDebugInstr());
     // 参照があるか調べる
     for (auto &MO: I->uses()) {
       if (!MO.isReg()) continue;
@@ -827,105 +806,41 @@ bool SwplLoop::check_need_copy4TiedUseReg(const MachineBasicBlock* body, const M
         return true;
       }
     }
-    // 定義があるか調べる(参照前にがあるならtied-defで利用されたレジスタはCOPY不要)
+    // 定義があるか調べる(条件に寄ってはCOPY不要となるが、スケジューラの動作によって結果NGの可能性があるためCOPYを生成する)
     for (auto &MO: I->defs()) {
       if (!MO.isReg()) continue;
       auto R = MO.getReg();
       if (tiedUseReg.id() == R.id()) {
-        if (liveOuts.contains(tiedDefReg)) {
-          if (SWPipeliner::isDebugOutput()) {
-            dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedDefReg("
-                   << printReg(tiedDefReg, SWPipeliner::TRI) << ") is liveout:" << *tiedInstr;
-          }
-          return true;
-        }
-        auto *mi = checkUseReg(I->getNextNode(), tiedInstr, tiedDefReg);
-        if (mi != nullptr) {
-          if (SWPipeliner::isDebugOutput()) {
-            dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedDefReg("
-                   << printReg(tiedUseReg, SWPipeliner::TRI) << ") is use:" << *mi;
-          }
-          return true;
-        }
         if (SWPipeliner::isDebugOutput()) {
           dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg("
                  << printReg(tiedUseReg, SWPipeliner::TRI) << ") is def:" << *I;
         }
-        return false;
-      }
-    }
-  }
-
-  // 2)liveOutsに存在するか確認する
-  if (liveOuts.contains(tiedUseReg)) {
-    if (SWPipeliner::isDebugOutput()) {
-      dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg("
-             << printReg(tiedUseReg, SWPipeliner::TRI) << ") is liveout\n";
-    }
-    return true;
-  }
-
-  // 3)MBB先頭からtiedInstrまでチェックする
-  for (auto &I:*body) {
-    if (&I==tiedInstr) {
-      // tiedInstrは参照オペランドのみ確認する
-      for (auto &MO: I.uses()) {
-        if (!MO.isReg()) continue;
-        auto R = MO.getReg();
-        if (tiedUseReg.id() == R.id()) {
-          if (MO.isTied()) continue;
-          if (SWPipeliner::isDebugOutput()) {
-            dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg("
-                   << printReg(tiedUseReg, SWPipeliner::TRI) << ") is used:" << I;
-          }
-          return true;
-        }
-      }
-
-      if (SWPipeliner::isDebugOutput()) {
-        dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg("
-               << printReg(tiedUseReg, SWPipeliner::TRI) << ") is not used\n";
-      }
-
-      return false;
-    }
-
-    // 参照があるか調べる
-    for (auto &MO: I.uses()) {
-      if (!MO.isReg()) continue;
-      auto R = MO.getReg();
-      if (tiedUseReg.id() == R.id()) {
-        if (SWPipeliner::isDebugOutput()) {
-          dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg("
-                 << printReg(tiedUseReg, SWPipeliner::TRI) << ") is used:" << I;
-        }
         return true;
       }
     }
-    // 定義があるか調べる(参照前にがあるならtied-defで利用されたレジスタはCOPY不要)
-    for (auto &MO: I.defs()) {
-      if (!MO.isReg()) continue;
-      auto R = MO.getReg();
-      if (tiedUseReg.id() == R.id()) {
+  }
 
-        auto *mi = checkUseReg(&I, tiedInstr, tiedDefReg);
-        if (mi != nullptr) {
-          if (SWPipeliner::isDebugOutput()) {
-            dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedDefReg("
-                   << printReg(tiedUseReg, SWPipeliner::TRI) << ") is used:" << *mi;
-          }
-          return true;
-        }
-
-        if (SWPipeliner::isDebugOutput()) {
-          dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg("
-                 << printReg(tiedUseReg, SWPipeliner::TRI) << ") is def:" << I;
-        }
-        return false;
+  for (auto &MO: tiedInstr->uses()) {
+    if (!MO.isReg()) continue;
+    auto R = MO.getReg();
+    if (tiedUseReg.id() == R.id()) {
+      if (MO.isTied()) continue;
+      if (SWPipeliner::isDebugOutput()) {
+        dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg("
+               << printReg(tiedUseReg, SWPipeliner::TRI) << ") is used:" << *tiedInstr;
       }
+      return true;
     }
   }
-  llvm_unreachable("SwplLoop::check_need_copy4TiedUseReg has BUG");
+
+  // tied-def use-regは定義・参照が無い。この場合はCOPY不要
+  if (SWPipeliner::isDebugOutput()) {
+    dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg("
+           << printReg(tiedUseReg, SWPipeliner::TRI) << ") is not used\n";
+  }
+
+  return false;
+
 }
 
 void SwplLoop::normalizeTiedDef(MachineBasicBlock *body) {
