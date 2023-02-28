@@ -30,6 +30,8 @@ static cl::opt<bool> DisableRmCopy("swpl-disable-rm-copy",cl::init(false), cl::R
 static cl::opt<bool> DisableSuppressCopy("swpl-disable-suppress-copy",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool>
     IgnoreRegClass_SuppressCopy("swpl-ignore-class-suppress-copy",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool>
+    GenCopy4AllTiedDef("swpl-gen-copy-for-all-tieddef",cl::init(false), cl::ReallyHidden);
 
 using BasicBlocks = std::vector<MachineBasicBlock *>;
 using BasicBlocksIterator = std::vector<MachineBasicBlock *>::iterator ;
@@ -637,9 +639,9 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
       NewMI2OrgMI[c]=org_phi;
       if (SWPipeliner::isDebugOutput()) {
         if (def_op && liveout_def)
-          dbgs() << "DEBUG(convertNonSSA): Generate copy: def-reg is liveout!";
+          dbgs() << "DEBUG(convertNonSSA): Generate copy: def-reg is liveout!\n";
         else if (def_op && liveout_own)
-          dbgs() << "DEBUG(convertNonSSA): Generate copy: own-reg is liveout!";
+          dbgs() << "DEBUG(convertNonSSA): Generate copy: own-reg is liveout!\n";
       }
     } else {
       if (SWPipeliner::isDebugOutput()) {
@@ -734,17 +736,9 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
 
   pre->addSuccessor(new_bb);
   
-  /// cloneBody() を呼び出し、MachineBasickBlockの複製とレジスタリネーミングを行う。
+  /// cloneBody() を呼び出し、MachineBasickBlockの複製とレジスタリネーミングを行う。(OrgReg2NewRegを生成する)
   cloneBody(new_bb, ob);
-  if (!DisableRmCopy)
-    removeCopy(new_bb, LiveOutReg);
-  /// convertPostPreIndeTo()を呼び出し、post/pre index命令を演算＋load/store命令に変換する
-  if (!DisableConvPrePost)
-    convertPrePostIndexInstr(new_bb);
-  /// convertNonSSA() を呼び出し、非SSA化と複製したMachineBasicBlockの回収を行う。
-  convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);
 
-  ///
   auto regmap=getOrgReg2NewReg();
   for (auto &p:LiveOutReg) {
     // p.first: reg, p.second:vector<MO*>
@@ -752,9 +746,92 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
     liveOuts.insert(newreg);
   }
 
+  if (!DisableRmCopy)
+    removeCopy(new_bb);
+  /// convertPostPreIndeTo()を呼び出し、post/pre index命令を演算＋load/store命令に変換する
+  if (!DisableConvPrePost)
+    convertPrePostIndexInstr(new_bb);
+  /// convertNonSSA() を呼び出し、非SSA化と複製したMachineBasicBlockの回収を行う。
+  /// PHIからCOPYを生成する際、liveOutsにPHIで定義されるvregを追加している。
+  convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);
+
+  if (SWPipeliner::STM->isEnableRegAlloc())
+    // レジスタ割付が動作するなら、tied-defにCOPY命令を追加する
+    normalizeTiedDef(new_bb);
+
 }
 
-void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOutReg) {
+bool SwplLoop::check_need_copy4TiedUseReg(const MachineBasicBlock* body, const MachineInstr* tiedInstr,
+                                      Register tiedDefReg, Register tiedUseReg) const {
+
+  if (GenCopy4AllTiedDef) {
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): GenCopy4AllTiedDef is true\n";
+    }
+    return true;
+  }
+
+  // 1) tiedInstrの定義参照が同じレジスタの場合のみ不要
+
+  if (tiedDefReg == tiedUseReg) {
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg("
+             << printReg(tiedUseReg, SWPipeliner::TRI) << ") eq tiedDef:" << *tiedInstr;
+    }
+    return false;
+  }
+  if (SWPipeliner::isDebugOutput()) {
+    dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): Decide that the COPY instruction is necessary\n";
+  }
+  return true;
+}
+
+void SwplLoop::normalizeTiedDef(MachineBasicBlock *body) {
+  // tied-defを検索する
+
+  // tied-def operandのCOPYが必要な命令
+  DenseMap<MachineInstr*, MachineOperand*> targets;
+
+  for (auto &MI:*body) {
+    for (auto &MO:MI.defs()) {
+      if (!MO.isReg()) continue;
+      if (!MO.isTied()) continue;
+      unsigned use_tied_index=0;
+      bool t = MI.isRegTiedToUseOperand(MI.getOperandNo(&MO), &use_tied_index);
+      assert(t && "isRegTiedToUseOperand");
+      auto &useMO = MI.getOperand(use_tied_index);
+      auto use_tied_r = useMO.getReg();
+
+      if (check_need_copy4TiedUseReg(body, &MI, MO.getReg(), use_tied_r)) {
+        targets[&MI]=&useMO;
+        if (SWPipeliner::isDebugOutput()) {
+          dbgs() << "DEBUG(SwplLoop::normalizeTiedDef): Copy is required.: " << MI;
+        }
+      } else {
+        if (SWPipeliner::isDebugOutput()) {
+          dbgs() << "DEBUG(SwplLoop::normalizeTiedDef): Copy is not required.: " << MI;
+        }
+      }
+    }
+  }
+
+  for (auto &p:targets) {
+    auto *mi = p.first;
+    auto *tied_mo = p.second;
+    auto tied_reg = tied_mo->getReg();
+    auto new_reg = SWPipeliner::MRI->cloneVirtualRegister(tied_reg);
+    auto dbgloc = mi->getDebugLoc();
+    MachineInstr *Copy = BuildMI(*body, mi, dbgloc, SWPipeliner::TII->get(TargetOpcode::COPY), new_reg)
+                             .addReg(tied_reg);
+    tied_mo->setReg(new_reg);
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DEBUG(SwplLoop::normalizeTiedDef):\n  generate: " << *Copy;
+      dbgs() << "  chenge op: " << *mi;
+    }
+  }
+}
+
+void SwplLoop::removeCopy(MachineBasicBlock *body) {
   std::vector<llvm::MachineInstr *> delete_mi;
   std::vector<llvm::MachineOperand *> target_mo;
   for (auto &mi:*body) {
@@ -764,16 +841,15 @@ void SwplLoop::removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOu
       dbgs() << " target mi: " << mi;
     }
 
+    auto &op0=mi.getOperand(0);
     const auto *org_copy=NewMI2OrgMI.at(&mi);
-    auto org_def_r= org_copy->getOperand(0).getReg();
-    if (LiveOutReg.count(org_def_r)) {
+    if (liveOuts.contains(op0.getReg())) {
       if (SWPipeliner::isDebugOutput()) {
         dbgs() << " org mi: " << org_copy;
         dbgs() << " op0 is liveout!\n";
       }
       continue;
     }
-    auto &op0=mi.getOperand(0);
     if (!mi.getOperand(1).isReg()) {
       if (SWPipeliner::isDebugOutput()) {
         dbgs() << " op1 isnot reg!\n";

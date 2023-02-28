@@ -290,11 +290,23 @@ private:
 
   /// 対象ループのbodyの無駄なCopyを削除する
   /// \param[in,out]  body ループボディの MachineBasicBlock
-  /// \param[in]  LiveOutReg
-  void removeCopy(MachineBasicBlock *body, const SwplScr::UseMap& LiveOutReg);
+  void removeCopy(MachineBasicBlock *body);
 
   /// SwplLoop::OrgMI2NewMI の命令列を走査し、SwplLoop::OrgReg2NewReg に登録されているレジスタへのリネーミングを行う
   void renameReg(void);
+
+  /// tied-defオペランドに対して定義前参照がある場合はCOPYを生成する
+  /// \param[in,out]  body ループボディの MachineBasicBlock
+  void normalizeTiedDef(MachineBasicBlock* body);
+
+  /// tied-defオペランドは定義前参照があるか確認する
+  /// \param[in]  body ループボディの MachineBasicBlock
+  /// \param[in]  tiedInstr tied-defが存在する命令。検索の起点となる
+  /// \param[in]  tiedDefReg tied-def属性定義レジスタ
+  /// \param[in]  tiedUseReg tied-def属性参照レジスタ
+  bool check_need_copy4TiedUseReg(const MachineBasicBlock* body, const MachineInstr* tiedInstr,
+                              Register tiedDefReg, Register tiedUseReg) const;
+
   /// Register クラスからレジスタIDを表示する
   void printRegID(Register r);
 
