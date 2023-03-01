@@ -83,6 +83,7 @@ struct RegAllocInfo {
   int      num_def;                     ///< 仮想レジスタの定義番号(無効値:0以下の値, 有効値:1以上の値)
   int      num_use;                     ///< 仮想レジスタの参照番号(無効値:0以下の値, 有効値:1以上の値)
   int      liverange;                   ///< 生存区間(参照番号-定義番号)
+  unsigned tied_vreg;                   ///< tied仮想レジスタ
   unsigned vreg_classid;                ///< 仮想レジスタのレジスタクラスID
   std::vector<MachineOperand*> vreg_mo; ///< 仮想レジスタのMachineOperand
   unsigned total_mi;
@@ -91,6 +92,13 @@ struct RegAllocInfo {
   /// \param [in,out] mo vreg_moに追加するMachineOperand
   void addMo( MachineOperand* mo ) {
     vreg_mo.push_back( mo );
+    return;
+  };
+
+  /// tied仮想レジスタを更新する
+  /// \param [in] reg tied仮想レジスタ
+  void updateTiedVReg( unsigned reg ) {
+    tied_vreg = reg;
     return;
   };
 
@@ -181,6 +189,7 @@ public:
                        int num_def,
                        int num_use,
                        MachineOperand *mo,
+                       unsigned tied_vreg,
                        unsigned preg=0);
 
   /// Swpl-RAで使用する生存区間表のうち、vregに該当する行を返す

@@ -165,37 +165,21 @@ static void createExcludeVReg(MachineInstr *mi, MachineOperand &mo,
     return;
   }
 
-  if (SWPipeliner::currentLoop->containsLiveOutReg(reg)) {
-    // SWPL適用後の段階でLiveOutしている仮想レジスタなら除外リストに追加
+  // 対象のオペランドなら除外リストに追加
+  assert(mi);
+  switch (mi->getOpcode()) {
+  case TargetOpcode::EXTRACT_SUBREG:
+  case TargetOpcode::INSERT_SUBREG:
+  case TargetOpcode::REG_SEQUENCE:
+  case TargetOpcode::SUBREG_TO_REG:
     if( DebugSwplRegAlloc ) {
-      dbgs() << "Excluded LiveOut. reg="
-             << printReg(reg, SWPipeliner::TRI) << "\n";
+      dbgs() << "Excluded operand: " << mi->getOpcode()
+             << ", reg=" << printReg(reg, SWPipeliner::TRI) << "\n";
     }
     ex_vreg.insert(reg);
-  } else if (mo.isTied()) {
-    // tied-defなら除外リストに追加
-    if( DebugSwplRegAlloc ) {
-      dbgs() << "Excluded tied-def. reg="
-             << printReg(reg, SWPipeliner::TRI) << "\n";
-    }
-    ex_vreg.insert(reg);
-  } else {
-    // 対象のオペランドなら除外リストに追加
-    assert(mi);
-    switch (mi->getOpcode()) {
-    case TargetOpcode::EXTRACT_SUBREG:
-    case TargetOpcode::INSERT_SUBREG:
-    case TargetOpcode::REG_SEQUENCE:
-    case TargetOpcode::SUBREG_TO_REG:
-      if( DebugSwplRegAlloc ) {
-        dbgs() << "Excluded operand: " << mi->getOpcode()
-               << ", reg=" << printReg(reg, SWPipeliner::TRI) << "\n";
-      }
-      ex_vreg.insert(reg);
-      break;
-    default:
-      break;
-    }
+    break;
+  default:
+    break;
   }
 
   return;
@@ -203,6 +187,8 @@ static void createExcludeVReg(MachineInstr *mi, MachineOperand &mo,
 
 /**
  * @brief  仮想レジスタごとに生存区間リストを作成する
+ * @param  [in]     mi llvm::MachineInstr
+ * @param  [in]     idx moのindex
  * @param  [in]     mo llvm::MachineOperand
  * @param  [in]     reg getReg()で取得したレジスタ番号
  * @param  [in,out] reginfo 割り当て済みレジスタ情報
@@ -213,7 +199,8 @@ static void createExcludeVReg(MachineInstr *mi, MachineOperand &mo,
  * @retval 0 正常終了
  * @retval 0以外 異常終了
  */
-static int createLiveRange(MachineOperand &mo, unsigned reg,
+static int createLiveRange(MachineInstr *mi, unsigned idx,
+                           MachineOperand &mo, unsigned reg,
                            SwplRegAllocInfoTbl &rai_tbl,
                            int num_mi, int total_mi,
                            std::unordered_set<unsigned> &ex_vreg,
@@ -237,7 +224,7 @@ static int createLiveRange(MachineOperand &mo, unsigned reg,
     if( !(rai_tbl.isUsePReg(reg)) ) {
       // 物理レジスタ割り付け前に登場する物理レジスタは使用することができない。
       // 無効な情報として、レジスタ情報になければ新規登録するのみ。
-      rai_tbl.addRegAllocInfo(0, 1, total_mi, &mo, reg);
+      rai_tbl.addRegAllocInfo(0, 1, total_mi, &mo, 0, reg);
     }
   } else if (Register::isVirtualRegister(reg)) {
     // 仮想レジスタである
@@ -248,9 +235,22 @@ static int createLiveRange(MachineOperand &mo, unsigned reg,
       // 割り当て済みレジスタ情報を当該仮想レジスタで検索
       auto rai = rai_tbl.getWithVReg( reg );
 
+      assert(mi);
+      unsigned tied_vreg = 0;
       // TODO: 以下、同じような処理が続くため、関数化した方が良い
       // 当該オペランドが"定義"か
       if (mo.isDef()) {
+        // 参照オペランドとtiedならそのオペランドを取得
+        if ((mo.isTied()) && (mi->isRegTiedToUseOperand(idx))) {
+          MachineOperand &tied_mo = mi->getOperand(mi->findTiedOperandIdx(idx));
+          if ((tied_mo.isReg()) && (tied_mo.getReg()) && (tied_mo.isTied()) &&
+              (ex_vreg.find(tied_mo.getReg()) == ex_vreg.end())) {
+            // レジスタオペランド かつ レジスタ値が0より大きい かつ tiedフラグが立っている かつ
+            // 除外リストに含まれていないならtied仮想レジスタとして使用する
+            tied_vreg = tied_mo.getReg();
+          }
+        }
+
         if (rai != nullptr) {
           // 同じ仮想レジスタの定義は、複数存在しないことが前提
           // 現在 assertとしているが、想定外としてエラーとすべきか。
@@ -265,13 +265,27 @@ static int createLiveRange(MachineOperand &mo, unsigned reg,
             rai->updateNumDef( num_mi );
           }
           rai->addMo(&mo);
+          if (tied_vreg != 0) {
+            rai->updateTiedVReg(tied_vreg);
+          }
         } else {
           // 当該仮想レジスタは登録されていないため新規登録
-          rai_tbl.addRegAllocInfo( reg, num_mi, -1, &mo );
+          rai_tbl.addRegAllocInfo( reg, num_mi, -1, &mo, tied_vreg );
         }
       }
       // 当該オペランドが"参照"か
       if (mo.isUse()) {
+        // 定義オペランドとtiedならそのオペランドを取得
+        if ((mo.isTied()) && (mi->isRegTiedToDefOperand(idx))) {
+          MachineOperand &tied_mo = mi->getOperand(mi->findTiedOperandIdx(idx));
+          if ((tied_mo.isReg()) && (tied_mo.getReg()) && (tied_mo.isTied()) &&
+              (ex_vreg.find(tied_mo.getReg()) == ex_vreg.end())) {
+            // レジスタオペランド かつ レジスタ値が0より大きい かつ tiedフラグが立っている かつ
+            // 除外リストに含まれていないならtied仮想レジスタとして使用する
+            tied_vreg = tied_mo.getReg();
+          }
+        }
+
         if (rai != nullptr) {
           if( rai->num_def == -1 ||
               rai->num_use == -1 ||
@@ -286,9 +300,12 @@ static int createLiveRange(MachineOperand &mo, unsigned reg,
             }
           }
           rai->addMo(&mo);
+          if (tied_vreg != 0) {
+            rai->updateTiedVReg(tied_vreg);
+          }
         } else {
           // 当該仮想レジスタは登録されていないため新規登録
-          rai_tbl.addRegAllocInfo( reg, -1, num_mi, &mo );
+          rai_tbl.addRegAllocInfo( reg, -1, num_mi, &mo, tied_vreg );
         }
       }
     }
@@ -375,6 +392,21 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
       continue;
     }
 
+    // tiedの相手が既に物理レジスタ割り当て済みだったらそれを使用
+    if ((!allocated) && (itr_cur->tied_vreg != 0)) {
+      RegAllocInfo* tied_rinfo = rai_tbl.getWithVReg(itr_cur->tied_vreg);
+      if ((tied_rinfo) && (tied_rinfo->preg != 0)) {
+        if( DebugSwplRegAlloc ) {
+          dbgs() << " tied-register. [current](vreg: "
+                 << printReg(itr_cur->vreg, SWPipeliner::TRI) << "), [tied](vreg: "
+                 << printReg(tied_rinfo->vreg, SWPipeliner::TRI) << ", preg: "
+                 << printReg(tied_rinfo->preg, SWPipeliner::TRI) << ")\n";
+        }
+        itr_cur->preg = tied_rinfo->preg;
+        allocated = true;
+      }
+    }
+
     // 第１候補：空いている物理レジスタから割り付け
     if (!allocated) {
       const TargetRegisterClass *trc = SWPipeliner::MRI->getRegClass(itr_cur->vreg);
@@ -408,11 +440,20 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
       }
     }
 
+    // containsLiveOutReg()が真になるレジスタはデバッグログに出力しておく
+    if ((DebugSwplRegAlloc) &&
+        (SWPipeliner::currentLoop->containsLiveOutReg(itr_cur->vreg))) {
+      dbgs() << " liveout-register. (vreg: "
+             << printReg(itr_cur->vreg, SWPipeliner::TRI) << ", preg: "
+             << printReg(itr_cur->preg, SWPipeliner::TRI) << ")\n";
+    }
+
     // それでも物理レジスタ割り当てできなかったら異常復帰
     if (!allocated) {
       if( DebugSwplRegAlloc ) {
         dbgs() << " failed to allocate a physical register for virtual register "
                << printReg(itr_cur->vreg) << "\n";
+        rai_tbl.dump();
       }
       std::string mistr;
       raw_string_ostream mistream(mistr);
@@ -449,20 +490,56 @@ static void callSetReg(MachineFunction &MF,
       continue;
 
     /*
-     * MBBをまたがるレジスタへの対処
-     *   bb.10.for.body1:
+     * 物理レジスタを割り付けた後に、MBBをまたがるレジスタへ
+     * COPYを追加する必要性について、以下を例に説明する。
+     *
+     * [OK: 物理レジスタ割り付けなし、COPY追加なし]
+     *   bb.20.for.body1:
      *     %11 = COPY %10
-     *   bb.5.for.body1: (kernel loop)
-     *     $x1 = COPY %11             <- $x1を定義するCOPYを追加する(livein)
-     *     $x2(%12) = ADD $x1(%11), 1
-     *     %12 = COPY $x2(%12)        <- %12を定義するCOPYを追加する(liveout)
-     *   bb.11.for.body1:
+     *   bb.15.for.body1: (kernel loop)
+     *     %12 = ADD %11, 1
+     *     %14 = ADD %13, 1
+     *   bb.21.for.body1:
      *     %13 = ADD %12, 1
+     *   bb.22.for.body1:
+     *     %15 = ADD %14, 1
+     *
+     * ↓↓
+     * [NG: 物理レジスタ割り付けあり、COPY追加なし]
+     *   bb.20.for.body1:
+     *     %11 = COPY %10
+     *   bb.15.for.body1: (kernel loop)
+     *     $x2(%12) = ADD $x1(%11), 1    <- $x1の定義がないため、不正オペランド
+     *     $x4(%14) = ADD $x3(%13), 1    <- $x3の定義がないため、不正オペランド
+     *   bb.21.for.body1:
+     *     %13 = ADD %12, 1              <- kernel loop 内で更新された
+     *   bb.22.for.body1:                   $x2の値が%12に入っている必要がある
+     *     %15 = ADD %14, 1              <- kernel loop 内で更新された
+     *                                      $x4の値が%14に入っている必要がある
+     * ↓↓
+     * [OK: 物理レジスタ割り付けあり、COPY追加あり]
+     *   bb.20.for.body1:
+     *     %11 = COPY %10
+     *   bb.15.for.body1: (kernel loop)
+     *     $x1 = COPY %11                <- $x1を定義するCOPYを追加する(livein)
+     *     $x3 = COPY %13                <- $x3を定義するCOPYを追加する(livein)
+     *     $x2(%12) = ADD $x1(%11), 1
+     *     $x4(%14) = ADD $x3(%13), 1
+     *     %12 = COPY $x2                <- %12を定義するCOPYを追加する(liveout)
+     *     %14 = COPY $x4                <- %14を定義するCOPYを追加する(liveout)
+     *   bb.21.for.body1:
+     *     %13 = ADD %12, 1
+     *   bb.22.for.body1:
+     *     %15 = ADD %14, 1
      */
     if ((rinfo->num_def == -1) || (rinfo->num_def > rinfo->num_use))
       addCopyMIpre(MF, pre_dl, tmi->kernel_pre_mis, rinfo->vreg, rinfo->preg);    // livein
-    if ((rinfo->num_def > -1) && (tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg)))
+    if ((rinfo->num_def > -1) && ((tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg)) ||
+                                  (SWPipeliner::currentLoop->containsLiveOutReg(rinfo->vreg)))) {
+      // (カーネル内で定義あり) かつ
+      // (エピローグで参照から始まっている もしくは SWPL時点でliveoutのレジスタ) なら物理からへの仮想COPY追加
       addCopyMIpost(MF, post_dl, tmi->kernel_post_mis, rinfo->vreg, rinfo->preg); // liveout
+    }
     // 当該物理レジスタを使用するMachineOperandすべてにsetReg()する
     for (auto *mo : rinfo->vreg_mo) {
       auto preg = rinfo->preg;
@@ -569,7 +646,8 @@ bool AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
       lastDL = mi->getDebugLoc();
 
     // MIのオペランド数でループ
-    for (MachineOperand& mo:mi->operands()) {
+    for (unsigned opIdx = 0, e = mi->getNumOperands(); opIdx != e; ++opIdx) {
+      MachineOperand &mo = mi->getOperand(opIdx);
       // レジスタオペランドなら以降の処理継続
       // レジスタ番号 0 はいかなる種類のレジスタも表していない
       unsigned reg = 0;
@@ -577,7 +655,7 @@ bool AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
         continue;
 
       // 各仮想レジスタの生存区間リストを作成する
-      if (createLiveRange(mo, reg, *(tmi->swplRAITbl), num_mi,
+      if (createLiveRange(mi, opIdx, mo, reg, *(tmi->swplRAITbl), num_mi,
                           total_mi, exclude_vreg, tmi->doVReg) != 0) {
         assert(0 && "createLiveRange() failed");
         return false;
@@ -768,12 +846,14 @@ void SwplExcKernelRegInfoTbl::dump() {
  * @param  [in] num_def 定義番号
  * @param  [in] num_use 参照番号
  * @param  [in] mo llvm::MachineOperand
+ * @param  [in] tied_vreg tiedの場合、その相手となる仮想レジスタ
  * @param  [in] preg 物理レジスタ番号
  */
 void SwplRegAllocInfoTbl::addRegAllocInfo( unsigned vreg,
                                            int num_def,
                                            int num_use,
                                            MachineOperand *mo,
+                                           unsigned tied_vreg,
                                            unsigned preg) {
   const TargetRegisterClass *trc;
 
@@ -784,7 +864,7 @@ void SwplRegAllocInfoTbl::addRegAllocInfo( unsigned vreg,
     trc = SWPipeliner::MRI->getRegClass(vreg);
     clsid = trc->getID();
   }
-  rai_tbl.push_back({vreg, preg, num_def, num_use, -1, clsid, {mo}, total_mi});
+  rai_tbl.push_back({vreg, preg, num_def, num_use, -1, tied_vreg, clsid, {mo}, total_mi});
   return;
 }
 
@@ -886,7 +966,7 @@ bool SwplRegAllocInfoTbl::isUsePReg( unsigned preg ) {
  */
 void SwplRegAllocInfoTbl::dump() {
   dbgs() << "Information of the registers of the kernel. MI=" << total_mi << "\n"
-         << "No.\tvreg\tpreg\tdef\tuse\trange\tclass\tMO\n";
+         << "No.\tvreg\tpreg\tdef\tuse\trange\ttied\tclass\tMO\n";
   for (size_t i = 0; i < rai_tbl.size(); i++) {
     RegAllocInfo *ri_p = &(rai_tbl[i]);
     dbgs() << i << "\t"
@@ -894,7 +974,8 @@ void SwplRegAllocInfoTbl::dump() {
            << printReg(ri_p->preg, SWPipeliner::TRI) << "\t" // 割り当て済み物理レジスタ
            << ri_p->num_def << "\t"             // 仮想レジスタの定義番号
            << ri_p->num_use << "\t"             // 仮想レジスタの参照番号
-           << ri_p->liverange  << "\t";         // 生存区間(参照番号-定義番号)
+           << ri_p->liverange  << "\t"          // 生存区間(参照番号-定義番号)
+           << printReg(ri_p->tied_vreg, SWPipeliner::TRI) << "\t";  // tied仮想レジスタ
     // 仮想レジスタのレジスタクラス
     if (ri_p->vreg > 0) {
       const TargetRegisterClass *trc = SWPipeliner::MRI->getRegClass(ri_p->vreg);
