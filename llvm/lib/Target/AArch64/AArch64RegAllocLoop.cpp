@@ -165,21 +165,30 @@ static void createExcludeVReg(MachineInstr *mi, MachineOperand &mo,
     return;
   }
 
-  // 対象のオペランドなら除外リストに追加
-  assert(mi);
-  switch (mi->getOpcode()) {
-  case TargetOpcode::EXTRACT_SUBREG:
-  case TargetOpcode::INSERT_SUBREG:
-  case TargetOpcode::REG_SEQUENCE:
-  case TargetOpcode::SUBREG_TO_REG:
+  if (SWPipeliner::currentLoop->containsLiveOutReg(reg)) {
+    // SWPL適用後の段階でLiveOutしている仮想レジスタなら除外リストに追加
     if( DebugSwplRegAlloc ) {
-      dbgs() << "Excluded operand: " << mi->getOpcode()
-             << ", reg=" << printReg(reg, SWPipeliner::TRI) << "\n";
+      dbgs() << "Excluded LiveOut. reg="
+             << printReg(reg, SWPipeliner::TRI) << "\n";
     }
     ex_vreg.insert(reg);
-    break;
-  default:
-    break;
+  } else {
+    // 対象のオペランドなら除外リストに追加
+    assert(mi);
+    switch (mi->getOpcode()) {
+    case TargetOpcode::EXTRACT_SUBREG:
+    case TargetOpcode::INSERT_SUBREG:
+    case TargetOpcode::REG_SEQUENCE:
+    case TargetOpcode::SUBREG_TO_REG:
+      if( DebugSwplRegAlloc ) {
+        dbgs() << "Excluded operand: " << mi->getOpcode()
+               << ", reg=" << printReg(reg, SWPipeliner::TRI) << "\n";
+      }
+      ex_vreg.insert(reg);
+      break;
+    default:
+      break;
+    }
   }
 
   return;
@@ -440,14 +449,6 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
       }
     }
 
-    // containsLiveOutReg()が真になるレジスタはデバッグログに出力しておく
-    if ((DebugSwplRegAlloc) &&
-        (SWPipeliner::currentLoop->containsLiveOutReg(itr_cur->vreg))) {
-      dbgs() << " liveout-register. (vreg: "
-             << printReg(itr_cur->vreg, SWPipeliner::TRI) << ", preg: "
-             << printReg(itr_cur->preg, SWPipeliner::TRI) << ")\n";
-    }
-
     // それでも物理レジスタ割り当てできなかったら異常復帰
     if (!allocated) {
       if( DebugSwplRegAlloc ) {
@@ -490,56 +491,20 @@ static void callSetReg(MachineFunction &MF,
       continue;
 
     /*
-     * 物理レジスタを割り付けた後に、MBBをまたがるレジスタへ
-     * COPYを追加する必要性について、以下を例に説明する。
-     *
-     * [OK: 物理レジスタ割り付けなし、COPY追加なし]
-     *   bb.20.for.body1:
+     * MBBをまたがるレジスタへの対処
+     *   bb.10.for.body1:
      *     %11 = COPY %10
-     *   bb.15.for.body1: (kernel loop)
-     *     %12 = ADD %11, 1
-     *     %14 = ADD %13, 1
-     *   bb.21.for.body1:
-     *     %13 = ADD %12, 1
-     *   bb.22.for.body1:
-     *     %15 = ADD %14, 1
-     *
-     * ↓↓
-     * [NG: 物理レジスタ割り付けあり、COPY追加なし]
-     *   bb.20.for.body1:
-     *     %11 = COPY %10
-     *   bb.15.for.body1: (kernel loop)
-     *     $x2(%12) = ADD $x1(%11), 1    <- $x1の定義がないため、不正オペランド
-     *     $x4(%14) = ADD $x3(%13), 1    <- $x3の定義がないため、不正オペランド
-     *   bb.21.for.body1:
-     *     %13 = ADD %12, 1              <- kernel loop 内で更新された
-     *   bb.22.for.body1:                   $x2の値が%12に入っている必要がある
-     *     %15 = ADD %14, 1              <- kernel loop 内で更新された
-     *                                      $x4の値が%14に入っている必要がある
-     * ↓↓
-     * [OK: 物理レジスタ割り付けあり、COPY追加あり]
-     *   bb.20.for.body1:
-     *     %11 = COPY %10
-     *   bb.15.for.body1: (kernel loop)
-     *     $x1 = COPY %11                <- $x1を定義するCOPYを追加する(livein)
-     *     $x3 = COPY %13                <- $x3を定義するCOPYを追加する(livein)
+     *   bb.5.for.body1: (kernel loop)
+     *     $x1 = COPY %11             <- $x1を定義するCOPYを追加する(livein)
      *     $x2(%12) = ADD $x1(%11), 1
-     *     $x4(%14) = ADD $x3(%13), 1
-     *     %12 = COPY $x2                <- %12を定義するCOPYを追加する(liveout)
-     *     %14 = COPY $x4                <- %14を定義するCOPYを追加する(liveout)
-     *   bb.21.for.body1:
+     *     %12 = COPY $x2(%12)        <- %12を定義するCOPYを追加する(liveout)
+     *   bb.11.for.body1:
      *     %13 = ADD %12, 1
-     *   bb.22.for.body1:
-     *     %15 = ADD %14, 1
      */
     if ((rinfo->num_def == -1) || (rinfo->num_def > rinfo->num_use))
       addCopyMIpre(MF, pre_dl, tmi->kernel_pre_mis, rinfo->vreg, rinfo->preg);    // livein
-    if ((rinfo->num_def > -1) && ((tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg)) ||
-                                  (SWPipeliner::currentLoop->containsLiveOutReg(rinfo->vreg)))) {
-      // (カーネル内で定義あり) かつ
-      // (エピローグで参照から始まっている もしくは SWPL時点でliveoutのレジスタ) なら物理からへの仮想COPY追加
+    if ((rinfo->num_def > -1) && (tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg)))
       addCopyMIpost(MF, post_dl, tmi->kernel_post_mis, rinfo->vreg, rinfo->preg); // liveout
-    }
     // 当該物理レジスタを使用するMachineOperandすべてにsetReg()する
     for (auto *mo : rinfo->vreg_mo) {
       auto preg = rinfo->preg;

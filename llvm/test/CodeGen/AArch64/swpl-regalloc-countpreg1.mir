@@ -1,6 +1,6 @@
 # RUN: llc %s  -fswp -mcpu=a64fx -start-before=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -swpl-enable-reg-alloc  -o /dev/null 2>&1 | FileCheck %s
-# CHECK: remark: b.c:47:4: software pipelining (IPC: 1.85, ITR: 3, MVE: 2, II: 21, Stage: 3, (VReg Fp: 11/32, Int: 5/32, Pred: 5/8)), SRA(PReg Fp: 10/32, Int: 15/29, Pred: 6/8)
-# CHECK-NEXT: remark: b.c:14:4: software pipelining (IPC: 1.85, ITR: 3, MVE: 2, II: 21, Stage: 3, (VReg Fp: 11/32, Int: 15/32, Pred: 7/8)), SRA(PReg Fp: 10/32, Int: 15/29, Pred: 6/8)
+# CHECK: remark: b.c:47:4: software pipelining (IPC: 1.85, ITR: 3, MVE: 2, II: 21, Stage: 3, (VReg Fp: 11/32, Int: 5/32, Pred: 5/8)), SRA(PReg Fp: 10/32, Int: 14/29, Pred: 6/8)
+# CHECK-NEXT: remark: b.c:14:4: software pipelining (IPC: 1.85, ITR: 3, MVE: 2, II: 21, Stage: 3, (VReg Fp: 11/32, Int: 15/32, Pred: 7/8)), SRA(PReg Fp: 10/32, Int: 14/29, Pred: 6/8)
 
 --- |
   ; ModuleID = 'b.c'
