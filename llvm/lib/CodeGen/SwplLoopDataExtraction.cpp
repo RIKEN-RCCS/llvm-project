@@ -32,6 +32,7 @@ static cl::opt<bool>
     IgnoreRegClass_SuppressCopy("swpl-ignore-class-suppress-copy",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool>
     GenCopy4AllTiedDef("swpl-gen-copy-for-all-tieddef",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> NoMMOIsNoDep("swpl-nommo-is-nodep",cl::init(false), cl::ReallyHidden);
 
 using BasicBlocks = std::vector<MachineBasicBlock *>;
 using BasicBlocksIterator = std::vector<MachineBasicBlock *>::iterator ;
@@ -385,10 +386,17 @@ unsigned SwplLoop::getMemsMinOverlapDistance(SwplMem *former_mem, SwplMem *latte
 
   const auto * former_mi=NewMI2OrgMI.at(former_mem->getInst()->getMI());
   const auto * latter_mi=NewMI2OrgMI.at(latter_mem->getInst()->getMI());
+  const auto *memop1=former_mem->getMO();
+  const auto *memop2=latter_mem->getMO();
+  if (NoMMOIsNoDep && (memop1==nullptr || memop2==nullptr)) {
+    if (SWPipeliner::isDebugOutput())
+      dbgs() << "DBG(getMemIncrement): NoMMOIsNoDep is true: return MAX_LOOP_DISTANCE\n"
+             << " formaer_mi:" << *former_mi
+             << " latter_mi:" << *latter_mi;
+    return SwplMem::MAX_LOOP_DISTANCE;
+  }
 
   if (!NoUseAA && !former_mi->mayAlias(SWPipeliner::AA, *latter_mi, false)) {
-    const auto *memop1=former_mem->getMO();
-    const auto *memop2=latter_mem->getMO();
     // MachineInstr::mayAlias の結果は信頼性が低いため、さらに、メモリ間で重なる可能性があるか確認する
     if (memop1!=nullptr && memop2!=nullptr && memop1->getValue()!=nullptr && memop2->getValue()!=nullptr) {
       if (SWPipeliner::AA->isNoAlias(
