@@ -788,6 +788,14 @@ bool SwplLoop::check_need_copy4TiedUseReg(const MachineBasicBlock* body, const M
     }
     return false;
   }
+  if (tiedInstr->getOpcode() == TargetOpcode::INSERT_SUBREG || tiedInstr->getOpcode() == TargetOpcode::EXTRACT_SUBREG ||
+      tiedInstr->getOpcode() == TargetOpcode::EXTRACT_SUBREG || tiedInstr->getOpcode() == TargetOpcode::SUBREG_TO_REG) {
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): Instruction to exclude allocation of physical registers\n"
+                "  mi: " << *tiedInstr;
+    }
+    return false;
+  }
   if (SWPipeliner::isDebugOutput()) {
     dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): Decide that the COPY instruction is necessary\n";
   }
