@@ -262,10 +262,9 @@ static int createLiveRange(MachineInstr *mi, unsigned idx,
             ex_vreg.insert(reg);
             return ret;
           }
-          if ((tied_mo.isReg()) && (tied_mo.getReg()) && (tied_mo.isTied()) &&
-              (ex_vreg.find(tied_mo.getReg()) == ex_vreg.end())) {
-            // レジスタオペランド かつ レジスタ値が0より大きい かつ tiedフラグが立っている かつ
-            // 除外リストに含まれていないならtied仮想レジスタとして使用する
+          if ((tied_mo.isReg()) && (tied_mo.getReg()) && (tied_mo.isTied())) {
+            // レジスタオペランド かつ レジスタ値が0より大きい かつ
+            // tiedフラグが立っているならtied仮想レジスタとして使用する
             tied_vreg = tied_mo.getReg();
           }
         }
@@ -307,10 +306,9 @@ static int createLiveRange(MachineInstr *mi, unsigned idx,
             ex_vreg.insert(reg);
             return ret;
           }
-          if ((tied_mo.isReg()) && (tied_mo.getReg()) && (tied_mo.isTied()) &&
-              (ex_vreg.find(tied_mo.getReg()) == ex_vreg.end())) {
-            // レジスタオペランド かつ レジスタ値が0より大きい かつ tiedフラグが立っている かつ
-            // 除外リストに含まれていないならtied仮想レジスタとして使用する
+          if ((tied_mo.isReg()) && (tied_mo.getReg()) && (tied_mo.isTied())) {
+            // レジスタオペランド かつ レジスタ値が0より大きい かつ
+            // tiedフラグが立っているならtied仮想レジスタとして使用する
             tied_vreg = tied_mo.getReg();
           }
         }
