@@ -250,8 +250,9 @@ static int createLiveRange(MachineInstr *mi, unsigned idx,
       // 当該オペランドが"定義"か
       if (mo.isDef()) {
         // 参照オペランドとtiedならそのオペランドを取得
-        if ((mo.isTied()) && (mi->isRegTiedToUseOperand(idx))) {
-          MachineOperand &tied_mo = mi->getOperand(mi->findTiedOperandIdx(idx));
+        unsigned tied_idx;
+        if ((mo.isTied()) && (mi->isRegTiedToUseOperand(idx, &tied_idx))) {
+          MachineOperand &tied_mo = mi->getOperand(tied_idx);
           if (ex_vreg.find(tied_mo.getReg()) != ex_vreg.end()) {
             // tiedの相手が除外リストに含まれるなら自分も除外リストへ
             if (DebugSwplRegAlloc) {
@@ -294,8 +295,9 @@ static int createLiveRange(MachineInstr *mi, unsigned idx,
       // 当該オペランドが"参照"か
       if (mo.isUse()) {
         // 定義オペランドとtiedならそのオペランドを取得
-        if ((mo.isTied()) && (mi->isRegTiedToDefOperand(idx))) {
-          MachineOperand &tied_mo = mi->getOperand(mi->findTiedOperandIdx(idx));
+        unsigned tied_idx;
+        if ((mo.isTied()) && (mi->isRegTiedToDefOperand(idx, &tied_idx))) {
+          MachineOperand &tied_mo = mi->getOperand(tied_idx);
           if (ex_vreg.find(tied_mo.getReg()) != ex_vreg.end()) {
             // tiedの相手が除外リストに含まれるなら自分も除外リストへ
             if (DebugSwplRegAlloc) {
