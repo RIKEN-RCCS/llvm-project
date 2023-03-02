@@ -380,6 +380,33 @@ static void extendLiveRange(SwplTransformedMIRInfo *tmi) {
 }
 
 /**
+ * @brief  レジスタ割り付け対象外であるかの判定
+ * @param  [in] rai 割り当て済みレジスタ情報
+ * @param  [in] ekri_tbl カーネル外のレジスタ情報の表
+ * @retval true レジスタ割り付け対象でない
+ * @retval false レジスタ割り付け対象である
+ */
+static bool isNoPhysRegAlloc(RegAllocInfo *rai, SwplExcKernelRegInfoTbl &ekri_tbl) {
+  /*
+   * 以下の仮想レジスタは、物理レジスタ割り付け対象としない
+   * ・仮想レジスタ番号が 0
+   * ・isVirtualRegister()の返却値がfalseである
+   * ・カーネル内に定義しかない かつ カーネル外にて参照から始まっていない
+   *   bb.5.for.body1: (kernel loop)
+   *     %10 = ADD $x1, 1  <- %10はカーネル内外で参照されないため、割り付け対象としない
+   *   bb.11.for.body1: (epilogue)
+   *     %10 = ADD %11, 1
+   */
+  assert(rai);
+  if ((rai->vreg == 0) || (!Register::isVirtualRegister(rai->vreg)) ||
+      ((rai->num_def > -1) && (rai->num_use == -1) &&
+       (!ekri_tbl.isUseFirstVRegInExcK(rai->vreg)))) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * @brief  生存区間を基に仮想レジスタへ物理レジスタを割り付ける
  * @param  [in,out] reginfo 割り当て済みレジスタ情報
  * @param  [in]     ekri_tbl カーネル外のレジスタ情報の表
@@ -398,19 +425,8 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
     RegAllocInfo *itr_cur =rai_tbl.getWithIdx(i);
     bool allocated = false;
 
-    /*
-     * 以下の仮想レジスタは、物理レジスタ割り付け対象としない
-     * ・仮想レジスタ番号が 0
-     * ・isVirtualRegister()の返却値がfalseである
-     * ・カーネル内に定義しかない かつ カーネル外にて参照から始まっていない
-     *   bb.5.for.body1: (kernel loop)
-     *     %10 = ADD $x1, 1  <- %10はカーネル内外で参照されないため、割り付け対象としない
-     *   bb.11.for.body1: (epilogue)
-     *     %10 = ADD %11, 1
-     */
-    if ((itr_cur->vreg == 0) || (!Register::isVirtualRegister(itr_cur->vreg)) ||
-        ((itr_cur->num_def > -1) && (itr_cur->num_use == -1) &&
-         (!ekri_tbl.isUseFirstVRegInExcK(itr_cur->vreg)))) {
+    // レジスタ割り付け対象か
+    if (isNoPhysRegAlloc(itr_cur, ekri_tbl)) {
       if( DebugSwplRegAlloc ) {
         dbgs() << " Following register will be not allocated a physcal register. (vreg: "
                << printReg(itr_cur->vreg, SWPipeliner::TRI) << ", preg: "
@@ -422,9 +438,11 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
     // tiedの相手が存在するか
     if ((!allocated) && (itr_cur->tied_vreg != 0)) {
       RegAllocInfo* tied_rinfo = rai_tbl.getWithVReg(itr_cur->tied_vreg);
-      if ((!tied_rinfo) || (tied_rinfo->tied_vreg != itr_cur->vreg)) {
-        // tiedの相手が存在しない もしくは tiedの相手が自分を指していなければ物理レジスタは割り付けない
-        break;
+      if ((!tied_rinfo) || (tied_rinfo->tied_vreg != itr_cur->vreg) ||
+          (isNoPhysRegAlloc(tied_rinfo, ekri_tbl))) {
+        // tiedの相手が「存在しない」もしくは「tiedの相手が自分を指していない」もしくは
+        // 「物理レジスタ割り付け対象外」であれば自分も物理レジスタを割り付けない
+        continue;
       }
       if (tied_rinfo->preg != 0) {
         // tied相手が既に物理レジスタ割り当て済みだったらそれを使用
