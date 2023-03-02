@@ -252,6 +252,16 @@ static int createLiveRange(MachineInstr *mi, unsigned idx,
         // 参照オペランドとtiedならそのオペランドを取得
         if ((mo.isTied()) && (mi->isRegTiedToUseOperand(idx))) {
           MachineOperand &tied_mo = mi->getOperand(mi->findTiedOperandIdx(idx));
+          if (ex_vreg.find(tied_mo.getReg()) != ex_vreg.end()) {
+            // tiedの相手が除外リストに含まれるなら自分も除外リストへ
+            if (DebugSwplRegAlloc) {
+              dbgs() << "Excluded register. current reg="
+                    << printReg(reg, SWPipeliner::TRI) << ", tied(excluded)="
+                    << printReg(tied_mo.getReg(), SWPipeliner::TRI) << "\n";
+            }
+            ex_vreg.insert(reg);
+            return ret;
+          }
           if ((tied_mo.isReg()) && (tied_mo.getReg()) && (tied_mo.isTied()) &&
               (ex_vreg.find(tied_mo.getReg()) == ex_vreg.end())) {
             // レジスタオペランド かつ レジスタ値が0より大きい かつ tiedフラグが立っている かつ
@@ -287,6 +297,16 @@ static int createLiveRange(MachineInstr *mi, unsigned idx,
         // 定義オペランドとtiedならそのオペランドを取得
         if ((mo.isTied()) && (mi->isRegTiedToDefOperand(idx))) {
           MachineOperand &tied_mo = mi->getOperand(mi->findTiedOperandIdx(idx));
+          if (ex_vreg.find(tied_mo.getReg()) != ex_vreg.end()) {
+            // tiedの相手が除外リストに含まれるなら自分も除外リストへ
+            if (DebugSwplRegAlloc) {
+              dbgs() << "Excluded register. current reg="
+                    << printReg(reg, SWPipeliner::TRI) << ", tied(excluded)="
+                    << printReg(tied_mo.getReg(), SWPipeliner::TRI) << "\n";
+            }
+            ex_vreg.insert(reg);
+            return ret;
+          }
           if ((tied_mo.isReg()) && (tied_mo.getReg()) && (tied_mo.isTied()) &&
               (ex_vreg.find(tied_mo.getReg()) == ex_vreg.end())) {
             // レジスタオペランド かつ レジスタ値が0より大きい かつ tiedフラグが立っている かつ
@@ -401,10 +421,15 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
       continue;
     }
 
-    // tiedの相手が既に物理レジスタ割り当て済みだったらそれを使用
+    // tiedの相手が存在するか
     if ((!allocated) && (itr_cur->tied_vreg != 0)) {
       RegAllocInfo* tied_rinfo = rai_tbl.getWithVReg(itr_cur->tied_vreg);
-      if ((tied_rinfo) && (tied_rinfo->preg != 0)) {
+      if ((!tied_rinfo) || (tied_rinfo->tied_vreg != itr_cur->vreg)) {
+        // tiedの相手が存在しない もしくは tiedの相手が自分を指していなければ物理レジスタは割り付けない
+        break;
+      }
+      if (tied_rinfo->preg != 0) {
+        // tied相手が既に物理レジスタ割り当て済みだったらそれを使用
         if( DebugSwplRegAlloc ) {
           dbgs() << " tied-register. [current](vreg: "
                  << printReg(itr_cur->vreg, SWPipeliner::TRI) << "), [tied](vreg: "
