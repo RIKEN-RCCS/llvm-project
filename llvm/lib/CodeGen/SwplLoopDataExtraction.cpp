@@ -510,14 +510,22 @@ static MachineOperand* used_reg(MachineInstr &phi) {
     own_r = phi.getOperand(3).getReg();
   }
 
-  auto def_r_class=SWPipeliner::MRI->getRegClass(def_r);
-  auto own_r_class=SWPipeliner::MRI->getRegClass(own_r);
-
-  if (!SWPipeliner::STM->isEnableRegAlloc() && !IgnoreRegClass_SuppressCopy && def_r_class->getID()!=own_r_class->getID()) {
-    if (SWPipeliner::isDebugOutput()) {
-      dbgs() << "DEBUG(used_reg): def-class is not use-class!:" << phi;
+  if (!SWPipeliner::STM->isEnableRegAlloc() && !IgnoreRegClass_SuppressCopy) {
+    if (def_r.isVirtual() && own_r.isVirtual()) {
+      auto def_r_class = SWPipeliner::MRI->getRegClass(def_r);
+      auto own_r_class = SWPipeliner::MRI->getRegClass(own_r);
+      if (def_r_class->getID() != own_r_class->getID()) {
+         if (SWPipeliner::isDebugOutput()) {
+           dbgs() << "DEBUG(used_reg): def-class is not use-class!:" << phi;
+         }
+         return nullptr;
+      }
+    } else {
+      if (SWPipeliner::isDebugOutput()) {
+         dbgs() << "DEBUG(used_reg): def-class is not use-class!:" << phi;
+      }
+      return nullptr;
     }
-    return nullptr;
   }
 
   auto *def_op = SWPipeliner::MRI->getOneDef(own_r);
