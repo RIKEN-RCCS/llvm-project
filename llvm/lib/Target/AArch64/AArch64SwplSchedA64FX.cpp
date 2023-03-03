@@ -28,15 +28,10 @@ static StmPipeline RES_INT_OP_001_03 = {{0}, {P_::EAGA}};
 static StmPipeline RES_INT_OP_001_04 = {{0}, {P_::EAGB}};
 static StmPipeline RES_INT_OP_002_01 = {{0}, {P_::EXA}};
 static StmPipeline RES_INT_OP_002_02 = {{0}, {P_::EXB}};
-static StmPipeline RES_INT_OP_003_01 = {
-  {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
-  {P_::FLA, P_::FLB, P_::EXA, P_::EXB, P_::EAGA, P_::EAGB, P_::PRX,  P_::BR,
-    P_::FLA, P_::FLB, P_::EXA, P_::EXB, P_::EAGA, P_::EAGB, P_::PRX,  P_::BR}};
-static StmPipeline RES_INT_OP_004_01 = {
-  {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2},
-  {P_::FLA, P_::FLB, P_::EXA, P_::EXB, P_::EAGA, P_::EAGB, P_::PRX, P_::BR,
-    P_::FLA, P_::FLB, P_::EXA, P_::EXB, P_::EAGA, P_::EAGB, P_::PRX, P_::BR,
-    P_::FLA, P_::FLB, P_::EXA, P_::EXB, P_::EAGA, P_::EAGB, P_::PRX, P_::BR}};
+static StmPipeline RES_INT_OP_003_01 = {{0, 1}, {P_::EXA, P_::EXA}};
+static StmPipeline RES_INT_OP_003_02 = {{0, 1}, {P_::EXB, P_::EXB}};
+static StmPipeline RES_INT_OP_004_01 = {{0, 1, 2}, {P_::EXA, P_::EXA, P_::EXA}};
+static StmPipeline RES_INT_OP_004_02 = {{0, 1, 2}, {P_::EXB, P_::EXB, P_::EXB}};
 static StmPipeline RES_INT_OP_005_01 = {{0}, {P_::EAGA}};
 static StmPipeline RES_INT_OP_005_02 = {{0}, {P_::EAGB}};
 static StmPipeline RES_INT_OP_006_01 = {{0}, {P_::EXA}};
@@ -133,15 +128,15 @@ static StmPipeline RES_SIMDFP_SVE_OP_006_02 = {{0, 6}, {P_::FLA, P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_007_01 = {{0, 4}, {P_::FLA, P_::FLA_C}};
 static StmPipeline RES_SIMDFP_SVE_OP_008_01 = {{0, 1, 1, 5}, {P_::FLA, P_::FLA_C, P_::FLA, P_::FLA_C}};
 static StmPipeline RES_SIMDFP_SVE_OP_009_01 = {
-  {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14,
+  {0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14,
     15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
     30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42},
-  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA}};
+  {P_::FLA, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E}};
 static StmPipeline RES_SIMDFP_SVE_OP_010_01 = {
   {0,  1,  7,  9,  13, 18, 19, 25, 27, 31, 36, 37,  43,  45,  49, 54,
     55, 61, 63, 67, 72, 73, 79, 81, 85, 90, 99, 108, 117, 126, 135},
@@ -382,23 +377,23 @@ static StmPipeline RES_SIMDFP_SVE_OP_018_32 = {
   {P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB, P_::FLA, P_::FLB,
     P_::FLA, P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_019_01 = {
-  {0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
-    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-    32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-    48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
-    64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79},
-  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
+  {0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
+    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+    31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46,
+    47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62,
+    63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79},
+  {P_::FLA, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E}};
 static StmPipeline RES_SIMDFP_SVE_OP_020_01 = {
-  {0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,
+  {0,   0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,
     14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,
     28,  29,  30,  31,  32,  33,  34,  35,  36,  37,  38,  39,  40,  41,
     42,  43,  44,  45,  46,  47,  48,  49,  50,  51,  52,  53,  54,  55,
@@ -409,67 +404,67 @@ static StmPipeline RES_SIMDFP_SVE_OP_020_01 = {
     112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125,
     126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139,
     140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153},
-  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA}};
+  {P_::FLA, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E}};
 static StmPipeline RES_SIMDFP_SVE_OP_021_01 = {{0, 6}, {P_::FLB, P_::FLB_C}};
 static StmPipeline RES_SIMDFP_SVE_OP_022_01 = {
-  {0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
+  {0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28},
-  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
+  {P_::FLA, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E}};
 static StmPipeline RES_SIMDFP_SVE_OP_023_01 = {
-  {0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
+  {0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
     32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
     48, 49, 50, 51},
-  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA}};
+  {P_::FLA, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E}};
 static StmPipeline RES_SIMDFP_SVE_OP_024_01 = {
-  {0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
+  {0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
     32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
     48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
     64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
     80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95,
     96, 97},
-  {P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA, P_::FLA,
-    P_::FLA, P_::FLA
+  {P_::FLA, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E, P_::FLA_E,
+    P_::FLA_E, P_::FLA_E
     }};
 static StmPipeline RES_SIMDFP_SVE_OP_025_01 = {
   {0, 4}, 
@@ -814,9 +809,9 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
   {MI_INT_OP_002,  /// Pipeline:EX*  Latency:1
     {{&RES_INT_OP_002_01, &RES_INT_OP_002_02}, 1}},
   {MI_INT_OP_003,  /// Pipeline:(EXA + EXA) | (EXB + EXB)  Latency:1+1  Blocking:P
-    {{&RES_INT_OP_003_01}, 2}},
+    {{&RES_INT_OP_003_01, &RES_INT_OP_003_02}, 2}},
   {MI_INT_OP_004,  /// Pipeline:(EXA + EXA) | (EXB + EXB)  Latency:2+1  Blocking:P
-    {{&RES_INT_OP_004_01}, 3}},
+    {{&RES_INT_OP_004_01, &RES_INT_OP_004_02}, 3}},
   {MI_INT_OP_005,  /// Pipeline:EAG*  Latency:NA
     {{&RES_INT_OP_005_01, &RES_INT_OP_005_02}, LATENCY_NA}},
   {MI_INT_OP_006,  /// Pipeline:EX*  Latency:2

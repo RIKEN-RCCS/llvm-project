@@ -552,6 +552,9 @@ static const char *getResourceName(StmResourceId resource) {
   case AArch64SwplSchedA64FX::EXB_C:name="EXB_C";break;
   case AArch64SwplSchedA64FX::EAGA_C:name="EAGA_C";break;
   case AArch64SwplSchedA64FX::EAGB_C:name="EAGB_C";break;
+  case AArch64SwplSchedA64FX::FLA_E:name="FLA_E";break;
+  case AArch64SwplSchedA64FX::EXA_E:name="EXA_E";break;
+  case AArch64SwplSchedA64FX::EXB_E:name="EXB_E";break;
   default:
     llvm_unreachable("unknown resourceid");
   }
