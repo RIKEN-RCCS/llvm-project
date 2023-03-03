@@ -47,7 +47,7 @@
 #CHECK-NEXT:  ResourceID: INT_OP+3
 #CHECK-NEXT:  latency: 2
 #CHECK-NEXT:  seqDecode: false
-#CHECK-NEXT:  stage/resource(): 0/FLA, 0/FLB, 0/EXA, 0/EXB, 0/EAGA, 0/EAGB, 0/PRX, 0/BR, 1/FLA, 1/FLB, 1/EXA, 1/EXB, 1/EAGA, 1/EAGB, 1/PRX, 1/BR
+#CHECK-NEXT:  stage/resource(): 0/EXA, 1/EXA
 
 --- |
   ; ModuleID = '/TSVC_2/src_sep_optnone/s141.c'

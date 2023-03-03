@@ -37,7 +37,8 @@ struct AArch64SwplSchedA64FX{
   enum PortKind {
     FLA=1, FLB=2, EXA=3, EXB=4, EAGA=5, EAGB=6, PRX=7, BR=8,
     LSU1=9, LSU2=10,
-    FLA_C=11, FLB_C=12, EXA_C=13, EXB_C=14, EAGA_C=15, EAGB_C=16
+    FLA_C=11, FLB_C=12, EXA_C=13, EXB_C=14, EAGA_C=15, EAGB_C=16,
+    FLA_E=17, EXA_E=18, EXB_E=19 
   };
 
 
