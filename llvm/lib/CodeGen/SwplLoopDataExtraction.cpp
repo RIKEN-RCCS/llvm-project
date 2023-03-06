@@ -576,6 +576,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     unsigned opix;
     unsigned num=phi->getNumOperands();
     llvm::Register def_r=0, Reg=0, own_r=0, in_r=0;
+    unsigned own_subreg=0;
 
     ///   (1)-1. Phiの参照レジスタのうち、自身のMBBで定義されるレジスタ(own_r)とLiveInのレジスタ(in_r)をおさえておく。
     int own_opix=0;
@@ -588,6 +589,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
       if (mbb==org) {
         assert(own_r == 0);
         own_r = Reg;
+        own_subreg = phi->getOperand(opix-1).getSubReg();
         own_opix = opix-1;
       } else {
         assert(in_r == 0);
@@ -632,11 +634,11 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     ///   predecessor of body :
     ///          inst
     ///          inst ...
-    ///      --> phi_def = COPY own_r
+    ///      --> phi_def = COPY in_r
     ///   body :
     ///          inst
     ///          inst ...
-    ///      --> phi_def = COPY in_r
+    ///      --> phi_def = COPY own_r
     ///````
 
     ///   (1)-3. preにin_rからown_rへのCopy命令を挿入する(def_r = Copy in_r)。
@@ -651,7 +653,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
         DisableSuppressCopy) {
       MachineInstr *c=BuildMI(*body, body->getFirstTerminator(), dbgloc,
                                 SWPipeliner::TII->get(TargetOpcode::COPY), def_r)
-                            .addReg(own_r);
+                            .addReg(own_r,0, own_subreg);
       NewMI2OrgMI[c]=org_phi;
       if (SWPipeliner::isDebugOutput()) {
         if (def_op && liveout_def)
