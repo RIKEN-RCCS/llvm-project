@@ -585,17 +585,26 @@ void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
   // 属性VLをMFから取り出し、AArch64SwplSchedA64FXに設定する
   const AArch64Subtarget &Subtarget = mf.getSubtarget<AArch64Subtarget>();
   SwplSched.VectorLength = Subtarget.getMaxSVEVectorSizeInBits();
-  auto &mbb = *mf.begin();
-  auto &mi = *mbb.begin();
-  auto loc = mi.getDebugLoc();
+
   if (SwplSched.VectorLength > 512 || SwplSched.VectorLength == 0) {
     SwplSched.VectorLength = 512;
   }
-  SWPipeliner::ORE->emit([&]() {
-    return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "VectorLength", loc, &mbb)
-         << "SVE instruction latency is calculated at " << ore::NV("VL", SwplSched.VectorLength) << "bit.";
-  });
-  
+  for (auto &mbb:mf) {
+    DebugLoc loc;
+    if (mbb.empty()) continue;
+    for (auto &mi : mbb) {
+      auto &l = mi.getDebugLoc();
+      loc=l;
+      if (l.get()==nullptr) continue;
+      break;
+    }
+    SWPipeliner::ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "VectorLength", loc, &mbb)
+             << "SVE instruction latency is calculated at " << ore::NV("VL", SwplSched.VectorLength) << "bit.";
+    });
+    break;
+  }
+
   // swpl-debug-dump-resourceで設定された正規表現をコンパイルする
   RDumpResource = Regex(OptionDumpResource);
   dumpedMIResource.clear();
