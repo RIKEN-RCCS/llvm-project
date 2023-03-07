@@ -537,6 +537,13 @@ static MachineOperand* used_reg(MachineInstr &phi) {
     }
     return nullptr;
   }
+  if (def_op->isTied() && def_op->getParent()->getOperand(1).getReg()== def_r) {
+
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DEBUG(used_reg): tied-def!\n";
+    }
+    return nullptr;
+  }
 
   MachineInstr *start_instr = def_op->getParent();
   for (auto *I=start_instr->getNextNode();I;I=I->getNextNode()) {
