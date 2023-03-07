@@ -530,8 +530,8 @@ static MachineOperand* used_reg(MachineInstr &phi) {
 
   auto *def_op = SWPipeliner::MRI->getOneDef(own_r);
 
-  // ここではまだSSAなのでdef_opがNULLになることはないはず
   if (def_op==nullptr) {
+    // 物理レジスタの場合:copy必須
     if (SWPipeliner::isDebugOutput()) {
       dbgs() << "DEBUG(used_reg): MRI->getOneDef(own_r) is nullptr\n";
     }
