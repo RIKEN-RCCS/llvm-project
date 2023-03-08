@@ -897,8 +897,20 @@ void SwplLoop::removeCopy(MachineBasicBlock *body) {
       continue;
     }
     target_mo.clear();
+    bool hasSubreg = mi.getOperand(1).getSubReg() != 0;
+    bool foundTied = false;
     for (auto &u:SWPipeliner::MRI->use_operands(r0)) {
+      if (hasSubreg && u.isTied()) {
+        foundTied = true;
+        break;
+      }
       target_mo.push_back(&u);
+    }
+    if (foundTied) {
+      if (SWPipeliner::isDebugOutput()) {
+        dbgs() << " op1 has subreg && use operand is tied!\n";
+      }
+      continue;
     }
     bool use_onlyphi=true;
     for (auto *op:target_mo) {

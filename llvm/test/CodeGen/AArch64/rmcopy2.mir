@@ -35,7 +35,7 @@
 # CHECK-NEXT:  before: %88:gpr64sp = PHI %1:gpr64all, %bb.1, %109:gpr64all, %bb.2
 # CHECK-NEXT:  after: %88:gpr64sp = PHI %1:gpr64all, %bb.1, %108:gpr64, %bb.2
 # CHECK-NEXT:  removed!
-# CHECK-NEXT: DEBUG(used_reg): MRI->getOneDef(own_r) is nullptr
+# CHECK: DEBUG(used_reg): MRI->getOneDef(own_r) is nullptr
 
 --- |
   ; ModuleID = 'rmcopy2.c'
