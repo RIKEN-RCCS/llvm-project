@@ -48,7 +48,7 @@ static cl::opt<bool> OptionDumpEveryInst("swpl-debug-dump-scheduling-every-inst"
 
 namespace llvm{
 
-#define DEFAULT_MAXII_BASE 95;
+#define DEFAULT_MAXII_BASE 1000;
 
 /// \brief 命令が使用する資源を予約する
 /// \details 命令が使用する資源をMrtに記録する。
