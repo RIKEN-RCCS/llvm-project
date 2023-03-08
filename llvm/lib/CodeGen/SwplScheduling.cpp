@@ -35,8 +35,8 @@ static cl::opt<unsigned> OptionMveLimit("swpl-mve-limit",cl::init(30), cl::Reall
 
 static cl::opt<unsigned> OptionBudgetRatioThreshold("swpl-budget-ratio-threshold",
                                                   cl::init(100), cl::ReallyHidden);
-static cl::opt<double> OptionBudgetRatioLess("swpl-budget-ratio-less",cl::init(5.0), cl::ReallyHidden);
-static cl::opt<double> OptionBudgetRatioMore("swpl-budget-ratio-more",cl::init(2.5), cl::ReallyHidden);
+static cl::opt<double> OptionBudgetRatioLess("swpl-budget-ratio-less",cl::init(50.0), cl::ReallyHidden);
+static cl::opt<double> OptionBudgetRatioMore("swpl-budget-ratio-more",cl::init(25.0), cl::ReallyHidden);
 
 static cl::opt<bool> OptionDumpModuleDdg("swpl-debug-dump-moduloddg",cl::init(false), cl::ReallyHidden);
 
