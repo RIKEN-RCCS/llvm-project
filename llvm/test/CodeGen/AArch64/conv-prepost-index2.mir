@@ -1,14 +1,25 @@
-# RUN: llc -mcpu=a64fx -O3 -fswp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
+# RUN: llc -mcpu=a64fx -O1 -fswp -swpl-disable-reg-alloc -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
 #
-# CHECK: before:%199:gpr64sp, %200:fpr128 = LD1i32_POST %198:fpr128(tied-def 1), 1, %194:gpr64common(tied-def 0), $xzr
-# CHECK: after 1:%200:fpr128 = LD1i32 %198:fpr128(tied-def 0), 1, %194:gpr64common
-# CHECK: after 2:%199:gpr64sp = ADDXri %194:gpr64common, 4, 0
-# CHECK: before:%202:gpr64sp, %203:fpr64 = LD1Rv2s_POST %193:gpr64common(tied-def 0), $xzr
-# CHECK: after 1:%203:fpr64 = LD1Rv2s %193:gpr64common
-# CHECK: after 2:%202:gpr64sp = ADDXri %193:gpr64common, 4, 0
-# CHECK: before:%204:gpr64sp, %205:fpr64 = LD1Rv2s_POST %190:gpr64common(tied-def 0), $xzr
-# CHECK: after 1:%205:fpr64 = LD1Rv2s %190:gpr64common
-# CHECK: after 2:%204:gpr64sp = ADDXri %190:gpr64common, 4, 0
+# CHECK: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:%204:gpr64sp, %205:fpr128 = LD1i32_POST %203:fpr128(tied-def 1), 1, %199:gpr64common(tied-def 0), $xzr
+# CHECK-NEXT:  after 1:%205:fpr128 = LD1i32 %203:fpr128(tied-def 0), 1, %199:gpr64common
+# CHECK-NEXT:  after 2:%204:gpr64sp = ADDXri %199:gpr64common, 4, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:%206:gpr64sp, %207:fpr128 = LD1i32_POST %203:fpr128(tied-def 1), 1, %199:gpr64common(tied-def 0), %X:gpr64
+# CHECK-NEXT:  after 1:%207:fpr128 = LD1i32 %203:fpr128(tied-def 0), 1, %199:gpr64common
+# CHECK-NEXT:  after 2:%206:gpr64sp = ADDXrr %199:gpr64common, %X:gpr64
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:%209:gpr64sp, %210:fpr64 = LD1Rv2s_POST %198:gpr64common(tied-def 0), $xzr
+# CHECK-NEXT:  after 1:%210:fpr64 = LD1Rv2s %198:gpr64common
+# CHECK-NEXT:  after 2:%209:gpr64sp = ADDXri %198:gpr64common, 4, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:%211:gpr64sp, %212:fpr64 = LD1Rv2s_POST %195:gpr64common(tied-def 0), $xzr
+# CHECK-NEXT:  after 1:%212:fpr64 = LD1Rv2s %195:gpr64common
+# CHECK-NEXT:  after 2:%211:gpr64sp = ADDXri %195:gpr64common, 4, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:%213:gpr64sp, %214:fpr64 = LD1Rv2s_POST %195:gpr64common(tied-def 0), %X:gpr64
+# CHECK-NEXT:  after 1:%214:fpr64 = LD1Rv2s %195:gpr64common
+# CHECK-NEXT:  after 2:%213:gpr64sp = ADDXrr %195:gpr64common, %X:gpr64
 
 --- |
   ; ModuleID = 'a10.c'
@@ -589,6 +600,7 @@ body:             |
     %13:gpr64all = COPY %14
     %12:gpr64all = COPY %15
     %1:gpr64all = SUBREG_TO_REG 0, %16, %subreg.sub_32
+    %X:gpr64 = COPY $xzr
     B %bb.4
   
   bb.2.for.cond.cleanup:
@@ -631,9 +643,11 @@ body:             |
     %28:fpr64 = INSERT_SUBREG %29, killed %27, %subreg.ssub
     %30:fpr128 = INSERT_SUBREG %31, killed %28, %subreg.dsub
     %32:gpr64sp, %33:fpr128 = LD1i32_POST %30, 1, %25, $xzr
+    %A1:gpr64sp, %A2:fpr128 = LD1i32_POST %30, 1, %25, %X
     %34:fpr64 = COPY %33.dsub
     %35:gpr64sp, %36:fpr64 = LD1Rv2s_POST %23, $xzr
     %38:gpr64sp, %39:fpr64 = LD1Rv2s_POST %18, $xzr
+    %B1:gpr64sp, %B2:fpr64 = LD1Rv2s_POST %18, %X
     %40:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2f32 killed %39, killed %34, killed %36
     STURDi killed %40, %3, -40 :: (store (s64) into %ir.uglygep233, align 4, !tbaa !8)
     %41:fpr32 = LDRSui killed %35, 0 :: (load (s32) from %ir.uglygep216, !tbaa !8)

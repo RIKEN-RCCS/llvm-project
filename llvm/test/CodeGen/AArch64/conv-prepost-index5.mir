@@ -1,17 +1,29 @@
-# RUN: llc -mcpu=a64fx -O3 -fswp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
+# RUN: llc -mcpu=a64fx -O1 -swpl-disable-reg-alloc -fswp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
 #
-# CHECK:  before:early-clobber %88:gpr64sp, %89:fpr32 = LDRSpost %83:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.lsr.iv41, !tbaa !13)
-# CHECK:  after 1:%89:fpr32 = LDURSi %83:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv41, !tbaa !13)
-# CHECK:  after 2:%88:gpr64sp = ADDXri %83:gpr64sp, 4, 0
-# CHECK:  before:early-clobber %90:gpr64sp, %91:fpr32 = LDRSpost %84:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.lsr.iv38, !tbaa !13)
-# CHECK:  after 1:%91:fpr32 = LDURSi %84:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv38, !tbaa !13)
-# CHECK:  after 2:%90:gpr64sp = ADDXri %84:gpr64sp, 4, 0
-# CHECK:  before:early-clobber %92:gpr64sp, %93:fpr32 = LDRSpost %85:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
-# CHECK:  after 1:%93:fpr32 = LDURSi %85:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
-# CHECK:  after 2:%92:gpr64sp = ADDXri %85:gpr64sp, 4, 0
-# CHECK:  before:early-clobber %95:gpr64sp, %96:gpr64 = LDRSWpost %86:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
-# CHECK:  after 1:%96:gpr64 = LDURSWi %86:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
-# CHECK:  after 2:%95:gpr64sp = ADDXri %86:gpr64sp, 4, 0
+# CHECK: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %92:gpr64sp, %93:fpr32 = LDRSpost %87:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.lsr.iv41, !tbaa !13)
+# CHECK-NEXT:  after 1:%93:fpr32 = LDURSi %87:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv41, !tbaa !13)
+# CHECK-NEXT:  after 2:%92:gpr64sp = ADDXri %87:gpr64sp, 4, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %94:gpr64sp, %95:fpr32 = LDRSpost %88:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.lsr.iv38, !tbaa !13)
+# CHECK-NEXT:  after 1:%95:fpr32 = LDURSi %88:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv38, !tbaa !13)
+# CHECK-NEXT:  after 2:%94:gpr64sp = ADDXri %88:gpr64sp, 4, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %96:gpr64sp, %97:fpr32 = LDRSpost %89:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
+# CHECK-NEXT:  after 1:%97:fpr32 = LDURSi %89:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
+# CHECK-NEXT:  after 2:%96:gpr64sp = ADDXri %89:gpr64sp, 4, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %98:gpr64sp, %99:fpr32 = LDRSpost %89:gpr64sp(tied-def 0), -4 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
+# CHECK-NEXT:  after 1:%99:fpr32 = LDURSi %89:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
+# CHECK-NEXT:  after 2:%98:gpr64sp = SUBXri %89:gpr64sp, 4, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %101:gpr64sp, %102:gpr64 = LDRSWpost %90:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
+# CHECK-NEXT:  after 1:%102:gpr64 = LDURSWi %90:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
+# CHECK-NEXT:  after 2:%101:gpr64sp = ADDXri %90:gpr64sp, 4, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %103:gpr64sp, %104:gpr64 = LDRSWpost %90:gpr64sp(tied-def 0), -4 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
+# CHECK-NEXT:  after 1:%104:gpr64 = LDURSWi %90:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
+# CHECK-NEXT:  after 2:%103:gpr64sp = SUBXri %90:gpr64sp, 4, 0
 
 --- |
   ; ModuleID = 'a10.c'
@@ -404,8 +416,10 @@ body:             |
     early-clobber %59:gpr64sp, %60:fpr32 = LDRSpost %13, 4 :: (load (s32) from %ir.lsr.iv41, !tbaa !13)
     early-clobber %61:gpr64sp, %62:fpr32 = LDRSpost %14, 4 :: (load (s32) from %ir.lsr.iv38, !tbaa !13)
     early-clobber %63:gpr64sp, %64:fpr32 = LDRSpost %15, 4 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
+    early-clobber %A1:gpr64sp, %A2:fpr32 = LDRSpost %15, -4 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
     %66:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDSrrr killed %64, killed %62, killed %60
     early-clobber %67:gpr64sp, %68:gpr64 = LDRSWpost %16, 4 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
+    early-clobber %B1:gpr64sp, %B2:gpr64 = LDRSWpost %16, -4 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
     STRSroX killed %66, %56, killed %68, 0, 1 :: (store (s32) into %ir.arrayidx12, !tbaa !13)
     %18:gpr64all = COPY %67
     %19:gpr64all = COPY %63

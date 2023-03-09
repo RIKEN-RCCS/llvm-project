@@ -1,8 +1,13 @@
-# RUN: llc -mcpu=a64fx -O3 -fswp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
+# RUN: llc -mcpu=a64fx -O1 -fswp -swpl-disable-reg-alloc -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
 #
-# CHECK: before:early-clobber %39:gpr64sp, %40:fpr32 = LDRSpre %37:gpr64sp(tied-def 0), -4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
-# CHECK: after 1:%40:fpr32 = LDURSi %37:gpr64sp, -4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
-# CHECK: after 2:%39:gpr64sp = SUBXri %37:gpr64sp, 4, 0
+# CHECK: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %41:gpr64sp, %42:fpr32 = LDRSpre %39:gpr64sp(tied-def 0), -4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
+# CHECK-NEXT:  after 1:%42:fpr32 = LDURSi %39:gpr64sp, -4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
+# CHECK-NEXT:  after 2:%41:gpr64sp = SUBXri %39:gpr64sp, 4, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %43:gpr64sp, %44:fpr32 = LDRSpre %39:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
+# CHECK-NEXT:  after 1:%44:fpr32 = LDURSi %39:gpr64sp, 4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
+# CHECK-NEXT:  after 2:%43:gpr64sp = ADDXri %39:gpr64sp, 4, 0
 
 --- |
   ; ModuleID = 'a.c'
@@ -228,6 +233,7 @@ body:             |
     %4:gpr64sp = PHI %13, %bb.1, %6, %bb.4
     %5:gpr64sp = PHI %1, %bb.1, %8, %bb.4
     early-clobber %17:gpr64sp, %18:fpr32 = LDRSpre %4, -4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
+    early-clobber %A:gpr64sp, %B:fpr32 = LDRSpre %4, 4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
     %20:fpr32 = LDRSroX %19, %3, 0, 0 :: (load (s32) from %ir.uglygep24, !tbaa !9)
     %21:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr killed %20, killed %18
     STRSui killed %21, %4, 0 :: (store (s32) into %ir.lsr.iv, !tbaa !9)
