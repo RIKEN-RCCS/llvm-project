@@ -19,6 +19,7 @@
 
 namespace llvm {
 
+/// SWPL向けMIが利用する資源情報。
 class AArch64StmPipeline: public StmPipeline {
   //  TargetSchedModel& SM;///< SchedModel
 public:
