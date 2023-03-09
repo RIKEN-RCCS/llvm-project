@@ -1,11 +1,9 @@
 # RUN: llc -o /dev/null -mcpu=a64fx -O1 -fswp -swpl-enable-reg-alloc -swpl-debug -start-before=aarch64-swpipeliner  %s 2>&1 | FileCheck %s
+
 # CHECK: DEBUG(SwplLoop::check_need_copy4TiedUseReg): Decide that the COPY instruction is necessary
 # CHECK-NEXT: DEBUG(SwplLoop::normalizeTiedDef): Copy is required.: %87:zpr = ADD_ZI_D %84:zpr(tied-def 0), 1, 0
-# CHECK-NEXT: DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg(%84) eq tiedDef:%84:zpr = ADD_ZI_D %84:zpr(tied-def 0), 16, 0
-# CHECK-NEXT: DEBUG(SwplLoop::normalizeTiedDef): Copy is not required.: %84:zpr = ADD_ZI_D %84:zpr(tied-def 0), 16, 0
-# CHECK-NEXT: DEBUG(SwplLoop::normalizeTiedDef):
-# CHECK-NEXT:   generate: %106:zpr = COPY %84:zpr
-# CHECK-NEXT:   chenge op: %87:zpr = ADD_ZI_D %106:zpr(tied-def 0), 1, 0
+# CHECK-NEXT: DEBUG(SwplLoop::check_need_copy4TiedUseReg): Decide that the COPY instruction is necessary
+# CHECK-NEXT: DEBUG(SwplLoop::normalizeTiedDef): Copy is required.: %101:zpr = ADD_ZI_D %84:zpr(tied-def 0), 16, 0
 
 --- |
   ; ModuleID = 'b.c'

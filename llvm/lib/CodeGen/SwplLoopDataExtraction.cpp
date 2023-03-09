@@ -530,10 +530,20 @@ static MachineOperand* used_reg(MachineInstr &phi) {
 
   auto *def_op = SWPipeliner::MRI->getOneDef(own_r);
 
-  // ここではまだSSAなのでdef_opがNULLになることはないはず
   if (def_op==nullptr) {
+    // 物理レジスタの場合:copy必須
     if (SWPipeliner::isDebugOutput()) {
       dbgs() << "DEBUG(used_reg): MRI->getOneDef(own_r) is nullptr\n";
+    }
+    return nullptr;
+  }
+
+  auto *defMI = def_op->getParent();
+  unsigned use_tied_ix;
+  bool t = defMI->isRegTiedToUseOperand(defMI->getOperandNo(def_op), &use_tied_ix);
+  if (t && defMI->getOperand(use_tied_ix).getReg() == def_r) {
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DEBUG(used_reg): tied-def!\n";
     }
     return nullptr;
   }
@@ -890,8 +900,20 @@ void SwplLoop::removeCopy(MachineBasicBlock *body) {
       continue;
     }
     target_mo.clear();
+    bool hasSubreg = mi.getOperand(1).getSubReg() != 0;
+    bool foundTied = false;
     for (auto &u:SWPipeliner::MRI->use_operands(r0)) {
+      if (hasSubreg && u.isTied()) {
+        foundTied = true;
+        break;
+      }
       target_mo.push_back(&u);
+    }
+    if (foundTied) {
+      if (SWPipeliner::isDebugOutput()) {
+        dbgs() << " op1 has subreg && use operand is tied!\n";
+      }
+      continue;
     }
     bool use_onlyphi=true;
     for (auto *op:target_mo) {
