@@ -8206,6 +8206,26 @@ bool AArch64InstrInfo::splitPrePostIndexInstr(
   int64_t imm;
 
   switch (MI.getOpcode()) {
+  case AArch64::LDRWpost:
+    def_addr_reg = MI.getOperand(0).getReg();
+    def_val = MI.getOperand(1).getReg();
+    use_addr_reg = MI.getOperand(2).getReg();
+    imm = MI.getOperand(3).getImm();
+
+    tldst = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::LDURWi), def_val)
+                .addReg(use_addr_reg).addImm(0) ;
+    for (MachineMemOperand *MMO : MI.memoperands()) {
+      tldst->addMemOperand(*MI.getMF(), MMO);
+    }
+    if (imm < 0) {
+      tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::SUBXri), def_addr_reg)
+                 .addReg(use_addr_reg).addImm(-imm).addImm(0);
+    } else {
+      tadd = BuildMI(MBB, MI, MI.getDebugLoc(), get(AArch64::ADDXri), def_addr_reg)
+                 .addReg(use_addr_reg).addImm(imm).addImm(0);
+    }
+    break;
+
   case AArch64::LDRSpost:
     def_addr_reg = MI.getOperand(0).getReg();
     def_val = MI.getOperand(1).getReg();
