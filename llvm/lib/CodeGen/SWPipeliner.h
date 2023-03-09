@@ -803,6 +803,7 @@ public:
   MachineFunction *MF = nullptr;
   const MachineLoopInfo *MLI = nullptr;
 
+  /// -swpl-debug指定されているか
   static bool isDebugOutput();
 
 
@@ -835,11 +836,32 @@ public:
     return "Software Pipeliner";
   }
 
+  /// remark-missedメッセージを出力する
   static void remarkMissed(const char *msg, MachineLoop &L);
 
 private:
+  /**
+   * \brief scheduleLoop
+   *        Swpl最適化を実施する。
+   *        ・対象ループ判定
+   *        ・データ抽出
+   *        ・スケジューリング
+   *        ・スケジューリング結果反映
+   *
+   * \param[in] L 対象のMachineLoop
+   * \retval true  Swpl最適化を適用した。
+   * \retval false Swpl最適化を適用しなかった。
+   */
   bool scheduleLoop(MachineLoop &L);
-  void outputRemarkAnalysis(MachineLoop &L, int msg_id);
+
+  /**
+   * \brief shouldOptimize
+   *        対象のループに対するSwpl最適化指示を判定する。
+   *
+   * \param[in] L 対象のMachineLoop
+   * \retval true  Swpl最適化対象指示がある
+   * \retval false Swpl最適化対象指示がない。もしくは最適化抑止指示がある。
+   */
   bool shouldOptimize(MachineLoop &L);
 };
 

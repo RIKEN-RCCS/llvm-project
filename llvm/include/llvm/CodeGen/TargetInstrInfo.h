@@ -2069,18 +2069,34 @@ public:
     return false;
   }
 
+  /// Is the branch operand NE
+  /// \param [in] imm branch operand
   virtual bool isNE(unsigned imm) const {
     return false;
   }
+
+  /// Is the branch operand GE
+  /// \param [in] imm branch operand
   virtual bool isGE(unsigned imm) const {
     return false;
   }
+
+  /// Generate StmRegKind from the specified register
+  /// \param [in] MRI
+  /// \param [in] r register
   virtual StmRegKind* getRegKind(const MachineRegisterInfo &MRI, Register r) const {
     return nullptr;
   }
+
+  /// get StmRegKind::id
+  /// \param [in] MRI
+  /// \param [in] r register
   virtual unsigned getRegKindId(const MachineRegisterInfo &MRI, Register r) const {
     return false;
   }
+
+  /// get StmRegKind object
+  /// \param [in] MRI
   virtual StmRegKind* getRegKind(const MachineRegisterInfo &MRI) const {
     return nullptr;
   }
@@ -2109,6 +2125,8 @@ public:
     return 0;
   }
 
+  /// new SwplTargetMachine
+  /// \return SwplTargetMachine object
   virtual SwplTargetMachine *getSwplTargetMachine() const {
     return nullptr;
   }
