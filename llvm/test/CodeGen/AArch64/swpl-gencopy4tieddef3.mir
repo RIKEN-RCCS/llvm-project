@@ -1,6 +1,9 @@
 # RUN: llc %s -o /dev/null -O1 -mcpu=a64fx -fswp -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner  -swpl-debug 2>&1 | FileCheck %s
-# CHECK: DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg(%45) eq tiedDef:%45:gpr64sp = ST2Twov2d_POST killed %53:qq, %45:gpr64sp(tied-def 0), $xzr
-# CHECK-NEXT: DEBUG(SwplLoop::normalizeTiedDef): Copy is not required.: %45:gpr64sp = ST2Twov2d_POST killed %53:qq, %45:gpr64sp(tied-def 0), $xzr
+# CHECK: DEBUG(SwplLoop::normalizeTiedDef): Copy is required.: %56:gpr64sp = ST2Twov2d_POST killed %54:qq, %46:gpr64sp(tied-def 0), $xzr
+
+# The COPY reduction specification has changed, and the following messages no longer occur.
+# : DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg(%45) eq tiedDef:%45:gpr64sp = ST2Twov2d_POST killed %53:qq, %45:gpr64sp(tied-def 0), $xzr
+# : DEBUG(SwplLoop::normalizeTiedDef): Copy is not required.: %45:gpr64sp = ST2Twov2d_POST killed %53:qq, %45:gpr64sp(tied-def 0), $xzr
 
 --- |
   ; ModuleID = 'swpl-gencopy4tieddef3.c'
@@ -228,7 +231,8 @@ body:             |
     %25:fpr128 = LDRQroX %24, %2, 0, 0 :: (load (s128) from %ir.uglygep56, !tbaa !6)
     %27:fpr128 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2f64 %17, killed %25, %21
     %28:qq = REG_SEQUENCE killed %23, %subreg.qsub0, killed %27, %subreg.qsub1
-    %29:gpr64sp = ST2Twov2d_POST killed %28, %3, $xzr
+    %A:gpr64sp = COPY %3
+    %29:gpr64sp = ST2Twov2d_POST killed %28, %A, $xzr
     %5:gpr64all = COPY %29
     %30:gpr64sp = nuw nsw ADDXri %2, 16, 0
     %6:gpr64all = COPY %30
