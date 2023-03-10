@@ -21,7 +21,7 @@ namespace llvm{
 
 /// \brief scheduling結果に対して指定したレジスタがいくつ必要であるかを数える処理
 /// \note 必要なレジスタ数を正確に計算する事は、RAでなければできないため、
-///       SWPL独自にに必要となるレジスタを概算する
+///       SWPL独自に必要となるレジスタを概算する
 unsigned SwplRegEstimate::calcNumRegs(const SwplLoop& loop,
                                       const SwplInstSlotHashmap* inst_slot_map,
                                       unsigned iteration_interval,
