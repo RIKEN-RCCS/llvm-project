@@ -825,7 +825,8 @@ bool AArch64SwplTargetMachine::isPseudo(const MachineInstr &mi) const {
 }
 
 bool AArch64SwplTargetMachine::isDisableRegAlloc(void) const {
-  return DisableRegAlloc;
+  if (DisableRegAlloc) return true;
+  return !EnableRegAlloc;
 }
 
 bool AArch64SwplTargetMachine::isEnableRegAlloc(void) const {
