@@ -126,7 +126,7 @@ SwplLoop *SwplLoop::Initialize(MachineLoop &L, const SwplScr::UseMap& LiveOutReg
   Register2SwplRegMap rmap;
 
   /// convertSSAtoNonSSA() を呼び出し、対象ループの非SSA化を行う。
-  loop->convertSSAtoNonSSA(L, LiveOutReg);
+  if (loop->convertSSAtoNonSSA(L, LiveOutReg)) return loop;
 
   /// makePreviousInsts() を呼び出し、ループボディで使われているレジスタを定義しているループ外の命令の一覧
   /// SwplLoop::PreviousInsts を作成する。
@@ -744,7 +744,7 @@ void SwplLoop::cloneBody(llvm::MachineBasicBlock*newBody, llvm::MachineBasicBloc
   renameReg();
 }
 
-void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOutReg) {
+bool SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOutReg) {
   MachineBasicBlock *ob=L.getTopBlock();
   const BasicBlock *ob_bb=ob->getBasicBlock();
   MachineFunction *MF=ob->getParent();
@@ -779,6 +779,9 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
   /// convertPostPreIndeTo()を呼び出し、post/pre index命令を演算＋load/store命令に変換する
   if (!DisableConvPrePost)
     convertPrePostIndexInstr(new_bb);
+
+  if (checkLimit(new_bb)) return true;
+
   /// convertNonSSA() を呼び出し、非SSA化と複製したMachineBasicBlockの回収を行う。
   /// PHIからCOPYを生成する際、liveOutsにPHIで定義されるvregを追加している。
   convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);
@@ -787,6 +790,7 @@ void SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
     // レジスタ割付が動作するなら、tied-defにCOPY命令を追加する
     normalizeTiedDef(new_bb);
 
+  return false;
 }
 
 bool SwplLoop::check_need_copy4TiedUseReg(const MachineBasicBlock* body, const MachineInstr* tiedInstr,
@@ -984,6 +988,33 @@ void SwplLoop::convertPrePostIndexInstr(MachineBasicBlock *body) {
   for (auto *mi:delete_mi)
     mi->eraseFromParent();
 
+}
+
+bool SwplLoop::checkLimit(const MachineBasicBlock *body) {
+  for (auto &mi:*body) {
+    if (!SWPipeliner::isDIsableLimitFunc(SWPipeliner::SwplLimitFlag::MultipleDef)) {
+      int num=0;
+      for (auto &def:mi.defs()) {
+        if (def.isImplicit()) continue;
+        num++;
+      }
+      if (num > 1) {
+        SWPipeliner::makeMissedMessage_Limit(mi);
+        return true;
+      }
+    }
+    if (!SWPipeliner::isDIsableLimitFunc(SWPipeliner::SwplLimitFlag::MultipleReg)) {
+      for (auto &mo:mi.operands()) {
+        if (mo.isReg()) {
+          auto r = mo.getReg();
+          if (r.isPhysical()) continue;
+          auto r_class = SWPipeliner::MRI->getRegClass(r);
+          if (SWPipeliner::TII->isMultipleReg(r_class)) return true;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 void SwplInst::pushAllRegs(SwplLoop *loop) {

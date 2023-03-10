@@ -8193,6 +8193,19 @@ bool AArch64InstrInfo::canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI,
   }
   return false;
 }
+bool AArch64InstrInfo::isMultipleReg(const TargetRegisterClass *TR) const {
+  if (TR->hasSuperClassEq(&AArch64::DDDRegClass) ||
+      TR->hasSuperClassEq(&AArch64::DDDDRegClass) ||
+      TR->hasSuperClassEq(&AArch64::QQRegClass) ||
+      TR->hasSuperClassEq(&AArch64::QQQRegClass) ||
+      TR->hasSuperClassEq(&AArch64::QQQQRegClass) ||
+      TR->hasSuperClassEq(&AArch64::ZPR2RegClass) ||
+      TR->hasSuperClassEq(&AArch64::ZPR3RegClass) ||
+      TR->hasSuperClassEq(&AArch64::ZPR4RegClass)) {
+    return  true;
+  }
+  return false;
+}
 
 bool AArch64InstrInfo::splitPrePostIndexInstr(
     MachineBasicBlock &MBB, MachineInstr &MI, MachineInstr **ldst, MachineInstr **add) const {

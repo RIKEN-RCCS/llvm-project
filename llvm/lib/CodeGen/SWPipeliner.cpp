@@ -184,8 +184,29 @@ void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {
   });
 }
 
+bool SWPipeliner::isDIsableLimitFunc(SwplLimitFlag f) {
+  static cl::opt<SwplLimitFlag> DisableLimitSWPL("swpl-disable-limit-detection",
+                                                 cl::init(SwplLimitFlag::None),
+                                                 cl::ValueOptional, cl::ReallyHidden,
+                                                 cl::values(clEnumValN(SwplLimitFlag::MultipleReg, "1", "multiple register"),
+                                                            clEnumValN(SwplLimitFlag::MultipleDef, "2", "multiple defined operator"),
+                                                            clEnumValN(SwplLimitFlag::All, "", "")
+                                                                ));
+
+  return (f==DisableLimitSWPL || DisableLimitSWPL==SwplLimitFlag::All);
+}
+
+void SWPipeliner::makeMissedMessage_Limit(const MachineInstr &target) {
+  std::string msg;
+  raw_string_ostream StrOS(msg);
+  StrOS << "SWPL is not performed because a limit is detected. MI:";
+  target.print(StrOS);
+  Reason = msg;
+}
+
 bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   bool Changed = false;
+  Reason = "";
   for (auto &InnerLoop : L)
     Changed |= scheduleLoop(*InnerLoop);
 
@@ -205,7 +226,6 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     return false;
   }
 
-
   if (!TII->canPipelineLoop(L)) {
     printDebug(__func__, "!!! Can not pipeline loop.", L);
     remarkMissed("Failed to pipeline loop", L);
@@ -224,6 +244,16 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
 
   // データ抽出
   currentLoop = SwplLoop::Initialize(L, liveOutReg);
+  if (!Reason.empty()) {
+    // 何かしらのエラーが発生した
+    remarkMissed("", *currentLoop->getML());
+    if (SWPipeliner::isDebugOutput()) {
+      printDebug(__func__, "!!! Can not pipeline loop. Loops with restricting MI", L);
+    }
+    delete currentLoop;
+    currentLoop = nullptr;
+    return Changed;
+  }
   SwplDdg *ddg = SwplDdg::Initialize(*currentLoop);
 
   // スケジューリング

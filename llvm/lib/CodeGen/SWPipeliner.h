@@ -267,7 +267,7 @@ private:
   /// 対象ループのbodyのBasicBlockを非SSA化する
   /// \param[in]  L MachineLoop
   /// \param[in]  LiveOutReg UseReg
-  void convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOutReg);
+  bool convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOutReg);
 
   /// MachineBasicBlock の複製を行う
   /// \param[in]  newBody 複製先のMachineBasicBlock
@@ -284,9 +284,14 @@ private:
                      MachineBasicBlock *org, const SwplScr::UseMap &LiveOutReg);
 
   /// pre/post index命令を検索し演算命令＋load/store命令に変換する
-  /// @todo 本メソッドTIIに移動する必要がある
   /// \param[in,out]  body ループボディの MachineBasicBlock
   void convertPrePostIndexInstr(MachineBasicBlock *body);
+
+  /// 指定MBBに制限となるMIがあるか確認する
+  /// \param[in]  body ループボディの MachineBasicBlock
+  /// \retval true 制限が見つかった
+  /// \retval false 制限は見つからなかった
+  bool checkLimit(const MachineBasicBlock *body);
 
   /// 対象ループのbodyの無駄なCopyを削除する
   /// \param[in,out]  body ループボディの MachineBasicBlock
@@ -799,6 +804,11 @@ public:
   static std::string Reason;
   static SwplLoop *currentLoop;
 
+  /// 制限抑止オプション指定の結果
+  enum class SwplLimitFlag {None, MultipleReg, MultipleDef, All};
+
+  /// 制限抑止オプション指定の問い合わせ
+  static bool isDIsableLimitFunc(SwplLimitFlag f);
 
   MachineFunction *MF = nullptr;
   const MachineLoopInfo *MLI = nullptr;
@@ -838,6 +848,10 @@ public:
 
   /// remark-missedメッセージを出力する
   static void remarkMissed(const char *msg, MachineLoop &L);
+
+  /// 制限を含んだループを検出した際のSWPL非対象とするメッセージ
+  /// param target 制限を含んだMI
+  static void makeMissedMessage_Limit(const MachineInstr &target);
 
 private:
   /**

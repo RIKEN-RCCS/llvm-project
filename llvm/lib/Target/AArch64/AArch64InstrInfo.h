@@ -342,6 +342,7 @@ public:
                               MachineInstr &MI,
                               MachineInstr **ldst,
                               MachineInstr **add) const override;
+  bool isMultipleReg(const TargetRegisterClass *TR) const override;
 
   MachineInstr* makeKernelIterationBranch(MachineRegisterInfo &MRI,
                                           MachineBasicBlock &MBB,
