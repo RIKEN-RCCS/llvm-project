@@ -780,7 +780,9 @@ bool SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
   if (!DisableConvPrePost)
     convertPrePostIndexInstr(new_bb);
 
-  if (checkLimit(new_bb)) return true;
+  if (SWPipeliner::STM->isEnableRegAlloc()) {
+    if (checkLimit(new_bb)) return true;
+  }
 
   /// convertNonSSA() を呼び出し、非SSA化と複製したMachineBasicBlockの回収を行う。
   /// PHIからCOPYを生成する際、liveOutsにPHIで定義されるvregを追加している。
