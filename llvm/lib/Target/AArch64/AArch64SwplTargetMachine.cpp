@@ -34,7 +34,7 @@ static cl::opt<bool> EnableSensitiveCheck("swpl-sensitive-check",cl::init(false)
 static cl::opt<unsigned> MaxInstNum("swpl-max-inst-num",cl::init(500), cl::ReallyHidden);
 static cl::opt<unsigned> MaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyHidden);
 static cl::opt<bool> DisableRegAlloc("swpl-disable-reg-alloc",cl::init(false), cl::ReallyHidden);
-static cl::opt<bool> EnableRegAlloc("swpl-enable-reg-alloc",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> EnableRegAlloc("swpl-enable-reg-alloc",cl::init(true), cl::ReallyHidden);
 static cl::opt<unsigned> LimitUseResPattern("swpl-resource-pattern-limit",cl::init(32), cl::ReallyHidden);
 
 // TargetLoopのMI出力オプション（swpl処理は迂回）
