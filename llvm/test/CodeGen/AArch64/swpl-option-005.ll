@@ -47,7 +47,7 @@ attributes #1 = { nofree nounwind "frame-pointer"="non-leaf" "no-trapping-math"=
 !2 = !{i32 7, !"PIE Level", i32 2}
 !3 = !{i32 7, !"uwtable", i32 2}
 !4 = !{i32 7, !"frame-pointer", i32 1}
-!5 = !{!"clang version 15.0.2 (http://172.16.1.70:10081/a64fx-swpl/llvm-project.git b4284707eafc4de5690f3eb6721462d210cd3c07)"}
+!5 = !{!"clang version 15.0.2 (b4284707eafc4de5690f3eb6721462d210cd3c07)"}
 !6 = !{!7, !7, i64 0}
 !7 = !{!"any pointer", !8, i64 0}
 !8 = !{!"omnipotent char", !9, i64 0}
