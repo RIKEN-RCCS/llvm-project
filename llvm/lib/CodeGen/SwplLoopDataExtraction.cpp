@@ -1011,7 +1011,10 @@ bool SwplLoop::checkLimit(const MachineBasicBlock *body) {
           auto r = mo.getReg();
           if (r.isPhysical()) continue;
           auto r_class = SWPipeliner::MRI->getRegClass(r);
-          if (SWPipeliner::TII->isMultipleReg(r_class)) return true;
+          if (SWPipeliner::TII->isMultipleReg(r_class)) {
+            SWPipeliner::makeMissedMessage_Limit(mi);
+            return true;
+          }
         }
       }
     }
