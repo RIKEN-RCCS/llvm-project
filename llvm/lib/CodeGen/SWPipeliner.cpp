@@ -183,23 +183,24 @@ void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {
            << msg1;
   });
 }
-
-bool SWPipeliner::isDIsableLimitFunc(SwplLimitFlag f) {
-  static cl::opt<SwplLimitFlag> DisableLimitSWPL("swpl-disable-limit-detection",
-                                                 cl::init(SwplLimitFlag::None),
-                                                 cl::ValueOptional, cl::ReallyHidden,
-                                                 cl::values(clEnumValN(SwplLimitFlag::MultipleReg, "1", "multiple register"),
-                                                            clEnumValN(SwplLimitFlag::MultipleDef, "2", "multiple defined operator"),
-                                                            clEnumValN(SwplLimitFlag::All, "", "")
+static cl::opt<SWPipeliner::SwplRestrinctionsFlag> DisableRestrictionsCheck("swpl-disable-restrictions-check",
+                                               cl::init(SWPipeliner::SwplRestrinctionsFlag::None),
+                                               cl::ValueOptional, cl::ReallyHidden,
+                                              cl::values(clEnumValN(SWPipeliner::SwplRestrinctionsFlag::MultipleReg, "1", "multiple register"),
+                                                          clEnumValN(SWPipeliner::SwplRestrinctionsFlag::MultipleDef, "2", "multiple defined operator"),
+                                                          clEnumValN(SWPipeliner::SwplRestrinctionsFlag::All, "", "")
                                                                 ));
 
-  return (f==DisableLimitSWPL || DisableLimitSWPL==SwplLimitFlag::All);
+bool SWPipeliner::isDIsableRestrinctionsCheck(SwplRestrinctionsFlag f) {
+
+  return (f== DisableRestrictionsCheck ||
+          DisableRestrictionsCheck == SwplRestrinctionsFlag::All);
 }
 
-void SWPipeliner::makeMissedMessage_Limit(const MachineInstr &target) {
+void SWPipeliner::makeMissedMessage_RestrictionsDetected(const MachineInstr &target) {
   std::string msg;
   raw_string_ostream StrOS(msg);
-  StrOS << "SWPL is not performed because a limit is detected. MI:";
+  StrOS << "SWPL is not performed because a restriction is detected. MI:";
   target.print(StrOS);
   Reason = msg;
 }

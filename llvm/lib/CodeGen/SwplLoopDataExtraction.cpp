@@ -781,7 +781,7 @@ bool SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
     convertPrePostIndexInstr(new_bb);
 
   if (SWPipeliner::STM->isEnableRegAlloc()) {
-    if (checkLimit(new_bb)) return true;
+    if (checkRestrictions(new_bb)) return true;
   }
 
   /// convertNonSSA() を呼び出し、非SSA化と複製したMachineBasicBlockの回収を行う。
@@ -992,27 +992,29 @@ void SwplLoop::convertPrePostIndexInstr(MachineBasicBlock *body) {
 
 }
 
-bool SwplLoop::checkLimit(const MachineBasicBlock *body) {
+bool SwplLoop::checkRestrictions(const MachineBasicBlock *body) {
   for (auto &mi:*body) {
-    if (!SWPipeliner::isDIsableLimitFunc(SWPipeliner::SwplLimitFlag::MultipleDef)) {
+    if (!SWPipeliner::isDIsableRestrinctionsCheck(
+            SWPipeliner::SwplRestrinctionsFlag::MultipleDef)) {
       int num=0;
       for (auto &def:mi.defs()) {
         if (def.isImplicit()) continue;
         num++;
       }
       if (num > 1) {
-        SWPipeliner::makeMissedMessage_Limit(mi);
+        SWPipeliner::makeMissedMessage_RestrictionsDetected(mi);
         return true;
       }
     }
-    if (!SWPipeliner::isDIsableLimitFunc(SWPipeliner::SwplLimitFlag::MultipleReg)) {
+    if (!SWPipeliner::isDIsableRestrinctionsCheck(
+            SWPipeliner::SwplRestrinctionsFlag::MultipleReg)) {
       for (auto &mo:mi.operands()) {
         if (mo.isReg()) {
           auto r = mo.getReg();
           if (r.isPhysical()) continue;
           auto r_class = SWPipeliner::MRI->getRegClass(r);
           if (SWPipeliner::TII->isMultipleReg(r_class)) {
-            SWPipeliner::makeMissedMessage_Limit(mi);
+            SWPipeliner::makeMissedMessage_RestrictionsDetected(mi);
             return true;
           }
         }

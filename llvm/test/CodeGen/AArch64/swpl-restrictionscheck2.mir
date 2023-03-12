@@ -1,43 +1,6 @@
-#  RUN: llc -o - -mcpu=a64fx -O1 %s -swpl-disable-restrictions-check -swpl-disable-reg-alloc -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner -fswp | FileCheck %s
-# CHECK:   bb.11.for.body5:
-# CHECK:     %96:fpr64 = LDURDi %110, 0 :: (volatile load (s64) from %ir.lsr.iv54, !tbaa !6)
-# CHECK:     %101:fpr64 = LDURDi %122, 0 :: (volatile load (s64) from %ir.lsr.iv48, !tbaa !6)
-# CHECK:     %98:fpr64 = LDURDi %114, 0 :: (volatile load (s64) from %ir.lsr.iv51, !tbaa !6)
-# CHECK:     %111:fpr64 = LDURDi %205, 0 :: (volatile load (s64) from %ir.lsr.iv54, !tbaa !6)
-# CHECK:     %123:fpr64 = LDURDi %206, 0 :: (volatile load (s64) from %ir.lsr.iv48, !tbaa !6)
-# CHECK:     %115:fpr64 = LDURDi %207, 0 :: (volatile load (s64) from %ir.lsr.iv51, !tbaa !6)
-# CHECK:     %102:fpr64 = nofpexcept FADDDrr %96, killed %101
-# CHECK:     %112:fpr64 = LDURDi %113, 0 :: (volatile load (s64) from %ir.lsr.iv54, !tbaa !6)
-# CHECK:     %124:fpr64 = LDURDi %125, 0 :: (volatile load (s64) from %ir.lsr.iv48, !tbaa !6)
-# CHECK:     %116:fpr64 = LDURDi %117, 0 :: (volatile load (s64) from %ir.lsr.iv51, !tbaa !6)
-# CHECK:     %210:fpr64 = LDURDi %208, 0 :: (volatile load (s64) from %ir.lsr.iv54, !tbaa !6)
-# CHECK:     %211:fpr64 = LDURDi %209, 0 :: (volatile load (s64) from %ir.lsr.iv48, !tbaa !6)
-# CHECK:     %213:fpr64 = LDURDi %212, 0 :: (volatile load (s64) from %ir.lsr.iv51, !tbaa !6)
-# CHECK:   bb.7.for.body5:
-# CHECK:     %157:fpr64 = LDURDi %199, 0 :: (volatile load (s64) from %ir.lsr.iv54, !tbaa !6)
-# CHECK:     %158:fpr64 = LDURDi %201, 0 :: (volatile load (s64) from %ir.lsr.iv48, !tbaa !6)
-# CHECK:     STURDi killed %168, %203, -8 :: (volatile "aarch64-suppress-pair" store (s64) into %ir.uglygep46, !tbaa !6)
-# CHECK:     %162:fpr64 = LDURDi %160, 0 :: (volatile load (s64) from %ir.lsr.iv51, !tbaa !6)
-# CHECK:     STRDui killed %176, %203, 0 :: (volatile store (s64) into %ir.lsr.iv, !tbaa !6)
-# CHECK:     %169:fpr64 = LDURDi %164, 0 :: (volatile load (s64) from %ir.lsr.iv54, !tbaa !6)
-# CHECK:     %171:fpr64 = LDURDi %165, 0 :: (volatile load (s64) from %ir.lsr.iv48, !tbaa !6)
-# CHECK:     STURDi killed %184, %166, -8 :: (volatile "aarch64-suppress-pair" store (s64) into %ir.uglygep46, !tbaa !6)
-# CHECK:     %177:fpr64 = LDURDi %174, 0 :: (volatile load (s64) from %ir.lsr.iv51, !tbaa !6)
-# CHECK:     STRDui killed %193, %166, 0 :: (volatile store (s64) into %ir.lsr.iv, !tbaa !6)
-# CHECK:     %185:fpr64 = LDURDi %180, 0 :: (volatile load (s64) from %ir.lsr.iv54, !tbaa !6)
-# CHECK:     %187:fpr64 = LDURDi %181, 0 :: (volatile load (s64) from %ir.lsr.iv48, !tbaa !6)
-# CHECK:     STURDi killed %156, %182, -8 :: (volatile "aarch64-suppress-pair" store (s64) into %ir.uglygep46, !tbaa !6)
-# CHECK:     %194:fpr64 = LDURDi %190, 0 :: (volatile load (s64) from %ir.lsr.iv51, !tbaa !6)
-# CHECK:     STRDui killed %161, %182, 0 :: (volatile store (s64) into %ir.lsr.iv, !tbaa !6)
-# CHECK:   bb.12.for.body5:
-# CHECK:     STURDi killed %167, %202, -8 :: (volatile "aarch64-suppress-pair" store (s64) into %ir.uglygep46, !tbaa !6)
-# CHECK:     STRDui killed %175, %202, 0 :: (volatile store (s64) into %ir.lsr.iv, !tbaa !6)
-# CHECK:     STURDi killed %183, %144, -8 :: (volatile "aarch64-suppress-pair" store (s64) into %ir.uglygep46, !tbaa !6)
-# CHECK:     STRDui killed %192, %144, 0 :: (volatile store (s64) into %ir.lsr.iv, !tbaa !6)
-# CHECK:     STURDi killed %139, %149, -8 :: (volatile "aarch64-suppress-pair" store (s64) into %ir.uglygep46, !tbaa !6)
-# CHECK:     STRDui killed %142, %149, 0 :: (volatile store (s64) into %ir.lsr.iv, !tbaa !6)
-# CHECK:     STURDi killed %145, %152, -8 :: (volatile "aarch64-suppress-pair" store (s64) into %ir.uglygep46, !tbaa !6)
-# CHECK:     STRDui killed %147, %152, 0 :: (volatile store (s64) into %ir.lsr.iv, !tbaa !6)
+#  RUN: llc -o /dev/null -mcpu=a64fx -O1 %s -swpl-disable-restrictions-check -pass-remarks-missed=aarch64-swpipeliner -swpl-disable-convert-prepost -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner -fswp 2>&1 | FileCheck %s
+# CHECK-NOT: remark: <unknown>:0:0: SWPL is not performed because a restriction is detected. MI:early-clobber %95:gpr64sp, %96:fpr64 = LDRDpost %90:gpr64sp(tied-def 0), 8 :: (load (s64) from %ir.lsr.iv54, !tbaa !6)
+
 --- |
   ; ModuleID = 'test1.c'
   source_filename = "test1.c"

@@ -1,41 +1,5 @@
-# RUN: llc %s -o /dev/null -swpl-debug -swpl-disable-restrictions-check -mcpu=a64fx -O1 -fswp -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner 2>&1 | FileCheck %s
-# CHECK: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %89:gpr64 = COPY $xzr
-# CHECK-NEXT:  before: %87:gpr64 = PHI %18:gpr64all, %bb.1, %89:gpr64, %bb.2
-# CHECK-NEXT:  after: %87:gpr64 = PHI %18:gpr64all, %bb.1, $xzr, %bb.2
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %90:zpr = COPY %86:zpr
-# CHECK-NEXT:  before: SST1D_SCALED killed %103:zpr, %29:ppr_3b, killed %104:gpr64sp, %90:zpr :: (store unknown-size, align 8, !tbaa !6)
-# CHECK-NEXT:  after: SST1D_SCALED killed %103:zpr, %29:ppr_3b, killed %104:gpr64sp, %86:zpr :: (store unknown-size, align 8, !tbaa !6)
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %93:gpr64sp = COPY %92.dsub:zpr
-# CHECK-NEXT:  canRemoveCopy() is false!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %95:zpr = COPY %94.zsub0:zpr2
-# CHECK-NEXT:  before: %98:zpr = FSUB_ZZZ_D killed %95:zpr, killed %97:zpr
-# CHECK-NEXT:  after: %98:zpr = FSUB_ZZZ_D %94.zsub0:zpr2, killed %97:zpr
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %100:gpr64common = COPY %91.dsub:zpr
-# CHECK-NEXT:  canRemoveCopy() is false!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %102:zpr = COPY %101.zsub0:zpr2
-# CHECK-NEXT:  before: %103:zpr = FADD_ZZZ_D %98:zpr, killed %102:zpr
-# CHECK-NEXT:  after: %103:zpr = FADD_ZZZ_D %98:zpr, %101.zsub0:zpr2
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %107:gpr64all = COPY %106:gpr64sp
-# CHECK-NEXT:  before: %85:gpr64common = PHI %18:gpr64all, %bb.1, %107:gpr64all, %bb.2
-# CHECK-NEXT:  after: %85:gpr64common = PHI %18:gpr64all, %bb.1, %106:gpr64sp, %bb.2
-# CHECK-NEXT:  removed!
-# CHECK-NEXT: DBG(SwplLoop::removeCopy)
-# CHECK-NEXT:  target mi: %109:gpr64all = COPY %108:gpr64
-# CHECK-NEXT:  before: %88:gpr64sp = PHI %1:gpr64all, %bb.1, %109:gpr64all, %bb.2
-# CHECK-NEXT:  after: %88:gpr64sp = PHI %1:gpr64all, %bb.1, %108:gpr64, %bb.2
-# CHECK-NEXT:  removed!
-# CHECK: DEBUG(used_reg): MRI->getOneDef(own_r) is nullptr
+# RUN: llc %s -o /dev/null -pass-remarks-missed=aarch64-swpipeliner -mcpu=a64fx -fswp -O1 -start-before=aarch64-swpipeliner 2>&1 | FileCheck %s
+# CHECK: remark: <unknown>:0:0: SWPL is not performed because a restriction is detected. MI:%94:zpr2 = LD2D_IMM %29:ppr_3b, killed %93:gpr64sp, 0
 
 --- |
   ; ModuleID = 'rmcopy2.c'

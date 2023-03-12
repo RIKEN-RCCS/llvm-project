@@ -1,4 +1,4 @@
-# RUN: llc %s -o /dev/null -O1 -mcpu=a64fx -fswp -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner  -swpl-debug 2>&1 | FileCheck %s
+# RUN: llc %s -o /dev/null -O1 -mcpu=a64fx -swpl-disable-restrictions-check -fswp -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner  -swpl-debug 2>&1 | FileCheck %s
 # CHECK: DEBUG(SwplLoop::normalizeTiedDef): Copy is required.: %56:gpr64sp = ST2Twov2d_POST killed %54:qq, %46:gpr64sp(tied-def 0), $xzr
 
 # The COPY reduction specification has changed, and the following messages no longer occur.

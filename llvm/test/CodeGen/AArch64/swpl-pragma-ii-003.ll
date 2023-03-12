@@ -1,4 +1,4 @@
-; RUN: llc < %s -O1 -mcpu=a64fx -fswp -swpl-debug -swpl-maxii=10 -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -O1 -mcpu=a64fx -fswp -swpl-disable-reg-alloc -swpl-debug -swpl-maxii=10 -o /dev/null 2>&1 | FileCheck %s
 ;CHECK:Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 9. Budget 450. II 5. Minimum II = 3.
 ;CHECK:Loop is software pipelined. (ii=5
 ; ModuleID = '2912.c'

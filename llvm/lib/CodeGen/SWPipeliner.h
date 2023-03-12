@@ -291,7 +291,7 @@ private:
   /// \param[in]  body ループボディの MachineBasicBlock
   /// \retval true 制限が見つかった
   /// \retval false 制限は見つからなかった
-  bool checkLimit(const MachineBasicBlock *body);
+  bool checkRestrictions(const MachineBasicBlock *body);
 
   /// 対象ループのbodyの無駄なCopyを削除する
   /// \param[in,out]  body ループボディの MachineBasicBlock
@@ -805,10 +805,10 @@ public:
   static SwplLoop *currentLoop;
 
   /// 制限抑止オプション指定の結果
-  enum class SwplLimitFlag {None, MultipleReg, MultipleDef, All};
+  enum class SwplRestrinctionsFlag {None, MultipleReg, MultipleDef, All};
 
   /// 制限抑止オプション指定の問い合わせ
-  static bool isDIsableLimitFunc(SwplLimitFlag f);
+  static bool isDIsableRestrinctionsCheck(SwplRestrinctionsFlag f);
 
   MachineFunction *MF = nullptr;
   const MachineLoopInfo *MLI = nullptr;
@@ -851,7 +851,8 @@ public:
 
   /// 制限を含んだループを検出した際のSWPL非対象とするメッセージ
   /// param target 制限を含んだMI
-  static void makeMissedMessage_Limit(const MachineInstr &target);
+  static void
+  makeMissedMessage_RestrictionsDetected(const MachineInstr &target);
 
 private:
   /**
