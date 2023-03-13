@@ -571,7 +571,7 @@ void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
   if (MF==nullptr) {
     const TargetSubtargetInfo &ST = mf.getSubtarget();
     SM.init(&ST);
-    numResource = 16;
+    numResource = AArch64SwplSchedA64FX::END - 1;
 
     forPseudoMI.push_back(new StmPipeline());
     auto *p = new StmPipeline();
