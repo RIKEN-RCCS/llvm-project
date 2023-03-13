@@ -1,5 +1,5 @@
 # RUN: llc -o /dev/null -swpl-maxii=1000 -mcpu=a64fx -O1 %s -start-before=aarch64-swpipeliner -fswp -pass-remarks-filter=aarch64-swpipeliner -pass-remarks-output=- 2>&1 | FileCheck %s
-# CHECK:  software pipelining (IPC: 0.03, ITR: 2, MVE: 1, II: 231, Stage: 2,
+# CHECK:  software pipelining (IPC: 0.03, ITR: 3, MVE: 2, II: 232, Stage: 3,
 
 --- |
   ; ModuleID = 's311.c'

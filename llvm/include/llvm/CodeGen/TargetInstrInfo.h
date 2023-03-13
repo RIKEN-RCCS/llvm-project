@@ -2012,6 +2012,11 @@ public:
     return false;
   }
 
+  /// check multiple reg class
+  virtual bool isMultipleReg(const TargetRegisterClass *TR) const {
+    return false;
+  }
+
   /// Can Remove copy-mi
   virtual bool canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI,
                              const MachineRegisterInfo &MRI, bool enableRegaloc) const {

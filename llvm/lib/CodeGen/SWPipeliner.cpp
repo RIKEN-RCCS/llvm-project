@@ -183,9 +183,31 @@ void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {
            << msg1;
   });
 }
+static cl::opt<SWPipeliner::SwplRestrinctionsFlag> DisableRestrictionsCheck("swpl-disable-restrictions-check",
+                                               cl::init(SWPipeliner::SwplRestrinctionsFlag::None),
+                                               cl::ValueOptional, cl::ReallyHidden,
+                                              cl::values(clEnumValN(SWPipeliner::SwplRestrinctionsFlag::MultipleReg, "1", "multiple register"),
+                                                          clEnumValN(SWPipeliner::SwplRestrinctionsFlag::MultipleDef, "2", "multiple defined operator"),
+                                                          clEnumValN(SWPipeliner::SwplRestrinctionsFlag::All, "", "")
+                                                                ));
+
+bool SWPipeliner::isDisableRestrinctionsCheck(SwplRestrinctionsFlag f) {
+
+  return (f== DisableRestrictionsCheck ||
+          DisableRestrictionsCheck == SwplRestrinctionsFlag::All);
+}
+
+void SWPipeliner::makeMissedMessage_RestrictionsDetected(const MachineInstr &target) {
+  std::string msg;
+  raw_string_ostream StrOS(msg);
+  StrOS << "SWPL is not performed because a restriction is detected. MI:";
+  target.print(StrOS);
+  Reason = msg;
+}
 
 bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   bool Changed = false;
+  Reason = "";
   for (auto &InnerLoop : L)
     Changed |= scheduleLoop(*InnerLoop);
 
@@ -205,7 +227,6 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     return false;
   }
 
-
   if (!TII->canPipelineLoop(L)) {
     printDebug(__func__, "!!! Can not pipeline loop.", L);
     remarkMissed("Failed to pipeline loop", L);
@@ -224,6 +245,16 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
 
   // データ抽出
   currentLoop = SwplLoop::Initialize(L, liveOutReg);
+  if (!Reason.empty()) {
+    // 何かしらのエラーが発生した
+    remarkMissed("", *currentLoop->getML());
+    if (SWPipeliner::isDebugOutput()) {
+      printDebug(__func__, "!!! Can not pipeline loop. Loops with restricting MI", L);
+    }
+    delete currentLoop;
+    currentLoop = nullptr;
+    return Changed;
+  }
   SwplDdg *ddg = SwplDdg::Initialize(*currentLoop);
 
   // スケジューリング
