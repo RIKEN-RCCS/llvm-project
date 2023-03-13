@@ -66,10 +66,10 @@ private:
 
 /// \brief スケジューリング機能において依存関係を保持する
 class SwplModuloDdg {
-  const SwplInstGraph& graph; /* Ref */
-  const SwplLoop& loop;       /* Ref */
-  unsigned iterator_interval;
-  SwplInstEdge2ModuloDelay* modulo_delay_map; /* Own */
+  const SwplInstGraph& graph; ///< 依存グラフ
+  const SwplLoop& loop;       ///< loop情報
+  unsigned iterator_interval; ///< initiation interval
+  SwplInstEdge2ModuloDelay* modulo_delay_map; ///< module ddg
 
 public:
   SwplModuloDdg(const SwplInstGraph& c_graph,
@@ -94,9 +94,9 @@ class SwplTrialState {
   /// \brief instが配置できるslot, inst, 配置可能となったpipeline,の組を保持するクラス
   class SlotInstPipeline {
   public:
-    SwplSlot slot;
-    SwplInst *inst;
-    StmPipeline * pipeline;
+    SwplSlot slot;          ///< instが配置できるslot
+    SwplInst *inst;         ///< 命令
+    StmPipeline * pipeline; ///< 配置可能となったpipeline
 
     SlotInstPipeline(SwplSlot s, SwplInst* i, StmPipeline * p) : slot(s), inst(i), pipeline(p) {} ///< constructor
   };
@@ -179,7 +179,7 @@ private:
 
 /// \brief schedulingに対するresourceの過不足情報を保持する
 class SwplMsResourceResult {
-  bool is_resource_sufficient=false;
+  bool is_resource_sufficient=false; ///< レジスタ資源が十分か
   unsigned num_necessary_ireg=0; ///< スケジューリング結果から算出した必要な整数レジスタ
   unsigned num_necessary_freg=0; ///< スケジューリング結果から算出した必要な浮動小数点数レジスタ
   unsigned num_necessary_preg=0; ///< スケジューリング結果から算出した必要なプレディケートレジスタ
@@ -231,18 +231,18 @@ public:
                         SIMPLY_SEARCH,      ///< simply search
   };
   SwplInstSlotHashmap* inst_slot_map; ///< スケジューリング結果を保持するHashmap
-  SwplMsResourceResult resource;
-  unsigned ii;
+  SwplMsResourceResult resource; ///< resourceの過不足情報
+  unsigned ii;                   ///< initiation interval
   unsigned tried_n_insts;        ///< スケジューリングされた命令数
-  unsigned n_insufficient_iregs;
-  unsigned n_insufficient_fregs;
-  unsigned n_insufficient_pregs;
-  unsigned required_itr_count;
-  unsigned required_mve;
-  bool is_reg_sufficient;
-  bool is_itr_sufficient;
-  bool is_mve_appropriate;
-  double evaluation;
+  unsigned n_insufficient_iregs; ///< 不足するireg数
+  unsigned n_insufficient_fregs; ///< 不足するfreg数
+  unsigned n_insufficient_pregs; ///< 不足するpreg数
+  unsigned required_itr_count;   ///< 必要な回転数
+  unsigned required_mve;         ///< 必要なMVE展開数
+  bool is_reg_sufficient;        ///< レジスタ資源が足りているか
+  bool is_itr_sufficient;        ///< 回転数が足りているか
+  bool is_mve_appropriate;       ///< MVE展開数が上限以内か
+  double evaluation;             ///< スケジューリング結果の評価値
   ProcState proc_state;          ///< MsResultの処理状態（ex. binary_search中、など）
 
   bool constructInstSlotMapAtSpecifiedII(SwplPlanSpec spec);

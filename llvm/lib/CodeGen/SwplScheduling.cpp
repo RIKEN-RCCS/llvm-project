@@ -295,6 +295,7 @@ void SwplMrt::dump() {
 }
 
 /// \brief Mrt中のSwplInstのオペコード名の中で、最長の長さを取得する
+/// \return オペコード名の最長の長さ
 unsigned SwplMrt::getMaxOpcodeNameLength() {
   unsigned max_length=0;
   for( auto cl : table ) {
@@ -395,7 +396,7 @@ void SwplMrt::printInstRotation(raw_ostream &stream,
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-/// \brief computePriorities
+/// \brief 配置する命令の優先順位を求める
 /// \return priorities ( map ; key=priority, valud=SwplInst* )
 ///
 /// \note 領域の解放は呼出し元の責任で実施する。
@@ -413,7 +414,7 @@ SwplInstIntMap* SwplModuloDdg::computePriorities() const {
   return priorities;
 }
 
-/// \brief getDelay
+/// \brief ２命令間のdelayを求める
 /// \details calc delay for former_inst to latter_inst
 /// \param [in] _former_inst former instruction
 /// \param [in] _latter_inst latter instruction
@@ -522,8 +523,8 @@ void SwplModuloDdg::dump() {
 /// \brief ひとつのInstをIMSにより配置する
 /// \details state->inst_queueから１つのInstを取り出して、IMSにて配置する。
 /// \param [in,out] state スケジューリング情報および結果を保持する構造体
-/// \retval TRUE 配置処理が適切におこなわれた
-/// \retval FALSE 配置処理ができなかった
+/// \retval true 配置処理が適切におこなわれた
+/// \retval false 配置処理ができなかった
 ///
 /// \note schedulingがある種の無限ループのような状況になってしまい,
 ///       使用するSlotが上下限を越えることがある。
@@ -1051,9 +1052,9 @@ void SwplPlanSpec::countLoadStore(unsigned *num_load, unsigned *num_store, unsig
 /// \param [in] c_loop 対象となるループ情報
 /// \param [in,out] iteration_count 回転数
 /// \details ソース情報から、ループの回転数を取得する。
-///          回転数が取得できた場合は、itr_countメンバ変数に格納し、TRUEを返す。
-/// \retval TRUE ループ回転数が取得できた
-/// \retval FALSE ループ回転数が取得できなかった
+///          回転数が取得できた場合は、itr_countメンバ変数に格納し、trueを返す。
+/// \retval true ループ回転数が取得できた
+/// \retval false ループ回転数が取得できなかった
 bool SwplPlanSpec::isIterationCountConstant(const SwplLoop& c_loop, unsigned* iteration_count) {
   SwplScr swpl_scr( *(const_cast<llvm::MachineLoop*>(c_loop.getML())) );
   SwplTransformedMIRInfo temp_tli;
@@ -1193,6 +1194,8 @@ void SwplMsResourceResult::init() {
   return;
 }
 
+/// \brief レジスタ資源を確認し、is_resource_sufficientを更新する
+/// \return なし
 void SwplMsResourceResult::setSufficient() {
   setSufficientWithArg( (isIregSufficient() &&
                          isFregSufficient() &&
@@ -1200,36 +1203,62 @@ void SwplMsResourceResult::setSufficient() {
   return;
 }
 
+/// \brief ireg資源が不足しないか
+/// \retval true 不足しない
+/// \retval false 不足する
 bool SwplMsResourceResult::isIregSufficient() {
   return (num_max_ireg >= num_necessary_ireg);
 }
 
+/// \brief freg資源が不足しないか
+/// \retval true 不足しない
+/// \retval false 不足する
 bool SwplMsResourceResult::isFregSufficient() {
   return (num_max_freg >= num_necessary_freg);
 }
 
+/// \brief preg資源が不足しないか
+/// \retval true 不足しない
+/// \retval false 不足する
 bool SwplMsResourceResult::isPregSufficient() {
   return (num_max_preg >= num_necessary_preg);
 }
 
+/// \brief 必要ireg数の更新
+/// \param [in] 必要ireg数
+/// \return なし
+///
+/// \note 更新したireg数でレジスタ資源を確認し、is_resource_sufficientを更新する
 void SwplMsResourceResult::setNecessaryIreg(unsigned ireg) {
   num_necessary_ireg = ireg;
   setSufficient();
   return;
 }
 
+/// \brief 必要freg数の更新
+/// \param [in] 必要ireg数
+/// \return なし
+///
+/// \note 更新したfreg数でレジスタ資源を確認し、is_resource_sufficientを更新する
 void SwplMsResourceResult::setNecessaryFreg(unsigned freg) {
   num_necessary_freg = freg;
   setSufficient();
   return;
 }
 
+/// \brief 必要preg数の更新
+/// \param [in] 必要ireg数
+/// \return なし
+///
+/// \note 更新したpreg数でレジスタ資源を確認し、is_resource_sufficientを更新する
 void SwplMsResourceResult::setNecessaryPreg(unsigned preg) {
   num_necessary_preg = preg;
   setSufficient();
   return;
 }
 
+/// \brief 不足するireg数の取得
+/// \return 不足するireg数
 unsigned SwplMsResourceResult::getNumInsufficientIreg() {
   if (isIregSufficient()) {
     return 0;
@@ -1237,6 +1266,8 @@ unsigned SwplMsResourceResult::getNumInsufficientIreg() {
   return getNecessaryIreg() - getMaxIreg();
 }
 
+/// \brief 不足するfreg数の取得
+/// \return 不足するfreg数
 unsigned SwplMsResourceResult::getNumInsufficientFreg() {
   if (isFregSufficient()) {
     return 0;
@@ -1244,6 +1275,8 @@ unsigned SwplMsResourceResult::getNumInsufficientFreg() {
   return getNecessaryFreg() - getMaxFreg();
 }
 
+/// \brief 不足するpreg数の取得
+/// \return 不足するpreg数
 unsigned SwplMsResourceResult::getNumInsufficientPreg() {
   if (isPregSufficient()) {
     return 0;
@@ -1252,6 +1285,8 @@ unsigned SwplMsResourceResult::getNumInsufficientPreg() {
 }
 
 /// \brief レジスタに余裕があるかどうかチェックする
+/// \retval true 余裕がある
+/// \retval false 余裕がない
 ///
 /// \note SwplMsResult.isEffective()==trueとなるMsResult.MsResourceResultに対して用いる
 bool SwplMsResourceResult::isModerate() {
@@ -1371,6 +1406,8 @@ void SwplMsResult::checkInstSlotMap(const SwplPlanSpec & spec, bool limit_reg) {
 }
 
 /// \brief inst_slot_mapに対して資源が足りているかをチェックする
+/// \param [in] spec スケジューリング指示情報
+/// \param [in] limit_reg レジスタ数上限をチェックするか否か
 ///
 /// \note 現在のところ,整数, predicateレジスタが不足している場合は採用していない
 void SwplMsResult::checkHardResource(const SwplPlanSpec & spec, bool limit_reg) {
@@ -1424,6 +1461,8 @@ void SwplMsResult::checkHardResource(const SwplPlanSpec & spec, bool limit_reg) 
 }
 
 /// \brief scheduling結果に対してレジスタが足りるかどうかを判定する
+/// \param [in] spec スケジューリング指示情報
+/// \return なし
 ///
 /// \note 固定割付けでないレジスタが、整数、浮動小数点数、プレディケートであることが前提の処理である。
 /// \note llvm::AArch64::CCRRegClassIDは固定割付けのため処理しない
@@ -1463,6 +1502,7 @@ SwplMsResourceResult SwplMsResult::isHardRegsSufficient(const SwplPlanSpec & spe
 }
 
 /// \brief 各II毎のinst_slot_mapに対して回転数が足りているかをチェックする
+/// \param [in] spec スケジューリング指示情報
 /// \return なし。結果は SwplPlanSpec::is_itr_sufficientに格納される。
 void SwplMsResult::checkIterationCount(const SwplPlanSpec & spec) {
   required_itr_count = 0;
@@ -1497,6 +1537,8 @@ void SwplMsResult::checkIterationCount(const SwplPlanSpec & spec) {
 }
 
 /// \brief kernelの展開数MVEが妥当な数であるかを判定する
+/// \param [in] spec スケジューリング指示情報
+/// \return なし
 void SwplMsResult::checkMve(const SwplPlanSpec & spec) {
   required_mve = 0;
 
@@ -2025,8 +2067,8 @@ SwplMsResult *SwplMsResult::getEffectiveSchedule(const SwplPlanSpec & spec,
 
 /// \brief 回転数が足りるscheduleが一つでもあるかどうか判定する
 /// \param [in] ms_result_candidate スケジューリング結果(MS_RESULT)のHashSet
-/// \retval TRUE ms_result_candidateに回転数が足りるscheduleが存在する
-/// \retval FALSE ms_result_candidateに回転数が足りるscheduleが存在しない
+/// \retval true ms_result_candidateに回転数が足りるscheduleが存在する
+/// \retval false ms_result_candidateに回転数が足りるscheduleが存在しない
 bool SwplMsResult::isAnyScheduleItrSufficient(std::unordered_set<SwplMsResult *>& ms_result_candidate) {
   for( auto temp : ms_result_candidate) {
     if (temp != nullptr && temp->is_itr_sufficient) {
@@ -2304,8 +2346,8 @@ bool SwplMsResult::collectCandidate(
 /// \param [in,out] spec スケジューリング指示情報のポインタ
 /// \param [in,out] ms_result_candidate スケジューリング結果(MS_RESULT)のHashSet
 /// \param [in] procstate MsResultの処理状態（ex. binary_search中、など）
-/// \retval TRUE スケジューリングに成功した（ms_result_candidateに新しい結果が追加される）
-/// \retval FALSE スケジューリングに失敗した
+/// \retval true スケジューリングに成功した（ms_result_candidateに新しい結果が追加される）
+/// \retval false スケジューリングに失敗した
 ///
 /// \note
 ///   - iiを、spec.min_iiからspec.max_iiまでinc_iiずつ更新しながら、
@@ -2355,8 +2397,8 @@ bool SwplMsResult::collectModerateCandidate(
 /// \param [in,out] spec スケジューリング指示情報のポインタ
 /// \param [in,out] ms_result_candidate スケジューリング結果(MS_RESULT)のHashSet
 /// \param [in] ms_result 再試行のベースとなるMsResult
-/// \retval TRUE スケジューリングに成功した（ms_result_candidateに新しい結果が追加される）
-/// \retval FALSE スケジューリングに失敗した
+/// \retval true スケジューリングに成功した（ms_result_candidateに新しい結果が追加される）
+/// \retval false スケジューリングに失敗した
 bool SwplMsResult::recollectModerateCandidateWithExII(
     SwplPlanSpec & spec,
                                                   std::unordered_set<SwplMsResult *>& ms_result_candidate,

@@ -25,6 +25,8 @@ bool SwplCalclIterations::checkIterationCountVariable(const SwplPlanSpec & spec,
 /// \brief スケジューリング結果が要する回転数が、実際の回転数（固定）を満たすかをチェックする
 /// \details スケジューリング結果が要する回転数が、実際の回転数（固定）を満たすかをチェックする
 ///          実際の命令列上の回転数を優先する.
+/// \retval true スケジューリング結果が要する回転数が、実際の回転数（固定）を満たす
+/// \retval false スケジューリング結果が要する回転数が、実際の回転数（固定）を満たさない
 bool SwplCalclIterations::checkIterationCountConstant(const SwplPlanSpec & spec, const SwplMsResult & ms) {
   return (ms.required_itr_count <= spec.itr_count);
 }

@@ -693,6 +693,7 @@ void SwplInstSlotHashmap::getMaxMinSlot(SwplSlot& max_slot, SwplSlot& min_slot) 
 
 /// \brief cycleにおける空きslotを返す
 /// \param [in] cycle 検索対象のcycle
+/// \param [in] iteration_interval II
 /// \param [in] isvirtual 仮想命令用の空きSlotを探すのであればtrue
 /// \return cycleのうち、命令が配置されていないslot
 SwplSlot SwplInstSlotHashmap::getEmptySlotInCycle( unsigned cycle,
@@ -787,7 +788,7 @@ void SwplInstSlotHashmap::dump() {
 
 /// \brief slotのcycleを返す
 /// \details cycleに換算した値を返す
-/// \return cycle
+/// \return slotに該当するcycle
 unsigned SwplSlot::calcCycle() {
   return slot_index / SWPipeliner::STM->getFetchBandwidth();
 }
