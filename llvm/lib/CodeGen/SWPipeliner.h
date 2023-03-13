@@ -267,6 +267,8 @@ private:
   /// 対象ループのbodyのBasicBlockを非SSA化する
   /// \param[in]  L MachineLoop
   /// \param[in]  LiveOutReg UseReg
+  /// \retval true 変換中問題が発生
+  /// \retval false 問題なく変換した
   bool convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOutReg);
 
   /// MachineBasicBlock の複製を行う
@@ -808,7 +810,7 @@ public:
   enum class SwplRestrinctionsFlag {None, MultipleReg, MultipleDef, All};
 
   /// 制限抑止オプション指定の問い合わせ
-  static bool isDIsableRestrinctionsCheck(SwplRestrinctionsFlag f);
+  static bool isDisableRestrinctionsCheck(SwplRestrinctionsFlag f);
 
   MachineFunction *MF = nullptr;
   const MachineLoopInfo *MLI = nullptr;

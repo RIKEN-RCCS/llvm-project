@@ -191,7 +191,7 @@ static cl::opt<SWPipeliner::SwplRestrinctionsFlag> DisableRestrictionsCheck("swp
                                                           clEnumValN(SWPipeliner::SwplRestrinctionsFlag::All, "", "")
                                                                 ));
 
-bool SWPipeliner::isDIsableRestrinctionsCheck(SwplRestrinctionsFlag f) {
+bool SWPipeliner::isDisableRestrinctionsCheck(SwplRestrinctionsFlag f) {
 
   return (f== DisableRestrictionsCheck ||
           DisableRestrictionsCheck == SwplRestrinctionsFlag::All);

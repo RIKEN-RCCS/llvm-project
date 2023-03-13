@@ -993,8 +993,10 @@ void SwplLoop::convertPrePostIndexInstr(MachineBasicBlock *body) {
 }
 
 bool SwplLoop::checkRestrictions(const MachineBasicBlock *body) {
+  if (SWPipeliner::isDisableRestrinctionsCheck(
+          SWPipeliner::SwplRestrinctionsFlag::All)) return false;
   for (auto &mi:*body) {
-    if (!SWPipeliner::isDIsableRestrinctionsCheck(
+    if (!SWPipeliner::isDisableRestrinctionsCheck(
             SWPipeliner::SwplRestrinctionsFlag::MultipleDef)) {
       int num=0;
       for (auto &def:mi.defs()) {
@@ -1006,7 +1008,7 @@ bool SwplLoop::checkRestrictions(const MachineBasicBlock *body) {
         return true;
       }
     }
-    if (!SWPipeliner::isDIsableRestrinctionsCheck(
+    if (!SWPipeliner::isDisableRestrinctionsCheck(
             SWPipeliner::SwplRestrinctionsFlag::MultipleReg)) {
       for (auto &mo:mi.operands()) {
         if (mo.isReg()) {
