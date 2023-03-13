@@ -124,7 +124,7 @@
   !llvm.module.flags = !{!2, !3, !4, !5, !6, !7}
   !llvm.ident = !{!8}
   
-  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 15.0.4 (git@172.16.1.70:a64fx-swpl/llvm-project.git 1202d19b025814a1876bde537e9e53eb75b2363d)", isOptimized: true, runtimeVersion: 0, emissionKind: NoDebug, splitDebugInlining: false, nameTableKind: None)
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 15.0.4 (1202d19b025814a1876bde537e9e53eb75b2363d)", isOptimized: true, runtimeVersion: 0, emissionKind: NoDebug, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "a.c", directory: "/home/aka")
   !2 = !{i32 2, !"Debug Info Version", i32 3}
   !3 = !{i32 1, !"wchar_size", i32 4}
@@ -132,7 +132,7 @@
   !5 = !{i32 7, !"PIE Level", i32 2}
   !6 = !{i32 7, !"uwtable", i32 2}
   !7 = !{i32 7, !"frame-pointer", i32 1}
-  !8 = !{!"clang version 15.0.4 (git@172.16.1.70:a64fx-swpl/llvm-project.git 1202d19b025814a1876bde537e9e53eb75b2363d)"}
+  !8 = !{!"clang version 15.0.4 (1202d19b025814a1876bde537e9e53eb75b2363d)"}
   !9 = distinct !DISubprogram(name: "xxx", scope: !1, file: !1, line: 13, type: !10, scopeLine: 13, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
   !10 = !DISubroutineType(types: !11)
   !11 = !{}
