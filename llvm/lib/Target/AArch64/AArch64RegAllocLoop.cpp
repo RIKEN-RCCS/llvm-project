@@ -96,7 +96,7 @@ static void createVRegListEpi(MachineInstr *mi, unsigned num_mi,
 }
 
 /**
- * @brief 仮想to物理レジスタのCOPY命令を作成する
+ * @brief 仮想レジスタから物理レジスタへのCOPY命令を作成する
  * @param [in]     MF MachineFunction
  * @param [in]     dl デバッグ情報の位置
  * @param [in,out] k_pre_mis kernel pre処理用のMI
@@ -116,14 +116,14 @@ static void addCopyMIpre(MachineFunction &MF,
   // 仮想レジスタから物理レジスタへのCOPY命令作成
   llvm::MachineInstr *copy =
       BuildMI(MF, dl, SWPipeliner::TII->get(TargetOpcode::COPY))
-      .addReg(preg, RegState::Define | RegState::Renamable).addReg(vreg);
+      .addReg(preg, RegState::Define).addReg(vreg);
   k_pre_mis.push_back(copy);
 
   return;
 }
 
 /**
- * @brief 物理to仮想レジスタのCOPY命令を作成する
+ * @brief 物理レジスタから仮想レジスタへのCOPY命令を作成する
  * @param [in]     MF MachineFunction
  * @param [in]     dl デバッグ情報の位置
  * @param [in,out] k_post_mis kernel post処理用のMI
@@ -143,7 +143,7 @@ static void addCopyMIpost(MachineFunction &MF,
   // 物理レジスタから仮想レジスタへのCOPY命令作成
   llvm::MachineInstr *copy =
       BuildMI(MF, dl, SWPipeliner::TII->get(TargetOpcode::COPY))
-      .addReg(vreg, RegState::Define).addReg(preg, RegState::Renamable);
+      .addReg(vreg, RegState::Define).addReg(preg);
   k_post_mis.push_back(copy);
 
   return;
@@ -200,7 +200,7 @@ static void createExcludeVReg(MachineInstr *mi, MachineOperand &mo,
  * @param  [in]     idx moのindex
  * @param  [in]     mo llvm::MachineOperand
  * @param  [in]     reg getReg()で取得したレジスタ番号
- * @param  [in,out] reginfo 割り当て済みレジスタ情報
+ * @param  [in,out] rai_tbl 割り当て済みレジスタ情報の表
  * @param  [in]     num_mi llvm::MachineInstrの通し番号
  * @param  [in]     total_mi llvm::MachineInstrの総数
  * @param  [in]     ex_vreg 割り付け対象外仮想レジスタ
@@ -410,7 +410,7 @@ static bool isNoPhysRegAlloc(RegAllocInfo *rai, SwplExcKernelRegInfoTbl &ekri_tb
 
 /**
  * @brief  生存区間を基に仮想レジスタへ物理レジスタを割り付ける
- * @param  [in,out] reginfo 割り当て済みレジスタ情報
+ * @param  [in,out] rai_tbl 割り当て済みレジスタ情報の表
  * @param  [in]     ekri_tbl カーネル外のレジスタ情報の表
  * @param  [in]     total_mi カーネル部の総MI数
  * @retval 0 正常終了
@@ -595,10 +595,12 @@ static void dumpKernelInstrs(const MachineFunction &MF,
  * @brief  SWPLpass内における仮想レジスタへの物理レジスタ割り付け
  * @param  [in,out] tmi 命令列変換情報
  * @param  [in]     MF  MachineFunction
+ * @retval true  物理レジスタ割り付け成功
+ * @retval false 物理レジスタ割り付け失敗
  * @note   カーネルループのみが対象。
  */
-bool AArch64InstrInfo::physRegAllocLoop(SwplTransformedMIRInfo *tmi,
-                                        MachineFunction &MF) const {
+bool AArch64InstrInfo::SwplRegAlloc(SwplTransformedMIRInfo *tmi,
+                                    MachineFunction &MF) const {
   DebugLoc firstDL;
   DebugLoc lastDL;
   std::unordered_set<unsigned> exclude_vreg;
@@ -1009,11 +1011,20 @@ void SwplRegAllocInfoTbl::dump() {
   return;
 }
 
+/**
+ * @brief SwplRegAllocInfoTblの初期化関数
+ * @param [in] num_of_mi MIの総数
+ */
 SwplRegAllocInfoTbl::SwplRegAllocInfoTbl(unsigned num_of_mi) {
   total_mi=num_of_mi;
   rai_tbl={};
 };
 
+/**
+ * @brief レジスタ割り付け情報からliverangeを求める
+ * @param [in] range        liverange
+ * @param [in] regAllocInfo レジスタ割り付け情報
+ */
 void SwplRegAllocInfoTbl::setRangeReg(std::vector<int> *range, RegAllocInfo& regAllocInfo) {
   if (regAllocInfo.num_def < 0) {
     for (int i = 1; i <= regAllocInfo.num_use; i++) {
@@ -1037,6 +1048,9 @@ void SwplRegAllocInfoTbl::setRangeReg(std::vector<int> *range, RegAllocInfo& reg
   }
 }
 
+/**
+ * @brief Integer/Floating-point/Predicateレジスタに割り当てた最大レジスタ数を数える
+ */
 void SwplRegAllocInfoTbl::countRegs() {
   std::vector<int> ireg;
   std::vector<int> freg;
@@ -1082,30 +1096,54 @@ void SwplRegAllocInfoTbl::countRegs() {
   for (int i:preg) num_preg = std::max(num_preg, i);
 }
 
+/**
+ * @brief  Integerレジスタに割り当てた最大レジスタ数を返す
+ * @retval 0以上の値 割り当てた最大レジスタ数
+ */
 int SwplRegAllocInfoTbl::countIReg() {
   if (num_ireg<0) countRegs();
   return num_ireg;
 }
 
+/**
+ * @brief  Floating-pointレジスタに割り当てた最大レジスタ数を返す
+ * @retval 0以上の値 割り当てた最大レジスタ数
+ */
 int SwplRegAllocInfoTbl::countFReg()  {
   if (num_freg<0) countRegs();
   return num_freg;
 }
 
+/**
+ * @brief  Predicateレジスタに割り当てた最大レジスタ数を返す
+ * @retval 0以上の値 割り当てた最大レジスタ数
+ */
 int SwplRegAllocInfoTbl::countPReg()  {
   if (num_preg<0) countRegs();
   return num_preg;
 }
 
+/**
+ * @brief  割り当て可能なIntegerレジスタの数を返す
+ * @retval 0以上の値 利用可能なレジスタ数
+ */
 int SwplRegAllocInfoTbl::availableIRegNumber() const {
   // UNAVAILABLE_REGがXおよびWを定義しているため、数は半分にしている
   return AArch64::GPR64RegClass.getNumRegs()-(UNAVAILABLE_REGS/2);
 }
 
+/**
+ * @brief  割り当て可能なFloating-pointレジスタの数を返す
+ * @retval 0以上の値 利用可能なレジスタ数
+ */
 int SwplRegAllocInfoTbl::availableFRegNumber() const {
   return AArch64::FPR64RegClass.getNumRegs();
 }
 
+/**
+ * @brief  割り当て可能なPredicateレジスタの数を返す
+ * @retval 0以上の値 利用可能なレジスタ数
+ */
 int SwplRegAllocInfoTbl::availablePRegNumber() const {
   return AArch64::PPR_3bRegClass.getNumRegs();
 }

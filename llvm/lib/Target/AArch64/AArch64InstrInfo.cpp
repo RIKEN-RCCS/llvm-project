@@ -8464,7 +8464,7 @@ MachineInstr* AArch64InstrInfo::makeKernelIterationBranch(MachineRegisterInfo &M
   const auto*regClass = MRI.getRegClass(doVReg);
   auto ini = doVReg;
   if (preg > 0) {
-    /// physRegAllocLoop()で割り当てられた物理レジスタを使用する
+    /// SwplRegAlloc()で割り当てられた物理レジスタを使用する
     ini = preg;
   } else {
     if (regClass->hasSubClassEq(&AArch64::GPR64RegClass)) {

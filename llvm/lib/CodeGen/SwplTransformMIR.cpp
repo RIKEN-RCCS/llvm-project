@@ -63,7 +63,7 @@ bool SwplTransformMIR::transformMIR() {
     /// 物理レジスタを割り付ける
     //if (!SWPipeliner::STM->isDisableRegAlloc())
     if (SWPipeliner::STM->isEnableRegAlloc()) {
-      if (!SWPipeliner::TII->physRegAllocLoop(&TMI, MF)) {
+      if (!SWPipeliner::TII->SwplRegAlloc(&TMI, MF)) {
         // 割付失敗
         return false;
       }
@@ -561,9 +561,8 @@ void SwplTransformMIR::makeKernelIterationBranch(MachineBasicBlock &MBB) {
 
   assert(TMI.branchDoVRegMI->isBranch());
   Register preg = 0;
-  //if (!SWPipeliner::STM->isDisableRegAlloc() && TMI.swplRAITbl != nullptr) {
   if (SWPipeliner::STM->isEnableRegAlloc() && TMI.swplRAITbl != nullptr) {
-    // TMI.doVReg に入っている仮想レジスタに、physRegAllocLoop()で
+    // TMI.doVReg に入っている仮想レジスタに、SwplRegAlloc()で
     // 物理レジスタが割り当てられていたら、それを使用する。
     auto rai = TMI.swplRAITbl->getWithVReg( TMI.doVReg );
     if( rai != nullptr ) {

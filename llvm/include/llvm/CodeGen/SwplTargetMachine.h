@@ -311,7 +311,7 @@ public:
   /// \retval false Valid the register allocation in the swpl pass.
   virtual bool isDisableRegAlloc(void) const = 0;
 
-  /// [TODO: To Be Deleted] Determine if the register allocation has validated.
+  /// Determine if the register allocation has validated.
   /// \retval true Valid the register allocation in the swpl pass.
   /// \retval false Invalid the register allocation in the swpl pass.
   virtual bool isEnableRegAlloc(void) const = 0;
