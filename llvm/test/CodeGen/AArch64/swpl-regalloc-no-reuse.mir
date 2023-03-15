@@ -108,7 +108,7 @@
   !llvm.ident = !{!9}
   
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 15.0.4 (aa8c40be5a4067d6183bbf71b6e4e26681001eb9)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
-  !1 = !DIFile(filename: "s4117.c", checksumkind: CSK_MD5, checksum: "07a19633c97159ca6602d0f04e32da48")
+  !1 = !DIFile(filename: "s4117.c", directory: "", checksumkind: CSK_MD5, checksum: "07a19633c97159ca6602d0f04e32da48")
   !2 = !{i32 7, !"Dwarf Version", i32 5}
   !3 = !{i32 2, !"Debug Info Version", i32 3}
   !4 = !{i32 1, !"wchar_size", i32 4}
@@ -151,7 +151,7 @@
   !41 = distinct !{!41, !16, !42, !31, !32}
   !42 = !DILocation(line: 40, column: 5, scope: !10)
   !43 = !DISubprogram(name: "initialise_arrays", scope: !44, file: !44, line: 30, type: !11, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !12)
-  !44 = !DIFile(filename: "./common.h", checksumkind: CSK_MD5, checksum: "813c757a5bf947ca4a43c95623064070")
+  !44 = !DIFile(filename: "./common.h", directory: "", checksumkind: CSK_MD5, checksum: "813c757a5bf947ca4a43c95623064070")
   !45 = !DISubprogram(name: "gettimeofday", scope: !46, file: !46, line: 67, type: !11, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !12)
   !46 = !DIFile(filename: "/usr/lib/gcc-cross/aarch64-linux-gnu/11/../../../../aarch64-linux-gnu/include/sys/time.h", directory: "", checksumkind: CSK_MD5, checksum: "b36e339815f62ba7208e5294180e353c")
   !47 = !DISubprogram(name: "dummy", scope: !44, file: !44, line: 26, type: !11, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !12)

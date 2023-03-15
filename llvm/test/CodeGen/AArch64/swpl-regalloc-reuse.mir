@@ -1,0 +1,950 @@
+# RUN: llc %s -fswp -mcpu=a64fx -start-before=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -swpl-enable-reg-alloc -o /dev/null 2>&1 | FileCheck %s
+# CHECK: remark: ./SOURCE_FILE/loop099.c:52:5: software pipelining (IPC: 3.00, ITR: 7, MVE: 4, II: 3, Stage: 7, (VReg Fp: 1/32, Int: 16/32, Pred: 1/8)), SRA(PReg Fp: 0/32, Int: 15/29, Pred: 0/8)
+
+--- |
+  ; ModuleID = './SOURCE_FILE/loop099.c'
+  source_filename = "./SOURCE_FILE/loop099.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+  
+  @.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
+  @gA1 = dso_local local_unnamed_addr global [2001 x i32] zeroinitializer, align 4
+  @gA2 = dso_local local_unnamed_addr global [2001 x i32] zeroinitializer, align 4
+  @.str.1 = private unnamed_addr constant [27 x i8] c"aA1[2][%d]=%d, j=%d, l=%d\0A\00", align 1
+  @.str.2 = private unnamed_addr constant [12 x i8] c"aA2[%d]=%d\0A\00", align 1
+  
+  ; Function Attrs: nofree nounwind uwtable vscale_range(4,4)
+  define dso_local i32 @main() local_unnamed_addr #0 !dbg !10 {
+  entry:
+    br label %while.body, !dbg !14
+  
+  while.body:                                       ; preds = %entry, %while.body
+    %lsr.iv = phi i32 [ 5, %entry ], [ %lsr.iv.next, %while.body ]
+    %call = tail call i32 @test_main(), !dbg !15
+    %call1 = tail call i32 @test_main(), !dbg !16
+    %lsr.iv.next = add nsw i32 %lsr.iv, -1, !dbg !17
+    %exitcond.not = icmp eq i32 %lsr.iv.next, 0, !dbg !17
+    br i1 %exitcond.not, label %while.end, label %while.body, !dbg !14, !llvm.loop !18
+  
+  while.end:                                        ; preds = %while.body
+    %call4 = tail call i32 (ptr, ...) @printf(ptr noundef nonnull @.str, i32 noundef 0), !dbg !22
+    ret i32 0, !dbg !23
+  }
+  
+  ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
+  declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+  
+  ; Function Attrs: nofree nounwind uwtable vscale_range(4,4)
+  define dso_local i32 @test_main() local_unnamed_addr #0 !dbg !24 {
+  entry:
+    %aA1 = alloca [5 x [2001 x i32]], align 4
+    %aA2 = alloca [1001 x i32], align 4
+    call void @llvm.lifetime.start.p0(i64 40020, ptr nonnull %aA1) #7, !dbg !25
+    call void @llvm.memset.p0.i64(ptr noundef nonnull align 4 dereferenceable(40020) %aA1, i8 0, i64 40020, i1 false), !dbg !26
+    call void @llvm.lifetime.start.p0(i64 4004, ptr nonnull %aA2) #7, !dbg !25
+    call void @llvm.memset.p0.i64(ptr noundef nonnull align 4 dereferenceable(4004) %aA2, i8 0, i64 4004, i1 false), !dbg !27
+    %0 = tail call <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32(), !dbg !28
+    %1 = call i64 @llvm.start.loop.iterations.i64(i64 125), !dbg !28
+    br label %vector.body, !dbg !28
+  
+  vector.body:                                      ; preds = %vector.body, %entry
+    %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ], !dbg !31
+    %vec.ind = phi <vscale x 4 x i32> [ %0, %entry ], [ %vec.ind.next, %vector.body ], !dbg !32
+    %2 = phi i64 [ %1, %entry ], [ %5, %vector.body ], !dbg !32
+    %3 = shl nuw nsw i64 %index, 2, !dbg !32
+    %uglygep104 = getelementptr i8, ptr @gA1, i64 %3, !dbg !32
+    store <vscale x 4 x i32> %vec.ind, ptr %uglygep104, align 4, !dbg !32, !tbaa !33
+    %4 = shl nuw nsw i64 %index, 2, !dbg !37
+    %uglygep105 = getelementptr i8, ptr @gA2, i64 %4, !dbg !37
+    store <vscale x 4 x i32> %vec.ind, ptr %uglygep105, align 4, !dbg !37, !tbaa !33
+    %index.next = add nuw i64 %index, 16, !dbg !31
+    %vec.ind.next = add <vscale x 4 x i32> %vec.ind, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 16, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), !dbg !32
+    %5 = call i64 @llvm.loop.decrement.reg.i64(i64 %2, i64 1), !dbg !31
+    %6 = icmp ne i64 %5, 0, !dbg !31
+    br i1 %6, label %vector.body, label %for.body.i.preheader, !dbg !31, !llvm.loop !38
+  
+  for.body.i.preheader:                             ; preds = %vector.body
+    br label %for.body.i, !dbg !28
+  
+  for.body.i:                                       ; preds = %for.body.i.preheader, %for.body.i
+    %indvars.iv.i = phi i64 [ %indvars.iv.next.i, %for.body.i ], [ 2000, %for.body.i.preheader ]
+    %7 = shl nuw nsw i64 %indvars.iv.i, 2, !dbg !32
+    %uglygep103 = getelementptr i8, ptr @gA1, i64 %7, !dbg !32
+    %tmp102 = trunc i64 %indvars.iv.i to i32
+    store i32 %tmp102, ptr %uglygep103, align 4, !dbg !32, !tbaa !33
+    %8 = shl nuw nsw i64 %indvars.iv.i, 2, !dbg !37
+    %uglygep100 = getelementptr i8, ptr @gA2, i64 %8, !dbg !37
+    %tmp101 = trunc i64 %indvars.iv.i to i32
+    store i32 %tmp101, ptr %uglygep100, align 4, !dbg !37, !tbaa !33
+    %indvars.iv.next.i = add nuw nsw i64 %indvars.iv.i, 1, !dbg !31
+    %exitcond.not.i = icmp eq i64 %indvars.iv.next.i, 2001, !dbg !41
+    br i1 %exitcond.not.i, label %while.cond1.preheader.preheader, label %for.body.i, !dbg !28, !llvm.loop !42
+  
+  while.cond1.preheader.preheader:                  ; preds = %for.body.i
+    %uglygep98 = getelementptr i8, ptr %aA1, i64 24008, !dbg !43
+    %9 = call i64 @llvm.start.loop.iterations.i64(i64 1001), !dbg !43
+    br label %while.cond1.preheader, !dbg !43
+  
+  while.cond1.preheader:                            ; preds = %while.cond1.preheader.preheader, %while.cond1.preheader
+    %indvars.iv = phi i64 [ %indvars.iv.next, %while.cond1.preheader ], [ 0, %while.cond1.preheader.preheader ]
+    %10 = phi i64 [ %9, %while.cond1.preheader.preheader ], [ %16, %while.cond1.preheader ], !dbg !44
+    %11 = shl nsw i64 %indvars.iv, 2, !dbg !44
+    %uglygep96 = getelementptr i8, ptr getelementptr (i8, ptr @gA1, i64 8000), i64 %11, !dbg !44
+    %12 = load i32, ptr %uglygep96, align 4, !dbg !44, !tbaa !33
+    %13 = shl nsw i64 %indvars.iv, 2, !dbg !45
+    %uglygep97 = getelementptr i8, ptr getelementptr (i8, ptr @gA2, i64 8000), i64 %13, !dbg !45
+    %14 = load i32, ptr %uglygep97, align 4, !dbg !45, !tbaa !33
+    %add12 = add nsw i32 %14, %12, !dbg !46
+    %15 = shl nsw i64 %indvars.iv, 2, !dbg !47
+    %uglygep99 = getelementptr i8, ptr %uglygep98, i64 %15, !dbg !47
+    store i32 %add12, ptr %uglygep99, align 4, !dbg !47, !tbaa !33
+    %indvars.iv.next = add nsw i64 %indvars.iv, -2, !dbg !48
+    %16 = call i64 @llvm.loop.decrement.reg.i64(i64 %10, i64 1), !dbg !43
+    %17 = icmp ne i64 %16, 0, !dbg !43
+    br i1 %17, label %while.cond1.preheader, label %vector.ph74, !dbg !43, !llvm.loop !49
+  
+  vector.ph74:                                      ; preds = %while.cond1.preheader
+    %18 = tail call <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32(), !dbg !51
+    %19 = sub <vscale x 4 x i32> zeroinitializer, %18, !dbg !51
+    %20 = call i64 @llvm.start.loop.iterations.i64(i64 62), !dbg !51
+    br label %vector.body79, !dbg !51
+  
+  vector.body79:                                    ; preds = %vector.body79, %vector.ph74
+    %vec.ind84 = phi <vscale x 4 x i32> [ %19, %vector.ph74 ], [ %vec.ind.next85, %vector.body79 ]
+    %21 = phi i64 [ %20, %vector.ph74 ], [ %27, %vector.body79 ], !dbg !52
+    %22 = add nsw <vscale x 4 x i32> %vec.ind84, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1000, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), !dbg !52
+    %23 = extractelement <vscale x 4 x i32> %22, i64 0, !dbg !53
+    %24 = zext i32 %23 to i64, !dbg !53
+    %25 = getelementptr inbounds [1001 x i32], ptr %aA2, i64 0, i64 %24, !dbg !53
+    %reverse = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %22), !dbg !54
+    %26 = getelementptr inbounds i32, ptr %25, i64 -15, !dbg !54
+    store <vscale x 4 x i32> %reverse, ptr %26, align 4, !dbg !54, !tbaa !33
+    %vec.ind.next85 = add <vscale x 4 x i32> %vec.ind84, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -16, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+    %27 = call i64 @llvm.loop.decrement.reg.i64(i64 %21, i64 1)
+    %28 = icmp ne i64 %27, 0
+    br i1 %28, label %vector.body79, label %while.body20.preheader, !llvm.loop !55
+  
+  while.body20.preheader:                           ; preds = %vector.body79
+    %29 = call i64 @llvm.start.loop.iterations.i64(i64 9), !dbg !51
+    br label %while.body20, !dbg !51
+  
+  while.body20:                                     ; preds = %while.body20.preheader, %while.body20
+    %lsr.iv = phi i64 [ 0, %while.body20.preheader ], [ %lsr.iv.next, %while.body20 ]
+    %30 = phi i64 [ %29, %while.body20.preheader ], [ %33, %while.body20 ], !dbg !53
+    %31 = add i64 %lsr.iv, 8, !dbg !53
+    %32 = shl nsw i64 %lsr.iv, 2, !dbg !54
+    %uglygep91 = getelementptr i8, ptr %aA2, i64 %32, !dbg !54
+    %uglygep92 = getelementptr i8, ptr %uglygep91, i64 32, !dbg !54
+    %tmp93 = trunc i64 %31 to i32
+    store i32 %tmp93, ptr %uglygep92, align 4, !dbg !54, !tbaa !33
+    %lsr.iv.next = add nsw i64 %lsr.iv, -1, !dbg !57
+    %33 = call i64 @llvm.loop.decrement.reg.i64(i64 %30, i64 1), !dbg !51
+    %34 = icmp ne i64 %33, 0, !dbg !51
+    br i1 %34, label %while.body20, label %for.body.preheader, !dbg !51, !llvm.loop !58
+  
+  for.body.preheader:                               ; preds = %while.body20
+    %uglygep88 = getelementptr i8, ptr %aA1, i64 16008, !dbg !59
+    br label %for.body, !dbg !59
+  
+  for.body:                                         ; preds = %for.body.preheader, %for.body
+    %indvars.iv65 = phi i64 [ %indvars.iv.next66, %for.body ], [ 0, %for.body.preheader ]
+    %35 = shl nuw nsw i64 %indvars.iv65, 2, !dbg !60
+    %uglygep89 = getelementptr i8, ptr %uglygep88, i64 %35, !dbg !60
+    %36 = load i32, ptr %uglygep89, align 4, !dbg !60, !tbaa !33
+    %tmp87 = trunc i64 %indvars.iv65 to i32
+    %call = tail call i32 (ptr, ...) @printf(ptr noundef nonnull @.str.1, i32 noundef %tmp87, i32 noundef %36, i32 noundef -6, i32 noundef -6), !dbg !61
+    %indvars.iv.next66 = add nuw nsw i64 %indvars.iv65, 100, !dbg !62
+    %37 = add i64 %indvars.iv.next66, -100, !dbg !63
+    %cmp27 = icmp ult i64 %37, 1900, !dbg !63
+    br i1 %cmp27, label %for.body, label %for.body34.preheader, !dbg !59, !llvm.loop !64
+  
+  for.body34.preheader:                             ; preds = %for.body
+    br label %for.body34, !dbg !66
+  
+  for.body34:                                       ; preds = %for.body34.preheader, %for.body34
+    %indvars.iv68 = phi i64 [ %indvars.iv.next69, %for.body34 ], [ 0, %for.body34.preheader ]
+    %38 = shl nuw nsw i64 %indvars.iv68, 2, !dbg !67
+    %uglygep = getelementptr i8, ptr %aA2, i64 %38, !dbg !67
+    %39 = load i32, ptr %uglygep, align 4, !dbg !67, !tbaa !33
+    %tmp = trunc i64 %indvars.iv68 to i32
+    %call37 = tail call i32 (ptr, ...) @printf(ptr noundef nonnull @.str.2, i32 noundef %tmp, i32 noundef %39), !dbg !68
+    %indvars.iv.next69 = add nuw nsw i64 %indvars.iv68, 10, !dbg !69
+    %40 = add i64 %indvars.iv.next69, -10, !dbg !70
+    %cmp33 = icmp ult i64 %40, 990, !dbg !70
+    br i1 %cmp33, label %for.body34, label %for.end40, !dbg !66, !llvm.loop !71
+  
+  for.end40:                                        ; preds = %for.body34
+    call void @llvm.lifetime.end.p0(i64 4004, ptr nonnull %aA2) #7, !dbg !73
+    call void @llvm.lifetime.end.p0(i64 40020, ptr nonnull %aA1) #7, !dbg !73
+    ret i32 0, !dbg !74
+  }
+  
+  ; Function Attrs: nofree nounwind
+  declare noundef i32 @printf(ptr nocapture noundef readonly, ...) local_unnamed_addr #2
+  
+  ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
+  declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+  
+  ; Function Attrs: argmemonly mustprogress nocallback nofree nounwind willreturn writeonly
+  declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #3
+  
+  ; Function Attrs: nofree norecurse nosync nounwind writeonly uwtable vscale_range(4,4)
+  define dso_local void @init() local_unnamed_addr #4 !dbg !29 {
+  entry:
+    %0 = tail call <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32(), !dbg !75
+    %1 = call i64 @llvm.start.loop.iterations.i64(i64 125), !dbg !75
+    br label %vector.body, !dbg !75
+  
+  vector.body:                                      ; preds = %vector.body, %entry
+    %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ], !dbg !76
+    %vec.ind = phi <vscale x 4 x i32> [ %0, %entry ], [ %vec.ind.next, %vector.body ], !dbg !77
+    %2 = phi i64 [ %1, %entry ], [ %5, %vector.body ], !dbg !77
+    %3 = shl nuw nsw i64 %index, 2, !dbg !77
+    %uglygep12 = getelementptr i8, ptr @gA1, i64 %3, !dbg !77
+    store <vscale x 4 x i32> %vec.ind, ptr %uglygep12, align 4, !dbg !77, !tbaa !33
+    %4 = shl nuw nsw i64 %index, 2, !dbg !78
+    %uglygep13 = getelementptr i8, ptr @gA2, i64 %4, !dbg !78
+    store <vscale x 4 x i32> %vec.ind, ptr %uglygep13, align 4, !dbg !78, !tbaa !33
+    %index.next = add nuw i64 %index, 16, !dbg !76
+    %vec.ind.next = add <vscale x 4 x i32> %vec.ind, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 16, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), !dbg !77
+    %5 = call i64 @llvm.loop.decrement.reg.i64(i64 %2, i64 1), !dbg !76
+    %6 = icmp ne i64 %5, 0, !dbg !76
+    br i1 %6, label %vector.body, label %for.body.preheader, !dbg !76, !llvm.loop !79
+  
+  for.body.preheader:                               ; preds = %vector.body
+    br label %for.body, !dbg !75
+  
+  for.body:                                         ; preds = %for.body.preheader, %for.body
+    %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 2000, %for.body.preheader ]
+    %7 = shl nuw nsw i64 %indvars.iv, 2, !dbg !77
+    %uglygep11 = getelementptr i8, ptr @gA1, i64 %7, !dbg !77
+    %tmp10 = trunc i64 %indvars.iv to i32
+    store i32 %tmp10, ptr %uglygep11, align 4, !dbg !77, !tbaa !33
+    %8 = shl nuw nsw i64 %indvars.iv, 2
+    %uglygep = getelementptr i8, ptr @gA2, i64 %8
+    %tmp = trunc i64 %indvars.iv to i32
+    store i32 %tmp, ptr %uglygep, align 4, !dbg !78, !tbaa !33
+    %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !76
+    %exitcond.not = icmp eq i64 %indvars.iv.next, 2001, !dbg !81
+    br i1 %exitcond.not, label %for.end, label %for.body, !dbg !75, !llvm.loop !82
+  
+  for.end:                                          ; preds = %for.body
+    ret void, !dbg !83
+  }
+  
+  ; Function Attrs: nocallback nofree nosync nounwind readnone willreturn
+  declare <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32() #5
+  
+  ; Function Attrs: nocallback nofree nosync nounwind readnone willreturn
+  declare <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32>) #5
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i64 @llvm.start.loop.iterations.i64(i64) #6
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #6
+  
+  attributes #0 = { nofree nounwind uwtable vscale_range(4,4) "frame-pointer"="non-leaf" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" }
+  attributes #1 = { argmemonly mustprogress nocallback nofree nosync nounwind willreturn }
+  attributes #2 = { nofree nounwind "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" }
+  attributes #3 = { argmemonly mustprogress nocallback nofree nounwind willreturn writeonly }
+  attributes #4 = { nofree norecurse nosync nounwind writeonly uwtable vscale_range(4,4) "frame-pointer"="non-leaf" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" }
+  attributes #5 = { nocallback nofree nosync nounwind readnone willreturn }
+  attributes #6 = { nocallback noduplicate nofree nosync nounwind willreturn }
+  attributes #7 = { nounwind }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3, !4, !5, !6, !7, !8}
+  !llvm.ident = !{!9}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 15.0.4 (9de4e9f577ef0a8a2dd2dffc8cfc1a0260919a54)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "SOURCE_FILE/loop099.c", directory: "", checksumkind: CSK_MD5, checksum: "b48ddeef9c96c963b260225607b8ceb9")
+  !2 = !{i32 7, !"Dwarf Version", i32 5}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = !{i32 1, !"wchar_size", i32 4}
+  !5 = !{i32 7, !"PIC Level", i32 2}
+  !6 = !{i32 7, !"PIE Level", i32 2}
+  !7 = !{i32 7, !"uwtable", i32 2}
+  !8 = !{i32 7, !"frame-pointer", i32 1}
+  !9 = !{!"clang version 15.0.4 (9de4e9f577ef0a8a2dd2dffc8cfc1a0260919a54)"}
+  !10 = distinct !DISubprogram(name: "main", scope: !11, file: !11, line: 38, type: !12, scopeLine: 38, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !13)
+  !11 = !DIFile(filename: "./SOURCE_FILE/loop099.c", directory: "", checksumkind: CSK_MD5, checksum: "b48ddeef9c96c963b260225607b8ceb9")
+  !12 = !DISubroutineType(types: !13)
+  !13 = !{}
+  !14 = !DILocation(line: 40, column: 5, scope: !10)
+  !15 = !DILocation(line: 42, column: 14, scope: !10)
+  !16 = !DILocation(line: 43, column: 14, scope: !10)
+  !17 = !DILocation(line: 40, column: 14, scope: !10)
+  !18 = distinct !{!18, !14, !19, !20, !21}
+  !19 = !DILocation(line: 44, column: 5, scope: !10)
+  !20 = !{!"llvm.loop.mustprogress"}
+  !21 = !{!"llvm.loop.unroll.disable"}
+  !22 = !DILocation(line: 45, column: 5, scope: !10)
+  !23 = !DILocation(line: 46, column: 5, scope: !10)
+  !24 = distinct !DISubprogram(name: "test_main", scope: !11, file: !11, line: 48, type: !12, scopeLine: 48, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !13)
+  !25 = !DILocation(line: 49, column: 5, scope: !24)
+  !26 = !DILocation(line: 49, column: 9, scope: !24)
+  !27 = !DILocation(line: 49, column: 33, scope: !24)
+  !28 = !DILocation(line: 85, column: 5, scope: !29, inlinedAt: !30)
+  !29 = distinct !DISubprogram(name: "init", scope: !11, file: !11, line: 82, type: !12, scopeLine: 82, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !13)
+  !30 = distinct !DILocation(line: 50, column: 5, scope: !24)
+  !31 = !DILocation(line: 85, column: 26, scope: !29, inlinedAt: !30)
+  !32 = !DILocation(line: 86, column: 16, scope: !29, inlinedAt: !30)
+  !33 = !{!34, !34, i64 0}
+  !34 = !{!"int", !35, i64 0}
+  !35 = !{!"omnipotent char", !36, i64 0}
+  !36 = !{!"Simple C/C++ TBAA"}
+  !37 = !DILocation(line: 87, column: 16, scope: !29, inlinedAt: !30)
+  !38 = distinct !{!38, !28, !39, !20, !21, !40}
+  !39 = !DILocation(line: 88, column: 5, scope: !29, inlinedAt: !30)
+  !40 = !{!"llvm.loop.isvectorized", i32 1}
+  !41 = !DILocation(line: 85, column: 16, scope: !29, inlinedAt: !30)
+  !42 = distinct !{!42, !28, !39, !20, !21, !40}
+  !43 = !DILocation(line: 52, column: 5, scope: !24)
+  !44 = !DILocation(line: 63, column: 26, scope: !24)
+  !45 = !DILocation(line: 63, column: 40, scope: !24)
+  !46 = !DILocation(line: 63, column: 38, scope: !24)
+  !47 = !DILocation(line: 63, column: 24, scope: !24)
+  !48 = !DILocation(line: 64, column: 11, scope: !24)
+  !49 = distinct !{!49, !43, !50, !20, !21}
+  !50 = !DILocation(line: 65, column: 5, scope: !24)
+  !51 = !DILocation(line: 67, column: 5, scope: !24)
+  !52 = !DILocation(line: 68, column: 25, scope: !24)
+  !53 = !DILocation(line: 68, column: 9, scope: !24)
+  !54 = !DILocation(line: 68, column: 21, scope: !24)
+  !55 = distinct !{!55, !51, !56, !20, !21, !40}
+  !56 = !DILocation(line: 70, column: 5, scope: !24)
+  !57 = !DILocation(line: 67, column: 14, scope: !24)
+  !58 = distinct !{!58, !51, !56, !20, !21, !40}
+  !59 = !DILocation(line: 72, column: 5, scope: !24)
+  !60 = !DILocation(line: 73, column: 50, scope: !24)
+  !61 = !DILocation(line: 73, column: 9, scope: !24)
+  !62 = !DILocation(line: 72, column: 24, scope: !24)
+  !63 = !DILocation(line: 72, column: 16, scope: !24)
+  !64 = distinct !{!64, !59, !65, !20, !21}
+  !65 = !DILocation(line: 74, column: 5, scope: !24)
+  !66 = !DILocation(line: 76, column: 5, scope: !24)
+  !67 = !DILocation(line: 77, column: 35, scope: !24)
+  !68 = !DILocation(line: 77, column: 9, scope: !24)
+  !69 = !DILocation(line: 76, column: 24, scope: !24)
+  !70 = !DILocation(line: 76, column: 16, scope: !24)
+  !71 = distinct !{!71, !66, !72, !20, !21}
+  !72 = !DILocation(line: 78, column: 5, scope: !24)
+  !73 = !DILocation(line: 80, column: 1, scope: !24)
+  !74 = !DILocation(line: 79, column: 5, scope: !24)
+  !75 = !DILocation(line: 85, column: 5, scope: !29)
+  !76 = !DILocation(line: 85, column: 26, scope: !29)
+  !77 = !DILocation(line: 86, column: 16, scope: !29)
+  !78 = !DILocation(line: 87, column: 16, scope: !29)
+  !79 = distinct !{!79, !75, !80, !20, !21, !40}
+  !80 = !DILocation(line: 88, column: 5, scope: !29)
+  !81 = !DILocation(line: 85, column: 16, scope: !29)
+  !82 = distinct !{!82, !75, !80, !20, !21, !40}
+  !83 = !DILocation(line: 89, column: 1, scope: !29)
+
+...
+---
+name:            main
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gpr32sp, preferred-register: '' }
+  - { id: 1, class: gpr32all, preferred-register: '' }
+  - { id: 2, class: gpr32all, preferred-register: '' }
+  - { id: 3, class: gpr32, preferred-register: '' }
+  - { id: 4, class: gpr32all, preferred-register: '' }
+  - { id: 5, class: gpr32all, preferred-register: '' }
+  - { id: 6, class: gpr32, preferred-register: '' }
+  - { id: 7, class: gpr64common, preferred-register: '' }
+  - { id: 8, class: gpr32all, preferred-register: '' }
+  - { id: 9, class: gpr32all, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+  
+    %3:gpr32 = MOVi32imm 5
+    %2:gpr32all = COPY %3
+  
+  bb.1.while.body:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  
+    %0:gpr32sp = PHI %2, %bb.0, %1, %bb.1
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp, debug-location !15
+    BL @test_main, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0, debug-location !15
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !15
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp, debug-location !16
+    BL @test_main, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0, debug-location !16
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !16
+    %6:gpr32 = nsw SUBSWri %0, 1, 0, implicit-def $nzcv, debug-location !17
+    %1:gpr32all = COPY %6, debug-location !17
+    Bcc 1, %bb.1, implicit $nzcv, debug-location !14
+    B %bb.2, debug-location !14
+  
+  bb.2.while.end:
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp, debug-location !22
+    %7:gpr64common = MOVaddr target-flags(aarch64-page) @.str, target-flags(aarch64-pageoff, aarch64-nc) @.str, debug-location !22
+    %8:gpr32all = COPY $wzr
+    $x0 = COPY %7, debug-location !22
+    $w1 = COPY %8, debug-location !22
+    BL @printf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $w1, implicit-def $sp, implicit-def $w0, debug-location !22
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !22
+    $w0 = COPY %8, debug-location !23
+    RET_ReallyLR implicit $w0, debug-location !23
+
+...
+---
+name:            test_main
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: zpr, preferred-register: '' }
+  - { id: 1, class: gpr64all, preferred-register: '' }
+  - { id: 2, class: gpr64common, preferred-register: '' }
+  - { id: 3, class: zpr, preferred-register: '' }
+  - { id: 4, class: gpr64sp, preferred-register: '' }
+  - { id: 5, class: gpr64all, preferred-register: '' }
+  - { id: 6, class: zpr, preferred-register: '' }
+  - { id: 7, class: gpr64all, preferred-register: '' }
+  - { id: 8, class: gpr64common, preferred-register: '' }
+  - { id: 9, class: gpr64all, preferred-register: '' }
+  - { id: 10, class: gpr64sp, preferred-register: '' }
+  - { id: 11, class: gpr64all, preferred-register: '' }
+  - { id: 12, class: gpr64common, preferred-register: '' }
+  - { id: 13, class: gpr64sp, preferred-register: '' }
+  - { id: 14, class: gpr64all, preferred-register: '' }
+  - { id: 15, class: gpr64all, preferred-register: '' }
+  - { id: 16, class: zpr, preferred-register: '' }
+  - { id: 17, class: gpr64all, preferred-register: '' }
+  - { id: 18, class: zpr, preferred-register: '' }
+  - { id: 19, class: gpr64sp, preferred-register: '' }
+  - { id: 20, class: zpr, preferred-register: '' }
+  - { id: 21, class: gpr64all, preferred-register: '' }
+  - { id: 22, class: gpr64all, preferred-register: '' }
+  - { id: 23, class: gpr64common, preferred-register: '' }
+  - { id: 24, class: gpr64sp, preferred-register: '' }
+  - { id: 25, class: gpr64all, preferred-register: '' }
+  - { id: 26, class: gpr64all, preferred-register: '' }
+  - { id: 27, class: gpr64sp, preferred-register: '' }
+  - { id: 28, class: gpr64common, preferred-register: '' }
+  - { id: 29, class: gpr64all, preferred-register: '' }
+  - { id: 30, class: gpr64common, preferred-register: '' }
+  - { id: 31, class: gpr64all, preferred-register: '' }
+  - { id: 32, class: gpr64all, preferred-register: '' }
+  - { id: 33, class: gpr32, preferred-register: '' }
+  - { id: 34, class: gpr64all, preferred-register: '' }
+  - { id: 35, class: gpr64sp, preferred-register: '' }
+  - { id: 36, class: gpr32all, preferred-register: '' }
+  - { id: 37, class: gpr64all, preferred-register: '' }
+  - { id: 38, class: gpr32, preferred-register: '' }
+  - { id: 39, class: gpr64all, preferred-register: '' }
+  - { id: 40, class: gpr64sp, preferred-register: '' }
+  - { id: 41, class: gpr64all, preferred-register: '' }
+  - { id: 42, class: gpr64all, preferred-register: '' }
+  - { id: 43, class: gpr32, preferred-register: '' }
+  - { id: 44, class: gpr64common, preferred-register: '' }
+  - { id: 45, class: ppr_3b, preferred-register: '' }
+  - { id: 46, class: gpr64common, preferred-register: '' }
+  - { id: 47, class: gpr64sp, preferred-register: '' }
+  - { id: 48, class: gpr64, preferred-register: '' }
+  - { id: 49, class: gpr64all, preferred-register: '' }
+  - { id: 50, class: gpr32, preferred-register: '' }
+  - { id: 51, class: gpr64, preferred-register: '' }
+  - { id: 52, class: gpr64common, preferred-register: '' }
+  - { id: 53, class: gpr32, preferred-register: '' }
+  - { id: 54, class: gpr64common, preferred-register: '' }
+  - { id: 55, class: gpr64sp, preferred-register: '' }
+  - { id: 56, class: gpr64, preferred-register: '' }
+  - { id: 57, class: gpr64all, preferred-register: '' }
+  - { id: 58, class: gpr32, preferred-register: '' }
+  - { id: 59, class: gpr64, preferred-register: '' }
+  - { id: 60, class: gpr64common, preferred-register: '' }
+  - { id: 61, class: gpr64, preferred-register: '' }
+  - { id: 62, class: gpr64all, preferred-register: '' }
+  - { id: 63, class: gpr32, preferred-register: '' }
+  - { id: 64, class: gpr64, preferred-register: '' }
+  - { id: 65, class: gpr64common, preferred-register: '' }
+  - { id: 66, class: gpr64common, preferred-register: '' }
+  - { id: 67, class: gpr32, preferred-register: '' }
+  - { id: 68, class: gpr64common, preferred-register: '' }
+  - { id: 69, class: gpr64common, preferred-register: '' }
+  - { id: 70, class: gpr32, preferred-register: '' }
+  - { id: 71, class: gpr32, preferred-register: '' }
+  - { id: 72, class: gpr64common, preferred-register: '' }
+  - { id: 73, class: gpr64, preferred-register: '' }
+  - { id: 74, class: gpr32, preferred-register: '' }
+  - { id: 75, class: gpr32common, preferred-register: '' }
+  - { id: 76, class: zpr, preferred-register: '' }
+  - { id: 77, class: zpr, preferred-register: '' }
+  - { id: 78, class: gpr32, preferred-register: '' }
+  - { id: 79, class: gpr64sp, preferred-register: '' }
+  - { id: 80, class: gpr64sp, preferred-register: '' }
+  - { id: 81, class: zpr, preferred-register: '' }
+  - { id: 82, class: gpr64common, preferred-register: '' }
+  - { id: 83, class: ppr_3b, preferred-register: '' }
+  - { id: 84, class: zpr, preferred-register: '' }
+  - { id: 85, class: gpr64, preferred-register: '' }
+  - { id: 86, class: gpr64all, preferred-register: '' }
+  - { id: 87, class: gpr64all, preferred-register: '' }
+  - { id: 88, class: gpr32, preferred-register: '' }
+  - { id: 89, class: gpr32sp, preferred-register: '' }
+  - { id: 90, class: gpr32common, preferred-register: '' }
+  - { id: 91, class: gpr64common, preferred-register: '' }
+  - { id: 92, class: gpr64common, preferred-register: '' }
+  - { id: 93, class: gpr64common, preferred-register: '' }
+  - { id: 94, class: gpr64, preferred-register: '' }
+  - { id: 95, class: gpr64all, preferred-register: '' }
+  - { id: 96, class: gpr32, preferred-register: '' }
+  - { id: 97, class: gpr64, preferred-register: '' }
+  - { id: 98, class: gpr64common, preferred-register: '' }
+  - { id: 99, class: gpr64, preferred-register: '' }
+  - { id: 100, class: gpr64all, preferred-register: '' }
+  - { id: 101, class: gpr32, preferred-register: '' }
+  - { id: 102, class: gpr32all, preferred-register: '' }
+  - { id: 103, class: gpr64common, preferred-register: '' }
+  - { id: 104, class: gpr32, preferred-register: '' }
+  - { id: 105, class: gpr32all, preferred-register: '' }
+  - { id: 106, class: gpr64sp, preferred-register: '' }
+  - { id: 107, class: gpr64, preferred-register: '' }
+  - { id: 108, class: gpr64all, preferred-register: '' }
+  - { id: 109, class: gpr64all, preferred-register: '' }
+  - { id: 110, class: gpr64sp, preferred-register: '' }
+  - { id: 111, class: gpr32, preferred-register: '' }
+  - { id: 112, class: gpr32all, preferred-register: '' }
+  - { id: 113, class: gpr64common, preferred-register: '' }
+  - { id: 114, class: gpr32all, preferred-register: '' }
+  - { id: 115, class: gpr64sp, preferred-register: '' }
+  - { id: 116, class: gpr64, preferred-register: '' }
+  - { id: 117, class: gpr32all, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  44024
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: aA1, type: default, offset: 0, size: 40020, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -40020, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 1, name: aA2, type: default, offset: 0, size: 4004, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -44024, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+  
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp, debug-location !26
+    %33:gpr32 = MOVi32imm 40020
+    %34:gpr64all = SUBREG_TO_REG 0, killed %33, %subreg.sub_32
+    %35:gpr64sp = ADDXri %stack.0.aA1, 0, 0
+    %36:gpr32all = COPY $wzr
+    $x0 = COPY %35, debug-location !26
+    $w1 = COPY %36, debug-location !26
+    $x2 = COPY %34, debug-location !26
+    BL &memset, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2, implicit-def $sp, implicit-def $x0, debug-location !26
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !26
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp, debug-location !27
+    %38:gpr32 = MOVi32imm 4004
+    %39:gpr64all = SUBREG_TO_REG 0, killed %38, %subreg.sub_32
+    %40:gpr64sp = ADDXri %stack.1.aA2, 0, 0
+    $x0 = COPY %40, debug-location !27
+    $w1 = COPY %36, debug-location !27
+    $x2 = COPY %39, debug-location !27
+    BL &memset, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2, implicit-def $sp, implicit-def $x0, debug-location !27
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !27
+    %0:zpr = INDEX_II_S 0, 1, debug-location !28
+    %42:gpr64all = COPY $xzr
+    %32:gpr64all = COPY %42
+    %43:gpr32 = MOVi32imm 125
+    %1:gpr64all = SUBREG_TO_REG 0, killed %43, %subreg.sub_32
+    %44:gpr64common = MOVaddr target-flags(aarch64-page) @gA1, target-flags(aarch64-pageoff, aarch64-nc) @gA1
+    %45:ppr_3b = PTRUE_S 31
+    %46:gpr64common = MOVaddr target-flags(aarch64-page) @gA2, target-flags(aarch64-pageoff, aarch64-nc) @gA2
+  
+  bb.1.vector.body:
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  
+    %2:gpr64common = PHI %32, %bb.0, %5, %bb.1, debug-location !31
+    %3:zpr = PHI %0, %bb.0, %6, %bb.1, debug-location !32
+    %4:gpr64sp = PHI %1, %bb.0, %7, %bb.1, debug-location !32
+    ST1W %3, %45, %44, %2, debug-location !32 :: (store unknown-size into %ir.uglygep104, align 4, !tbaa !33)
+    ST1W %3, %45, %46, %2, debug-location !37 :: (store unknown-size into %ir.uglygep105, align 4, !tbaa !33)
+    %47:gpr64sp = nuw ADDXri %2, 16, 0, debug-location !31
+    %5:gpr64all = COPY %47, debug-location !31
+    %6:zpr = ADD_ZI_S %3, 16, 0, debug-location !32
+    %48:gpr64 = SUBSXri %4, 1, 0, implicit-def $nzcv, debug-location !31
+    %7:gpr64all = COPY %48, debug-location !31
+    Bcc 1, %bb.1, implicit $nzcv, debug-location !31
+    B %bb.2, debug-location !31
+  
+  bb.2.for.body.i.preheader:
+    successors: %bb.3(0x80000000)
+  
+    %50:gpr32 = MOVi32imm 2000
+    %49:gpr64all = SUBREG_TO_REG 0, killed %50, %subreg.sub_32
+  
+  bb.3.for.body.i:
+    successors: %bb.4(0x04000000), %bb.3(0x7c000000)
+  
+    %8:gpr64common = PHI %49, %bb.2, %9, %bb.3
+    %51:gpr64 = nuw nsw UBFMXri %8, 62, 61, debug-location !32
+    %53:gpr32 = COPY %8.sub_32
+    STRWroX %53, %44, %51, 0, 0, debug-location !32 :: (store (s32) into %ir.uglygep103, !tbaa !33)
+    STRWroX %53, %46, %51, 0, 0, debug-location !37 :: (store (s32) into %ir.uglygep100, !tbaa !33)
+    %55:gpr64sp = nuw nsw ADDXri %8, 1, 0, debug-location !31
+    %9:gpr64all = COPY %55, debug-location !31
+    dead $xzr = SUBSXri %55, 2001, 0, implicit-def $nzcv, debug-location !28
+    Bcc 1, %bb.3, implicit $nzcv, debug-location !28
+    B %bb.4, debug-location !28
+  
+  bb.4.while.cond1.preheader.preheader:
+    successors: %bb.5(0x80000000)
+  
+    %58:gpr32 = MOVi32imm 24008
+    %59:gpr64 = SUBREG_TO_REG 0, killed %58, %subreg.sub_32
+    %60:gpr64common = ADDXri %stack.0.aA1, 0, 0
+    %61:gpr64 = ADDXrr killed %60, killed %59, debug-location !43
+    %10:gpr64sp = COPY %61, debug-location !43
+    %62:gpr64all = COPY $xzr
+    %57:gpr64all = COPY %62
+    %63:gpr32 = MOVi32imm 1001
+    %11:gpr64all = SUBREG_TO_REG 0, killed %63, %subreg.sub_32
+  
+  bb.5.while.cond1.preheader:
+    successors: %bb.5(0x7c000000), %bb.6(0x04000000)
+  
+    %12:gpr64common = PHI %57, %bb.4, %14, %bb.5
+    %13:gpr64sp = PHI %11, %bb.4, %15, %bb.5, debug-location !44
+    %64:gpr64 = nsw UBFMXri %12, 62, 61, debug-location !44
+    %66:gpr64common = ADDXrr %44, %64, debug-location !44
+    %67:gpr32 = LDRWui killed %66, 2000, debug-location !44 :: (load (s32) from %ir.uglygep96, !tbaa !33)
+    %69:gpr64common = ADDXrr %46, %64, debug-location !45
+    %70:gpr32 = LDRWui killed %69, 2000, debug-location !45 :: (load (s32) from %ir.uglygep97, !tbaa !33)
+    %71:gpr32 = nsw ADDWrr killed %70, killed %67, debug-location !46
+    STRWroX killed %71, %10, %64, 0, 0, debug-location !47 :: (store (s32) into %ir.uglygep99, !tbaa !33)
+    %72:gpr64common = nsw SUBXri %12, 2, 0, debug-location !48
+    %14:gpr64all = COPY %72, debug-location !48
+    %73:gpr64 = SUBSXri %13, 1, 0, implicit-def $nzcv, debug-location !43
+    %15:gpr64all = COPY %73, debug-location !43
+    Bcc 1, %bb.5, implicit $nzcv, debug-location !43
+    B %bb.6, debug-location !43
+  
+  bb.6.vector.ph74:
+    successors: %bb.7(0x80000000)
+  
+    %16:zpr = INDEX_II_S 0, -1, debug-location !51
+    %74:gpr32 = MOVi32imm 62
+    %17:gpr64all = SUBREG_TO_REG 0, killed %74, %subreg.sub_32
+    %75:gpr32common = MOVi32imm 1000
+    %76:zpr = DUP_ZR_S %75
+    %79:gpr64sp = ADDXri %stack.1.aA2, 0, 0
+    %82:gpr64common = MOVi64imm -15
+    %84:zpr = DUP_ZI_S 240, 0
+  
+  bb.7.vector.body79:
+    successors: %bb.7(0x7c000000), %bb.8(0x04000000)
+  
+    %18:zpr = PHI %16, %bb.6, %20, %bb.7
+    %19:gpr64sp = PHI %17, %bb.6, %21, %bb.7, debug-location !52
+    %77:zpr = nsw ADD_ZZZ_S %18, %76, debug-location !52
+    %78:gpr32 = COPY %77.ssub, debug-location !53
+    %80:gpr64sp = ADDXrx %79, killed %78, 18, debug-location !53
+    %81:zpr = REV_ZZ_S %77, debug-location !54
+    ST1W killed %81, %45, killed %80, %82, debug-location !54 :: (store unknown-size into %ir.26, align 4, !tbaa !33)
+    %20:zpr = ADD_ZZZ_S %18, %84
+    %85:gpr64 = SUBSXri %19, 1, 0, implicit-def $nzcv
+    %21:gpr64all = COPY %85
+    Bcc 1, %bb.7, implicit $nzcv
+    B %bb.8
+  
+  bb.8.while.body20.preheader:
+    successors: %bb.9(0x80000000)
+  
+    %87:gpr64all = COPY $xzr
+    %86:gpr64all = COPY %87
+    %88:gpr32 = MOVi32imm 9
+    %22:gpr64all = SUBREG_TO_REG 0, killed %88, %subreg.sub_32
+    %91:gpr64common = ADDXri %stack.1.aA2, 0, 0
+  
+  bb.9.while.body20:
+    successors: %bb.9(0x7c000000), %bb.10(0x04000000)
+  
+    %23:gpr64common = PHI %86, %bb.8, %25, %bb.9
+    %24:gpr64sp = PHI %22, %bb.8, %26, %bb.9, debug-location !53
+    %89:gpr32sp = COPY %23.sub_32, debug-location !53
+    %90:gpr32common = ADDWri killed %89, 8, 0, debug-location !53
+    %92:gpr64common = ADDXrs %91, %23, 2, debug-location !54
+    STRWui killed %90, killed %92, 8, debug-location !54 :: (store (s32) into %ir.uglygep92, !tbaa !33)
+    %93:gpr64common = nsw SUBXri %23, 1, 0, debug-location !57
+    %25:gpr64all = COPY %93, debug-location !57
+    %94:gpr64 = SUBSXri %24, 1, 0, implicit-def $nzcv, debug-location !51
+    %26:gpr64all = COPY %94, debug-location !51
+    Bcc 1, %bb.9, implicit $nzcv, debug-location !51
+    B %bb.10, debug-location !51
+  
+  bb.10.for.body.preheader:
+    successors: %bb.11(0x80000000)
+  
+    %96:gpr32 = MOVi32imm 16008
+    %97:gpr64 = SUBREG_TO_REG 0, killed %96, %subreg.sub_32
+    %98:gpr64common = ADDXri %stack.0.aA1, 0, 0
+    %99:gpr64 = ADDXrr killed %98, killed %97, debug-location !59
+    %100:gpr64all = COPY $xzr
+    %95:gpr64all = COPY %100
+    %27:gpr64sp = COPY %99, debug-location !59
+    %103:gpr64common = MOVaddr target-flags(aarch64-page) @.str.1, target-flags(aarch64-pageoff, aarch64-nc) @.str.1
+    %104:gpr32 = MOVi32imm -6
+  
+  bb.11.for.body:
+    successors: %bb.11(0x7c000000), %bb.12(0x04000000)
+  
+    %28:gpr64common = PHI %95, %bb.10, %29, %bb.11
+    %101:gpr32 = LDRWroX %27, %28, 0, 1, debug-location !60 :: (load (s32) from %ir.uglygep89, !tbaa !33)
+    %102:gpr32all = COPY %28.sub_32
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp, debug-location !61
+    $x0 = COPY %103, debug-location !61
+    $w1 = COPY %102, debug-location !61
+    $w2 = COPY %101, debug-location !61
+    $w3 = COPY %104, debug-location !61
+    $w4 = COPY %104, debug-location !61
+    BL @printf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $w1, implicit $w2, implicit $w3, implicit $w4, implicit-def $sp, implicit-def $w0, debug-location !61
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !61
+    %106:gpr64sp = nuw nsw ADDXri %28, 100, 0, debug-location !62
+    %29:gpr64all = COPY %106, debug-location !62
+    dead $xzr = SUBSXri %28, 1900, 0, implicit-def $nzcv, debug-location !59
+    Bcc 3, %bb.11, implicit $nzcv, debug-location !59
+    B %bb.12, debug-location !59
+  
+  bb.12.for.body34.preheader:
+    successors: %bb.13(0x80000000)
+  
+    %109:gpr64all = COPY $xzr
+    %108:gpr64all = COPY %109
+    %110:gpr64sp = ADDXri %stack.1.aA2, 0, 0
+    %113:gpr64common = MOVaddr target-flags(aarch64-page) @.str.2, target-flags(aarch64-pageoff, aarch64-nc) @.str.2
+  
+  bb.13.for.body34:
+    successors: %bb.13(0x7c000000), %bb.14(0x04000000)
+  
+    %30:gpr64common = PHI %108, %bb.12, %31, %bb.13
+    %111:gpr32 = LDRWroX %110, %30, 0, 1, debug-location !67 :: (load (s32) from %ir.uglygep, !tbaa !33)
+    %112:gpr32all = COPY %30.sub_32
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp, debug-location !68
+    $x0 = COPY %113, debug-location !68
+    $w1 = COPY %112, debug-location !68
+    $w2 = COPY %111, debug-location !68
+    BL @printf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $w1, implicit $w2, implicit-def $sp, implicit-def $w0, debug-location !68
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !68
+    %115:gpr64sp = nuw nsw ADDXri %30, 10, 0, debug-location !69
+    %31:gpr64all = COPY %115, debug-location !69
+    dead $xzr = SUBSXri %30, 990, 0, implicit-def $nzcv, debug-location !66
+    Bcc 3, %bb.13, implicit $nzcv, debug-location !66
+    B %bb.14, debug-location !66
+  
+  bb.14.for.end40:
+    %117:gpr32all = COPY $wzr
+    $w0 = COPY %117, debug-location !74
+    RET_ReallyLR implicit $w0, debug-location !74
+
+...
+---
+name:            init
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: zpr, preferred-register: '' }
+  - { id: 1, class: gpr64all, preferred-register: '' }
+  - { id: 2, class: gpr64common, preferred-register: '' }
+  - { id: 3, class: zpr, preferred-register: '' }
+  - { id: 4, class: gpr64sp, preferred-register: '' }
+  - { id: 5, class: gpr64all, preferred-register: '' }
+  - { id: 6, class: zpr, preferred-register: '' }
+  - { id: 7, class: gpr64all, preferred-register: '' }
+  - { id: 8, class: gpr64common, preferred-register: '' }
+  - { id: 9, class: gpr64all, preferred-register: '' }
+  - { id: 10, class: gpr64all, preferred-register: '' }
+  - { id: 11, class: gpr64all, preferred-register: '' }
+  - { id: 12, class: gpr32, preferred-register: '' }
+  - { id: 13, class: gpr64common, preferred-register: '' }
+  - { id: 14, class: ppr_3b, preferred-register: '' }
+  - { id: 15, class: gpr64common, preferred-register: '' }
+  - { id: 16, class: gpr64sp, preferred-register: '' }
+  - { id: 17, class: gpr64, preferred-register: '' }
+  - { id: 18, class: gpr64all, preferred-register: '' }
+  - { id: 19, class: gpr32, preferred-register: '' }
+  - { id: 20, class: gpr64, preferred-register: '' }
+  - { id: 21, class: gpr64common, preferred-register: '' }
+  - { id: 22, class: gpr32, preferred-register: '' }
+  - { id: 23, class: gpr64common, preferred-register: '' }
+  - { id: 24, class: gpr64sp, preferred-register: '' }
+  - { id: 25, class: gpr64, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+  
+    %0:zpr = INDEX_II_S 0, 1, debug-location !75
+    %11:gpr64all = COPY $xzr
+    %10:gpr64all = COPY %11
+    %12:gpr32 = MOVi32imm 125
+    %1:gpr64all = SUBREG_TO_REG 0, killed %12, %subreg.sub_32
+    %13:gpr64common = MOVaddr target-flags(aarch64-page) @gA1, target-flags(aarch64-pageoff, aarch64-nc) @gA1
+    %14:ppr_3b = PTRUE_S 31
+    %15:gpr64common = MOVaddr target-flags(aarch64-page) @gA2, target-flags(aarch64-pageoff, aarch64-nc) @gA2
+  
+  bb.1.vector.body:
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  
+    %2:gpr64common = PHI %10, %bb.0, %5, %bb.1, debug-location !76
+    %3:zpr = PHI %0, %bb.0, %6, %bb.1, debug-location !77
+    %4:gpr64sp = PHI %1, %bb.0, %7, %bb.1, debug-location !77
+    ST1W %3, %14, %13, %2, debug-location !77 :: (store unknown-size into %ir.uglygep12, align 4, !tbaa !33)
+    ST1W %3, %14, %15, %2, debug-location !78 :: (store unknown-size into %ir.uglygep13, align 4, !tbaa !33)
+    %16:gpr64sp = nuw ADDXri %2, 16, 0, debug-location !76
+    %5:gpr64all = COPY %16, debug-location !76
+    %6:zpr = ADD_ZI_S %3, 16, 0, debug-location !77
+    %17:gpr64 = SUBSXri %4, 1, 0, implicit-def $nzcv, debug-location !76
+    %7:gpr64all = COPY %17, debug-location !76
+    Bcc 1, %bb.1, implicit $nzcv, debug-location !76
+    B %bb.2, debug-location !76
+  
+  bb.2.for.body.preheader:
+    successors: %bb.3(0x80000000)
+  
+    %19:gpr32 = MOVi32imm 2000
+    %18:gpr64all = SUBREG_TO_REG 0, killed %19, %subreg.sub_32
+  
+  bb.3.for.body:
+    successors: %bb.4(0x04000000), %bb.3(0x7c000000)
+  
+    %8:gpr64common = PHI %18, %bb.2, %9, %bb.3
+    %20:gpr64 = nuw nsw UBFMXri %8, 62, 61, debug-location !77
+    %22:gpr32 = COPY %8.sub_32
+    STRWroX %22, %13, %20, 0, 0, debug-location !77 :: (store (s32) into %ir.uglygep11, !tbaa !33)
+    STRWroX %22, %15, %20, 0, 0, debug-location !78 :: (store (s32) into %ir.uglygep, !tbaa !33)
+    %24:gpr64sp = nuw nsw ADDXri %8, 1, 0, debug-location !76
+    %9:gpr64all = COPY %24, debug-location !76
+    dead $xzr = SUBSXri %24, 2001, 0, implicit-def $nzcv, debug-location !75
+    Bcc 1, %bb.3, implicit $nzcv, debug-location !75
+    B %bb.4, debug-location !75
+  
+  bb.4.for.end:
+    RET_ReallyLR debug-location !83
+
+...
