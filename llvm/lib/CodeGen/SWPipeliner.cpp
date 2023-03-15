@@ -183,18 +183,18 @@ void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {
            << msg1;
   });
 }
-static cl::opt<SWPipeliner::SwplRestrinctionsFlag> DisableRestrictionsCheck("swpl-disable-restrictions-check",
-                                               cl::init(SWPipeliner::SwplRestrinctionsFlag::None),
+static cl::opt<SWPipeliner::SwplRestrictionsFlag> DisableRestrictionsCheck("swpl-disable-restrictions-check",
+                                               cl::init(SWPipeliner::SwplRestrictionsFlag::None),
                                                cl::ValueOptional, cl::ReallyHidden,
-                                              cl::values(clEnumValN(SWPipeliner::SwplRestrinctionsFlag::MultipleReg, "1", "multiple register"),
-                                                          clEnumValN(SWPipeliner::SwplRestrinctionsFlag::MultipleDef, "2", "multiple defined operator"),
-                                                          clEnumValN(SWPipeliner::SwplRestrinctionsFlag::All, "", "")
+                                              cl::values(clEnumValN(SWPipeliner::SwplRestrictionsFlag::MultipleReg, "1", "multiple register"),
+                                                          clEnumValN(SWPipeliner::SwplRestrictionsFlag::MultipleDef, "2", "multiple defined operator"),
+                                                          clEnumValN(SWPipeliner::SwplRestrictionsFlag::All, "", "")
                                                                 ));
 
-bool SWPipeliner::isDisableRestrinctionsCheck(SwplRestrinctionsFlag f) {
+bool SWPipeliner::isDisableRestrictionsCheck(SwplRestrictionsFlag f) {
 
   return (f== DisableRestrictionsCheck ||
-          DisableRestrictionsCheck == SwplRestrinctionsFlag::All);
+          DisableRestrictionsCheck == SwplRestrictionsFlag::All);
 }
 
 void SWPipeliner::makeMissedMessage_RestrictionsDetected(const MachineInstr &target) {

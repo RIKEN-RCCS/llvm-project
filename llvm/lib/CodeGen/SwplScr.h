@@ -86,7 +86,7 @@ struct RegAllocInfo {
   unsigned tied_vreg;                   ///< tied仮想レジスタ
   unsigned vreg_classid;                ///< 仮想レジスタのレジスタクラスID
   std::vector<MachineOperand*> vreg_mo; ///< 仮想レジスタのMachineOperand
-  unsigned total_mi;
+  unsigned total_mi;                    ///< MIの総数
 
   /// MachineOperandを追加する
   /// \param [in,out] mo vreg_moに追加するMachineOperand
@@ -102,8 +102,8 @@ struct RegAllocInfo {
     return;
   };
 
-  /// 定義番号を更新する
-  /// また、更新された定義番号を使用して、LiveRangeを再計算する
+  /// 定義番号を更新する。
+  /// また、更新された定義番号を使用して、LiveRangeを再計算する。
   /// \param [in] def 定義番号
   void updateNumDef( int def ) {
     num_def = def;
@@ -111,9 +111,9 @@ struct RegAllocInfo {
     return;
   };
 
-  /// 定義番号を更新する
-  /// また、更新された定義番号を使用して、LiveRangeを再計算する
-  /// 物理レジスタの再利用を禁止するため、参照点は最大値となる
+  /// 定義番号を更新する。
+  /// また、更新された定義番号を使用して、LiveRangeを再計算する。
+  /// 物理レジスタの再利用を禁止するため、参照点は最大値となる。
   /// \param [in] def 定義番号
   void updateNumDefNoReuse(int def) {
     num_def = def;
@@ -121,8 +121,8 @@ struct RegAllocInfo {
     return;
   };
 
-  /// 参照番号を更新する
-  /// また、更新された参照番号を使用して、LiveRangeを再計算する
+  /// 参照番号を更新する。
+  /// また、更新された参照番号を使用して、LiveRangeを再計算する。
   /// \param [in] use 参照番号
   void updateNumUse( int use ) {
     num_use = use;
@@ -130,9 +130,9 @@ struct RegAllocInfo {
     return;
   };
 
-  /// 参照番号を更新する
-  /// また、更新された参照番号を使用して、LiveRangeを再計算する
-  /// 物理レジスタの再利用を禁止するため、参照点は最大値となる
+  /// 参照番号を更新する。
+  /// また、更新された参照番号を使用して、LiveRangeを再計算する。
+  /// 物理レジスタの再利用を禁止するため、参照点は最大値となる。
   /// \param [in] use 参照番号
   void updateNumUseNoReuse(int use) {
     num_use = use;
@@ -141,14 +141,14 @@ struct RegAllocInfo {
   };
 
 private:
-  /// 定義点と参照点から生存区間を求める
+  /// 定義点と参照点から生存区間を求める。
   /// 仮想レジスタごとの生存区間を求める。
   /// 定義点、参照点のどちらかが存在しない場合、計算不能として-1を返す。
   /// \retval 0以上 計算した生存区間
   /// \retval -1 計算不能
   int calcLiveRange();
 
-  /// 定義点と参照点から生存区間を求める
+  /// 定義点と参照点から生存区間を求める。
   /// 仮想レジスタごとの生存区間を求める。
   /// 定義点、参照点のどちらかが存在しない場合、計算不能として-1を返す。
   /// 定義 < 参照の場合、物理レジスタの再利用を禁止するため、
@@ -163,12 +163,17 @@ private:
 class SwplRegAllocInfoTbl {
 
   std::vector<RegAllocInfo> rai_tbl; ///< Swpl-RAで使用する生存区間表
-  unsigned total_mi;
-  int num_ireg=-1;
-  int num_freg=-1;
-  int num_preg=-1;
+  unsigned total_mi;                 ///< MIの総数
+  int num_ireg=-1;                   ///< Integerレジスタの数
+  int num_freg=-1;                   ///< Floating-pointレジスタの数
+  int num_preg=-1;                   ///< Predicateレジスタの数
 
+  /// 割り当てた最大レジスタ数を数える
   void countRegs();
+
+  /// レジスタ割り付け情報からliverangeを求める
+  /// \param [in] range liverange
+  /// \param [in] r レジスタ割り付け情報
   void setRangeReg(std::vector<int>* range, RegAllocInfo& r);
 
 public:
@@ -184,6 +189,7 @@ public:
   /// \param [in] num_def 定義番号
   /// \param [in] num_use 参照番号
   /// \param [in] mo llvm::MachineOperand
+  /// \param [in] tied_vreg tiedの場合、その相手となる仮想レジスタ
   /// \param [in] preg 物理レジスタ番号
   void addRegAllocInfo( unsigned vreg,
                        int num_def,
@@ -221,18 +227,21 @@ public:
   /// debug dump
   void dump();
 
-  /// 割り当てた最大レジスタ数を返す
+  /// Integerレジスタに割り当てた最大レジスタ数を返す
   int countIReg();
+  /// Floating-pointレジスタに割り当てた最大レジスタ数を返す
   int countFReg();
+  /// Predicateレジスタに割り当てた最大レジスタ数を返す
   int countPReg();
 
-  /// 割り当て可能なレジスタ数を返す
+  /// 割り当て可能なIntegerレジスタの数を返す
   int availableIRegNumber() const;
+  /// 割り当て可能なFloating-pointレジスタの数を返す
   int availableFRegNumber() const;
+  /// 割り当て可能なPredicateレジスタの数を返す
   int availablePRegNumber() const;
 
 private:
-
   /// 生存区間表の行のLiveRangeが重なるかを判定する
   /// \param [in] reginfo1 チェック対象のRegAllocInfo
   /// \param [in] reginfo2 チェック対象のRegAllocInfo

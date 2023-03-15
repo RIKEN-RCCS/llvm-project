@@ -807,10 +807,10 @@ public:
   static SwplLoop *currentLoop;
 
   /// 制限抑止オプション指定の結果
-  enum class SwplRestrinctionsFlag {None, MultipleReg, MultipleDef, All};
+  enum class SwplRestrictionsFlag {None, MultipleReg, MultipleDef, All};
 
   /// 制限抑止オプション指定の問い合わせ
-  static bool isDisableRestrinctionsCheck(SwplRestrinctionsFlag f);
+  static bool isDisableRestrictionsCheck(SwplRestrictionsFlag f);
 
   MachineFunction *MF = nullptr;
   const MachineLoopInfo *MLI = nullptr;
