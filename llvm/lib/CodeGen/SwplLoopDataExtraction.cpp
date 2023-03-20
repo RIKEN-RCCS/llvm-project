@@ -538,6 +538,14 @@ static MachineOperand* used_reg(MachineInstr &phi) {
     return nullptr;
   }
 
+  if (def_op->getParent()->getParent()!=phi.getParent()) {
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "DEBUG(used_reg): own_r is livein!\n";
+    }
+    return nullptr;
+
+  }
+
   auto *defMI = def_op->getParent();
   unsigned use_tied_ix;
   bool t = defMI->isRegTiedToUseOperand(defMI->getOperandNo(def_op), &use_tied_ix);
