@@ -33,6 +33,10 @@ static cl::opt<bool>
 static cl::opt<bool>
     GenCopy4AllTiedDef("swpl-gen-copy-for-all-tieddef",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> NoMMOIsNoDep("swpl-nommo-is-nodep",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> EnableTieddef("swpl-enable-tieddef",cl::init(true), cl::ReallyHidden);
+
+// rm-copyを強化する（reg-alloc時と同じ処理にする）
+static cl::opt<bool> IgnoreRegClass_RmCopy("swpl-ignore-class-rm-copy",cl::init(true), cl::ReallyHidden);
 
 using BasicBlocks = std::vector<MachineBasicBlock *>;
 using BasicBlocksIterator = std::vector<MachineBasicBlock *>::iterator ;
@@ -587,7 +591,10 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
   DenseMap<MachineInstr*, MachineOperand*> uses;
   for (auto &phi:body->phis()) {
     phis.push_back(&phi);
-    uses[&phi]=used_reg(phi);
+    if (DisableSuppressCopy)
+      uses[&phi]=nullptr;
+    else
+      uses[&phi]=used_reg(phi);
   }
   /// (1). Phi命令を検索し、Phi命令の単位に以下の処理を行う。
   for (auto *phi:phis) {
@@ -667,8 +674,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     ///   (1)-4. preにin_rからown_rへのCopy命令を挿入する(def_r = Copy own_r)。
     /// own_r/def_rの参照がない場合はCOPY生成不要
     auto *def_op = uses[phi];
-    if (liveout_def || liveout_own || def_op==nullptr ||
-        DisableSuppressCopy) {
+    if (liveout_def || liveout_own || def_op==nullptr) {
       MachineInstr *c=BuildMI(*body, body->getFirstTerminator(), dbgloc,
                                 SWPipeliner::TII->get(TargetOpcode::COPY), def_r)
                             .addReg(own_r,0, own_subreg);
@@ -796,7 +802,7 @@ bool SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
   /// PHIからCOPYを生成する際、liveOutsにPHIで定義されるvregを追加している。
   convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);
 
-  if (SWPipeliner::STM->isEnableRegAlloc())
+  if (SWPipeliner::STM->isEnableRegAlloc() || EnableTieddef)
     // レジスタ割付が動作するなら、tied-defにCOPY命令を追加する
     normalizeTiedDef(new_bb);
 
@@ -936,7 +942,30 @@ void SwplLoop::removeCopy(MachineBasicBlock *body) {
     }
 
     if (use_onlyphi ||
-        SWPipeliner::TII->canRemoveCopy(*body, mi, *SWPipeliner::MRI, SWPipeliner::STM->isEnableRegAlloc())){
+        SWPipeliner::TII->canRemoveCopy(*body, mi, *SWPipeliner::MRI,
+                                        (SWPipeliner::STM->isEnableRegAlloc() || IgnoreRegClass_RmCopy))){
+
+      // op1定義からop0定義までに間にop0の参照がある場合はCOPYを削除できない
+      Register r1 = mi.getOperand(1).getReg();
+      bool use_op0=false;
+      auto *def_use = SWPipeliner::MRI->getOneDef(r1);
+      if (def_use!=nullptr) {
+        for (MachineInstr *t = def_use->getParent()->getNextNode(); t!=nullptr && !use_op0; t=t->getNextNode()) {
+          if (t==&mi) break;
+          for (auto &MO:t->uses()) {
+            if (MO.isReg() && MO.getReg()==r0) {
+              use_op0 = true;
+              break;
+            }
+          }
+        }
+        if (use_op0) {
+          if (SWPipeliner::isDebugOutput()) {
+            dbgs() << " op0 is referenced from the definition of op1 to the definition of op0.!\n";
+          }
+          continue;
+        }
+      }
       for (auto *op:target_mo) {
         auto *umi=op->getParent();
         if (SWPipeliner::isDebugOutput()) {
