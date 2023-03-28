@@ -33,7 +33,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     GenCopy4AllTiedDef("swpl-gen-copy-for-all-tieddef",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> NoMMOIsNoDep("swpl-nommo-is-nodep",cl::init(false), cl::ReallyHidden);
-static cl::opt<bool> EnableTieddef("swpl-enable-tieddef",cl::init(true), cl::ReallyHidden);
+static cl::opt<bool> EnableNormalizeTieddef("swpl-enable-normalize-tieddef",cl::init(true), cl::ReallyHidden);
 
 // rm-copyを強化する（reg-alloc時と同じ処理にする）
 static cl::opt<bool> IgnoreRegClass_RmCopy("swpl-ignore-class-rm-copy",cl::init(true), cl::ReallyHidden);
@@ -802,7 +802,7 @@ bool SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
   /// PHIからCOPYを生成する際、liveOutsにPHIで定義されるvregを追加している。
   convertNonSSA(new_bb, pre, dbgloc, ob, LiveOutReg);
 
-  if (SWPipeliner::STM->isEnableRegAlloc() || EnableTieddef)
+  if (SWPipeliner::STM->isEnableRegAlloc() || EnableNormalizeTieddef)
     // レジスタ割付が動作するなら、tied-defにCOPY命令を追加する
     normalizeTiedDef(new_bb);
 
