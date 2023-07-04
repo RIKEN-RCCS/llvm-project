@@ -39,30 +39,9 @@ using StmOpcodeId=unsigned ;
 ///  pipe4  [label = "{pipeline:}|{stage:|1|1}|{resource:|EAGB|EAGB}"];
 /// }
 /// \enddot
-class StmPipeline {
-//  TargetSchedModel& SM;///< SchedModel
-public:
-  StmPatternId patternId=0;
+struct StmPipeline {
   SmallVector<unsigned,4> stages;
   SmallVector<StmResourceId,4> resources;
-
-  /// constructor
-  StmPipeline(){}
-  virtual ~StmPipeline() {}
-
-  /// Output StmPipeline in display format。
-  /// \param ost output steam
-  virtual void print(llvm::raw_ostream& ost) const = 0;
-
-  /// count the resources present in resources
-  /// \param [in] resource Resources to be counted
-  /// \return number of resource
-  virtual int getNResources(StmResourceId resource) const = 0;
-
-  /// return the resource name
-  /// \param [in] resource ResourceId
-  /// \return Resource name
-  virtual const char* getResourceName(StmResourceId resource) const = 0;
 };
 
 /// Handles the register types used by the SWPL function
@@ -288,7 +267,7 @@ public:
   /// Returns all resource usage patterns used by the specified instruction.
   /// \param [in] mi Target instruction
   /// \return StmPipelines
-  virtual const StmPipelinesImpl * getPipelines(const MachineInstr& mi) = 0;
+  virtual const StmPipelinesImpl * getPipelines(const MachineInstr& mi) const = 0;
 
   /// returns the number of resources available
   /// \return number of resources
@@ -299,12 +278,35 @@ public:
   /// \return name
   virtual const char* getResourceName(StmResourceId resource) const = 0;
 
+  /// print pipeline
+  /// \param [in] ost
+  /// \param [in] pipeline
+  virtual void print(llvm::raw_ostream &ost, const StmPipeline &pipeline) const = 0;
+
   /// Determine if an instruction is Pseudo
   /// \details Judge as Pseudo only if instruction is not defined in SchedModel
   /// \param [in] mi instruction
   /// \retval true Psedo
   /// \retval false not Pseudo
   virtual bool isPseudo(const MachineInstr& mi) const = 0;
+
+  /// Get instruction-type-ID from instruction
+  /// \param [in] mi Target instruction
+  /// \return instruction-type-ID (ex. AArch64SwplSchedA64FX::INT_OP)
+  virtual unsigned getInstType(const MachineInstr &mi) const = 0;
+
+  /// Returns a string corresponding to instruction-type-ID.
+  /// \param [in] insttypeid instruction-type-ID
+  /// \return string corresponding to instruction-type-ID
+  virtual const char* getInstTypeString(unsigned insttypeid) const = 0;
+
+  /// Calculate penalty by instruction type and dependent register.
+  /// \param [in] prod MI of producer instruction
+  /// \param [in] cons MI of consumer instruction
+  /// \param [in] regs depend reg
+  /// \return penalty by instruction type and dependent register
+  virtual unsigned calcPenaltyByInsttypeAndDependreg(const MachineInstr& prod, const MachineInstr& cons,
+                                                     const llvm::Register& reg) const = 0;
 
   /// Determine if the register allocation has invalidated.
   /// \retval true Invalid the register allocation in the swpl pass.

@@ -1,4 +1,4 @@
-# RUN: llc -mcpu=a64fx -O1 -fswp -swpl-disable-reg-alloc -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
+# RUN: llc -mcpu=a64fx -O1 -fswp -swpl-disable-reg-alloc -start-before=aarch64-swpipeliner -o /dev/null  -pass-remarks-output=- -swpl-debug %s 2>&1 | FileCheck %s
 #
 # CHECK: DBG(SwplLoop::convertPrePostIndexInstr)
 # CHECK-NEXT:  before:early-clobber %41:gpr64sp, %42:fpr32 = LDRSpre %39:gpr64sp(tied-def 0), -4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
@@ -8,6 +8,8 @@
 # CHECK-NEXT:  before:early-clobber %43:gpr64sp, %44:fpr32 = LDRSpre %39:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
 # CHECK-NEXT:  after 1:%44:fpr32 = LDURSi %39:gpr64sp, 4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
 # CHECK-NEXT:  after 2:%43:gpr64sp = ADDXri %39:gpr64sp, 4, 0
+# CHECL: 'SVE instruction latency is calculated at '
+# CHECK: '512'
 
 --- |
   ; ModuleID = 'a.c'

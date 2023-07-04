@@ -498,7 +498,7 @@ void SwplModuloDdg::dump() {
     else {
       for( auto pl : *(SWPipeliner::STM->getPipelines( *(inst->getMI()) ) ) ){
         dbgs() << "\t\t";
-        pl->print( dbgs() );
+        SWPipeliner::STM->print( dbgs(), *pl );
       }
     }
 
