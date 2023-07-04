@@ -24,8 +24,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-swpipeliner"
 #define UNAVAILABLE_REGS 7
+#define PRIO_ASC_ORDER 0
+#define PRIO_UNUSE 1
 
 static cl::opt<bool> DebugSwplRegAlloc("swpl-debug-reg-alloc",cl::init(false), cl::ReallyHidden);
+static cl::opt<int> SwplRegAllocPrio("swpl-reg-alloc-prio",cl::init(PRIO_ASC_ORDER), cl::ReallyHidden);
 
 // 使ってはいけない物理レジスタのリスト
 static DenseSet<unsigned> nousePhysRegs {
@@ -459,8 +462,8 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
       }
     }
 
-    // 第１候補：空いている物理レジスタから割り付け
-    if (!allocated) {
+    // オプション指定があった場合は、空いている物理レジスタから優先して割り付け
+    if ((!allocated) && (SwplRegAllocPrio == PRIO_UNUSE)) {
       const TargetRegisterClass *trc = SWPipeliner::MRI->getRegClass(itr_cur->vreg);
       for (auto preg:*trc) {
         // 物理レジスタ番号取得
@@ -481,9 +484,9 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
       }
     }
 
-    // 第２候補：空いている物理レジスタがなく割り当てできなかったら、
-    // 過去に割り当て済みの物理レジスタの中から
-    // 「生存区間終了している」かつ「最も過去に"定義"に割り当てたもの」から再利用
+    // 仮想レジスタのレジスタクラスに該当する物理レジスタ群を取得。
+    // 当該物理レジスタをキーにレジスタ管理情報の表を見ていき、
+    // 「生存区間が自分と重ならない」ものが見つかり次第、当該物理レジスタを割り付け。
     if (!allocated) {
       unsigned preg = rai_tbl.getReusePReg( itr_cur );
       if( preg!=0 ) {
