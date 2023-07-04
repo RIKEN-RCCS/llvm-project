@@ -12,37 +12,12 @@
 #ifndef AARCH64SWPLTM_H
 #define AARCH64SWPLTM_H
 
+#include "AArch64SwplSchedA64FX.h"
 #include "AArch64TargetTransformInfo.h"
-#include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/SwplTargetMachine.h"
-#include "AArch64A64FXResourceInfo.h"
+#include "llvm/CodeGen/TargetSchedule.h"
 
 namespace llvm {
-
-/// SWPL向けMIが利用する資源情報。
-class AArch64StmPipeline: public StmPipeline {
-  //  TargetSchedModel& SM;///< SchedModel
-public:
-
-  /// constructor/destructor
-  AArch64StmPipeline(){}
-  virtual ~AArch64StmPipeline() {}
-
-  /// StmPipelineをダンプする。
-  /// \param ost 出力先
-  void print(raw_ostream& ost) const override;
-
-  /// resourcesに存在する資源を数える
-  /// \param [in] resource カウントしてほしい資源
-  /// \return リソース数
-  int getNResources(StmResourceId resource) const override;
-
-  /// ResourceIdに応じた名前を返す
-  /// \param [in] resource 名前を取得したい資源
-  /// \return ResourceIdに応じた名前
-  const char* getResourceName(StmResourceId resource) const override;
-};
-
 
 /// SWPL向けにRegisterの種別を判断する。
 class AArch64StmRegKind: public StmRegKind {
@@ -147,15 +122,8 @@ public:
 /// SchedModelを利用してターゲット情報を取得し、SWPL機能に提供する
 class AArch64SwplTargetMachine: public SwplTargetMachine {
 protected:
-  DenseMap<StmResourceId, int> tmNumSameKindResources;  ///< 資源種別ごとの数
   DenseMap<StmOpcodeId, StmPipelinesImpl * > stmPipelines; ///< Opcodeが利用する資源
   unsigned numResource=0; ///< 資源数（資源種別数ではない）
-
-  const AArch64A64FXResInfo *ResInfo=nullptr;
-  /// StmPipelineを生成する
-  /// \param [in] mp 対象となる命令
-  /// \return 生成したStmPipeline
-  StmPipelinesImpl *generateStmPipelines(const MachineInstr &mp);
 
   /// 指定命令の資源情報が取得できるかどうかをチェックする
   /// \param [in] mi 調査対象の命令
@@ -164,6 +132,8 @@ protected:
   bool isImplimented(const MachineInstr &mi) const;
 
 public:
+  AArch64SwplSchedA64FX SwplSched; ///< A64FX SchedModel for SWP
+
   /// constructor
   AArch64SwplTargetMachine() {}
   /// destructor
@@ -176,11 +146,6 @@ public:
         delete tms.getSecond();
       }
     }
-    if (ResInfo!=nullptr) {
-      delete ResInfo;
-      ResInfo=nullptr;
-    }
-
   }
 
   /// SwplTargetMachineの初期化を行う。
@@ -227,7 +192,7 @@ public:
   /// 指定命令が利用するリソースの利用パターンをすべて返す。
   /// \param [in] mi 対象命令
   /// \return StmPipelinesを返す
-  const StmPipelinesImpl * getPipelines(const MachineInstr& mi) override;
+  const StmPipelinesImpl * getPipelines(const MachineInstr& mi) const override;
 
 
   /// 利用可能な資源の数を返す
@@ -239,12 +204,35 @@ public:
   /// \return ResourceIdに応じた名前
   const char* getResourceName(StmResourceId resource) const override;
 
+  /// StmPipelineをダンプする。
+  /// \param ost 出力先
+  /// \param pipeline 出力対象pipeline
+  void print(raw_ostream &ost, const StmPipeline &pipeline) const override;
+
   /// 命令がPseudoかどうかを判断する
   /// \details 命令がSchedModelに定義されていない場合のみ、Pseudoと判断する
   /// \param [in] mi 対象命令
   /// \retval truer Psedo命令
   /// \retval false Pseudo命令ではない
   bool isPseudo(const MachineInstr& mi) const override;
+
+  /// 命令から命令種のIDを取得する
+  /// \param [in] mi 対象命令
+  /// \return 命令種のID AArch64SwplSchedA64FX::INT_OPなど
+  unsigned getInstType(const MachineInstr &mi) const override;
+
+  /// 命令種のIDに該当する文字列を返す
+  /// \param [in] insttypeid 命令種のID
+  /// \return 命令種のIDに該当する文字列
+  const char* getInstTypeString(unsigned insttypeid) const override;
+
+  /// 命令種と依存レジスタによるペナルティを算出する
+  /// \param [in] prod 先行命令のMI
+  /// \param [in] cons 後続命令のMI
+  /// \param [in] regs 先行命令と後続命令で依存するレジスタ
+  /// \return 命令種と依存レジスタによるペナルティ
+  unsigned calcPenaltyByInsttypeAndDependreg(const MachineInstr& prod, const MachineInstr& cons,
+                                             const llvm::Register& reg) const override;
 
   /// SWPLでのレジスタ割り付けを無効にするか否かを判断する
   /// \retval true  レジスタ割り付けを無効にする

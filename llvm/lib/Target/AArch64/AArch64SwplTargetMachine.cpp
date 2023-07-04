@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Regex.h"
 
 using namespace llvm;
 
@@ -35,12 +36,13 @@ static cl::opt<unsigned> MaxInstNum("swpl-max-inst-num",cl::init(500), cl::Reall
 static cl::opt<unsigned> MaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyHidden);
 static cl::opt<bool> DisableRegAlloc("swpl-disable-reg-alloc",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableRegAlloc("swpl-enable-reg-alloc",cl::init(true), cl::ReallyHidden);
-static cl::opt<unsigned> LimitUseResPattern("swpl-resource-pattern-limit",cl::init(32), cl::ReallyHidden);
 
 // TargetLoopのMI出力オプション（swpl処理は迂回）
 static cl::opt<bool> OptionDumpTargetLoopOnly("swpl-debug-dump-targetloop-only",cl::init(false), cl::ReallyHidden);
 // TargetLoopのMI出力オプション
 static cl::opt<bool> OptionDumpTargetLoop("swpl-debug-dump-targetloop",cl::init(false), cl::ReallyHidden);
+// MIのリソース情報出力オプション
+static cl::opt<std::string> OptionDumpResource("swpl-debug-dump-resource-filter",cl::init(""), cl::ReallyHidden);
 
 static void printDebug(const char *f, const StringRef &msg, const MachineLoop &L) {
   if (!SWPipeliner::isDebugOutput()) return;
@@ -519,173 +521,81 @@ SwplTargetMachine *AArch64InstrInfo::getSwplTargetMachine() const {
 
 }
 
-
-namespace llvm {
-
-/// 利用資源パターンを生成するための生成過程で使われるデータ構造
-struct work_node {
-  StmResourceId id; ///< 利用資源
-  int startCycle=0; ///< 開始サイクル
-  SmallVector<work_node*, 8> nodes; ///< 次の利用資源
-
-  /// constructor
-  explicit work_node(StmResourceId id):id(id){}
-
-  /// destructor
-  ~work_node() {
-    /// 次の利用資源を削除する
-    for (auto *n:nodes) delete n;
+static const char *getResourceName(StmResourceId resource) {
+  const char *name="";
+  switch (resource) {
+  case AArch64SwplSchedA64FX::FLA:name="FLA";break;
+  case AArch64SwplSchedA64FX::FLB:name="FLB";break;
+  case AArch64SwplSchedA64FX::EXA:name="EXA";break;
+  case AArch64SwplSchedA64FX::EXB:name="EXB";break;
+  case AArch64SwplSchedA64FX::EAGA:name="EAGA";break;
+  case AArch64SwplSchedA64FX::EAGB:name="EAGB";break;
+  case AArch64SwplSchedA64FX::PRX:name="PRX";break;
+  case AArch64SwplSchedA64FX::BR:name="BR";break;
+  case AArch64SwplSchedA64FX::LSU1:name="LSU1";break;
+  case AArch64SwplSchedA64FX::LSU2:name="LSU2";break;
+  case AArch64SwplSchedA64FX::FLA_C:name="FLA_C";break;
+  case AArch64SwplSchedA64FX::FLB_C:name="FLB_C";break;
+  case AArch64SwplSchedA64FX::EXA_C:name="EXA_C";break;
+  case AArch64SwplSchedA64FX::EXB_C:name="EXB_C";break;
+  case AArch64SwplSchedA64FX::EAGA_C:name="EAGA_C";break;
+  case AArch64SwplSchedA64FX::EAGB_C:name="EAGB_C";break;
+  case AArch64SwplSchedA64FX::FLA_E:name="FLA_E";break;
+  case AArch64SwplSchedA64FX::EXA_E:name="EXA_E";break;
+  case AArch64SwplSchedA64FX::EXB_E:name="EXB_E";break;
+  default:
+    llvm_unreachable("unknown resourceid");
   }
-
-  /// 前の利用資源につなげる
-  ///
-  /// \param [in] p つなげる利用資源
-  void append(work_node*p) {
-    if (p==nullptr) return;
-    nodes.push_back(p);
-  }
-
-  /// 資源の利用パターンを生成する
-  ///
-  /// \param [in] SM SchedModel
-  /// \param [out] stmPipelines 生成結果
-  void gen_patterns(TargetSchedModel&SM, StmPipelinesImpl &stmPipelines) {
-    std::vector<StmResourceId> ptn;
-    std::vector<int> cycle;
-    StmPatternId patternId=0;
-    auto rc = gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
-    if (rc) {
-      if (DebugStm)
-        dbgs() << "DBG(AArch64SwplTargetMachine::gen_pattern): Number of patterns reached limit\n";
-    }
-  }
-
-  /// 資源の利用パターンを生成する
-  ///
-  /// \param [in] SM SchedModel
-  /// \param [in] patternId 利用資源パターンのID
-  /// \param [in] ptn 利用資源パターン
-  /// \param [in] cycle 開始サイクル
-  /// \param [out] stmPipelines 生成結果
-  /// \retval true 生成パターン数の制限で、一部のパターンのみ生成しました
-  /// \retval false すべてのパターンを生成した
-  bool gen_pattern(TargetSchedModel&SM, StmPatternId &patternId, std::vector<StmResourceId> ptn, std::vector<int> cycle,
-                   StmPipelinesImpl &stmPipelines) {
-
-    if (LimitUseResPattern > 0 && patternId >= LimitUseResPattern) {
-      return true;
-    }
-    // 引数：ptnはコピーコンストラクタで複製させている。
-    if (id!=A64FXRes::PortKind::P_NULL) {
-      ptn.push_back(id);
-      cycle.push_back(startCycle);
-      if (nodes.empty()) {
-        AArch64StmPipeline *t=new AArch64StmPipeline();
-        stmPipelines.push_back(t);
-        t->patternId=patternId++;
-        for (auto resource:ptn) {
-          t->resources.push_back(resource);
-        }
-        for (auto stage:cycle) {
-          t->stages.push_back(stage);
-        }
-        return false;
-      }
-    }
-    for ( work_node* c : nodes ) {
-      // and-node
-      auto rc = c->gen_pattern(SM, patternId, ptn, cycle, stmPipelines);
-      if (rc) return true;
-    }
-    return false;
-  }
-};
+  return name;
 
 }
 
-using nodelist=std::vector<work_node*>;
-
-/// 利用資源パターン生成の準備
-/// \param [in] sm SchedModel
-/// \param [in,out] next_target 次の資源をつなげる親
-/// \param [in] target
-/// \param [in] portKindList
-/// \param [in] cycle 開始サイクル
-static void makePrePattern(TargetSchedModel sm, nodelist&next_target, nodelist&target, const SmallVectorImpl<A64FXRes::PortKind> &portKindList, int cycle) {
-  for (const auto portKind: portKindList) {
-    for (auto *t:target) {
-      work_node *p=new work_node(portKind);
-      p->startCycle=cycle;
-      t->nodes.push_back(p);
-      next_target.push_back(p);
-    }
-
-  }
-}
-
-/// 利用資源パターン生成の準備
-/// \param [in] sm SchedModel
-/// \param [in] resInfo
-/// \param [in] mi 対象のMachineInstr
-/// \return 利用資源パターンを生成するための中間表現
-/// @note
-/// stage値はAArch64A64FXResInfoがstartCycleを真面目に対応しているため、歯抜けになることがある。<br>
-/// スケジューリングの際に問題が出たら、歯抜けステージ値が無くなるよう、「0,1,7」から「0,1,2」に変更する。（2020年11月30日鎌塚氏より指示）<br>
-/// 例：FMAXNMPv2i64pという命令では、以下のようにstage値が0,1,7と歯抜けになる。<br>
-/// (パターン=0) stage/resource: 0/FLA, 1/FLA, 7/FLA<br>
-/// (パターン=1) stage/resource: 0/FLA, 1/FLA, 7/FLB
-static work_node* makePrePatterns(TargetSchedModel& sm, const AArch64A64FXResInfo& resInfo,  const MachineInstr& mi) {
-  work_node *root=nullptr;
-  nodelist *target=nullptr;
-  nodelist *next_target=nullptr;
-  auto *IResDesc = resInfo.getInstResDesc(mi);
-  if (IResDesc==nullptr) {
-    llvm_unreachable("AArch64A64FXResInfo::getInstResDesc() is nullptr");
-  }
-  assert(IResDesc!=nullptr);
-  const auto &cycleList=IResDesc->getStartCycleList();
-  int ix=0;
-  for (const auto &PRE : IResDesc->getResList()) {
-
-    if (root==nullptr) {
-      root=new work_node(A64FXRes::PortKind::P_NULL);
-      target=new nodelist;
-      next_target=new nodelist;
-      target->push_back(root);
-    }
-    makePrePattern(sm, *next_target, *target, PRE, cycleList[ix++]);
-    nodelist* t=target;
-    target=next_target;
-    next_target=t;
-    t->clear();
-  }
-  if  (target!=nullptr) {
-    target->clear();
-    delete target;
-  }
-  if (next_target!=nullptr) {
-    next_target->clear();
-    delete next_target;
-  }
-  return root;
-}
+static StmPipelines forPseudoMI;
+static StmPipelines forNoImplMI;
+Regex RDumpResource;
+StringSet<> dumpedMIResource;
 
 void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
   if (MF==nullptr) {
     const TargetSubtargetInfo &ST = mf.getSubtarget();
     SM.init(&ST);
-    ResInfo=new AArch64A64FXResInfo(ST);
-    tmNumSameKindResources[A64FXRes::PortKind::P_FLA]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_FLB]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_EXA]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_EXB]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_EAGA]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_EAGB]=2;
-    tmNumSameKindResources[A64FXRes::PortKind::P_PRX]=1;
-    tmNumSameKindResources[A64FXRes::PortKind::P_BR]=1;
-    numResource=8; // 資源管理がSchedModelとは別になったので、ハードコードする
+    numResource = AArch64SwplSchedA64FX::END - 1;
+
+    forPseudoMI.push_back(new StmPipeline());
+    auto *p = new StmPipeline();
+    p->stages.push_back(0);
+    p->resources.push_back(AArch64SwplSchedA64FX::BR);
+    forNoImplMI.push_back(p);
+
   }
   MF=&mf;
+
+  // 属性VLをMFから取り出し、AArch64SwplSchedA64FXに設定する
+  const AArch64Subtarget &Subtarget = mf.getSubtarget<AArch64Subtarget>();
+  SwplSched.VectorLength = Subtarget.getMaxSVEVectorSizeInBits();
+
+  if (SwplSched.VectorLength > 512 || SwplSched.VectorLength == 0) {
+    SwplSched.VectorLength = 512;
+  }
+  for (auto &mbb:mf) {
+    DebugLoc loc;
+    if (mbb.empty()) continue;
+    for (auto &mi : mbb) {
+      auto &l = mi.getDebugLoc();
+      loc=l;
+      if (l.get()==nullptr) continue;
+      break;
+    }
+    SWPipeliner::ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "VectorLength", loc, &mbb)
+             << "SVE instruction latency is calculated at " << ore::NV("VL", SwplSched.VectorLength) << "bit.";
+    });
+    break;
+  }
+
+  // swpl-debug-dump-resourceで設定された正規表現をコンパイルする
+  RDumpResource = Regex(OptionDumpResource);
+  dumpedMIResource.clear();
 }
 
 unsigned int AArch64SwplTargetMachine::getFetchBandwidth(void) const {
@@ -696,58 +606,9 @@ unsigned int AArch64SwplTargetMachine::getRealFetchBandwidth(void) const {
   return OptionRealFetchWidth;
 }
 
-int AArch64StmPipeline::getNResources(StmResourceId resource) const {
-  int counter=0;
-  for (StmResourceId r: resources) {
-    if (r==resource) counter++;
-  }
-  return counter;
-}
-
-void AArch64StmPipeline::print(raw_ostream &ost) const {
-  ost << "DBG(AArch64StmPipeline::print) stage/resource("<< patternId << "): ";
-  int last=stages.size();
-  const char *sep="";
-  for (int ix=0; ix<last; ix++) {
-    ost << sep << stages[ix] << "/" << getResourceName(resources[ix]);
-    sep=", ";
-  }
-  ost << "\n";
-}
-
-const char *AArch64StmPipeline::getResourceName(StmResourceId resource) const {
-  // @todo AArch64SwplTargetMachine::getResourceName()を呼び出すようにすべきor本メソッド削除
-  const char *name="";
-  switch (resource) {
-  case A64FXRes::PortKind::P_FLA:name="FLA";break;
-  case A64FXRes::PortKind::P_FLB:name="FLB";break;
-  case A64FXRes::PortKind::P_EXA:name="EXA";break;
-  case A64FXRes::PortKind::P_EXB:name="EXB";break;
-  case A64FXRes::PortKind::P_EAGA:name="EAGA";break;
-  case A64FXRes::PortKind::P_EAGB:name="EAGB";break;
-  case A64FXRes::PortKind::P_PRX:name="PRX";break;
-  case A64FXRes::PortKind::P_BR:name="BR";break;
-  default:
-    llvm_unreachable("unknown resourceid");
-  }
-  return name;
-}
 
 const char *AArch64SwplTargetMachine::getResourceName(StmResourceId resource) const {
-  const char *name="";
-  switch (resource) {
-  case A64FXRes::PortKind::P_FLA:name="FLA";break;
-  case A64FXRes::PortKind::P_FLB:name="FLB";break;
-  case A64FXRes::PortKind::P_EXA:name="EXA";break;
-  case A64FXRes::PortKind::P_EXB:name="EXB";break;
-  case A64FXRes::PortKind::P_EAGA:name="EAGA";break;
-  case A64FXRes::PortKind::P_EAGB:name="EAGB";break;
-  case A64FXRes::PortKind::P_PRX:name="PRX";break;
-  case A64FXRes::PortKind::P_BR:name="BR";break;
-  default:
-    llvm_unreachable("unknown resourceid");
-  }
-  return name;
+  return ::getResourceName(resource);
 }
 
 int AArch64SwplTargetMachine::computeMemFlowDependence(const MachineInstr *, const MachineInstr *) const {
@@ -756,49 +617,72 @@ int AArch64SwplTargetMachine::computeMemFlowDependence(const MachineInstr *, con
   return 1;
 }
 
+
 const StmPipelinesImpl *
-AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) {
-  auto *tps= stmPipelines[mi.getOpcode()];
-  if (tps==nullptr) {
-    tps= generateStmPipelines(mi);
-    stmPipelines[mi.getOpcode()]=tps;
-  }
-  return tps;
-}
+AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) const {
 
-StmPipelinesImpl *
-AArch64SwplTargetMachine::generateStmPipelines(const MachineInstr &mi) {
-
-  work_node *t=nullptr;
-  if (isImplimented(mi)) {
-    t=makePrePatterns(SM, *ResInfo, mi);
-    if (t==nullptr) {
-      if (DebugStm)
-        dbgs() << "DBG(AArch64SwplTargetMachine::generateStmPipelines): makePrePatterns() is nullptr. MIR=" << mi;
-      return nullptr;
+  // swpl-debug-dump-resourceで指定されていて、まだdumpしていないMIのみdumpする
+  bool dump = false;
+  if (!(OptionDumpResource.empty())){
+    // miを文字列にして既にdumpしたかを判断する
+    std::string mistr;
+    raw_string_ostream mistream(mistr);
+    mi.print(mistream);
+    if (RDumpResource.match(SWPipeliner::TII->getName(mi.getOpcode())) &&
+        !(dumpedMIResource.contains(mistr))){
+      dump = true;
+      dumpedMIResource.insert(mistr);
     }
   }
-  auto *pipelines=new StmPipelines;
-  if (t) {
-    if (DebugStm)
-      dbgs() << "DBG(AArch64SwplTargetMachine::generateStmPipelines): MIR=" << mi;
-    t->gen_patterns(SM, *pipelines);
-    delete t;
-  } else {
-    pipelines->push_back(new AArch64StmPipeline());
-    errs() << "warning: Unimplemented instruction: " << mi;
+
+  if (isPseudo(mi)) {
+    if (dump) {
+      dbgs() << "DBG(AArch64SwplTargetMachine::getPipelines): Pseudo-instr: "
+             << SWPipeliner::TII->getName(mi.getOpcode()) << "\n";
+    }
+    return &forPseudoMI;
+  } else if (!isImplimented(mi)) {
+    if (dump || SWPipeliner::isDebugOutput()) {
+      dbgs() << "DBG(AArch64SwplTargetMachine::getPipelines): undefined machine-instr: "
+             << SWPipeliner::TII->getName(mi.getOpcode()) << "\n";
+    }
+    return &forNoImplMI;
   }
-  if (DebugStm) {
-    for (auto*pipeline:*pipelines) {
-      pipeline->print(dbgs());
+  auto id=SwplSched.getRes(mi);
+  const StmPipelinesImpl *p=SwplSched.getPipelines(id);
+  if (dump) {
+    dbgs() << "DBG(AArch64SwplTargetMachine::getPipelines): MI: " << mi;
+    const char *q="";
+    switch ((id&0xfffff000)) {
+    case AArch64SwplSchedA64FX::INT_OP:q="INT_OP"; break;
+    case AArch64SwplSchedA64FX::INT_LD:q="INT_LD"; break;
+    case AArch64SwplSchedA64FX::INT_ST:q="INT_ST"; break;
+    case AArch64SwplSchedA64FX::SIMDFP_SVE_OP:q="SIMDFP_SVE_OP"; break;
+    case AArch64SwplSchedA64FX::SIMDFP_SVE_LD:q="SIMDFP_SVE_LD"; break;
+    case AArch64SwplSchedA64FX::SIMDFP_SVE_ST:q="SIMDFP_SVE_ST"; break;
+    case AArch64SwplSchedA64FX::SVE_CMP_INST:q="SVE_CMP_INST"; break;
+    case AArch64SwplSchedA64FX::PREDICATE_OP:q="PREDICATE_OP"; break;
+    case AArch64SwplSchedA64FX::PREDICATE_LD:q="PREDICATE_LD"; break;
+    case AArch64SwplSchedA64FX::PREDICATE_ST:q="PREDICATE_ST"; break;
+    }
+    dbgs() << "  ResourceID: " << q << "+" << (id&0xfff) << "\n";
+    dbgs() << "  latency: " << SwplSched.getLatency(id) << "\n";
+    dbgs() << "  seqDecode: " << (SwplSched.isSeqDecode(id) ? "true" : "false") << "\n";
+    for (const auto s: *p) {
+      print(dbgs(), *s);
     }
   }
-  return pipelines;
+  return p;
 }
+
 int AArch64SwplTargetMachine::computeRegFlowDependence(const MachineInstr* def, const MachineInstr* use) const {
-  const auto *IResDesc=ResInfo->getInstResDesc(*def);
-  if (IResDesc==nullptr) return 1;
-  return IResDesc->getLatency();
+  if (isPseudo(*def)) {
+    return 0;
+  }
+  if (isImplimented(*def)) {
+    return SwplSched.getLatency(SwplSched.getRes(*def));
+  }
+  return 1;
 }
 
 int AArch64SwplTargetMachine::computeMemAntiDependence(const MachineInstr *, const MachineInstr *) const {
@@ -814,19 +698,62 @@ unsigned int AArch64SwplTargetMachine::getNumResource(void) const {
 }
 
 bool AArch64SwplTargetMachine::isImplimented(const MachineInstr&mi) const {
-  if (OptionCopyIsVirtual) {
-    if (mi.isCopy()) return false;
-  }
-  return ResInfo->getInstResDesc(mi)!=nullptr;
+  if (SwplSched.getRes(mi) == AArch64SwplSchedA64FX::MI_NA)
+    return false;
+  else
+    return true;
 }
 
 bool AArch64SwplTargetMachine::isPseudo(const MachineInstr &mi) const {
-  return !isImplimented(mi);
+  if (OptionCopyIsVirtual && mi.isCopy()) return true;
+  return SwplSched.isPseudo(mi);
 }
 
+void AArch64SwplTargetMachine::print(llvm::raw_ostream &ost, const StmPipeline &pipeline) const {
+  ost << "  stage/resource(" << "): ";
+  int last=pipeline.stages.size();
+  const char *sep="";
+  for (int ix=0; ix<last; ix++) {
+    ost << sep << pipeline.stages[ix] << "/" << getResourceName(pipeline.resources[ix]);
+    sep=", ";
+  }
+  ost << "\n";
+}
 bool AArch64SwplTargetMachine::isDisableRegAlloc(void) const {
   if (DisableRegAlloc) return true;
   return !EnableRegAlloc;
+}
+
+unsigned AArch64SwplTargetMachine::getInstType(const MachineInstr &mi) const {
+  auto id=SwplSched.getRes(mi);
+  return (id&0xfffff000);
+}
+
+const char* AArch64SwplTargetMachine::getInstTypeString(unsigned insttypeid) const {
+  switch(insttypeid) {
+  case AArch64SwplSchedA64FX::INT_OP: return "INT_OP";break;
+  case AArch64SwplSchedA64FX::INT_LD: return "INT_LD"; break;
+  case AArch64SwplSchedA64FX::INT_ST: return "INT_ST"; break;
+  case AArch64SwplSchedA64FX::SIMDFP_SVE_OP: return "SIMDFP_SVE_OP"; break;
+  case AArch64SwplSchedA64FX::SIMDFP_SVE_LD: return "SIMDFP_SVE_LD"; break;
+  case AArch64SwplSchedA64FX::SIMDFP_SVE_ST: return "SIMDFP_SVE_ST"; break;
+  case AArch64SwplSchedA64FX::SVE_CMP_INST: return "SVE_CMP_INST"; break;
+  case AArch64SwplSchedA64FX::PREDICATE_OP: return "PREDICATE_OP"; break;
+  case AArch64SwplSchedA64FX::PREDICATE_LD: return "PREDICATE_LD"; break;
+  case AArch64SwplSchedA64FX::PREDICATE_ST: return "PREDICATE_ST"; break;
+  case 0: return "undefined"; break;
+  default:
+    llvm_unreachable("unknown InstTypeId");
+  }
+}
+
+unsigned AArch64SwplTargetMachine::calcPenaltyByInsttypeAndDependreg(const MachineInstr& prod,
+                                                                     const MachineInstr& cons,
+                                                                     const llvm::Register& reg) const {
+  /// \todo 現在 I/Fのみ。
+  ///       命令種と依存レジスタによるペナルティを算出する処理を実装し、
+  ///       スケジューラがこれを用いてスケジューリングするように実装する。
+  return 0;
 }
 
 bool AArch64SwplTargetMachine::isEnableRegAlloc(void) const {

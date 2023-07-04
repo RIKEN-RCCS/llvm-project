@@ -1,0 +1,318 @@
+#RUN: llc %s -mcpu=a64fx -ffj-swp -start-before=aarch64-swpipeliner -swpl-debug-ddg -o /dev/null 2>&1 | FileCheck %s
+
+#CHECK:### from: %24:gpr64common = COPY %36:gpr64all
+#CHECK-NEXT:### to  : %27:gpr64common = ADDXrr %12:gpr64common, %24:gpr64common
+#CHECK-NEXT:### distance:1 delay:1
+
+#CHECK:### from: %27:gpr64common = ADDXrr %12:gpr64common, %24:gpr64common
+#CHECK-NEXT:### to  : %28:fpr64 = LDRDui %27:gpr64common, 0 
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### from: %25:fpr64 = COPY %33:fpr64
+#CHECK-NEXT:### to  : %29:fpr64 = FADDDrr %25:fpr64, killed %28:fpr64
+#CHECK-NEXT:### distance:1 delay:4
+
+#CHECK:### from: %28:fpr64 = LDRDui %27:gpr64common, 0 
+#CHECK-NEXT:### to  : %29:fpr64 = FADDDrr %25:fpr64, killed %28:fpr64
+#CHECK-NEXT:### distance:0 delay:8
+
+#CHECK:### from: %24:gpr64common = COPY %36:gpr64all
+#CHECK-NEXT:### to  : %30:gpr64common = ADDXrr %16:gpr64common, %24:gpr64common
+#CHECK-NEXT:### distance:1 delay:1
+
+#CHECK:### from: %29:fpr64 = FADDDrr %25:fpr64, killed %28:fpr64
+#CHECK-NEXT:### to  : STRDui killed %29:fpr64, %30:gpr64common, 0 
+#CHECK-NEXT:### distance:0 delay:9
+
+#CHECK:### from: %30:gpr64common = ADDXrr %16:gpr64common, %24:gpr64common
+#CHECK-NEXT:### to  : STRDui killed %29:fpr64, %30:gpr64common, 0 
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### from: %30:gpr64common = ADDXrr %16:gpr64common, %24:gpr64common
+#CHECK-NEXT:### to  : %31:fpr64 = LDRDui %30:gpr64common, 1 
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### from: %27:gpr64common = ADDXrr %12:gpr64common, %24:gpr64common
+#CHECK-NEXT:### to  : %32:fpr64 = LDRDui %27:gpr64common, 1 
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### from: %31:fpr64 = LDRDui %30:gpr64common, 1 
+#CHECK-NEXT:### to  : %33:fpr64 = FMULDrr killed %31:fpr64, killed %32:fpr64
+#CHECK-NEXT:### distance:0 delay:8
+
+#CHECK:### from: %32:fpr64 = LDRDui %27:gpr64common, 1 
+#CHECK-NEXT:### to  : %33:fpr64 = FMULDrr killed %31:fpr64, killed %32:fpr64
+#CHECK-NEXT:### distance:0 delay:8
+
+#CHECK:### from: %24:gpr64common = COPY %36:gpr64all
+#CHECK-NEXT:### to  : %34:gpr64common = ADDXrr %20:gpr64common, %24:gpr64common
+#CHECK-NEXT:### distance:1 delay:1
+
+#CHECK:### from: %33:fpr64 = FMULDrr killed %31:fpr64, killed %32:fpr64
+#CHECK-NEXT:### to  : STRDui %33:fpr64, killed %34:gpr64common, 1 
+#CHECK-NEXT:### distance:0 delay:9
+
+#CHECK:### from: %34:gpr64common = ADDXrr %20:gpr64common, %24:gpr64common
+#CHECK-NEXT:### to  : STRDui %33:fpr64, killed %34:gpr64common, 1 
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### from: %24:gpr64common = COPY %36:gpr64all
+#CHECK-NEXT:### to  : %35:gpr64sp = nuw nsw ADDXri %24:gpr64common, 8, 0
+#CHECK-NEXT:### distance:1 delay:1
+
+#CHECK:### from: %35:gpr64sp = nuw nsw ADDXri %24:gpr64common, 8, 0
+#CHECK-NEXT:### to  : %36:gpr64all = COPY %35:gpr64sp
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### from: %26:gpr64sp = COPY %38:gpr64all
+#CHECK-NEXT:### to  : %37:gpr64 = SUBSXri %26:gpr64sp, 1, 0, implicit-def $nzcv
+#CHECK-NEXT:### distance:1 delay:1
+
+#CHECK:### from: %37:gpr64 = SUBSXri %26:gpr64sp, 1, 0, implicit-def $nzcv
+#CHECK-NEXT:### to  : %38:gpr64all = COPY %37:gpr64
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### from: %36:gpr64all = COPY %35:gpr64sp
+#CHECK-NEXT:### to  : %24:gpr64common = COPY %36:gpr64all
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### from: %33:fpr64 = FMULDrr killed %31:fpr64, killed %32:fpr64
+#CHECK-NEXT:### to  : %25:fpr64 = COPY %33:fpr64
+#CHECK-NEXT:### distance:0 delay:9
+
+#CHECK:### from: %38:gpr64all = COPY %37:gpr64
+#CHECK-NEXT:### to  : %26:gpr64sp = COPY %38:gpr64all
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### from: %28:fpr64 = LDRDui %27:gpr64common, 0 
+#CHECK-NEXT:### to  : STRDui killed %29:fpr64, %30:gpr64common, 0 
+#CHECK-NEXT:### distance:20 delay:1
+
+#CHECK:### from: %28:fpr64 = LDRDui %27:gpr64common, 0 
+#CHECK-NEXT:### to  : STRDui %33:fpr64, killed %34:gpr64common, 1 
+#CHECK-NEXT:### distance:20 delay:1
+
+#CHECK:### from: STRDui killed %29:fpr64, %30:gpr64common, 0 
+#CHECK-NEXT:### to  : %28:fpr64 = LDRDui %27:gpr64common, 0 
+#CHECK-NEXT:### distance:20 delay:6
+
+#CHECK:### from: STRDui killed %29:fpr64, %30:gpr64common, 0 
+#CHECK-NEXT:### to  : %31:fpr64 = LDRDui %30:gpr64common, 1 
+#CHECK-NEXT:### distance:20 delay:6
+
+#CHECK:### from: STRDui killed %29:fpr64, %30:gpr64common, 0 
+#CHECK-NEXT:### to  : %32:fpr64 = LDRDui %27:gpr64common, 1 
+#CHECK-NEXT:### distance:20 delay:6
+
+#CHECK:### from: STRDui killed %29:fpr64, %30:gpr64common, 0 
+#CHECK-NEXT:### to  : STRDui %33:fpr64, killed %34:gpr64common, 1 
+#CHECK-NEXT:### distance:20 delay:1
+
+#CHECK:### from: %31:fpr64 = LDRDui %30:gpr64common, 1 
+#CHECK-NEXT:### to  : STRDui killed %29:fpr64, %30:gpr64common, 0 
+#CHECK-NEXT:### distance:1 delay:1
+
+#CHECK:### from: %31:fpr64 = LDRDui %30:gpr64common, 1 
+#CHECK-NEXT:### to  : STRDui %33:fpr64, killed %34:gpr64common, 1 
+#CHECK-NEXT:### distance:20 delay:1
+
+#CHECK:### from: %32:fpr64 = LDRDui %27:gpr64common, 1 
+#CHECK-NEXT:### to  : STRDui killed %29:fpr64, %30:gpr64common, 0 
+#CHECK-NEXT:### distance:20 delay:1
+
+#CHECK:### from: %32:fpr64 = LDRDui %27:gpr64common, 1 
+#CHECK-NEXT:### to  : STRDui %33:fpr64, killed %34:gpr64common, 1 
+#CHECK-NEXT:### distance:20 delay:1
+
+#CHECK:### from: STRDui %33:fpr64, killed %34:gpr64common, 1 
+#CHECK-NEXT:### to  : %28:fpr64 = LDRDui %27:gpr64common, 0 
+#CHECK-NEXT:### distance:20 delay:6
+
+#CHECK:### from: STRDui %33:fpr64, killed %34:gpr64common, 1 
+#CHECK-NEXT:### to  : STRDui killed %29:fpr64, %30:gpr64common, 0 
+#CHECK-NEXT:### distance:20 delay:1
+
+#CHECK:### from: STRDui %33:fpr64, killed %34:gpr64common, 1 
+#CHECK-NEXT:### to  : %31:fpr64 = LDRDui %30:gpr64common, 1 
+#CHECK-NEXT:### distance:20 delay:6
+
+#CHECK:### from: STRDui %33:fpr64, killed %34:gpr64common, 1 
+#CHECK-NEXT:### to  : %32:fpr64 = LDRDui %27:gpr64common, 1 
+#CHECK-NEXT:### distance:20 delay:6
+
+
+
+--- |
+  ; ModuleID = '2937-28.ll'
+  source_filename = "2937-28.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux"
+  
+  @a = dso_local local_unnamed_addr global [1000 x double] zeroinitializer, align 8
+  @c = dso_local local_unnamed_addr global [1000 x double] zeroinitializer, align 8
+  @b = dso_local local_unnamed_addr global [1000 x double] zeroinitializer, align 8
+  @x = dso_local local_unnamed_addr global double 0.000000e+00, align 8
+  @y = dso_local local_unnamed_addr global double 0.000000e+00, align 8
+  
+  ; Function Attrs: nofree norecurse nounwind
+  define dso_local void @foo() local_unnamed_addr #0 {
+    %load_initial = load double, double* getelementptr inbounds ([1000 x double], [1000 x double]* @a, i64 0, i64 0), align 8
+    call void @llvm.set.loop.iterations.i64(i64 100)
+    br label %2
+  
+  1:                                                ; preds = %2
+    ret void
+  
+  2:                                                ; preds = %2, %0
+    %lsr.iv = phi i64 [ %lsr.iv.next, %2 ], [ 0, %0 ]
+    %store_forwarded = phi double [ %load_initial, %0 ], [ %8, %2 ]
+    %3 = phi i64 [ 100, %0 ], [ %9, %2 ]
+    %uglygep2 = getelementptr i8, i8* bitcast ([1000 x double]* @c to i8*), i64 %lsr.iv
+    %uglygep23 = bitcast i8* %uglygep2 to double*
+    %4 = load double, double* %uglygep23, align 8, !tbaa !2
+    %5 = fadd double %store_forwarded, %4
+    %uglygep6 = getelementptr i8, i8* bitcast ([1000 x double]* @b to i8*), i64 %lsr.iv
+    %uglygep67 = bitcast i8* %uglygep6 to double*
+    store double %5, double* %uglygep67, align 8, !tbaa !2
+    %scevgep8 = getelementptr double, double* %uglygep67, i64 1
+    %6 = load double, double* %scevgep8, align 8, !tbaa !2
+    %uglygep4 = getelementptr i8, i8* bitcast ([1000 x double]* @c to i8*), i64 %lsr.iv
+    %uglygep45 = bitcast i8* %uglygep4 to double*
+    %scevgep = getelementptr double, double* %uglygep45, i64 1
+    %7 = load double, double* %scevgep, align 8, !tbaa !2
+    %8 = fmul double %6, %7
+    %uglygep = getelementptr i8, i8* bitcast (double* getelementptr inbounds ([1000 x double], [1000 x double]* @a, i64 0, i64 1) to i8*), i64 %lsr.iv
+    %uglygep1 = bitcast i8* %uglygep to double*
+    store double %8, double* %uglygep1, align 8, !tbaa !2
+    %lsr.iv.next = add nuw nsw i64 %lsr.iv, 8
+    %9 = call i64 @llvm.loop.decrement.reg.i64(i64 %3, i64 1)
+    %10 = icmp ne i64 %9, 0
+    br i1 %10, label %2, label %1, !llvm.loop !6
+  }
+  
+  ; Function Attrs: noduplicate nounwind
+  declare void @llvm.set.loop.iterations.i64(i64) #1
+  
+  ; Function Attrs: noduplicate nounwind
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+  
+  attributes #0 = { nofree norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { noduplicate nounwind }
+  attributes #2 = { nounwind }
+  
+  !llvm.module.flags = !{!0}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !2 = !{!3, !3, i64 0}
+  !3 = !{!"double", !4, i64 0}
+  !4 = !{!"omnipotent char", !5, i64 0}
+  !5 = !{!"Simple C/C++ TBAA"}
+  !6 = distinct !{!6, !7}
+  !7 = !{!"llvm.loop.unroll.disable"}
+
+...
+---
+name:            foo
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: fpr64, preferred-register: '' }
+  - { id: 1, class: gpr64common, preferred-register: '' }
+  - { id: 2, class: fpr64, preferred-register: '' }
+  - { id: 3, class: gpr64sp, preferred-register: '' }
+  - { id: 4, class: fpr64, preferred-register: '' }
+  - { id: 5, class: gpr64all, preferred-register: '' }
+  - { id: 6, class: gpr64all, preferred-register: '' }
+  - { id: 7, class: gpr64all, preferred-register: '' }
+  - { id: 8, class: gpr64all, preferred-register: '' }
+  - { id: 9, class: gpr64common, preferred-register: '' }
+  - { id: 10, class: gpr64all, preferred-register: '' }
+  - { id: 11, class: gpr32, preferred-register: '' }
+  - { id: 12, class: gpr64common, preferred-register: '' }
+  - { id: 13, class: gpr64common, preferred-register: '' }
+  - { id: 14, class: fpr64, preferred-register: '' }
+  - { id: 15, class: fpr64, preferred-register: '' }
+  - { id: 16, class: gpr64common, preferred-register: '' }
+  - { id: 17, class: gpr64common, preferred-register: '' }
+  - { id: 18, class: fpr64, preferred-register: '' }
+  - { id: 19, class: fpr64, preferred-register: '' }
+  - { id: 20, class: gpr64common, preferred-register: '' }
+  - { id: 21, class: gpr64common, preferred-register: '' }
+  - { id: 22, class: gpr64sp, preferred-register: '' }
+  - { id: 23, class: gpr64, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.2(0x80000000)
+  
+    %9:gpr64common = ADRP target-flags(aarch64-page) @a
+    %0:fpr64 = LDRDui killed %9, target-flags(aarch64-pageoff, aarch64-nc) @a :: (dereferenceable load 8 from `double* getelementptr inbounds ([1000 x double], [1000 x double]* @a, i64 0, i64 0)`)
+    %10:gpr64all = COPY $xzr
+    %7:gpr64all = COPY %10
+    %11:gpr32 = MOVi32imm 100
+    %8:gpr64all = SUBREG_TO_REG 0, killed %11, %subreg.sub_32
+    %12:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    %16:gpr64common = MOVaddr target-flags(aarch64-page) @b, target-flags(aarch64-pageoff, aarch64-nc) @b
+    %20:gpr64common = MOVaddr target-flags(aarch64-page) @a, target-flags(aarch64-pageoff, aarch64-nc) @a
+    B %bb.2
+  
+  bb.1 (%ir-block.1):
+    RET_ReallyLR
+  
+  bb.2 (%ir-block.2):
+    successors: %bb.2(0x7c000000), %bb.1(0x04000000)
+  
+    %1:gpr64common = PHI %7, %bb.0, %5, %bb.2
+    %2:fpr64 = PHI %0, %bb.0, %4, %bb.2
+    %3:gpr64sp = PHI %8, %bb.0, %6, %bb.2
+    %13:gpr64common = ADDXrr %12, %1
+    %14:fpr64 = LDRDui %13, 0 :: (load 8 from %ir.uglygep23, !tbaa !2)
+    %15:fpr64 = FADDDrr %2, killed %14
+    %17:gpr64common = ADDXrr %16, %1
+    STRDui killed %15, %17, 0 :: (store 8 into %ir.uglygep67, !tbaa !2)
+    %18:fpr64 = LDRDui %17, 1 :: (load 8 from %ir.scevgep8, !tbaa !2)
+    %19:fpr64 = LDRDui %13, 1 :: (load 8 from %ir.scevgep, !tbaa !2)
+    %4:fpr64 = FMULDrr killed %18, killed %19
+    %21:gpr64common = ADDXrr %20, %1
+    STRDui %4, killed %21, 1 :: (store 8 into %ir.uglygep1, !tbaa !2)
+    %22:gpr64sp = nuw nsw ADDXri %1, 8, 0
+    %5:gpr64all = COPY %22
+    %23:gpr64 = SUBSXri %3, 1, 0, implicit-def $nzcv
+    %6:gpr64all = COPY %23
+    Bcc 1, %bb.2, implicit $nzcv
+    B %bb.1
+
+...
