@@ -1,5 +1,7 @@
-; RUN: llc < %s -O1 -mcpu=a64fx -fswp -swpl-disable-reg-alloc -swpl-debug -o /dev/null 2>&1 | FileCheck %s
-;CHECK:Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 9. Budget 450. II 5. Minimum II = 3.
+; RUN: llc < %s -O1 -mcpu=a64fx -fswp -swpl-disable-reg-alloc -pass-remarks-analysis=aarch64-swpipeliner -swpl-debug -o /dev/null 2>&1 | FileCheck %s
+;CHECK:This loop tries to schedule with the InitiationInterval=5 specified in the pragma.
+
+;CHECK:(O) Scheduling succeeds    at estimation.          : (II: 5 in [ 5,6]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 5) (VReg Fp: 6/32, Int: 9/32, Pre: 1/8) Eval:0.000000e+00.
 ;CHECK:Loop is software pipelined. (ii=5
 ; ModuleID = '2912.c'
 source_filename = "2912.c"

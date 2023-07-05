@@ -1007,6 +1007,14 @@ bool SwplPlanSpec::init(unsigned arg_res_mii) {
   if (exists) {
     min_ii = ii;
     max_ii = ii + 1;
+
+    //analysis
+    const auto *ml = loop.getML();
+    SWPipeliner::ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "InitiationInterval", ml->getStartLoc(), ml->getHeader())
+      << "This loop tries to schedule with the InitiationInterval=" << ore::NV("InitiationInterval ", ii) << " specified in the pragma.";
+    });
+      
     if (SWPipeliner::isDebugOutput()) {
       dbgs() << "II " << ii << ". ";
     }
