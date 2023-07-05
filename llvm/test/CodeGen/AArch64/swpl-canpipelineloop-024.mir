@@ -1,5 +1,6 @@
-# RUN: llc -mcpu=a64fx -march=aarch64 -fswp -start-after=aarch64-dead-defs -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
-# CHECK: pipeliner info:multi-defoperand==NZCV
+# RUN: llc -mcpu=a64fx -march=aarch64 -fswp -start-after=aarch64-dead-defs -o /dev/null -pass-remarks-missed=aarch64-swpipeliner %s 2>&1 | FileCheck %s
+
+#CHECK: This loop cannot be software pipelined because multiple instructions to update CCR.
 
 --- |
 

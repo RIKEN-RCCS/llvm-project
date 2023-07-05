@@ -63,7 +63,9 @@ enum MsgID {
   MsgID_swpl_many_insts,
   MsgID_swpl_many_memory_insts,
   MsgID_swpl_not_covered_inst,
-  MsgID_swpl_not_covered_loop_shape
+  MsgID_swpl_not_covered_loop_shape,
+  MsgID_swpl_multiple_inst_update_CCR,
+  MsgID_swpl_multiple_inst_reference_CCR
 };
 static void outputRemarkMissed(MachineLoop &L, int msg_id) {
   switch (msg_id) {
@@ -87,6 +89,14 @@ static void outputRemarkMissed(MachineLoop &L, int msg_id) {
   case MsgID_swpl_not_covered_loop_shape:
     SWPipeliner::Reason = "This loop cannot be software pipelined"
                           " because the shape of the loop is not covered by software pipelining.";
+    break;
+  case MsgID_swpl_multiple_inst_update_CCR:
+    SWPipeliner::Reason = "This loop cannot be software pipelined"
+                          " because multiple instructions to update CCR.";
+    break;
+  case MsgID_swpl_multiple_inst_reference_CCR:
+    SWPipeliner::Reason = "This loop cannot be software pipelined"
+                          " because multiple instructions to reference CCR.";
     break;
   }
   return;
@@ -233,13 +243,13 @@ static bool isNonTargetLoop(MachineLoop &L) {
     /* CCを更新する命令が複数出現した。 */
     if (CompMI && hasRegisterImplicitDefOperand (&*I, AArch64::NZCV)) {
       printDebug(__func__, "pipeliner info:multi-defoperand==NZCV", L);
-      outputRemarkMissed(L, MsgID_swpl_branch_not_for_loop);
+      outputRemarkMissed(L, MsgID_swpl_multiple_inst_update_CCR);
       return true;
     }
     /* CCを参照する命令が複数出現した。 */
     if (BccMI && I->hasRegisterImplicitUseOperand(AArch64::NZCV)) {
       printDebug(__func__, "pipeliner info:multi-refoperand==NZCV", L);
-      outputRemarkMissed(L, MsgID_swpl_branch_not_for_loop);
+      outputRemarkMissed(L, MsgID_swpl_multiple_inst_reference_CCR);
       return true;
     }
     /* ループ分岐命令を捕捉 */
