@@ -1,6 +1,6 @@
-# RUN: llc -mcpu=a64fx -march=aarch64 -fswp -start-after=aarch64-dead-defs -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
-# CHECK: multi-refoperand
+# RUN: llc -mcpu=a64fx -march=aarch64 -fswp -start-after=aarch64-dead-defs -pass-remarks-missed=aarch64-swpipeliner -o /dev/null  %s 2>&1 | FileCheck %s
 
+#CHECK: This loop cannot be software pipelined because multiple instructions to reference CCR.
 
 --- |
 
