@@ -2096,8 +2096,8 @@ public:
   /// get StmRegKind::id
   /// \param [in] MRI
   /// \param [in] r register
-  virtual unsigned getRegKindId(const MachineRegisterInfo &MRI, Register r) const {
-    return false;
+  virtual std::tuple<unsigned, unsigned> getRegKindId(const MachineRegisterInfo &MRI, Register r) const {
+    return {0, 0};
   }
 
   /// get StmRegKind object

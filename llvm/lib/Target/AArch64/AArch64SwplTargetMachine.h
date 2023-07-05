@@ -29,11 +29,14 @@ public:
 
   /// \param id register class id
   /// \param isPReg 割当済か
+  /// \param unitNum レジスタを構成するユニット数
+  /// \param mri MRI
   AArch64StmRegKind(unsigned id,
                     bool isPReg,
-                    const MachineRegisterInfo&mri): StmRegKind(id, isPReg),MRI(mri){}
+                    unsigned unitNum,
+                    const MachineRegisterInfo&mri): StmRegKind(id,  isPReg, unitNum),MRI(mri){}
 
-  AArch64StmRegKind(const AArch64StmRegKind &s): AArch64StmRegKind(s.registerClassId, s.allocated, s.MRI) {}
+  AArch64StmRegKind(const AArch64StmRegKind &s): AArch64StmRegKind(s.registerClassId, s.allocated, s.unitNum, s.MRI) {}
 
   virtual ~AArch64StmRegKind(){}
 

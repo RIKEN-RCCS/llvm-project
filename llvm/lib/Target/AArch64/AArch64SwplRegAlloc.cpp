@@ -19,6 +19,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <unordered_set>
+#include "llvm/CodeGen/SwplTargetMachine.h"
 
 using namespace llvm;
 
@@ -1070,25 +1071,25 @@ SwplRegAllocInfoTbl::SwplRegAllocInfoTbl(unsigned num_of_mi) {
  * @param [in] range        liverange
  * @param [in] regAllocInfo レジスタ割り付け情報
  */
-void SwplRegAllocInfoTbl::setRangeReg(std::vector<int> *range, RegAllocInfo& regAllocInfo) {
+void SwplRegAllocInfoTbl::setRangeReg(std::vector<int> *range, RegAllocInfo& regAllocInfo, unsigned unitNum) {
   if (regAllocInfo.num_def < 0) {
     for (int i = 1; i <= regAllocInfo.num_use; i++) {
-      range->at(i)++;
+      range->at(i)+=unitNum;
     }
   } else if (regAllocInfo.num_use > 0 && regAllocInfo.num_def >= regAllocInfo.num_use) {
     for (int i=1; i<=regAllocInfo.num_use; i++) {
-      range->at(i)++;
+      range->at(i)+=unitNum;
     }
     for (unsigned i = regAllocInfo.num_def; i <= total_mi ; i++) {
-      range->at(i)++;
+      range->at(i)+=unitNum;
     }
   } else if (regAllocInfo.num_use < 0) {
     for (unsigned i = regAllocInfo.num_def; i <= total_mi ; i++) {
-      range->at(i)++;
+      range->at(i)+=unitNum;
     }
   } else {
     for (int i = regAllocInfo.num_def; i <= regAllocInfo.num_use; i++) {
-      range->at(i)++;
+      range->at(i)+=unitNum;
     }
   }
 }
@@ -1105,16 +1106,17 @@ void SwplRegAllocInfoTbl::countRegs() {
   freg.resize(total_mi+1);
   preg.resize(total_mi+1);
 
-  std::unique_ptr<StmRegKind> regKind;
+  unsigned rk, units;
+
   for (auto &regAllocInfo:rai_tbl) {
     if (regAllocInfo.vreg==0) {
       // SWPL化前から実レジスタが割り付けてある
-      regKind.reset(SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, regAllocInfo.preg));
-      if (regKind->isCCRegister()) {
+      std::tie(rk, units) = SWPipeliner::TII->getRegKindId(*SWPipeliner::MRI, regAllocInfo.preg);
+      if (rk == StmRegKind::getCCRegID()) {
         // CCレジスタは計算から除外する
         continue;
       }
-      if (regKind->isInteger()) {
+      if (rk == StmRegKind::getIntRegID()) {
         if (nousePhysRegs.contains(regAllocInfo.preg)) continue;
         // レジスタ割付処理で割付禁止レジスタが、割り付けてあるため、計算から除外する
       }
@@ -1123,14 +1125,14 @@ void SwplRegAllocInfoTbl::countRegs() {
         // 実レジスタを割り付けていないので、計算から除外する
         continue;
       }
-      regKind.reset(SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, regAllocInfo.vreg));
+      std::tie(rk, units) = SWPipeliner::TII->getRegKindId(*SWPipeliner::MRI, regAllocInfo.vreg);
     }
-    if (regKind->isInteger()) {
-      setRangeReg(&ireg, regAllocInfo);
-    } else if (regKind->isFloating()) {
-      setRangeReg(&freg, regAllocInfo);
-    } else if (regKind->isPredicate()) {
-      setRangeReg(&preg, regAllocInfo);
+    if (rk == StmRegKind::getIntRegID()) {
+      setRangeReg(&ireg, regAllocInfo, units);
+    } else if (rk == StmRegKind::getFloatRegID()) {
+      setRangeReg(&freg, regAllocInfo, units);
+    } else if (rk == StmRegKind::getPredicateRegID()) {
+      setRangeReg(&preg, regAllocInfo, units);
     } else {
       llvm_unreachable("unnown reg class");
     }
@@ -1146,7 +1148,7 @@ void SwplRegAllocInfoTbl::countRegs() {
  * @retval 0以上の値 割り当てた最大レジスタ数
  */
 int SwplRegAllocInfoTbl::countIReg() {
-  if (num_ireg<0) countRegs();
+  if (num_ireg < 0) countRegs();
   return num_ireg;
 }
 
@@ -1155,7 +1157,7 @@ int SwplRegAllocInfoTbl::countIReg() {
  * @retval 0以上の値 割り当てた最大レジスタ数
  */
 int SwplRegAllocInfoTbl::countFReg()  {
-  if (num_freg<0) countRegs();
+  if (num_freg < 0) countRegs();
   return num_freg;
 }
 
@@ -1164,7 +1166,7 @@ int SwplRegAllocInfoTbl::countFReg()  {
  * @retval 0以上の値 割り当てた最大レジスタ数
  */
 int SwplRegAllocInfoTbl::countPReg()  {
-  if (num_preg<0) countRegs();
+  if (num_preg < 0) countRegs();
   return num_preg;
 }
 

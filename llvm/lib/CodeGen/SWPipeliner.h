@@ -456,6 +456,7 @@ class SwplReg {
   SwplReg *Successor;        ///< 後任者
   bool EarlyClobber=false;   ///< early-clobber属性
   StmRegKind *rk=nullptr;
+  unsigned units=1;          ///< レジスタを構成するユニット数.defaultは１
 
 public:
   SwplReg() {};
@@ -540,8 +541,11 @@ public:
   /// Stack-pointerを扱うレジスタかどうかを判定する
   bool isStack() const { return (Register::isStackSlot(Reg)); }
 
-  /// レジスタの数を返す
-  int getRegSize() const;
+  /// レジスタを構成するユニット数を返す
+  unsigned getRegSize() const {return units;}
+
+  /// レジスタを構成するユニット数を設定する
+  void setRegSize(unsigned n) {units=n;}
 };
 
 /// \class SwplMem
