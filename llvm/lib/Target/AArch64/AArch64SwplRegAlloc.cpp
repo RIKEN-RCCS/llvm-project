@@ -385,30 +385,82 @@ static void extendLiveRange(SwplTransformedMIRInfo *tmi) {
 }
 
 /**
- * @brief  レジスタ割り付け対象外であるかの判定
+ * @brief  レジスタ情報からレジスタ割り付け対象外であるかをチェックする
  * @param  [in] rai 割り当て済みレジスタ情報
  * @param  [in] ekri_tbl カーネル外のレジスタ情報の表
  * @retval true レジスタ割り付け対象でない
  * @retval false レジスタ割り付け対象である
  */
-static bool isNoPhysRegAlloc(RegAllocInfo *rai, SwplExcKernelRegInfoTbl &ekri_tbl) {
+static bool checkNoPhysRegAlloc(RegAllocInfo *rai, SwplExcKernelRegInfoTbl &ekri_tbl) {
+  assert(rai);
   /*
-   * 以下の仮想レジスタは、物理レジスタ割り付け対象としない
-   * ・仮想レジスタ番号が 0
-   * ・isVirtualRegister()の返却値がfalseである
-   * ・カーネル内に定義しかない かつ カーネル外にて参照から始まっていない
+   * 以下の1～3のいずれかに該当する仮想レジスタは、物理レジスタ割り付け対象としない
+   * 1. 仮想レジスタ番号が 0
+   * 2. isVirtualRegister()の返却値がfalseである
+   * 3. カーネル内に定義しかない かつ カーネル外にて参照から始まっていない
+   *   上記3.の例）
    *   bb.5.for.body1: (kernel loop)
-   *     %10 = ADD $x1, 1  <- %10はカーネル内外で参照されないため、割り付け対象としない
+   *     %10 = ADD $x1, 1  <- %10はカーネル内外で参照されないため、
+   *                          割り付ける意味がなく、対象としない
    *   bb.11.for.body1: (epilogue)
    *     %10 = ADD %11, 1
    */
-  assert(rai);
   if ((rai->vreg == 0) || (!Register::isVirtualRegister(rai->vreg)) ||
       ((rai->num_def > -1) && (rai->num_use == -1) &&
        (!ekri_tbl.isUseFirstVRegInExcK(rai->vreg)))) {
     return true;
   }
   return false;
+}
+
+/**
+ * @brief  自分およびtied相手がレジスタ割り付け対象外であるかの判定
+ * @param  [in] own 割り当て済みレジスタ情報
+ * @param  [in] rai_tbl 割り当て済みレジスタ情報の表
+ * @param  [in] ekri_tbl カーネル外のレジスタ情報の表
+ * @retval true レジスタ割り付け対象でない
+ * @retval false レジスタ割り付け対象である
+ */
+static bool isNoPhysRegAlloc(RegAllocInfo *own, SwplRegAllocInfoTbl &rai_tbl,
+                             SwplExcKernelRegInfoTbl &ekri_tbl) {
+  bool ret = false;
+  // 自分が割り付け対象かを調べる
+  ret |= checkNoPhysRegAlloc(own, ekri_tbl);
+
+  RegAllocInfo* tied;
+  if ((own->tied_vreg != 0) && (tied = rai_tbl.getWithVReg(own->tied_vreg))) {
+    if( DebugSwplRegAlloc ) {
+      dbgs() << " tied-register. [current](vreg: "
+             << printReg(own->vreg, SWPipeliner::TRI) << ", tied_vreg: "
+             << printReg(own->tied_vreg, SWPipeliner::TRI) << "), [tied](vreg: "
+             << printReg(tied->vreg, SWPipeliner::TRI) << ", tied_vreg: "
+             << printReg(tied->tied_vreg, SWPipeliner::TRI) << ", preg: "
+             << printReg(tied->preg, SWPipeliner::TRI) << ")\n";
+    }
+    assert(tied->tied_vreg == own->vreg);
+    // tied相手が存在すれば、tied相手に合わせて自分も割り付け対象外となるか否かを調べる
+    ret |= checkNoPhysRegAlloc(tied, ekri_tbl);
+    // tied相手によって既に自分にも物理レジスタ割り当て済みなら自分は割り当て処理しない
+    ret |= ((tied->preg > 0) && (own->preg > 0) && (tied->preg == own->preg));
+  }
+
+  return ret;
+}
+
+/**
+ * @brief  生存区間を基に仮想レジスタへ物理レジスタを割り付ける
+ * @param  [in] preg 物理レジスタ
+ * @param  [in] rai 割り当て済みレジスタ情報
+ * @param  [in] ekri_tbl カーネル外のレジスタ情報の表
+ */
+static void assignPReg(unsigned preg, RegAllocInfo *rai, SwplRegAllocInfoTbl &rai_tbl) {
+  assert(rai);
+  rai->preg = preg;
+  if (rai->tied_vreg != 0) {
+    RegAllocInfo *tied = rai_tbl.getWithVReg(rai->tied_vreg);
+    if (tied) tied->preg = preg;
+  }
+  return;
 }
 
 /**
@@ -431,35 +483,13 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
     bool allocated = false;
 
     // レジスタ割り付け対象か
-    if (isNoPhysRegAlloc(itr_cur, ekri_tbl)) {
+    if (isNoPhysRegAlloc(itr_cur, rai_tbl, ekri_tbl)) {
       if( DebugSwplRegAlloc ) {
         dbgs() << " Following register will be not allocated a physcal register. (vreg: "
                << printReg(itr_cur->vreg, SWPipeliner::TRI) << ", preg: "
                << printReg(itr_cur->preg, SWPipeliner::TRI) << ")\n";
       }
       continue;
-    }
-
-    // tiedの相手が存在するか
-    if ((!allocated) && (itr_cur->tied_vreg != 0)) {
-      RegAllocInfo* tied_rinfo = rai_tbl.getWithVReg(itr_cur->tied_vreg);
-      if ((!tied_rinfo) || (tied_rinfo->tied_vreg != itr_cur->vreg) ||
-          (isNoPhysRegAlloc(tied_rinfo, ekri_tbl))) {
-        // tiedの相手が「存在しない」もしくは「tiedの相手が自分を指していない」もしくは
-        // 「物理レジスタ割り付け対象外」であれば自分も物理レジスタを割り付けない
-        continue;
-      }
-      if (tied_rinfo->preg != 0) {
-        // tied相手が既に物理レジスタ割り当て済みだったらそれを使用
-        if( DebugSwplRegAlloc ) {
-          dbgs() << " tied-register. [current](vreg: "
-                 << printReg(itr_cur->vreg, SWPipeliner::TRI) << "), [tied](vreg: "
-                 << printReg(tied_rinfo->vreg, SWPipeliner::TRI) << ", preg: "
-                 << printReg(tied_rinfo->preg, SWPipeliner::TRI) << ")\n";
-        }
-        itr_cur->preg = tied_rinfo->preg;
-        allocated = true;
-      }
     }
 
     // オプション指定があった場合は、空いている物理レジスタから優先して割り付け
@@ -477,7 +507,7 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
 
         // 割り当て済みリストに登録されていないなら当該物理レジスタを使用
         if( !(rai_tbl.isUsePReg( preg )) ) {
-          itr_cur->preg = preg;
+          assignPReg(preg, itr_cur, rai_tbl);
           allocated = true;
           break;
         }
@@ -490,7 +520,7 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
     if (!allocated) {
       unsigned preg = rai_tbl.getReusePReg( itr_cur );
       if( preg!=0 ) {
-        itr_cur->preg = preg;
+        assignPReg(preg, itr_cur, rai_tbl);
         allocated = true;
       }
     }
@@ -914,6 +944,11 @@ unsigned SwplRegAllocInfoTbl::getReusePReg( RegAllocInfo* rai ) {
   // TODO：物理レジスタに生存区間を紐づけたようなデータを活用するような形で、
   //       この検索を早く実施できるようにしたい。
 
+  // tied相手のレジスタ情報を取得する
+  RegAllocInfo *tied = nullptr;
+  if (rai->tied_vreg != 0)
+    tied = getWithVReg(rai->tied_vreg);
+
   // レジスタクラスに該当するレジスタごとに、
   // 既に割り当て済みの行を収集し、そのすべての生存区間が重なっていなければ、
   // 再利用可能とする。
@@ -922,7 +957,12 @@ unsigned SwplRegAllocInfoTbl::getReusePReg( RegAllocInfo* rai ) {
        itr != itr_end; ++itr) {
     unsigned candidate_preg = *itr;
     std::vector<RegAllocInfo*> ranges;
-    if (nousePhysRegs.contains(candidate_preg)) continue;
+
+    // 当該物理レジスタが割り当て可能なレジスタでなければcontinue
+    if ((nousePhysRegs.contains(candidate_preg)) || (candidate_preg == 0) ||
+        (!SWPipeliner::MRI->isAllocatable(candidate_preg))) {
+      continue;
+    }
 
     for (size_t j = 0; j < rai_tbl.size(); j++) {
       RegAllocInfo *wk_reginfo = &(rai_tbl[j]);
@@ -933,7 +973,9 @@ unsigned SwplRegAllocInfoTbl::getReusePReg( RegAllocInfo* rai ) {
 
     bool isoverlap = false;
     for(unsigned i=0; i<ranges.size(); i++) {
-      if( isOverlapLiveRange(ranges[i], rai) ) {
+      if ((isOverlapLiveRange(ranges[i], rai)) ||
+          ((tied) && (isOverlapLiveRange(ranges[i], tied)))) {
+         // 「自分のliverange」もしくは「tied相手のliverange」のどちらかがチェック対象と重なる
         isoverlap = true;
         break;
       }
