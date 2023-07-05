@@ -516,12 +516,19 @@ void SwplLoop::recollectPhiInsts() {
 
 static MachineOperand* used_reg(MachineInstr &phi) {
   Register def_r = phi.getOperand(0).getReg();
-  Register own_r;
+  unsigned opid;
   if (phi.getOperand(2).getMBB()==phi.getParent()) {
-    own_r = phi.getOperand(1).getReg();
+    opid=1;
   } else {
-    own_r = phi.getOperand(3).getReg();
+    opid=3;
   }
+  if (phi.getOperand(opid).getSubReg()) {
+    if (DebugPrepare) {
+      dbgs() << "DEBUG(used_reg): own-operand has subreg!:" << phi;
+    }
+    return nullptr;
+  }
+  auto own_r = phi.getOperand(opid).getReg();
 
   if (!SWPipeliner::STM->isEnableRegAlloc() && !IgnoreRegClass_SuppressCopy) {
     if (def_r.isVirtual() && own_r.isVirtual()) {

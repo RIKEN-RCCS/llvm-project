@@ -1919,7 +1919,7 @@ bool PostRAMachineSinking::runOnMachineFunction(MachineFunction &MF) {
     Changed |= tryToSinkCopy(BB, MF, TRI, TII);
 
   if (!DisableRemoveUselessCopy) {
-
+    // TODO: only SWPL-MBBs(prolog, kernek, epilog)
     SmallVector<MachineInstr*, 100> eraseCopys;
     SmallVector<Register, 100> usedRegisters;
 
@@ -1943,6 +1943,7 @@ bool PostRAMachineSinking::runOnMachineFunction(MachineFunction &MF) {
         }
       }
     }
+    auto regsReserved=TRI->getReservedRegs(MF);
     for (auto &MBB:MF) {
       for (auto &MI:MBB) {
         if (!MI.isCopy()) continue;
@@ -1951,10 +1952,14 @@ bool PostRAMachineSinking::runOnMachineFunction(MachineFunction &MF) {
         } else {
           bool used=false;
           Register def_reg = MI.getOperand(0).getReg();
-          for (auto r:usedRegisters) {
-            if (TRI->regsOverlap(r, def_reg)) {
-              used=true;
-              break;
+          if (regsReserved.test(def_reg.id())) {
+            used=true;
+          } else {
+            for (auto r:usedRegisters) {
+              if (TRI->regsOverlap(r, def_reg)) {
+                used=true;
+                break;
+              }
             }
           }
           if (!used)
