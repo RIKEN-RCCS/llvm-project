@@ -37,6 +37,7 @@ static cl::opt<bool> EnableNormalizeTieddef("swpl-enable-normalize-tieddef",cl::
 
 // rm-copyを強化する（reg-alloc時と同じ処理にする）
 static cl::opt<bool> IgnoreRegClass_RmCopy("swpl-ignore-class-rm-copy",cl::init(true), cl::ReallyHidden);
+static cl::opt<bool> NoDep("swpl-nodep",cl::init(false), cl::ReallyHidden);
 
 using BasicBlocks = std::vector<MachineBasicBlock *>;
 using BasicBlocksIterator = std::vector<MachineBasicBlock *>::iterator ;
@@ -392,6 +393,13 @@ unsigned SwplLoop::getMemsMinOverlapDistance(SwplMem *former_mem, SwplMem *latte
   const auto * latter_mi=NewMI2OrgMI.at(latter_mem->getInst()->getMI());
   const auto *memop1=former_mem->getMO();
   const auto *memop2=latter_mem->getMO();
+  if (NoDep) {
+    if (SWPipeliner::isDebugOutput())
+      dbgs() << "DBG(getMemIncrement): NoDep is true: return MAX_LOOP_DISTANCE\n"
+             << " formaer_mi:" << *former_mi
+             << " latter_mi:" << *latter_mi;
+    return SwplMem::MAX_LOOP_DISTANCE;
+  }
   if (NoMMOIsNoDep && (memop1==nullptr || memop2==nullptr)) {
     if (SWPipeliner::isDebugOutput())
       dbgs() << "DBG(getMemIncrement): NoMMOIsNoDep is true: return MAX_LOOP_DISTANCE\n"
