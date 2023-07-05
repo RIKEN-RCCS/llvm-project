@@ -1,4 +1,4 @@
-# RUN: llc -mcpu=a64fx -O1 -fswp -swpl-disable-reg-alloc -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug %s 2>&1 | FileCheck %s
+# RUN: llc -mcpu=a64fx -O1 -fswp -swpl-disable-reg-alloc -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug-prepare %s 2>&1 | FileCheck %s
 #
 # CHECK: DBG(SwplLoop::convertPrePostIndexInstr)
 # CHECK-NEXT:  before:%204:gpr64sp, %205:fpr128 = LD1i32_POST %203:fpr128(tied-def 1), 1, %199:gpr64common(tied-def 0), $xzr

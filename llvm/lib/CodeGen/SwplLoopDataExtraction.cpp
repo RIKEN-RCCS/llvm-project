@@ -24,6 +24,7 @@ using namespace llvm;
 
 
 static cl::opt<bool> DebugLoop("swpl-debug-loop",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> DebugPrepare("swpl-debug-prepare",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> NoUseAA("swpl-no-use-aa",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableConvPrePost("swpl-disable-convert-prepost",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableRmCopy("swpl-disable-rm-copy",cl::init(false), cl::ReallyHidden);
@@ -270,7 +271,7 @@ void SwplInst::InitializeWithDefUse(llvm::MachineInstr *MI, SwplLoop *loop, Regi
 
   if ((MI->mayLoad() || MI->mayStore() || MI->mayLoadOrStore()) && MI->memoperands_empty()) {
     // load/store命令でMI->memoperands_empty()の場合、MayAliasとして動作する必要がある
-    if (SWPipeliner::isDebugOutput()) {
+    if (SWPipeliner::isDebugDdgOutput()) {
       dbgs() << "DBG(SwplInst::InitializeWithDefUse): memoperands_empty mi=" << *MI;
     }
     construct_mem_use(rmap, *this, nullptr, insts, mems, memsOtherBody);
@@ -394,14 +395,14 @@ unsigned SwplLoop::getMemsMinOverlapDistance(SwplMem *former_mem, SwplMem *latte
   const auto *memop1=former_mem->getMO();
   const auto *memop2=latter_mem->getMO();
   if (NoDep) {
-    if (SWPipeliner::isDebugOutput())
+    if (SWPipeliner::isDebugDdgOutput())
       dbgs() << "DBG(getMemIncrement): NoDep is true: return MAX_LOOP_DISTANCE\n"
              << " formaer_mi:" << *former_mi
              << " latter_mi:" << *latter_mi;
     return SwplMem::MAX_LOOP_DISTANCE;
   }
   if (NoMMOIsNoDep && (memop1==nullptr || memop2==nullptr)) {
-    if (SWPipeliner::isDebugOutput())
+    if (SWPipeliner::isDebugDdgOutput())
       dbgs() << "DBG(getMemIncrement): NoMMOIsNoDep is true: return MAX_LOOP_DISTANCE\n"
              << " formaer_mi:" << *former_mi
              << " latter_mi:" << *latter_mi;
@@ -414,7 +415,7 @@ unsigned SwplLoop::getMemsMinOverlapDistance(SwplMem *former_mem, SwplMem *latte
       if (SWPipeliner::AA->isNoAlias(
               MemoryLocation::getAfter(memop1->getValue(), memop1->getAAInfo()),
               MemoryLocation::getAfter(memop2->getValue(), memop2->getAAInfo()))) {
-         if (SWPipeliner::isDebugOutput()) { dbgs() << " aliasAnalysis is NoAlias\n"; }
+         if (SWPipeliner::isDebugDdgOutput()) { dbgs() << " aliasAnalysis is NoAlias\n"; }
          return SwplMem::MAX_LOOP_DISTANCE;
       }
     }
@@ -425,7 +426,7 @@ unsigned SwplLoop::getMemsMinOverlapDistance(SwplMem *former_mem, SwplMem *latte
 
   former_increment = getMemIncrement(former_mem);
   latter_increment = getMemIncrement(latter_mem);
-  if (SWPipeliner::isDebugOutput())
+  if (SWPipeliner::isDebugDdgOutput())
     dbgs() << "DBG(getMemIncrement): former_increment=" << former_increment << " , latter_increment=" << latter_increment << "\n";
 
   if (former_increment == SwplDdg::UNKNOWN_MEM_DIFF
@@ -451,7 +452,7 @@ unsigned SwplLoop::getMemsMinOverlapDistance(SwplMem *former_mem, SwplMem *latte
 
   int distance;
   int initial_diff = mems_initial_diff (former_mi, latter_mi);
-  if (SWPipeliner::isDebugOutput())
+  if (SWPipeliner::isDebugDdgOutput())
     dbgs() << "DBG(mems_initial_diff): initial_diff=" << initial_diff
      << ", former_size=" << former_mem->getSize()
      << ", latter_size=" << latter_mem->getSize() << "\n";
@@ -527,13 +528,13 @@ static MachineOperand* used_reg(MachineInstr &phi) {
       auto def_r_class = SWPipeliner::MRI->getRegClass(def_r);
       auto own_r_class = SWPipeliner::MRI->getRegClass(own_r);
       if (def_r_class->getID() != own_r_class->getID()) {
-         if (SWPipeliner::isDebugOutput()) {
+         if (DebugPrepare) {
            dbgs() << "DEBUG(used_reg): def-class is not use-class!:" << phi;
          }
          return nullptr;
       }
     } else {
-      if (SWPipeliner::isDebugOutput()) {
+      if (DebugPrepare) {
          dbgs() << "DEBUG(used_reg): def-class is not use-class!:" << phi;
       }
       return nullptr;
@@ -544,14 +545,14 @@ static MachineOperand* used_reg(MachineInstr &phi) {
 
   if (def_op==nullptr) {
     // 物理レジスタの場合:copy必須
-    if (SWPipeliner::isDebugOutput()) {
+    if (DebugPrepare) {
       dbgs() << "DEBUG(used_reg): MRI->getOneDef(own_r) is nullptr\n";
     }
     return nullptr;
   }
 
   if (def_op->getParent()->getParent()!=phi.getParent()) {
-    if (SWPipeliner::isDebugOutput()) {
+    if (DebugPrepare) {
       dbgs() << "DEBUG(used_reg): own_r is livein!\n";
     }
     return nullptr;
@@ -562,7 +563,7 @@ static MachineOperand* used_reg(MachineInstr &phi) {
   unsigned use_tied_ix;
   bool t = defMI->isRegTiedToUseOperand(defMI->getOperandNo(def_op), &use_tied_ix);
   if (t && defMI->getOperand(use_tied_ix).getReg() == def_r) {
-    if (SWPipeliner::isDebugOutput()) {
+    if (DebugPrepare) {
       dbgs() << "DEBUG(used_reg): tied-def!\n";
     }
     return nullptr;
@@ -575,13 +576,13 @@ static MachineOperand* used_reg(MachineInstr &phi) {
       if (o.isDef()) continue;
       auto r=o.getReg();
       if (r.id()==own_r.id()) {
-         if (SWPipeliner::isDebugOutput()) {
+         if (DebugPrepare) {
            dbgs() << "DEBUG(used_reg): own-reg is used!\n";
          }
          return nullptr;
       }
       if (r.id()==def_r.id()) {
-         if (SWPipeliner::isDebugOutput()) {
+         if (DebugPrepare) {
            dbgs() << "DEBUG(used_reg): def-reg is used!\n";
          }
          return nullptr;
@@ -687,14 +688,14 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
                                 SWPipeliner::TII->get(TargetOpcode::COPY), def_r)
                             .addReg(own_r,0, own_subreg);
       NewMI2OrgMI[c]=org_phi;
-      if (SWPipeliner::isDebugOutput()) {
+      if (DebugPrepare) {
         if (def_op && liveout_def)
           dbgs() << "DEBUG(convertNonSSA): Generate copy: def-reg is liveout!\n";
         else if (def_op && liveout_own)
           dbgs() << "DEBUG(convertNonSSA): Generate copy: own-reg is liveout!\n";
       }
     } else {
-      if (SWPipeliner::isDebugOutput()) {
+      if (DebugPrepare) {
         dbgs() << "DEBUG(convertNonSSA): Suppress the generation of COPY: " << *phi;
       }
       def_op->setReg(def_r);
@@ -821,7 +822,7 @@ bool SwplLoop::check_need_copy4TiedUseReg(const MachineBasicBlock* body, const M
                                       Register tiedDefReg, Register tiedUseReg) const {
 
   if (GenCopy4AllTiedDef) {
-    if (SWPipeliner::isDebugOutput()) {
+    if (DebugPrepare) {
       dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): GenCopy4AllTiedDef is true\n";
     }
     return true;
@@ -830,7 +831,7 @@ bool SwplLoop::check_need_copy4TiedUseReg(const MachineBasicBlock* body, const M
   // 1) tiedInstrの定義参照が同じレジスタの場合のみ不要
 
   if (tiedDefReg == tiedUseReg) {
-    if (SWPipeliner::isDebugOutput()) {
+    if (DebugPrepare) {
       dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): tiedUseReg("
              << printReg(tiedUseReg, SWPipeliner::TRI) << ") eq tiedDef:" << *tiedInstr;
     }
@@ -838,13 +839,13 @@ bool SwplLoop::check_need_copy4TiedUseReg(const MachineBasicBlock* body, const M
   }
   if (tiedInstr->getOpcode() == TargetOpcode::INSERT_SUBREG || tiedInstr->getOpcode() == TargetOpcode::EXTRACT_SUBREG ||
       tiedInstr->getOpcode() == TargetOpcode::EXTRACT_SUBREG || tiedInstr->getOpcode() == TargetOpcode::SUBREG_TO_REG) {
-    if (SWPipeliner::isDebugOutput()) {
+    if (DebugPrepare) {
       dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): Instruction to exclude allocation of physical registers\n"
                 "  mi: " << *tiedInstr;
     }
     return false;
   }
-  if (SWPipeliner::isDebugOutput()) {
+  if (DebugPrepare) {
     dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): Decide that the COPY instruction is necessary\n";
   }
   return true;
@@ -868,11 +869,11 @@ void SwplLoop::normalizeTiedDef(MachineBasicBlock *body) {
 
       if (check_need_copy4TiedUseReg(body, &MI, MO.getReg(), use_tied_r)) {
         targets[&MI]=&useMO;
-        if (SWPipeliner::isDebugOutput()) {
+        if (DebugPrepare) {
           dbgs() << "DEBUG(SwplLoop::normalizeTiedDef): Copy is required.: " << MI;
         }
       } else {
-        if (SWPipeliner::isDebugOutput()) {
+        if (DebugPrepare) {
           dbgs() << "DEBUG(SwplLoop::normalizeTiedDef): Copy is not required.: " << MI;
         }
       }
@@ -888,7 +889,7 @@ void SwplLoop::normalizeTiedDef(MachineBasicBlock *body) {
     MachineInstr *Copy = BuildMI(*body, mi, dbgloc, SWPipeliner::TII->get(TargetOpcode::COPY), new_reg)
                              .addReg(tied_reg);
     tied_mo->setReg(new_reg);
-    if (SWPipeliner::isDebugOutput()) {
+    if (DebugPrepare) {
       dbgs() << "DEBUG(SwplLoop::normalizeTiedDef):\n  generate: " << *Copy;
       dbgs() << "  chenge op: " << *mi;
     }
@@ -900,7 +901,7 @@ void SwplLoop::removeCopy(MachineBasicBlock *body) {
   std::vector<llvm::MachineOperand *> target_mo;
   for (auto &mi:*body) {
     if (!mi.isCopy()) continue;
-    if (SWPipeliner::isDebugOutput()) {
+    if (DebugPrepare) {
       dbgs() << "DBG(SwplLoop::removeCopy)\n";
       dbgs() << " target mi: " << mi;
     }
@@ -908,21 +909,21 @@ void SwplLoop::removeCopy(MachineBasicBlock *body) {
     auto &op0=mi.getOperand(0);
     const auto *org_copy=NewMI2OrgMI.at(&mi);
     if (liveOuts.contains(op0.getReg())) {
-      if (SWPipeliner::isDebugOutput()) {
+      if (DebugPrepare) {
         dbgs() << " org mi: " << org_copy;
         dbgs() << " op0 is liveout!\n";
       }
       continue;
     }
     if (!mi.getOperand(1).isReg()) {
-      if (SWPipeliner::isDebugOutput()) {
+      if (DebugPrepare) {
         dbgs() << " op1 isnot reg!\n";
       }
       continue;
     }
     Register r0 = op0.getReg();
     if (r0.isPhysical()) {
-      if (SWPipeliner::isDebugOutput()) {
+      if (DebugPrepare) {
         dbgs() << " op0 isnot virtual-reg!\n";
       }
       continue;
@@ -938,7 +939,7 @@ void SwplLoop::removeCopy(MachineBasicBlock *body) {
       target_mo.push_back(&u);
     }
     if (foundTied) {
-      if (SWPipeliner::isDebugOutput()) {
+      if (DebugPrepare) {
         dbgs() << " op1 has subreg && use operand is tied!\n";
       }
       continue;
@@ -968,7 +969,7 @@ void SwplLoop::removeCopy(MachineBasicBlock *body) {
           }
         }
         if (use_op0) {
-          if (SWPipeliner::isDebugOutput()) {
+          if (DebugPrepare) {
             dbgs() << " op0 is referenced from the definition of op1 to the definition of op0.!\n";
           }
           continue;
@@ -976,7 +977,7 @@ void SwplLoop::removeCopy(MachineBasicBlock *body) {
       }
       for (auto *op:target_mo) {
         auto *umi=op->getParent();
-        if (SWPipeliner::isDebugOutput()) {
+        if (DebugPrepare) {
           dbgs() << " before: " << *umi;
         }
         // r0を参照しているオペランドを書き換える
@@ -984,7 +985,7 @@ void SwplLoop::removeCopy(MachineBasicBlock *body) {
         op->setReg(op1.getReg());
         op->setSubReg(op1.getSubReg());
         op->setIsKill(false);
-        if (SWPipeliner::isDebugOutput()) {
+        if (DebugPrepare) {
           dbgs() << " after: " << *umi;
         }
       }
@@ -993,13 +994,13 @@ void SwplLoop::removeCopy(MachineBasicBlock *body) {
       auto *org = NewMI2OrgMI.at(&mi);
       NewMI2OrgMI.erase(&mi);
       OrgMI2NewMI[org]=nullptr;
-      if (SWPipeliner::isDebugOutput()) {
+      if (DebugPrepare) {
         dbgs() << " removed!\n";
       }
       // MBBから削除する命令の収集
       delete_mi.push_back(&mi);
     } else {
-      if (SWPipeliner::isDebugOutput()) {
+      if (DebugPrepare) {
         dbgs() << " canRemoveCopy() is false!\n";
       }
     }
@@ -1021,7 +1022,7 @@ void SwplLoop::convertPrePostIndexInstr(MachineBasicBlock *body) {
       OrgMI2NewMI[org] = ldst;
       NewMI2OrgMI[ldst] = org;
       NewMI2OrgMI[add] = org;
-      if (SWPipeliner::isDebugOutput()) {
+      if (DebugPrepare) {
         dbgs() << "DBG(SwplLoop::convertPrePostIndexInstr)\n";
         dbgs() << " before:" << mi;
         dbgs() << " after 1:" << *ldst;
@@ -1119,7 +1120,7 @@ void SwplLoop::deleteNewBodyMBB() {
 int SwplMem::calcEachMemAddressIncrement() {
   int sum = 0;
   int old_sum = 0;
-  if (SWPipeliner::isDebugOutput()) {
+  if (SWPipeliner::isDebugDdgOutput()) {
     if (Inst->getMI()==nullptr)
       dbgs() << "DBG(calcEachMemAddressIncrement): \n";
     else
@@ -1128,7 +1129,7 @@ int SwplMem::calcEachMemAddressIncrement() {
   for (auto *reg:getUseRegs()) {
 
     int increment = SWPipeliner::TII->calcEachRegIncrement(reg);
-    if (SWPipeliner::isDebugOutput()) {
+    if (SWPipeliner::isDebugDdgOutput()) {
       dbgs() << " calcEachRegIncrement(" << printReg(reg->getReg(), SWPipeliner::TRI)  << "): "
              << increment << "\n";
     }

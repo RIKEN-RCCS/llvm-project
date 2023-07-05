@@ -19,7 +19,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "swp-ddg"
 
-static cl::opt<bool> DebugDdg("swpl-debug-ddg",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> DebugDumpDdg("swpl-debug-dump-ddg",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableInstDep("swpl-enable-instdep",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableCheckEarlyClobber("swpl-enable-check-early-clobber",cl::init(false), cl::ReallyHidden);
 
@@ -42,7 +42,7 @@ SwplDdg *SwplDdg::Initialize (SwplLoop &loop) {
   /// SwplDdg を生成後に SwplLoop::BodyInsts に含まれるPhiを PhiInsts に再収集する。
   loop.recollectPhiInsts();
 
-  if (DebugDdg) {
+  if (DebugDumpDdg) {
     ddg->print();
   }  
   return ddg;
@@ -197,7 +197,7 @@ void SwplDdg::analysisInstDependence() {
       const auto *qmi=Loop->getOrgMI(q->getMI());
       if (qmi->isPHI()) continue;
       if (isDependence(pmi, qmi)) {
-        if (SWPipeliner::isDebugOutput()) {
+        if (SWPipeliner::isDebugDdgOutput()) {
           dbgs() << "DBG(SwplDdg::analysisInstDependence):\n"
                  << " former_inst:" << *(p->getMI())
                  << " latter_inst:" << *(q->getMI())
@@ -239,7 +239,7 @@ void SwplDdg::analysisRegsFlowDependence() {
       } else {
         delay = SWPipeliner::STM->computeRegFlowDependence(def_inst->getMI(), use_inst->getMI());
       }
-      if (SWPipeliner::isDebugOutput()) {
+      if (SWPipeliner::isDebugDdgOutput()) {
         dbgs() << "DBG(SwplDdg::analysisRegsFlowDependence):\n"
                << " former_inst:" << *(def_inst->getMI())
                << " latter_inst:" << *(use_inst->getMI())
@@ -271,7 +271,7 @@ void SwplDdg::analysisRegsAntiDependence() {
         }
         int distance = (getLoop()->areBodyInstsOrder(use_inst, def_inst) ? 0 : 1);
         int delay = 1;
-        if (SWPipeliner::isDebugOutput()) {
+        if (SWPipeliner::isDebugDdgOutput()) {
           dbgs() << "DBG(SwplDdg::analysisRegsAntiDependence):\n"
                  << " former_inst:" << *(use_inst->getMI())
                  << " latter_inst:" << *(def_inst->getMI())
@@ -303,7 +303,7 @@ void SwplDdg::analysisRegsOutputDependence() {
       assert(def_indx >= 0);
       int distance = (getLoop()->areBodyInstsOrder(pred_def_inst, def_inst) ? 0 : 1);
       int delay = 1;
-      if (SWPipeliner::isDebugOutput()) {
+      if (SWPipeliner::isDebugDdgOutput()) {
         dbgs() << "DBG(SwplDdg::analysisRegsOutputDependence):\n"
                << " former_inst:" << *(pred_def_inst->getMI())
                << " latter_inst:" << *(def_inst->getMI())
@@ -352,7 +352,7 @@ void SwplDdg::analysisMemDependence() {
         }
       }
       distance = getLoop()->getMemsMinOverlapDistance(former_mem, latter_mem);
-      if (SWPipeliner::isDebugOutput()) {
+      if (SWPipeliner::isDebugDdgOutput()) {
         auto *p="";
         switch (depKind) {
         case DepKind::flow: p="flow"; break;

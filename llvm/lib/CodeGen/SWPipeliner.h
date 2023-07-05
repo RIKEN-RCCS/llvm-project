@@ -817,7 +817,8 @@ public:
 
   /// -swpl-debug指定されているか
   static bool isDebugOutput();
-
+  /// -swpl-debug-ddg指定されているか
+  static bool isDebugDdgOutput();
 
   /**
    * \brief SWPipelinerのコンストラクタ

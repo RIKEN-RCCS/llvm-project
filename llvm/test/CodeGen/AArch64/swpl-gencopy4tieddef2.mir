@@ -1,4 +1,4 @@
-# RUN: llc %s -O1 -fswp -mcpu=a64fx -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner -swpl-debug -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc %s -O1 -fswp -mcpu=a64fx -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner -swpl-debug-prepare -o /dev/null 2>&1 | FileCheck %s
 # CHECK: DEBUG(SwplLoop::check_need_copy4TiedUseReg): Instruction to exclude allocation of physical registers
 # CHECK-NEXT:   mi: %39:zpr = INSERT_SUBREG %19:zpr(tied-def 0), %36:fpr64, %subreg.dsub
 

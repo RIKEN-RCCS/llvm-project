@@ -1,4 +1,4 @@
-# RUN: llc -mcpu=a64fx -O1 -fswp -swpl-disable-reg-alloc -start-before=aarch64-swpipeliner -o /dev/null  -pass-remarks-output=- -swpl-debug %s 2>&1 | FileCheck %s
+# RUN: llc -mcpu=a64fx -O1 -fswp -swpl-disable-reg-alloc -start-before=aarch64-swpipeliner -o /dev/null  -pass-remarks-output=- -swpl-debug-prepare %s 2>&1 | FileCheck %s
 #
 # CHECK: DBG(SwplLoop::convertPrePostIndexInstr)
 # CHECK-NEXT:  before:early-clobber %41:gpr64sp, %42:fpr32 = LDRSpre %39:gpr64sp(tied-def 0), -4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
