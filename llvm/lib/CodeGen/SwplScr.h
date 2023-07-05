@@ -164,9 +164,9 @@ class SwplRegAllocInfoTbl {
 
   std::vector<RegAllocInfo> rai_tbl; ///< Swpl-RAで使用する生存区間表
   unsigned total_mi;                 ///< MIの総数
-  int num_ireg=-1;                   ///< Integerレジスタの数
-  int num_freg=-1;                   ///< Floating-pointレジスタの数
-  int num_preg=-1;                   ///< Predicateレジスタの数
+  int num_ireg = -1;                   ///< Integerレジスタの数
+  int num_freg = -1;                   ///< Floating-pointレジスタの数
+  int num_preg = -1;                   ///< Predicateレジスタの数
 
   /// 割り当てた最大レジスタ数を数える
   void countRegs();
@@ -174,7 +174,8 @@ class SwplRegAllocInfoTbl {
   /// レジスタ割り付け情報からliverangeを求める
   /// \param [in] range liverange
   /// \param [in] r レジスタ割り付け情報
-  void setRangeReg(std::vector<int>* range, RegAllocInfo& r);
+  /// \param [in] unitNum レジスタを構成するユニット数
+  void setRangeReg(std::vector<int>* range, RegAllocInfo& r, unsigned unitNum);
 
 public:
   SwplRegAllocInfoTbl(unsigned num_of_mi);

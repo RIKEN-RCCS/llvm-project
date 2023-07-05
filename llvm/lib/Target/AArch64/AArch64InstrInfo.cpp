@@ -8150,7 +8150,7 @@ bool AArch64InstrInfo::canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI,
   Register r0 = op0.getReg();
   Register r1 = op1.getReg();
   if (enableRegalloc) {
-    if (getRegKindId(MRI, r0) == getRegKindId(MRI, r1)) return true;
+    if (std::get<0>(getRegKindId(MRI, r0)) == std::get<0>(getRegKindId(MRI, r1))) return true;
     return false;
   }
   const auto *r0_class = MRI.getRegClass(r0);
@@ -8622,7 +8622,7 @@ StmRegKind * AArch64InstrInfo::getRegKind(const MachineRegisterInfo &MRI) const 
 }
 
 StmRegKind * AArch64InstrInfo::getRegKind(const MachineRegisterInfo &MRI, Register reg) const {
-    unsigned regClassId=getRegKindId(MRI, reg);
+    auto [regClassId, n] = getRegKindId(MRI, reg);
     bool pReg=false;
     if (reg.isPhysical()) {
 #ifndef ALLOCATED_IS_CCR_ONLY
@@ -8632,7 +8632,7 @@ StmRegKind * AArch64InstrInfo::getRegKind(const MachineRegisterInfo &MRI, Regist
 #endif
     }
 
-    return new AArch64StmRegKind(regClassId, pReg, MRI);
+    return new AArch64StmRegKind(regClassId, pReg, n, MRI);
 }
 
 bool AArch64InstrInfo::isNonTargetMI4SWPL(MachineInstr &inst) const {
@@ -8646,80 +8646,93 @@ bool AArch64InstrInfo::isNonTargetMI4SWPL(MachineInstr &inst) const {
     }
 }
 
-unsigned AArch64InstrInfo::getRegKindId(const MachineRegisterInfo &MRI, Register reg) const {
-    if (reg.isVirtual()) {
-      const auto * regClass=MRI.getRegClass(reg);
-      if (regClass->hasSuperClassEq(&AArch64::GPR64allRegClass) || regClass->hasSuperClassEq(&AArch64::GPR32allRegClass)) {
-        return  AArch64StmRegKind::getIntRegID();
-      }
-      if (regClass->hasSuperClassEq(&AArch64::FPR8RegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::FPR16RegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::FPR32RegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::FPR64RegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::FPR128RegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::DDRegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::DDDRegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::DDDDRegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::QQRegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::QQQRegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::QQQQRegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::FPR16_loRegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::FPR64_loRegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::FPR128_loRegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::ZPRRegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::ZPR_3bRegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::ZPR_4bRegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::ZPR2RegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::ZPR3RegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::ZPR4RegClass)) {
-        return  AArch64StmRegKind::getFloatRegID();
-      }
-      if (regClass->hasSuperClassEq(&AArch64::PPRRegClass) ||
-                 regClass->hasSuperClassEq(&AArch64::PPR_3bRegClass)) {
-        return AArch64StmRegKind::getPredicateRegID();
-      }
-
-        dbgs() << "unknown register class: " << MRI.getTargetRegisterInfo()->getRegClassName(regClass) << "\n";
-        llvm_unreachable("unknown register");
-
-    } else {
-      if (AArch64::GPR64allRegClass.contains(reg) ||
-          AArch64::GPR32allRegClass.contains(reg)) {
-        return  AArch64StmRegKind::getIntRegID();
-      }
-      if (AArch64::FPR128RegClass.contains(reg) ||
-          AArch64::FPR64RegClass.contains(reg) ||
-          AArch64::FPR32RegClass.contains(reg) ||
-          AArch64::FPR16RegClass.contains(reg) ||
-          AArch64::FPR8RegClass.contains(reg) ||
-          AArch64::DDRegClass.contains(reg) ||
-          AArch64::DDDRegClass.contains(reg) ||
-          AArch64::DDDDRegClass.contains(reg) ||
-          AArch64::QQRegClass.contains(reg) ||
-          AArch64::QQQRegClass.contains(reg) ||
-          AArch64::QQQQRegClass.contains(reg) ||
-          AArch64::FPR128_loRegClass.contains(reg) ||
-          AArch64::FPR64_loRegClass.contains(reg) ||
-          AArch64::FPR16_loRegClass.contains(reg) ||
-          AArch64::ZPRRegClass.contains(reg) ||
-          AArch64::ZPR_3bRegClass.contains(reg) ||
-          AArch64::ZPR_4bRegClass.contains(reg) ||
-          AArch64::ZPR2RegClass.contains(reg) ||
-          AArch64::ZPR3RegClass.contains(reg) ||
-          AArch64::ZPR4RegClass.contains(reg)) {
-        return  AArch64StmRegKind::getFloatRegID();
-      }
-      if (AArch64::PPRRegClass.contains(reg) ||
-                 AArch64::PPR_3bRegClass.contains(reg)) {
-        return AArch64StmRegKind::getPredicateRegID();
-      }
-      if (AArch64::CCRRegClass.contains(reg)) {
-        return AArch64StmRegKind::getCCRegID();
-      }
-
-      llvm_unreachable("unknown register");
+std::tuple<unsigned, unsigned> AArch64InstrInfo::getRegKindId(const MachineRegisterInfo &MRI, Register reg) const {
+  if (reg.isVirtual()) {
+    const auto * regClass=MRI.getRegClass(reg);
+    if (regClass->hasSuperClassEq(&AArch64::GPR64allRegClass) || regClass->hasSuperClassEq(&AArch64::GPR32allRegClass)) {
+      return  {AArch64StmRegKind::getIntRegID(), 1};
     }
-    return 0;
+    if (regClass->hasSuperClassEq(&AArch64::PPRRegClass) ||
+        regClass->hasSuperClassEq(&AArch64::PPR_3bRegClass)) {
+      return {AArch64StmRegKind::getPredicateRegID(), 1};
+    }
+    if (regClass->hasSuperClassEq(&AArch64::FPR8RegClass) ||
+        regClass->hasSuperClassEq(&AArch64::FPR16RegClass) ||
+        regClass->hasSuperClassEq(&AArch64::FPR32RegClass) ||
+        regClass->hasSuperClassEq(&AArch64::FPR64RegClass) ||
+        regClass->hasSuperClassEq(&AArch64::FPR128RegClass) ||
+        regClass->hasSuperClassEq(&AArch64::FPR16_loRegClass) ||
+        regClass->hasSuperClassEq(&AArch64::FPR64_loRegClass) ||
+        regClass->hasSuperClassEq(&AArch64::FPR128_loRegClass) ||
+        regClass->hasSuperClassEq(&AArch64::ZPRRegClass) ||
+        regClass->hasSuperClassEq(&AArch64::ZPR_3bRegClass) ||
+        regClass->hasSuperClassEq(&AArch64::ZPR_4bRegClass)) {
+      return  {AArch64StmRegKind::getFloatRegID(), 1};
+    }
+    if (regClass->hasSuperClassEq(&AArch64::DDRegClass) ||
+        regClass->hasSuperClassEq(&AArch64::QQRegClass) ||
+        regClass->hasSuperClassEq(&AArch64::ZPR2RegClass)) {
+      return  {AArch64StmRegKind::getFloatRegID(), 2};
+
+    }
+    if (regClass->hasSuperClassEq(&AArch64::DDDRegClass) ||
+        regClass->hasSuperClassEq(&AArch64::QQQRegClass) ||
+        regClass->hasSuperClassEq(&AArch64::ZPR3RegClass)) {
+      return  {AArch64StmRegKind::getFloatRegID(), 3};
+    }
+    if (regClass->hasSuperClassEq(&AArch64::DDDDRegClass) ||
+        regClass->hasSuperClassEq(&AArch64::QQQQRegClass) ||
+        regClass->hasSuperClassEq(&AArch64::ZPR4RegClass)) {
+      return  {AArch64StmRegKind::getFloatRegID(), 4};
+    }
+
+    dbgs() << "unknown register class: " << MRI.getTargetRegisterInfo()->getRegClassName(regClass) << "\n";
+    llvm_unreachable("unknown register");
+
+  } else {
+    if (AArch64::GPR64allRegClass.contains(reg) ||
+        AArch64::GPR32allRegClass.contains(reg)) {
+      return  {AArch64StmRegKind::getIntRegID(), 1};
+    }
+    if (AArch64::FPR128RegClass.contains(reg) ||
+        AArch64::FPR64RegClass.contains(reg) ||
+        AArch64::FPR32RegClass.contains(reg) ||
+        AArch64::FPR16RegClass.contains(reg) ||
+        AArch64::FPR8RegClass.contains(reg) ||
+        AArch64::FPR128_loRegClass.contains(reg) ||
+        AArch64::FPR64_loRegClass.contains(reg) ||
+        AArch64::FPR16_loRegClass.contains(reg) ||
+        AArch64::ZPRRegClass.contains(reg) ||
+        AArch64::ZPR_3bRegClass.contains(reg) ||
+        AArch64::ZPR_4bRegClass.contains(reg)) {
+      return  {AArch64StmRegKind::getFloatRegID(), 1};
+    }
+    if (AArch64::DDRegClass.contains(reg) ||
+        AArch64::QQRegClass.contains(reg) ||
+        AArch64::ZPR2RegClass.contains(reg)) {
+      return  {AArch64StmRegKind::getFloatRegID(), 2};
+    }
+    if (AArch64::DDDRegClass.contains(reg) ||
+        AArch64::QQQRegClass.contains(reg) ||
+        AArch64::ZPR3RegClass.contains(reg)) {
+      return  {AArch64StmRegKind::getFloatRegID(), 3};
+    }
+    if (AArch64::DDDDRegClass.contains(reg) ||
+        AArch64::QQQQRegClass.contains(reg) ||
+        AArch64::ZPR4RegClass.contains(reg)) {
+      return  {AArch64StmRegKind::getFloatRegID(), 4};
+    }
+    if (AArch64::PPRRegClass.contains(reg) ||
+        AArch64::PPR_3bRegClass.contains(reg)) {
+      return {AArch64StmRegKind::getPredicateRegID(), 1};
+    }
+    if (AArch64::CCRRegClass.contains(reg)) {
+      return {AArch64StmRegKind::getCCRegID(), 1};
+    }
+
+    llvm_unreachable("unknown register");
+  }
+  return {0, 0};
 }
 
 unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {

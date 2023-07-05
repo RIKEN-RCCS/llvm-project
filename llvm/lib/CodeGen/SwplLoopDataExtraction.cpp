@@ -87,12 +87,6 @@ void SwplReg::getDefPortInLoopBody( SwplInst **p_def_inst, int *p_def_index) {
   }
 }
 
-/// \note レジスタのサイズではないことに注意
-int SwplReg::getRegSize() const {
-  /// llvmではtuple型の内部表現は存在せず、レジスタそれぞれが独立している。
-  return 1;
-}
-
 bool SwplInst::isDefinePredicate() const {
   for (auto *reg:getDefRegs()) {
     if (reg->isPredReg()) return true;
@@ -198,6 +192,7 @@ void SwplLoop::makePhiInsts(Register2SwplRegMap &rmap) {
     if (itr == rmap.end()) {
       SwplInst *d_inst = new SwplInst(nullptr, nullptr);
       swpl_reg = new SwplReg(Reg, *(d_inst), 0, false);
+
       d_inst->addDefRegs(swpl_reg);
       addPreviousInsts(d_inst);
     } else {
@@ -208,6 +203,7 @@ void SwplLoop::makePhiInsts(Register2SwplRegMap &rmap) {
     phi->addUseRegs(swpl_reg);
 
     SwplReg *swpl_defreg = new SwplReg(Reg, *phi, 0, false);
+
     phi->addDefRegs(swpl_defreg);
     rmap[Reg] = swpl_defreg;
     addPhiInsts(phi);
@@ -643,13 +639,10 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     for (auto *t=phi->getNextNode();t;t=t->getNextNode()) {
       if (!t->isPHI()) break;
       Register t_own_r;
-      unsigned t_own_subreg;
       if (t->getOperand(2).getMBB()==org) {
         t_own_r = t->getOperand(1).getReg();
-        t_own_subreg = t->getOperand(1).getSubReg();
       } else {
         t_own_r = t->getOperand(3).getReg();
-        t_own_subreg = t->getOperand(3).getSubReg();
       }
       if (def_r==t_own_r) {
         llvm::Register newReg = SWPipeliner::MRI->cloneVirtualRegister(def_r);
@@ -1273,6 +1266,7 @@ SwplReg::SwplReg(const SwplReg &s) {
   Predecessor = s.Predecessor;
   Successor = s.Successor;
   EarlyClobber=s.EarlyClobber;
+  units = s.units;
   rk = SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, s.Reg);
 }
 
@@ -1284,6 +1278,8 @@ SwplReg::SwplReg(Register r, SwplInst &i, size_t def_index, bool earlyclober) {
   Successor = nullptr;
   EarlyClobber=earlyclober;
   rk = SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, r);
+  units = rk->getUnitNum();
+
 }
 
 void SwplReg::print() {

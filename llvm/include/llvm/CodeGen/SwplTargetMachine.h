@@ -50,18 +50,20 @@ protected:
   enum RegKindID {unknown=0, IntReg=1, FloatReg=2, PredicateReg=3, CCReg=4};
   unsigned registerClassId = RegKindID::unknown;
   bool allocated = false;
+  unsigned unitNum=0;
 
 public:
   /// constructor
 
   StmRegKind():registerClassId(RegKindID::unknown),allocated(false)  {}
-  StmRegKind(const StmRegKind&s):registerClassId(s.registerClassId),allocated(s.allocated) {}
+  StmRegKind(const StmRegKind&s):registerClassId(s.registerClassId),allocated(s.allocated),unitNum(s.unitNum) {}
   virtual ~StmRegKind() {}
 
   /// \param id register class id
   /// \param isAllocated  physical register
-  StmRegKind(unsigned id, bool isAllocated)
-      : registerClassId(id), allocated(isAllocated) {}
+  /// \param n unit number
+  StmRegKind(unsigned id, bool isAllocated, unsigned n)
+      : registerClassId(id), allocated(isAllocated), unitNum(n) {}
 
   /// check Interger
   /// \retval true Interger
@@ -201,6 +203,8 @@ public:
   static bool isSameKind(const StmRegKind &kind1, RegKindID regclassid) {
     return kind1.registerClassId == regclassid;
   }
+  /// return unit number
+  unsigned getUnitNum() {return unitNum;}
 };
 
 /// list of StmPipeline(for argument)
