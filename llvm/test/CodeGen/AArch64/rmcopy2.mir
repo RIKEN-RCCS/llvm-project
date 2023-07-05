@@ -1,4 +1,4 @@
-# RUN: llc %s -o /dev/null -swpl-debug -swpl-disable-restrictions-check -mcpu=a64fx -O1 -fswp -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner 2>&1 | FileCheck %s
+# RUN: llc %s -o /dev/null -swpl-debug-prepare -swpl-disable-restrictions-check -mcpu=a64fx -O1 -fswp -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner 2>&1 | FileCheck %s
 # CHECK: DBG(SwplLoop::removeCopy)
 # CHECK-NEXT:  target mi: %89:gpr64 = COPY $xzr
 # CHECK-NEXT:  before: %87:gpr64 = PHI %18:gpr64all, %bb.1, %89:gpr64, %bb.2

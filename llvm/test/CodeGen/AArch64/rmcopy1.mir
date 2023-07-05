@@ -1,4 +1,4 @@
-# RUN: llc %s -o /dev/null -swpl-debug -mcpu=a64fx -O1 -fswp -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner 2>&1 | FileCheck %s
+# RUN: llc %s -o /dev/null -swpl-debug-prepare -mcpu=a64fx -O1 -fswp -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner 2>&1 | FileCheck %s
 # CHECK: DBG(SwplLoop::removeCopy)
 # CHECK-NEXT:  target mi: %41:fpr64 = COPY %40.dsub:zpr
 # CHECK-NEXT:  op0 is liveout!

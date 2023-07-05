@@ -38,7 +38,7 @@ static cl::opt<bool> DisableSwpl("swpl-disable",cl::init(false), cl::ReallyHidde
 /// Pragmaによるswpのon/offの代わりにSWPL化Loopを絞り込む
 static cl::opt<int> TargetLoop("swpl-choice-loop",cl::init(0), cl::ReallyHidden);
 static cl::opt<bool> DebugOutput("swpl-debug",cl::init(false), cl::ReallyHidden);
-
+static cl::opt<bool> DebugDdgOutput("swpl-debug-ddg",cl::init(false), cl::ReallyHidden);
 
 
 
@@ -46,6 +46,10 @@ namespace llvm {
 
 bool SWPipeliner::isDebugOutput() {
   return ::DebugOutput;
+}
+
+bool SWPipeliner::isDebugDdgOutput() {
+  return ::DebugDdgOutput;
 }
 
 MachineOptimizationRemarkEmitter *SWPipeliner::ORE = nullptr;
