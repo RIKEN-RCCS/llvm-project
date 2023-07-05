@@ -604,6 +604,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
                              llvm::MachineBasicBlock *org, const SwplScr::UseMap &LiveOutReg) {
   std::vector<MachineInstr*> phis;
 
+  DenseMap<MachineInstr*, Register> flow;
   DenseMap<MachineInstr*, MachineOperand*> uses;
   for (auto &phi:body->phis()) {
     phis.push_back(&phi);
@@ -637,6 +638,32 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
         in_r = Reg;
       }
     }
+
+    // def_rは後続するown_rで参照されるか調査する
+    for (auto *t=phi->getNextNode();t;t=t->getNextNode()) {
+      if (!t->isPHI()) break;
+      Register t_own_r;
+      unsigned t_own_subreg;
+      if (t->getOperand(2).getMBB()==org) {
+        t_own_r = t->getOperand(1).getReg();
+        t_own_subreg = t->getOperand(1).getSubReg();
+      } else {
+        t_own_r = t->getOperand(3).getReg();
+        t_own_subreg = t->getOperand(3).getSubReg();
+      }
+      if (def_r==t_own_r) {
+        llvm::Register newReg = SWPipeliner::MRI->cloneVirtualRegister(def_r);
+        MachineInstr *c=BuildMI(*body, body->getFirstTerminator(), dbgloc,
+                                  SWPipeliner::TII->get(TargetOpcode::COPY), newReg)
+                              .addReg(def_r /* def_rはsubreg指定は無い */);
+        flow[t]=newReg;
+        if (DebugPrepare) {
+           dbgs() << "DEBUG(convertNonSSA): def_r is referenced by subsequent own_r:" << *c;
+        }
+        break;
+      }
+    }
+
     ///   (1)-2. Phiの定義を参照する命令を検索し2.の参照レジスタに置きかえる。 \n
     ///      defregはliveoutしているかを確認する。liveoutしていれば、PHIから生成されるCOPYの定義レジスタは新規を利用。
     const auto *org_phi=NewMI2OrgMI[phi];
@@ -691,6 +718,14 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     /// own_r/def_rの参照がない場合はCOPY生成不要
     auto *def_op = uses[phi];
     if (liveout_def || liveout_own || def_op==nullptr) {
+      if (flow.count(phi)) {
+        if (DebugPrepare) {
+           dbgs() << "DEBUG(convertNonSSA): change own_r " << printReg(own_r, SWPipeliner::TRI)
+                  << " to " << printReg(flow[phi], SWPipeliner::TRI) << "\n";
+        }
+        own_r = flow[phi];
+      }
+
       MachineInstr *c=BuildMI(*body, body->getFirstTerminator(), dbgloc,
                                 SWPipeliner::TII->get(TargetOpcode::COPY), def_r)
                             .addReg(own_r,0, own_subreg);
