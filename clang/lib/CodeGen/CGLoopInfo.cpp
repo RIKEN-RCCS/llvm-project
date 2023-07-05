@@ -55,6 +55,7 @@ MDNode *LoopInfo::createPipeliningMetadata(const LoopAttributes &Attrs,
                             ConstantAsMetadata::get(ConstantInt::get(
                                 llvm::Type::getInt1Ty(Ctx), 1))}));
       LoopProperties = NewLoopProperties;
+      HasUserTransforms = true;
     }
     return createLoopPropertiesMetadata(LoopProperties);
   }
