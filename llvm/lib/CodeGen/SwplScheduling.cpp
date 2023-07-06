@@ -1022,7 +1022,7 @@ bool SwplPlanSpec::init(unsigned arg_res_mii) {
   assert(min_ii < max_ii);
 
   if (SWPipeliner::isDebugOutput()) {
-    dbgs() << "Minimum II = " << res_mii << ".)\n";
+    dbgs() << "Minimum II = " << min_ii << ".)\n";
   }
   return true;
 }
