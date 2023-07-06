@@ -3162,6 +3162,62 @@ bool AArch64TTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
 }
 
 /**
+ * Loopメタ情報を探索しllvm.loop.pipeline.enable/disableの指定状況を取得する
+ * @details 入れ子になったメタ情報を再帰的に探索し、指定状況を取得する。
+ * @param [in] L 対象Loopの情報
+ * @param [in] MD 対象のメタ情報
+ * @param [out] exists llvm.loop.pipeline.enable/disableが指定されていればtrueとなる
+ * @retval true llvm.loop.pipeline.enableが指定されている
+ * @retval false llvm.loop.pipeline.disableが指定されている
+ */
+bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists) {
+
+  if (MD->isDistinct()) {
+    // 例）!25 = distinct !{!25, !18, !23, !26, !27, !28}
+    // すべてのオペランドを探索する
+    for (unsigned i = 1, e = MD->getNumOperands(); i < e; ++i) {
+      MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(i));
+
+      if (MD == nullptr)
+        continue;
+
+      bool ret = isEnableSwp(L, childMD, exists);
+      if (exists)
+        return ret;
+    }
+  }
+  else {
+    // 例）!28 = !{!"llvm.loop.pipeline.enable"}
+    // 先頭オペランドの文字列を取得する
+    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+
+    if (S == nullptr)
+      return false;
+
+    // loopメタ情報表示
+    LLVM_DEBUG( if (L->getLocRange().getStart().get()) dbgs() << __func__ << ":loop=" << L->getLocRange().getStart().getLine() << "-" << L->getLocRange().getEnd().getLine() << " meta:" << S->getString() << "\n");
+
+    if (S->getString()=="llvm.loop.pipeline.disable") {
+      exists = true;
+      return false;
+    }
+
+    if (S->getString()=="llvm.loop.pipeline.enable") {
+      exists = true;
+      return true;
+    }
+
+    // 例）!28 = !{!"llvm.loop.vectorize.followup_all", !29}
+    // followupを含むメタ情報の場合は、第2オペランドを探索する
+    if ((S->getString()).find("followup") != std::string::npos) {
+      MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(1));
+      return isEnableSwp(L, childMD, exists);
+    }
+  }
+  return false;
+}
+
+/**
  * Loopメタ情報からllvm.loop.pipeline.enable/disableの指定状況を取得する
  * @param [in] L
  * @param [out] exists llvm.loop.pipeline.enable/disableが指定されていればtrueとなる
@@ -3175,31 +3231,9 @@ static int enableLoopSWP(const Loop* L, bool &exists) {
   if (LoopID == nullptr)
     return false;
 
-  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
-    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
+  // llvm.loop.pipeline.enable/disableの指定状況取得
+  return isEnableSwp(L, LoopID, exists);
 
-    if (MD == nullptr)
-      continue;
-
-    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
-
-    if (S == nullptr)
-      continue;
-
-    // loopメタ情報を表示する。
-    LLVM_DEBUG( if (L->getLocRange().getStart().get()) dbgs() << __func__ << ":loop=" << L->getLocRange().getStart().getLine() << "-" << L->getLocRange().getEnd().getLine() << " meta:" << S->getString() << "\n");
-
-    if (S->getString()=="llvm.loop.pipeline.disable") {
-      exists=true;
-      return false;
-    }
-
-    if (S->getString()=="llvm.loop.pipeline.enable") {
-      exists=true;
-      return true;
-    }
-  }
-  return false;
 }
 
 bool llvm::enableSWP(const Loop *L) {

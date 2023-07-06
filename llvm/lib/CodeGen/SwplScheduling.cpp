@@ -1127,6 +1127,52 @@ unsigned SwplPlanSpec::getMaxIterationInterval(const SwplLoop& loop, unsigned mi
   return maxii;
 }
 
+/// \brief pragma pipeline_initiation_intervalの指定値をメタ情報を探索し取得する
+/// \details 入れ子になったメタ情報を再帰的に探索し、指定値を取得する。
+/// \param [in] MD 対象となるメタ情報
+/// \param [out] exists pipeline_initiation_intervalが指定されていればtrue
+/// \return メタ情報から取得したIIの値
+unsigned int getIIMetadata(MDNode *MD, bool &exists) {
+
+  if (MD->isDistinct()) {
+    // 例）!25 = distinct !{!25, !18, !23, !26, !27, !28}
+    // すべてのオペランドを探索する
+    for (unsigned i = 1, e = MD->getNumOperands(); i < e; ++i) {
+      MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(i));
+
+      if (MD == nullptr)
+        continue;
+
+      unsigned int ret = getIIMetadata(childMD, exists);
+      if (exists)
+        return ret;
+    }
+  }
+  else {
+    // 例）!28 = !{!"llvm.loop.pipeline.initiationinterval", i32 30}
+    // 先頭オペランドの文字列を参照する
+    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+
+    if (S == nullptr)
+      return 0;
+
+    if (S->getString() == "llvm.loop.pipeline.initiationinterval") {
+      assert(MD->getNumOperands() == 2 &&
+             "Pipeline initiation interval hint metadata should have two operands.");
+      exists = true;
+      return mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
+    }
+
+    // 例）!28 = !{!"llvm.loop.vectorize.followup_all", !29}
+    // followupを含むメタ情報の場合は、第2オペランドを探索する
+    if ((S->getString()).find("followup") != std::string::npos) {
+      MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(1));
+      return getIIMetadata(childMD, exists);
+    }
+  }
+  return 0;
+}
+
 /// \brief pragma pipeline_initiation_intervalの指定値をメタ情報から取得する
 /// \param [in] loop 対象となるループ情報
 /// \param [in,out] exists pipeline_initiation_intervalが指定されていればtrue
@@ -1158,24 +1204,9 @@ unsigned int SwplPlanSpec::getInitiationInterval(const SwplLoop &loop, bool &exi
   assert(LoopID->getOperand(0) == LoopID && "invalid loop");
 
   // メタ情報の探索
-  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
-    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
-
-    if (MD == nullptr)
-      continue;
-
-    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
-
-    if (S == nullptr)
-      continue;
-
-    if (S->getString() == "llvm.loop.pipeline.initiationinterval") {
-      assert(MD->getNumOperands() == 2 &&
-             "Pipeline initiation interval hint metadata should have two operands.");
-      exists = true;
-      return mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
-    }
-  }
+  unsigned int ret = getIIMetadata(LoopID, exists);
+  if (exists)
+    return ret;
 
   return 0;
 }
