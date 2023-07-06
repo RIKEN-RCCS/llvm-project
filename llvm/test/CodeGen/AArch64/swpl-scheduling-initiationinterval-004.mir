@@ -1,17 +1,17 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-ii-by-Bsearch=true -swpl-minii=4 -swpl-maxii=7  -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-ii-by-Bsearch=true -swpl-minii=1 -swpl-maxii=7  -o /dev/null 2>&1 | FileCheck %s
 
-
-#CHECK:        : (Iterative Modulo Scheduling. ResMII 6. NumOfBodyInsts 23. Budget 115. Minimum II = 6.)
-#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 4 in [ 4,7]) MVE: 0 Last inst: 7. (Itr Org: 99, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 6 in [ 4,7]) MVE: 1 Last inst: 0. (Itr Org: 99, Req: 2) (VReg Fp: 0/32, Int: 14/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Run out of budget      at binary search.       : (II: 5 in [ 4,6]) MVE: 0 Last inst: 6. (Itr Org: 99, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        : Required iteration count in MIR input is        :   2 (= kernel:1 + pro/epilogue:1 + mod:0) 
+#CHECK:        : (Iterative Modulo Scheduling. ResMII 4. NumOfBodyInsts 13. Budget 650. Minimum II = 1.)
+#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 1 in [ 1,7]) MVE: 0 Last inst: 9. (Itr Org: 99, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 5 in [ 1,7]) MVE: 2 Last inst: 0. (Itr Org: 99, Req: 3) (VReg Fp: 0/32, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Run out of budget      at binary search.       : (II: 3 in [ 1,5]) MVE: 0 Last inst: 2. (Itr Org: 99, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 4 in [ 3,5]) MVE: 2 Last inst: 0. (Itr Org: 99, Req: 3) (VReg Fp: 0/32, Int: 14/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        : Required iteration count in MIR input is        :   3 (= kernel:2 + pro/epilogue:1 + mod:0) 
 #CHECK:        : Original iteration count in MIR is found        :   99
-#CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 1, 98, 0)
+#CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 2, 49, 0)
 #CHECK:        :
-#CHECK:        : Loop is software pipelined. (ii=6, kernel=6 cycles, prologue,epilogue =6 cycles)
-#CHECK:        :      IPC (initial=5.25, real=3.50, rate=66.67%)
-#CHECK:        :      = Instructions(21)/II(6)
+#CHECK:        : Loop is software pipelined. (ii=4, kernel=8 cycles, prologue,epilogue =4 cycles)
+#CHECK:        :      IPC (initial=11.00, real=2.75, rate=25.00%)
+#CHECK:        :      = Instructions(11)/II(4)
 #CHECK:        :      Virtual inst:(2)
 #CHECK:        :
 --- |
