@@ -715,7 +715,7 @@ void SwplTransformMIR::outputLoopoptMessage(int n_body_inst) {
                           "SRA(PReg Fp: {11}/{12}, Int: {13}/{14}, Pred: {15}/{16})",
                           (ipc100/100.), TMI.nCopies, mve,
                           TMI.iterationInterval,
-                          Plan.getNIterationCopies(),
+                          Plan.getNIterationCopies() - mve + 1,
                           Plan.getNecessaryFreg(), Plan.getMaxFreg(),
                           Plan.getNecessaryIreg(), Plan.getMaxIreg(),
                           Plan.getNecessaryPreg(), Plan.getMaxPreg(),
