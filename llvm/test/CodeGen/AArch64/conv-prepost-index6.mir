@@ -1,21 +1,20 @@
 # RUN: llc -mcpu=a64fx -O1 -swpl-disable-reg-alloc -fswp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug-prepare %s 2>&1 | FileCheck %s
 #
-# CHECK: DBG(SwplLoop::convertPrePostIndexInstr)
-# CHECK:  before:early-clobber %897:gpr64sp, %898:fpr64 = LDRDpost %895:gpr64sp(tied-def 0), 8 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
-# CHECK-NEXT:  after 1:%898:fpr64 = LDURDi %895:gpr64sp, 0 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
-# CHECK-NEXT:  after 2:%897:gpr64sp = ADDXri %895:gpr64sp, 8, 0
+# CHECK:  before:early-clobber %717:gpr64sp, %718:fpr64 = LDRDpost %715:gpr64sp(tied-def 0), 8 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
+# CHECK-NEXT:  after 1:%718:fpr64 = LDURDi %715:gpr64sp, 0 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
+# CHECK-NEXT:  after 2:%717:gpr64sp = ADDXri %715:gpr64sp, 8, 0
 # CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
-# CHECK-NEXT:  before:early-clobber %899:gpr64sp, %900:fpr64 = LDRDpost %895:gpr64sp(tied-def 0), -8 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
-# CHECK-NEXT:  after 1:%900:fpr64 = LDURDi %895:gpr64sp, 0 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
-# CHECK-NEXT:  after 2:%899:gpr64sp = SUBXri %895:gpr64sp, 8, 0
+# CHECK-NEXT:  before:early-clobber %719:gpr64sp, %720:fpr64 = LDRDpost %715:gpr64sp(tied-def 0), -8 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
+# CHECK-NEXT:  after 1:%720:fpr64 = LDURDi %715:gpr64sp, 0 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
+# CHECK-NEXT:  after 2:%719:gpr64sp = SUBXri %715:gpr64sp, 8, 0
 # CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
-# CHECK-NEXT:  before:early-clobber %903:gpr64sp = STRDpost %902:fpr64, %894:gpr64sp(tied-def 0), 8 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
-# CHECK-NEXT:  after 1:STURDi %902:fpr64, %894:gpr64sp, 0 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
-# CHECK-NEXT:  after 2:%903:gpr64sp = ADDXri %894:gpr64sp, 8, 0
+# CHECK-NEXT:  before:early-clobber %723:gpr64sp = STRDpost %722:fpr64, %714:gpr64sp(tied-def 0), 8 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
+# CHECK-NEXT:  after 1:STURDi %722:fpr64, %714:gpr64sp, 0 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
+# CHECK-NEXT:  after 2:%723:gpr64sp = ADDXri %714:gpr64sp, 8, 0
 # CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
-# CHECK-NEXT:  before:early-clobber %904:gpr64sp = STRDpost killed %902:fpr64, %894:gpr64sp(tied-def 0), -8 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
-# CHECK-NEXT:  after 1:STURDi %902:fpr64, %894:gpr64sp, 0 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
-# CHECK-NEXT:  after 2:%904:gpr64sp = SUBXri %894:gpr64sp, 8, 0
+# CHECK-NEXT:  before:early-clobber %724:gpr64sp = STRDpost killed %722:fpr64, %714:gpr64sp(tied-def 0), -8 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
+# CHECK-NEXT:  after 1:STURDi %722:fpr64, %714:gpr64sp, 0 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
+# CHECK-NEXT:  after 2:%724:gpr64sp = SUBXri %714:gpr64sp, 8, 0
 
 --- |
   ; ModuleID = 'n10.c'

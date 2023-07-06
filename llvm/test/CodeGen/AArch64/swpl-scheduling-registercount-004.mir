@@ -1,20 +1,20 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner -swpl-maxii=6 -swpl-debug-dump-estimate-reg -swpl-max-ireg=2 -swpl-debug -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner -swpl-maxii=6 -swpl-debug-dump-estimate-reg -swpl-max-ireg=2 -swpl-debug -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:        : (Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 10. Budget 50. Minimum II = 3.)
-#CHECK:Estimated number of I registers (classid:1) : immortal 3, mortal  10, interfered 15, extended 11, pattern 6, margin 1,
-#CHECK: total    : 19
-#CHECK:Estimated number of F registers (classid:2) : immortal 0, mortal  10, interfered 0, extended 10, pattern 6, margin 1,
-#CHECK: total    : 11
+#CHECK:        : (Iterative Modulo Scheduling. ResMII 2. NumOfBodyInsts 6. Budget 300. Minimum II = 2.)
+#CHECK:Estimated number of I registers (classid:1) : immortal 3, mortal  11, interfered 21, extended 12, pattern 2, margin 1,
+#CHECK: total    : 25
+#CHECK:Estimated number of F registers (classid:2) : immortal 0, mortal  15, interfered 0, extended 15, pattern 4, margin 1,
+#CHECK: total    : 16
 #CHECK:Estimated number of P registers (classid:3) : immortal 0, mortal  0, interfered 0, extended 0, pattern 0, margin 1,
 #CHECK: total    : 1
-#CHECK:        :  (x) Register (I) short     at estimation.          : (II: 3 in [ 3,6]) MVE: 7 Last inst: 0. (Itr Org: 100, Req: 13) (VReg Fp: 11/32, Int: 19/2, Pre: 1/8) Eval:-1.000000e+00.
-#CHECK:Estimated number of I registers (classid:1) : immortal 3, mortal  7, interfered 9, extended 8, pattern 2, margin 1,
+#CHECK:        :  (x) Register (I) short     at estimation.          : (II: 2 in [ 2,6]) MVE: 10 Last inst: 0. (Itr Org: 100, Req: 19) (VReg Fp: 16/32, Int: 25/2, Pre: 1/8) Eval:-1.000000e+00.
+#CHECK:Estimated number of I registers (classid:1) : immortal 3, mortal  5, interfered 9, extended 6, pattern 2, margin 1,
 #CHECK: total    : 13
 #CHECK:Estimated number of F registers (classid:2) : immortal 0, mortal  6, interfered 0, extended 6, pattern 4, margin 1,
 #CHECK: total    : 7
 #CHECK:Estimated number of P registers (classid:3) : immortal 0, mortal  0, interfered 0, extended 0, pattern 0, margin 1,
 #CHECK: total    : 1
-#CHECK:        :  (x) Register (I) short     at estimation.          : (II: 5 in [ 3,6]) MVE: 4 Last inst: 0. (Itr Org: 100, Req: 7) (VReg Fp: 7/32, Int: 13/2, Pre: 1/8) Eval:-1.000000e+00.
+#CHECK:        :  (x) Register (I) short     at estimation.          : (II: 5 in [ 2,6]) MVE: 4 Last inst: 0. (Itr Org: 100, Req: 7) (VReg Fp: 7/32, Int: 13/2, Pre: 1/8) Eval:-1.000000e+00.
 
 --- |
   ; ModuleID = '/TEST/tp/testprg.ll'
