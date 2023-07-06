@@ -40,6 +40,8 @@ static cl::opt<int> TargetLoop("swpl-choice-loop",cl::init(0), cl::ReallyHidden)
 static cl::opt<bool> DebugOutput("swpl-debug",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DebugDdgOutput("swpl-debug-ddg",cl::init(false), cl::ReallyHidden);
 
+static cl::opt<unsigned> OptionMinIIBase("swpl-minii",cl::init(0), cl::ReallyHidden);
+static cl::opt<unsigned> OptionMaxIIBase("swpl-maxii",cl::init(0), cl::ReallyHidden);
 
 
 namespace llvm {
@@ -50,6 +52,14 @@ bool SWPipeliner::isDebugOutput() {
 
 bool SWPipeliner::isDebugDdgOutput() {
   return ::DebugDdgOutput;
+}
+
+unsigned SWPipeliner::nOptionMinIIBase() {
+  return ::OptionMinIIBase;
+}
+
+unsigned SWPipeliner::nOptionMaxIIBase() {
+  return ::OptionMaxIIBase;
 }
 
 MachineOptimizationRemarkEmitter *SWPipeliner::ORE = nullptr;
