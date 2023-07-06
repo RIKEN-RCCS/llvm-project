@@ -1403,18 +1403,14 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
     bool Valid = StateInfo &&
                  llvm::StringSwitch<bool>(StateInfo->getName())
                      .Case("disable", true)
-                     .Case("enable", !OptionPipelineDisabled)
+                     .Case("enable", true)
                      .Case("full", OptionUnroll || OptionUnrollAndJam)
                      .Case("assume_safety", AssumeSafetyArg)
                      .Default(false);
     if (!Valid) {
-      if (OptionPipelineDisabled) {
-        Diag(Toks[0].getLocation(), diag::err_pragma_pipeline_invalid_keyword);
-      } else {
         Diag(Toks[0].getLocation(), diag::err_pragma_invalid_keyword)
             << /*FullKeyword=*/(OptionUnroll || OptionUnrollAndJam)
             << /*AssumeSafetyKeyword=*/AssumeSafetyArg;
-      }
       return false;
     }
     if (Toks.size() > 2)
