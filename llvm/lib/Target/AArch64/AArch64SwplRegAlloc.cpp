@@ -169,33 +169,22 @@ static void createExcludeVReg(MachineInstr *mi, MachineOperand &mo,
     return;
   }
 
-  if (SWPipeliner::currentLoop->containsLiveOutReg(reg)) {
-    // SWPL適用後の段階でLiveOutしている仮想レジスタなら除外リストに追加
+  // 対象のオペランドなら除外リストに追加
+  assert(mi);
+  switch (mi->getOpcode()) {
+  case TargetOpcode::EXTRACT_SUBREG:
+  case TargetOpcode::INSERT_SUBREG:
+  case TargetOpcode::REG_SEQUENCE:
+  case TargetOpcode::SUBREG_TO_REG:
     if( DebugSwplRegAlloc ) {
-      dbgs() << "Excluded LiveOut. reg="
-             << printReg(reg, SWPipeliner::TRI) << "\n";
+      dbgs() << "Excluded operand: " << mi->getOpcode()
+             << ", reg=" << printReg(reg, SWPipeliner::TRI) << "\n";
     }
     ex_vreg.insert(reg);
-  } else {
-    // 対象のオペランドなら除外リストに追加
-    assert(mi);
-    switch (mi->getOpcode()) {
-    case TargetOpcode::EXTRACT_SUBREG:
-    case TargetOpcode::INSERT_SUBREG:
-    case TargetOpcode::REG_SEQUENCE:
-    case TargetOpcode::SUBREG_TO_REG:
-      if( DebugSwplRegAlloc ) {
-        dbgs() << "Excluded operand: " << mi->getOpcode()
-               << ", reg=" << printReg(reg, SWPipeliner::TRI) << "\n";
-      }
-      ex_vreg.insert(reg);
-      break;
-    default:
-      break;
-    }
+    break;
+  default:
+    break;
   }
-
-  return;
 }
 
 /**
@@ -580,7 +569,8 @@ static void callSetReg(MachineFunction &MF,
      */
     if ((rinfo->num_def == -1) || (rinfo->num_def > rinfo->num_use))
       addCopyMIpre(MF, pre_dl, tmi->kernel_pre_mis, rinfo->vreg, rinfo->preg);    // livein
-    if ((rinfo->num_def > -1) && (tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg)))
+    if (((rinfo->num_def > -1) && (tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg)))
+        || SWPipeliner::currentLoop->containsLiveOutReg(rinfo->vreg))
       addCopyMIpost(MF, post_dl, tmi->kernel_post_mis, rinfo->vreg, rinfo->preg); // liveout
     // 当該物理レジスタを使用するMachineOperandすべてにsetReg()する
     for (auto *mo : rinfo->vreg_mo) {
