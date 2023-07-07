@@ -1,0 +1,168 @@
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O3 -swpl-debug -swpl-plan-import=%S/Inputs/3044-24.yaml -start-before=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
+
+
+#CHECK:DBG(canPipelineLoop) [canPipelineLoop:OK] Passed all checks. :
+#CHECK:DBG(calcEachMemAddressIncrement): %20:fpr32 = LDRSroX %11:gpr64common, %17:gpr64common, 0, 0 :: (load (s32) from %ir.uglygep23, !tbaa !2)
+#CHECK:DBG(calcEachMemAddressIncrement): STRSroX %21:fpr32, %14:gpr64common, %17:gpr64common, 0, 0 :: (store (s32) into %ir.uglygep1, !tbaa !2)
+#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 13 in [ 12,14]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (VReg Fp: 5/32, Int: 9/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        : Required iteration count in MIR input is        :   6 (= kernel:3 + pro/epilogue:3 + mod:0) 
+#CHECK:        : Original iteration count in MIR is found        :   5
+#CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 3, 0, 5)
+#CHECK:        :
+#CHECK:        : Swpl kernel is not generated because of shortage of iteration.
+#CHECK:        :
+
+
+
+--- |
+  ; ModuleID = 'test3044-15.ll'
+  source_filename = "test3044-15.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+  
+  @B = external dso_local local_unnamed_addr global [100 x float], align 4
+  @A = external dso_local local_unnamed_addr global [100 x float], align 4
+  
+  ; Function Attrs: nofree norecurse nounwind
+  define dso_local float @test3044() local_unnamed_addr #0 {
+    call void @llvm.set.loop.iterations.i64(i64 5)
+    br label %2
+  
+  1:                                                ; preds = %2
+    ret float %7
+  
+  2:                                                ; preds = %2, %0
+    %lsr.iv = phi i64 [ %lsr.iv.next, %2 ], [ 0, %0 ]
+    %3 = phi float [ 0.000000e+00, %0 ], [ %7, %2 ]
+    %4 = phi i64 [ 5, %0 ], [ %8, %2 ]
+    %uglygep2 = getelementptr i8, i8* bitcast ([100 x float]* @B to i8*), i64 %lsr.iv
+    %uglygep23 = bitcast i8* %uglygep2 to float*
+    %5 = load float, float* %uglygep23, align 4, !tbaa !2
+    %6 = fmul fast float %5, 2.000000e+00
+    %uglygep = getelementptr i8, i8* bitcast ([100 x float]* @A to i8*), i64 %lsr.iv
+    %uglygep1 = bitcast i8* %uglygep to float*
+    store float %6, float* %uglygep1, align 4, !tbaa !2
+    %7 = fadd fast float %6, %3
+    %lsr.iv.next = add nuw nsw i64 %lsr.iv, 4
+    %8 = call i64 @llvm.loop.decrement.reg.i64(i64 %4, i64 1)
+    %9 = icmp ne i64 %8, 0
+    br i1 %9, label %2, label %1, !llvm.loop !6
+  }
+  
+  ; Function Attrs: noduplicate nounwind
+  declare void @llvm.set.loop.iterations.i64(i64) #1
+  
+  ; Function Attrs: noduplicate nounwind
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+  
+  attributes #0 = { nofree norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" "use-soft-float"="false" }
+  attributes #1 = { noduplicate nounwind }
+  attributes #2 = { nounwind }
+  
+  !llvm.module.flags = !{!0}
+  !llvm.ident = !{!1}
+
+
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{!"clang version 11.0.0"}
+
+
+  !2 = !{!3, !3, i64 0}
+  !3 = !{!"float", !4, i64 0}
+  !4 = !{!"omnipotent char", !5, i64 0}
+  !5 = !{!"Simple C/C++ TBAA"}
+  !6 = distinct !{!6, !7}
+  !7 = !{!"llvm.loop.unroll.disable"}
+
+...
+---
+name:            test3044
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gpr64common, preferred-register: '' }
+  - { id: 1, class: fpr32, preferred-register: '' }
+  - { id: 2, class: gpr64sp, preferred-register: '' }
+  - { id: 3, class: fpr32, preferred-register: '' }
+  - { id: 4, class: gpr64all, preferred-register: '' }
+  - { id: 5, class: gpr64all, preferred-register: '' }
+  - { id: 6, class: gpr64all, preferred-register: '' }
+  - { id: 7, class: fpr32, preferred-register: '' }
+  - { id: 8, class: gpr64all, preferred-register: '' }
+  - { id: 9, class: gpr64all, preferred-register: '' }
+  - { id: 10, class: gpr32, preferred-register: '' }
+  - { id: 11, class: gpr64common, preferred-register: '' }
+  - { id: 12, class: fpr32, preferred-register: '' }
+  - { id: 13, class: fpr32, preferred-register: '' }
+  - { id: 14, class: gpr64common, preferred-register: '' }
+  - { id: 15, class: gpr64sp, preferred-register: '' }
+  - { id: 16, class: gpr64, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.2(0x80000000)
+  
+    %7:fpr32 = FMOVS0
+    %9:gpr64all = COPY $xzr
+    %6:gpr64all = COPY %9
+    %10:gpr32 = MOVi32imm 5
+    %8:gpr64all = SUBREG_TO_REG 0, killed %10, %subreg.sub_32
+    %11:gpr64common = MOVaddr target-flags(aarch64-page) @B, target-flags(aarch64-pageoff, aarch64-nc) @B
+    %14:gpr64common = MOVaddr target-flags(aarch64-page) @A, target-flags(aarch64-pageoff, aarch64-nc) @A
+    B %bb.2
+  
+  bb.1 (%ir-block.1):
+    $s0 = COPY %3
+    RET_ReallyLR implicit $s0
+  
+  bb.2 (%ir-block.2):
+    successors: %bb.2(0x7c000000), %bb.1(0x04000000)
+  
+    %0:gpr64common = PHI %6, %bb.0, %4, %bb.2
+    %1:fpr32 = PHI %7, %bb.0, %3, %bb.2
+    %2:gpr64sp = PHI %8, %bb.0, %5, %bb.2
+    %12:fpr32 = LDRSroX %11, %0, 0, 0 :: (load 4 from %ir.uglygep23, !tbaa !2)
+    %13:fpr32 = nnan ninf nsz arcp contract afn reassoc FADDSrr %12, %12
+    STRSroX %13, %14, %0, 0, 0 :: (store 4 into %ir.uglygep1, !tbaa !2)
+    %3:fpr32 = nnan ninf nsz arcp contract afn reassoc FADDSrr %13, %1
+    %15:gpr64sp = nuw nsw ADDXri %0, 4, 0
+    %4:gpr64all = COPY %15
+    %16:gpr64 = SUBSXri %2, 1, 0, implicit-def $nzcv
+    %5:gpr64all = COPY %16
+    Bcc 1, %bb.2, implicit $nzcv
+    B %bb.1
+
+...

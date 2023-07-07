@@ -1,0 +1,338 @@
+#RUN: llc %s -mcpu=a64fx -ffj-swp -start-before=aarch64-swpipeliner -swpl-debug-ddg -o /dev/null 2>&1 | FileCheck %s
+
+#CHECK:DBG(SwplDdg::print) SwplDdg. 
+#CHECK-NEXT:### SwplDdg: 
+#CHECK-NEXT:### SwplEdge: 
+#CHECK-NEXT:### from: %23:gpr64common = COPY %33:gpr64all
+#CHECK-NEXT:### to  : %25:gpr64common = ADDXrr %11:gpr64common, %23:gpr64common
+#CHECK-NEXT:### distance:1 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %25:gpr64common = ADDXrr %11:gpr64common, %23:gpr64common
+#CHECK-NEXT:### to  : %26:gpr32 = LDURWi %25:gpr64common, -4 :: (load (s32) from %ir.uglygep1, !tbaa !1)
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %23:gpr64common = COPY %33:gpr64all
+#CHECK-NEXT:### to  : %27:gpr64common = ADDXrr %14:gpr64common, %23:gpr64common
+#CHECK-NEXT:### distance:1 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %27:gpr64common = ADDXrr %14:gpr64common, %23:gpr64common
+#CHECK-NEXT:### to  : %28:gpr32 = LDRWui %27:gpr64common, 0 :: (load (s32) from %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %26:gpr32 = LDURWi %25:gpr64common, -4 :: (load (s32) from %ir.uglygep1, !tbaa !1)
+#CHECK-NEXT:### to  : %29:gpr32 = nsw SUBWrr killed %26:gpr32, killed %28:gpr32
+#CHECK-NEXT:### distance:0 delay:5
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %28:gpr32 = LDRWui %27:gpr64common, 0 :: (load (s32) from %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### to  : %29:gpr32 = nsw SUBWrr killed %26:gpr32, killed %28:gpr32
+#CHECK-NEXT:### distance:0 delay:5
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %29:gpr32 = nsw SUBWrr killed %26:gpr32, killed %28:gpr32
+#CHECK-NEXT:### to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 :: (store (s32) into %ir.uglygep910, !tbaa !1)
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %23:gpr64common = COPY %33:gpr64all
+#CHECK-NEXT:### to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 :: (store (s32) into %ir.uglygep910, !tbaa !1)
+#CHECK-NEXT:### distance:1 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %27:gpr64common = ADDXrr %14:gpr64common, %23:gpr64common
+#CHECK-NEXT:### to  : %30:gpr32 = LDRWui %27:gpr64common, 1 :: (load (s32) from %ir.scevgep8, !tbaa !1)
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %30:gpr32 = LDRWui %27:gpr64common, 1 :: (load (s32) from %ir.scevgep8, !tbaa !1)
+#CHECK-NEXT:### to  : %31:gpr32 = nsw MADDWrrr killed %30:gpr32, %8:gpr32, $wzr
+#CHECK-NEXT:### distance:0 delay:5
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %31:gpr32 = nsw MADDWrrr killed %30:gpr32, %8:gpr32, $wzr
+#CHECK-NEXT:### to  : STRWui killed %31:gpr32, %25:gpr64common, 2 :: (store (s32) into %ir.scevgep, !tbaa !1)
+#CHECK-NEXT:### distance:0 delay:5
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %25:gpr64common = ADDXrr %11:gpr64common, %23:gpr64common
+#CHECK-NEXT:### to  : STRWui killed %31:gpr32, %25:gpr64common, 2 :: (store (s32) into %ir.scevgep, !tbaa !1)
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %23:gpr64common = COPY %33:gpr64all
+#CHECK-NEXT:### to  : %32:gpr64sp = nuw nsw ADDXri %23:gpr64common, 4, 0
+#CHECK-NEXT:### distance:1 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %32:gpr64sp = nuw nsw ADDXri %23:gpr64common, 4, 0
+#CHECK-NEXT:### to  : %33:gpr64all = COPY %32:gpr64sp
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %24:gpr64sp = COPY %35:gpr64all
+#CHECK-NEXT:### to  : %34:gpr64 = SUBSXri %24:gpr64sp, 1, 0, implicit-def $nzcv
+#CHECK-NEXT:### distance:1 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %34:gpr64 = SUBSXri %24:gpr64sp, 1, 0, implicit-def $nzcv
+#CHECK-NEXT:### to  : %35:gpr64all = COPY %34:gpr64
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %33:gpr64all = COPY %32:gpr64sp
+#CHECK-NEXT:### to  : %23:gpr64common = COPY %33:gpr64all
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %35:gpr64all = COPY %34:gpr64
+#CHECK-NEXT:### to  : %24:gpr64sp = COPY %35:gpr64all
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %26:gpr32 = LDURWi %25:gpr64common, -4 :: (load (s32) from %ir.uglygep1, !tbaa !1)
+#CHECK-NEXT:### to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 :: (store (s32) into %ir.uglygep910, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %26:gpr32 = LDURWi %25:gpr64common, -4 :: (load (s32) from %ir.uglygep1, !tbaa !1)
+#CHECK-NEXT:### to  : STRWui killed %31:gpr32, %25:gpr64common, 2 :: (store (s32) into %ir.scevgep, !tbaa !1)
+#CHECK-NEXT## distance:20 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %28:gpr32 = LDRWui %27:gpr64common, 0 :: (load (s32) from %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 :: (store (s32) into %ir.uglygep910, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %28:gpr32 = LDRWui %27:gpr64common, 0 :: (load (s32) from %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### to  : STRWui killed %31:gpr32, %25:gpr64common, 2 :: (store (s32) into %ir.scevgep, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 :: (store (s32) into %ir.uglygep910, !tbaa !1)
+#CHECK-NEXT:### to  : %26:gpr32 = LDURWi %25:gpr64common, -4 :: (load (s32) from %ir.uglygep1, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:6
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 :: (store (s32) into %ir.uglygep910, !tbaa !1)
+#CHECK-NEXT:### to  : %28:gpr32 = LDRWui %27:gpr64common, 0 :: (load (s32) from %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:6
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 :: (store (s32) into %ir.uglygep910, !tbaa !1)
+#CHECK-NEXT:### to  : %30:gpr32 = LDRWui %27:gpr64common, 1 :: (load (s32) from %ir.scevgep8, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:6
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 :: (store (s32) into %ir.uglygep910, !tbaa !1)
+#CHECK-NEXT:### to  : STRWui killed %31:gpr32, %25:gpr64common, 2 :: (store (s32) into %ir.scevgep, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %30:gpr32 = LDRWui %27:gpr64common, 1 :: (load (s32) from %ir.scevgep8, !tbaa !1)
+#CHECK-NEXT:### to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 :: (store (s32) into %ir.uglygep910, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %30:gpr32 = LDRWui %27:gpr64common, 1 :: (load (s32) from %ir.scevgep8, !tbaa !1)
+#CHECK-NEXT:### to  : STRWui killed %31:gpr32, %25:gpr64common, 2 :: (store (s32) into %ir.scevgep, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: STRWui killed %31:gpr32, %25:gpr64common, 2 :: (store (s32) into %ir.scevgep, !tbaa !1)
+#CHECK-NEXT:### to  : %26:gpr32 = LDURWi %25:gpr64common, -4 :: (load (s32) from %ir.uglygep1, !tbaa !1)
+#CHECK-NEXT:### distance:3 delay:6
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: STRWui killed %31:gpr32, %25:gpr64common, 2 :: (store (s32) into %ir.scevgep, !tbaa !1)
+#CHECK-NEXT:### to  : %28:gpr32 = LDRWui %27:gpr64common, 0 :: (load (s32) from %ir.uglygep45, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:6
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: STRWui killed %31:gpr32, %25:gpr64common, 2 :: (store (s32) into %ir.scevgep, !tbaa !1)
+#CHECK-NEXT:### to  : STRWroX killed %29:gpr32, %18:gpr64common, %23:gpr64common, 0, 0 :: (store (s32) into %ir.uglygep910, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: STRWui killed %31:gpr32, %25:gpr64common, 2 :: (store (s32) into %ir.scevgep, !tbaa !1)
+#CHECK-NEXT:### to  : %30:gpr32 = LDRWui %27:gpr64common, 1 :: (load (s32) from %ir.scevgep8, !tbaa !1)
+#CHECK-NEXT:### distance:20 delay:6
+
+
+
+--- |
+  ; ModuleID = '2937-31.ll'
+  source_filename = "2937-31.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux"
+  
+  @a = dso_local local_unnamed_addr global [1000 x i32] zeroinitializer, align 4
+  @c = dso_local local_unnamed_addr global [1000 x i32] zeroinitializer, align 4
+  @b = dso_local local_unnamed_addr global [1000 x i32] zeroinitializer, align 4
+  @y = dso_local local_unnamed_addr global i32 0, align 4
+  @x = dso_local local_unnamed_addr global i32 0, align 4
+  
+  ; Function Attrs: nofree norecurse nounwind
+  define dso_local void @foo() local_unnamed_addr #0 {
+    %1 = load i32, i32* @y, align 4, !tbaa !2
+    call void @llvm.set.loop.iterations.i64(i64 100)
+    br label %3
+  
+  2:                                                ; preds = %3
+    ret void
+  
+  3:                                                ; preds = %3, %0
+    %lsr.iv = phi i64 [ %lsr.iv.next, %3 ], [ 0, %0 ]
+    %4 = phi i64 [ 100, %0 ], [ %10, %3 ]
+    %uglygep = getelementptr i8, i8* bitcast (i32* getelementptr ([1000 x i32], [1000 x i32]* @a, i64 0, i64 -1) to i8*), i64 %lsr.iv
+    %uglygep1 = bitcast i8* %uglygep to i32*
+    %5 = load i32, i32* %uglygep1, align 4, !tbaa !2
+    %uglygep4 = getelementptr i8, i8* bitcast ([1000 x i32]* @c to i8*), i64 %lsr.iv
+    %uglygep45 = bitcast i8* %uglygep4 to i32*
+    %6 = load i32, i32* %uglygep45, align 4, !tbaa !2
+    %7 = sub nsw i32 %5, %6
+    %uglygep9 = getelementptr i8, i8* bitcast ([1000 x i32]* @b to i8*), i64 %lsr.iv
+    %uglygep910 = bitcast i8* %uglygep9 to i32*
+    store i32 %7, i32* %uglygep910, align 4, !tbaa !2
+    %uglygep6 = getelementptr i8, i8* bitcast ([1000 x i32]* @c to i8*), i64 %lsr.iv
+    %uglygep67 = bitcast i8* %uglygep6 to i32*
+    %scevgep8 = getelementptr i32, i32* %uglygep67, i64 1
+    %8 = load i32, i32* %scevgep8, align 4, !tbaa !2
+    %9 = mul nsw i32 %8, %1
+    %uglygep2 = getelementptr i8, i8* bitcast (i32* getelementptr ([1000 x i32], [1000 x i32]* @a, i64 0, i64 -1) to i8*), i64 %lsr.iv
+    %uglygep23 = bitcast i8* %uglygep2 to i32*
+    %scevgep = getelementptr i32, i32* %uglygep23, i64 3
+    store i32 %9, i32* %scevgep, align 4, !tbaa !2
+    %lsr.iv.next = add nuw nsw i64 %lsr.iv, 4
+    %10 = call i64 @llvm.loop.decrement.reg.i64(i64 %4, i64 1)
+    %11 = icmp ne i64 %10, 0
+    br i1 %11, label %3, label %2, !llvm.loop !6
+  }
+  
+  ; Function Attrs: noduplicate nounwind
+  declare void @llvm.set.loop.iterations.i64(i64) #1
+  
+  ; Function Attrs: noduplicate nounwind
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+  
+  attributes #0 = { nofree norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { noduplicate nounwind }
+  attributes #2 = { nounwind }
+  
+  !llvm.module.flags = !{!0}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !2 = !{!3, !3, i64 0}
+  !3 = !{!"int", !4, i64 0}
+  !4 = !{!"omnipotent char", !5, i64 0}
+  !5 = !{!"Simple C/C++ TBAA"}
+  !6 = distinct !{!6, !7}
+  !7 = !{!"llvm.loop.unroll.disable"}
+
+...
+---
+name:            foo
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gpr32, preferred-register: '' }
+  - { id: 1, class: gpr64common, preferred-register: '' }
+  - { id: 2, class: gpr64sp, preferred-register: '' }
+  - { id: 3, class: gpr64all, preferred-register: '' }
+  - { id: 4, class: gpr64all, preferred-register: '' }
+  - { id: 5, class: gpr64all, preferred-register: '' }
+  - { id: 6, class: gpr64all, preferred-register: '' }
+  - { id: 7, class: gpr64common, preferred-register: '' }
+  - { id: 8, class: gpr32, preferred-register: '' }
+  - { id: 9, class: gpr64all, preferred-register: '' }
+  - { id: 10, class: gpr32, preferred-register: '' }
+  - { id: 11, class: gpr64common, preferred-register: '' }
+  - { id: 12, class: gpr64common, preferred-register: '' }
+  - { id: 13, class: gpr32, preferred-register: '' }
+  - { id: 14, class: gpr64common, preferred-register: '' }
+  - { id: 15, class: gpr64common, preferred-register: '' }
+  - { id: 16, class: gpr32, preferred-register: '' }
+  - { id: 17, class: gpr32, preferred-register: '' }
+  - { id: 18, class: gpr64common, preferred-register: '' }
+  - { id: 19, class: gpr32, preferred-register: '' }
+  - { id: 20, class: gpr32, preferred-register: '' }
+  - { id: 21, class: gpr64sp, preferred-register: '' }
+  - { id: 22, class: gpr64, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.2(0x80000000)
+  
+    %7:gpr64common = ADRP target-flags(aarch64-page) @y
+    %8:gpr32 = LDRWui killed %7, target-flags(aarch64-pageoff, aarch64-nc) @y :: (dereferenceable load 4 from @y, !tbaa !2)
+    %9:gpr64all = COPY $xzr
+    %5:gpr64all = COPY %9
+    %10:gpr32 = MOVi32imm 100
+    %6:gpr64all = SUBREG_TO_REG 0, killed %10, %subreg.sub_32
+    %11:gpr64common = MOVaddr target-flags(aarch64-page) @a, target-flags(aarch64-pageoff, aarch64-nc) @a
+    %14:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    %18:gpr64common = MOVaddr target-flags(aarch64-page) @b, target-flags(aarch64-pageoff, aarch64-nc) @b
+    B %bb.2
+  
+  bb.1 (%ir-block.2):
+    RET_ReallyLR
+  
+  bb.2 (%ir-block.3):
+    successors: %bb.2(0x7c000000), %bb.1(0x04000000)
+  
+    %1:gpr64common = PHI %5, %bb.0, %3, %bb.2
+    %2:gpr64sp = PHI %6, %bb.0, %4, %bb.2
+    %12:gpr64common = ADDXrr %11, %1
+    %13:gpr32 = LDURWi %12, -4 :: (load 4 from %ir.uglygep1, !tbaa !2)
+    %15:gpr64common = ADDXrr %14, %1
+    %16:gpr32 = LDRWui %15, 0 :: (load 4 from %ir.uglygep45, !tbaa !2)
+    %17:gpr32 = nsw SUBWrr killed %13, killed %16
+    STRWroX killed %17, %18, %1, 0, 0 :: (store 4 into %ir.uglygep910, !tbaa !2)
+    %19:gpr32 = LDRWui %15, 1 :: (load 4 from %ir.scevgep8, !tbaa !2)
+    %20:gpr32 = nsw MADDWrrr killed %19, %8, $wzr
+    STRWui killed %20, %12, 2 :: (store 4 into %ir.scevgep, !tbaa !2)
+    %21:gpr64sp = nuw nsw ADDXri %1, 4, 0
+    %3:gpr64all = COPY %21
+    %22:gpr64 = SUBSXri %2, 1, 0, implicit-def $nzcv
+    %4:gpr64all = COPY %22
+    Bcc 1, %bb.2, implicit $nzcv
+    B %bb.1
+
+...

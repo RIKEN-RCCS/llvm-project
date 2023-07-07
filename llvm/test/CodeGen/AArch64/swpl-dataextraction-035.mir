@@ -1,0 +1,149 @@
+#RUN: llc %s -mcpu=a64fx -ffj-swp -start-before=aarch64-swpipeliner -swpl-debug-loop -o /dev/null 2>&1 | FileCheck %s
+#CHECK: DBG(SwplLoop::print) SwplLoop Print.
+
+--- |
+  ; ModuleID = '2937-35.ll'
+  source_filename = "2937-35.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux"
+  
+  @b = dso_local local_unnamed_addr global [1000 x double] zeroinitializer, align 8
+  @c = dso_local local_unnamed_addr global [1000 x double] zeroinitializer, align 8
+  @a = dso_local local_unnamed_addr global [1000 x double] zeroinitializer, align 8
+  
+  ; Function Attrs: nofree norecurse nounwind
+  define dso_local void @foo() local_unnamed_addr #0 {
+    call void @llvm.set.loop.iterations.i64(i64 100)
+    br label %2
+  
+  1:                                                ; preds = %2
+    ret void
+  
+  2:                                                ; preds = %2, %0
+    %lsr.iv = phi i64 [ %lsr.iv.next, %2 ], [ 0, %0 ]
+    %3 = phi i64 [ 100, %0 ], [ %7, %2 ]
+    %uglygep4 = getelementptr i8, i8* bitcast ([1000 x double]* @b to i8*), i64 %lsr.iv
+    %uglygep45 = bitcast i8* %uglygep4 to double*
+    %4 = load double, double* %uglygep45, align 8, !tbaa !2
+    %uglygep2 = getelementptr i8, i8* bitcast ([1000 x double]* @c to i8*), i64 %lsr.iv
+    %uglygep23 = bitcast i8* %uglygep2 to double*
+    %5 = load double, double* %uglygep23, align 8, !tbaa !2
+    %6 = fadd double %4, %5
+    %uglygep = getelementptr i8, i8* bitcast ([1000 x double]* @a to i8*), i64 %lsr.iv
+    %uglygep1 = bitcast i8* %uglygep to double*
+    store double %6, double* %uglygep1, align 8, !tbaa !2
+    %lsr.iv.next = add nuw nsw i64 %lsr.iv, 8
+    %7 = call i64 @llvm.loop.decrement.reg.i64(i64 %3, i64 1)
+    %8 = icmp ne i64 %7, 0
+    br i1 %8, label %2, label %1, !llvm.loop !6
+  }
+  
+  ; Function Attrs: noduplicate nounwind
+  declare void @llvm.set.loop.iterations.i64(i64) #1
+  
+  ; Function Attrs: noduplicate nounwind
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+  
+  attributes #0 = { nofree norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { noduplicate nounwind }
+  attributes #2 = { nounwind }
+  
+  !llvm.module.flags = !{!0}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !2 = !{!3, !3, i64 0}
+  !3 = !{!"double", !4, i64 0}
+  !4 = !{!"omnipotent char", !5, i64 0}
+  !5 = !{!"Simple C/C++ TBAA"}
+  !6 = distinct !{!6, !7}
+  !7 = !{!"llvm.loop.unroll.disable"}
+
+...
+---
+name:            foo
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gpr64common, preferred-register: '' }
+  - { id: 1, class: gpr64sp, preferred-register: '' }
+  - { id: 2, class: gpr64all, preferred-register: '' }
+  - { id: 3, class: gpr64all, preferred-register: '' }
+  - { id: 4, class: gpr64all, preferred-register: '' }
+  - { id: 5, class: gpr64all, preferred-register: '' }
+  - { id: 6, class: gpr64all, preferred-register: '' }
+  - { id: 7, class: gpr32, preferred-register: '' }
+  - { id: 8, class: gpr64common, preferred-register: '' }
+  - { id: 9, class: fpr64, preferred-register: '' }
+  - { id: 10, class: gpr64common, preferred-register: '' }
+  - { id: 11, class: fpr64, preferred-register: '' }
+  - { id: 12, class: fpr64, preferred-register: '' }
+  - { id: 13, class: gpr64common, preferred-register: '' }
+  - { id: 14, class: gpr64sp, preferred-register: '' }
+  - { id: 15, class: gpr64, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.2(0x80000000)
+  
+    %6:gpr64all = COPY $xzr
+    %4:gpr64all = COPY %6
+    %7:gpr32 = MOVi32imm 100
+    %5:gpr64all = SUBREG_TO_REG 0, killed %7, %subreg.sub_32
+    %8:gpr64common = MOVaddr target-flags(aarch64-page) @b, target-flags(aarch64-pageoff, aarch64-nc) @b
+    %10:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    %13:gpr64common = MOVaddr target-flags(aarch64-page) @a, target-flags(aarch64-pageoff, aarch64-nc) @a
+    B %bb.2
+  
+  bb.1 (%ir-block.1):
+    RET_ReallyLR
+  
+  bb.2 (%ir-block.2):
+    successors: %bb.2(0x7c000000), %bb.1(0x04000000)
+  
+    %0:gpr64common = PHI %4, %bb.0, %2, %bb.2
+    %1:gpr64sp = PHI %5, %bb.0, %3, %bb.2
+    %9:fpr64 = LDRDroX %8, %0, 0, 0 :: (load 8 from %ir.uglygep45, !tbaa !2)
+    %11:fpr64 = LDRDroX %10, %0, 0, 0 :: (load 8 from %ir.uglygep23, !tbaa !2)
+    %12:fpr64 = FADDDrr killed %9, killed %11
+    STRDroX killed %12, %13, %0, 0, 0 :: (store 8 into %ir.uglygep1, !tbaa !2)
+    %14:gpr64sp = nuw nsw ADDXri %0, 8, 0
+    %2:gpr64all = COPY %14
+    %15:gpr64 = SUBSXri %1, 1, 0, implicit-def $nzcv
+    %3:gpr64all = COPY %15
+    Bcc 1, %bb.2, implicit $nzcv
+    B %bb.1
+
+...

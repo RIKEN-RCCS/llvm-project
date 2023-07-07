@@ -1,0 +1,264 @@
+# RUN: llc %s  -ffj-swp -swpl-debug-ddg  -mcpu=a64fx -start-before=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
+
+# CHECK:from: %21:gpr64common = COPY %28:gpr64all
+# CHECK:to  : %23:gpr32 = LDRWroX %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:1 delay:1
+
+# CHECK:from: %21:gpr64common = COPY %28:gpr64all
+# CHECK:to  : %24:gpr32 = LDRWroX %14:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:1 delay:1
+
+# CHECK:from: %24:gpr32 = LDRWroX %14:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:to  : %25:gpr32 = nsw MADDWrrr killed %24:gpr32, %23:gpr32, $wzr
+# CHECK:distance:0 delay:5
+
+# CHECK:from: %23:gpr32 = LDRWroX %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:to  : %25:gpr32 = nsw MADDWrrr killed %24:gpr32, %23:gpr32, $wzr
+# CHECK:distance:0 delay:5
+
+# CHECK:from: %25:gpr32 = nsw MADDWrrr killed %24:gpr32, %23:gpr32, $wzr
+# CHECK:to  : %26:gpr32 = COPY %25:gpr32
+# CHECK:distance:0 delay:5
+
+# CHECK:from: %25:gpr32 = nsw MADDWrrr killed %24:gpr32, %23:gpr32, $wzr
+# CHECK:to  : STRWroX killed %25:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:0 delay:5
+
+# CHECK:from: %21:gpr64common = COPY %28:gpr64all
+# CHECK:to  : STRWroX killed %25:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:1 delay:1
+
+# CHECK:from: %26:gpr32 = COPY %25:gpr32
+# CHECK:to  : STRWroX killed %26:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:0 delay:1
+
+# CHECK:from: %21:gpr64common = COPY %28:gpr64all
+# CHECK:to  : STRWroX killed %26:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:1 delay:1
+
+# CHECK:from: %21:gpr64common = COPY %28:gpr64all
+# CHECK:to  : %27:gpr64sp = nuw nsw ADDXri %21:gpr64common, 4, 0
+# CHECK:distance:1 delay:1
+
+# CHECK:from: %27:gpr64sp = nuw nsw ADDXri %21:gpr64common, 4, 0
+# CHECK:to  : %28:gpr64all = COPY %27:gpr64sp
+# CHECK:distance:0 delay:1
+
+# CHECK:from: %22:gpr64sp = COPY %30:gpr64all
+# CHECK:to  : %29:gpr64 = SUBSXri %22:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK:distance:1 delay:1
+
+# CHECK:from: %29:gpr64 = SUBSXri %22:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK:to  : %30:gpr64all = COPY %29:gpr64
+# CHECK:distance:0 delay:1
+
+# CHECK:from: %28:gpr64all = COPY %27:gpr64sp
+# CHECK:to  : %21:gpr64common = COPY %28:gpr64all
+# CHECK:distance:0 delay:1
+
+# CHECK:from: %30:gpr64all = COPY %29:gpr64
+# CHECK:to  : %22:gpr64sp = COPY %30:gpr64all
+# CHECK:distance:0 delay:1
+
+# CHECK:from: %23:gpr32 = LDRWroX %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:to  : STRWroX killed %25:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:0 delay:1
+
+# CHECK:from: %23:gpr32 = LDRWroX %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:to  : STRWroX killed %26:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:0 delay:1
+
+# CHECK:from: %24:gpr32 = LDRWroX %14:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:to  : STRWroX killed %25:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:20 delay:1
+
+# CHECK:from: %24:gpr32 = LDRWroX %14:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:to  : STRWroX killed %26:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:20 delay:1
+
+# CHECK:from: STRWroX killed %25:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:to  : %23:gpr32 = LDRWroX %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:1 delay:6
+
+# CHECK:from: STRWroX killed %25:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:to  : %24:gpr32 = LDRWroX %14:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:20 delay:6
+
+# CHECK:from: STRWroX killed %25:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:to  : STRWroX killed %26:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:0 delay:1
+
+# CHECK:from: STRWroX killed %26:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:to  : %23:gpr32 = LDRWroX %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:1 delay:6
+
+# CHECK:from: STRWroX killed %26:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:to  : %24:gpr32 = LDRWroX %14:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:20 delay:6
+
+# CHECK:from: STRWroX killed %26:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:to  : STRWroX killed %25:gpr32, %12:gpr64common, %21:gpr64common, 0, 0 
+# CHECK:distance:1 delay:1
+
+
+--- |
+  ; ModuleID = '2937-24.ll'
+  source_filename = "2937-24.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux"
+  
+  @a = dso_local local_unnamed_addr global [1000 x i32] zeroinitializer, align 4
+  @x = dso_local local_unnamed_addr global i32 0, align 4
+  @y = dso_local local_unnamed_addr global i32 0, align 4
+  @b = dso_local local_unnamed_addr global [1000 x i32] zeroinitializer, align 4
+  @c = dso_local local_unnamed_addr global [1000 x i32] zeroinitializer, align 4
+  
+  ; Function Attrs: nofree norecurse nounwind
+  define dso_local void @foo() local_unnamed_addr #0 {
+    %1 = load i32, i32* @y, align 4, !tbaa !2
+    call void @llvm.set.loop.iterations.i64(i64 100)
+    br label %3
+  
+  2:                                                ; preds = %3
+    store i32 %5, i32* @x, align 4, !tbaa !2
+    ret void
+  
+  3:                                                ; preds = %3, %0
+    %lsr.iv = phi i64 [ %lsr.iv.next, %3 ], [ 0, %0 ]
+    %4 = phi i64 [ 100, %0 ], [ %10, %3 ]
+    %uglygep4 = getelementptr i8, i8* bitcast ([1000 x i32]* @a to i8*), i64 %lsr.iv
+    %uglygep45 = bitcast i8* %uglygep4 to i32*
+    %5 = load i32, i32* %uglygep45, align 4, !tbaa !2
+    %uglygep2 = getelementptr i8, i8* bitcast ([1000 x i32]* @b to i8*), i64 %lsr.iv
+    %uglygep23 = bitcast i8* %uglygep2 to i32*
+    %6 = load i32, i32* %uglygep23, align 4, !tbaa !2
+    %7 = mul nsw i32 %6, %1
+    store i32 %7, i32* %uglygep45, align 4, !tbaa !2
+    %uglygep = getelementptr i8, i8* bitcast ([1000 x i32]* @c to i8*), i64 %lsr.iv
+    %uglygep1 = bitcast i8* %uglygep to i32*
+    %8 = load i32, i32* %uglygep1, align 4, !tbaa !2
+    %9 = mul nsw i32 %8, %5
+    store i32 %9, i32* %uglygep45, align 4, !tbaa !2
+    %lsr.iv.next = add nuw nsw i64 %lsr.iv, 4
+    %10 = call i64 @llvm.loop.decrement.reg.i64(i64 %4, i64 1)
+    %11 = icmp ne i64 %10, 0
+    br i1 %11, label %3, label %2, !llvm.loop !6
+  }
+  
+  ; Function Attrs: noduplicate nounwind
+  declare void @llvm.set.loop.iterations.i64(i64) #1
+  
+  ; Function Attrs: noduplicate nounwind
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+  
+  attributes #0 = { nofree norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { noduplicate nounwind }
+  attributes #2 = { nounwind }
+  
+  !llvm.module.flags = !{!0}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !2 = !{!3, !3, i64 0}
+  !3 = !{!"int", !4, i64 0}
+  !4 = !{!"omnipotent char", !5, i64 0}
+  !5 = !{!"Simple C/C++ TBAA"}
+  !6 = distinct !{!6, !7}
+  !7 = !{!"llvm.loop.unroll.disable"}
+
+...
+---
+name:            foo
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gpr32all, preferred-register: '' }
+  - { id: 1, class: gpr64common, preferred-register: '' }
+  - { id: 2, class: gpr64sp, preferred-register: '' }
+  - { id: 3, class: gpr32, preferred-register: '' }
+  - { id: 4, class: gpr64all, preferred-register: '' }
+  - { id: 5, class: gpr64all, preferred-register: '' }
+  - { id: 6, class: gpr64all, preferred-register: '' }
+  - { id: 7, class: gpr64all, preferred-register: '' }
+  - { id: 8, class: gpr64common, preferred-register: '' }
+  - { id: 9, class: gpr32, preferred-register: '' }
+  - { id: 10, class: gpr64all, preferred-register: '' }
+  - { id: 11, class: gpr32, preferred-register: '' }
+  - { id: 12, class: gpr64common, preferred-register: '' }
+  - { id: 13, class: gpr32, preferred-register: '' }
+  - { id: 14, class: gpr64common, preferred-register: '' }
+  - { id: 15, class: gpr32, preferred-register: '' }
+  - { id: 16, class: gpr32, preferred-register: '' }
+  - { id: 17, class: gpr64sp, preferred-register: '' }
+  - { id: 18, class: gpr64, preferred-register: '' }
+  - { id: 19, class: gpr64common, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.2(0x80000000)
+  
+    %10:gpr64all = COPY $xzr
+    %6:gpr64all = COPY %10
+    %11:gpr32 = MOVi32imm 100
+    %7:gpr64all = SUBREG_TO_REG 0, killed %11, %subreg.sub_32
+    %12:gpr64common = MOVaddr target-flags(aarch64-page) @a, target-flags(aarch64-pageoff, aarch64-nc) @a
+    %14:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    B %bb.2
+  
+  bb.1 (%ir-block.2):
+    %3:gpr32 = COPY %13
+    %19:gpr64common = ADRP target-flags(aarch64-page) @x
+    STRWui %3, killed %19, target-flags(aarch64-pageoff, aarch64-nc) @x :: (store 4 into @x, !tbaa !2)
+    RET_ReallyLR
+  
+  bb.2 (%ir-block.3):
+    successors: %bb.2(0x7c000000), %bb.1(0x04000000)
+  
+    %1:gpr64common = PHI %6, %bb.0, %4, %bb.2
+    %2:gpr64sp = PHI %7, %bb.0, %5, %bb.2
+    %13:gpr32 = LDRWroX %12, %1, 0, 0 :: (load 4 from %ir.uglygep45, !tbaa !2)
+    %15:gpr32 = LDRWroX %14, %1, 0, 0 :: (load 4 from %ir.uglygep1, !tbaa !2)
+    %16:gpr32 = nsw MADDWrrr killed %15, %13, $wzr
+    %20:gpr32 = COPY %16
+    STRWroX killed %16, %12, %1, 0, 0 :: (store 4 into %ir.uglygep45, !tbaa !2)
+    STRWroX killed %20, %12, %1, 0, 0 :: (store 4 into %ir.uglygep45, !tbaa !2)
+    %17:gpr64sp = nuw nsw ADDXri %1, 4, 0
+    %4:gpr64all = COPY %17
+    %18:gpr64 = SUBSXri %2, 1, 0, implicit-def $nzcv
+    %5:gpr64all = COPY %18
+    Bcc 1, %bb.2, implicit $nzcv
+    B %bb.1
+
+...

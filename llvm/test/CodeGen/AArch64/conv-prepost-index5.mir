@@ -1,0 +1,433 @@
+# RUN: llc -mcpu=a64fx -O1 -swpl-disable-reg-alloc -fswp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug-prepare %s 2>&1 | FileCheck %s
+#
+# CHECK: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %92:gpr64sp, %93:fpr32 = LDRSpost %87:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.lsr.iv41, !tbaa !13)
+# CHECK-NEXT:  after 1:%93:fpr32 = LDURSi %87:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv41, !tbaa !13)
+# CHECK-NEXT:  after 2:%92:gpr64sp = ADDXri %87:gpr64sp, 4, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %94:gpr64sp, %95:fpr32 = LDRSpost %88:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.lsr.iv38, !tbaa !13)
+# CHECK-NEXT:  after 1:%95:fpr32 = LDURSi %88:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv38, !tbaa !13)
+# CHECK-NEXT:  after 2:%94:gpr64sp = ADDXri %88:gpr64sp, 4, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %96:gpr64sp, %97:fpr32 = LDRSpost %89:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
+# CHECK-NEXT:  after 1:%97:fpr32 = LDURSi %89:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
+# CHECK-NEXT:  after 2:%96:gpr64sp = ADDXri %89:gpr64sp, 4, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %98:gpr64sp, %99:fpr32 = LDRSpost %89:gpr64sp(tied-def 0), -4 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
+# CHECK-NEXT:  after 1:%99:fpr32 = LDURSi %89:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
+# CHECK-NEXT:  after 2:%98:gpr64sp = SUBXri %89:gpr64sp, 4, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %101:gpr64sp, %102:gpr64 = LDRSWpost %90:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
+# CHECK-NEXT:  after 1:%102:gpr64 = LDURSWi %90:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
+# CHECK-NEXT:  after 2:%101:gpr64sp = ADDXri %90:gpr64sp, 4, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %103:gpr64sp, %104:gpr64 = LDRSWpost %90:gpr64sp(tied-def 0), -4 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
+# CHECK-NEXT:  after 1:%104:gpr64 = LDURSWi %90:gpr64sp, 0 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
+# CHECK-NEXT:  after 2:%103:gpr64sp = SUBXri %90:gpr64sp, 4, 0
+
+--- |
+  ; ModuleID = 'a10.c'
+  source_filename = "a10.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+  
+  %struct.args_t = type { %struct.timeval, %struct.timeval, ptr }
+  %struct.timeval = type { i64, i64 }
+  
+  @b = dso_local global [32000 x float] zeroinitializer, align 64
+  @c = dso_local global [32000 x float] zeroinitializer, align 64
+  @d = dso_local global [32000 x float] zeroinitializer, align 64
+  @a = dso_local global [32000 x float] zeroinitializer, align 64
+  @e = dso_local global [32000 x float] zeroinitializer, align 64
+  @aa = dso_local global [256 x [256 x float]] zeroinitializer, align 64
+  @bb = dso_local global [256 x [256 x float]] zeroinitializer, align 64
+  @cc = dso_local global [256 x [256 x float]] zeroinitializer, align 64
+  
+  ; Function Attrs: nounwind uwtable vscale_range(1,16)
+  define dso_local void @a10(ptr nocapture noundef readonly %func_args) local_unnamed_addr #0 {
+  entry:
+    %arg_info = getelementptr inbounds %struct.args_t, ptr %func_args, i64 0, i32 2
+    %0 = load ptr, ptr %arg_info, align 8, !tbaa !6
+    %1 = tail call i64 @llvm.vscale.i64()
+    %2 = shl nuw nsw i64 %1, 2
+    %n.mod.vf = urem i64 32000, %2
+    %n.vec = sub nuw nsw i64 32000, %n.mod.vf
+    %3 = udiv i64 32000, %2
+    %4 = mul i64 %1, %3
+    %5 = shl i64 %4, 4
+    %uglygep32 = getelementptr i8, ptr %0, i64 %5
+    %uglygep34 = getelementptr i8, ptr @d, i64 %5
+    %uglygep37 = getelementptr i8, ptr @c, i64 %5
+    %uglygep40 = getelementptr i8, ptr @b, i64 %5
+    br label %vector.ph
+  
+  vector.ph:                                        ; preds = %for.cond.cleanup3, %entry
+    %nl.023 = phi i32 [ 0, %entry ], [ %inc14, %for.cond.cleanup3 ]
+    br label %vector.body
+  
+  vector.body:                                      ; preds = %vector.body, %vector.ph
+    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+    %6 = shl i64 %index, 2
+    %uglygep = getelementptr i8, ptr @b, i64 %6
+    %wide.load = load <vscale x 4 x float>, ptr %uglygep, align 16, !tbaa !13
+    %uglygep29 = getelementptr i8, ptr @c, i64 %6
+    %wide.load26 = load <vscale x 4 x float>, ptr %uglygep29, align 16, !tbaa !13
+    %7 = shl i64 %index, 2
+    %uglygep30 = getelementptr i8, ptr @d, i64 %7
+    %wide.load27 = load <vscale x 4 x float>, ptr %uglygep30, align 16, !tbaa !13
+    %8 = fmul fast <vscale x 4 x float> %wide.load27, %wide.load26
+    %9 = fadd fast <vscale x 4 x float> %8, %wide.load
+    %uglygep31 = getelementptr i8, ptr %0, i64 %7
+    %wide.load28 = load <vscale x 4 x i32>, ptr %uglygep31, align 4, !tbaa !15
+    %10 = sext <vscale x 4 x i32> %wide.load28 to <vscale x 4 x i64>
+    %11 = getelementptr float, ptr @a, <vscale x 4 x i64> %10
+    tail call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> %9, <vscale x 4 x ptr> %11, i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)), !tbaa !13
+    %index.next = add nuw i64 %index, %2
+    %12 = icmp eq i64 %n.vec, %index.next
+    br i1 %12, label %middle.block, label %vector.body, !llvm.loop !17
+  
+  middle.block:                                     ; preds = %vector.body
+    %13 = icmp eq i64 %n.mod.vf, 0
+    br i1 %13, label %for.cond.cleanup3, label %for.body4.preheader
+  
+  for.body4.preheader:                              ; preds = %middle.block
+    %14 = call i64 @llvm.start.loop.iterations.i64(i64 %n.mod.vf)
+    br label %for.body4
+  
+  for.cond.cleanup:                                 ; preds = %for.cond.cleanup3
+    ret void
+  
+  for.cond.cleanup3:                                ; preds = %for.body4, %middle.block
+    %call = tail call i32 @dummy(ptr noundef nonnull @a, ptr noundef nonnull @b, ptr noundef nonnull @c, ptr noundef nonnull @d, ptr noundef nonnull @e, ptr noundef nonnull @aa, ptr noundef nonnull @bb, ptr noundef nonnull @cc, float noundef 0.000000e+00) #5
+    %inc14 = add nuw nsw i32 %nl.023, 1
+    %exitcond25.not = icmp eq i32 %inc14, 10
+    br i1 %exitcond25.not, label %for.cond.cleanup, label %vector.ph, !llvm.loop !21
+  
+  for.body4:                                        ; preds = %for.body4.preheader, %for.body4
+    %lsr.iv41 = phi ptr [ %uglygep40, %for.body4.preheader ], [ %uglygep42, %for.body4 ]
+    %lsr.iv38 = phi ptr [ %uglygep37, %for.body4.preheader ], [ %uglygep39, %for.body4 ]
+    %lsr.iv35 = phi ptr [ %uglygep34, %for.body4.preheader ], [ %uglygep36, %for.body4 ]
+    %lsr.iv = phi ptr [ %uglygep32, %for.body4.preheader ], [ %uglygep33, %for.body4 ]
+    %15 = phi i64 [ %14, %for.body4.preheader ], [ %20, %for.body4 ]
+    %16 = load float, ptr %lsr.iv41, align 4, !tbaa !13
+    %17 = load float, ptr %lsr.iv38, align 4, !tbaa !13
+    %18 = load float, ptr %lsr.iv35, align 4, !tbaa !13
+    %mul = fmul fast float %18, %17
+    %add = fadd fast float %mul, %16
+    %19 = load i32, ptr %lsr.iv, align 4, !tbaa !15
+    %idxprom11 = sext i32 %19 to i64
+    %arrayidx12 = getelementptr inbounds [32000 x float], ptr @a, i64 0, i64 %idxprom11
+    store float %add, ptr %arrayidx12, align 4, !tbaa !13
+    %uglygep33 = getelementptr i8, ptr %lsr.iv, i64 4
+    %uglygep36 = getelementptr i8, ptr %lsr.iv35, i64 4
+    %uglygep39 = getelementptr i8, ptr %lsr.iv38, i64 4
+    %uglygep42 = getelementptr i8, ptr %lsr.iv41, i64 4
+    %20 = call i64 @llvm.loop.decrement.reg.i64(i64 %15, i64 1)
+    %21 = icmp ne i64 %20, 0
+    br i1 %21, label %for.body4, label %for.cond.cleanup3, !llvm.loop !22
+  }
+  
+  declare i32 @dummy(ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, float noundef) local_unnamed_addr #1
+  
+  ; Function Attrs: nocallback nofree nosync nounwind readnone willreturn
+  declare i64 @llvm.vscale.i64() #2
+  
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn writeonly
+  declare void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float>, <vscale x 4 x ptr>, i32 immarg, <vscale x 4 x i1>) #3
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i64 @llvm.start.loop.iterations.i64(i64) #4
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #4
+  
+  attributes #0 = { nounwind uwtable vscale_range(1,16) "approx-func-fp-math"="true" "frame-pointer"="non-leaf" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" }
+  attributes #1 = { "approx-func-fp-math"="true" "frame-pointer"="non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" }
+  attributes #2 = { nocallback nofree nosync nounwind readnone willreturn }
+  attributes #3 = { nocallback nofree nosync nounwind willreturn writeonly }
+  attributes #4 = { nocallback noduplicate nofree nosync nounwind willreturn }
+  attributes #5 = { nounwind }
+  
+  !llvm.module.flags = !{!0, !1, !2, !3, !4}
+  !llvm.ident = !{!5}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 7, !"PIC Level", i32 2}
+  !2 = !{i32 7, !"PIE Level", i32 2}
+  !3 = !{i32 7, !"uwtable", i32 2}
+  !4 = !{i32 7, !"frame-pointer", i32 1}
+  !5 = !{!"clang version 15.0.4 (b2d25cc8cf3144572d54c48c148d395200f7e1f9)"}
+  !6 = !{!7, !12, i64 32}
+  !7 = !{!"args_t", !8, i64 0, !8, i64 16, !12, i64 32}
+  !8 = !{!"timeval", !9, i64 0, !9, i64 8}
+  !9 = !{!"long", !10, i64 0}
+  !10 = !{!"omnipotent char", !11, i64 0}
+  !11 = !{!"Simple C/C++ TBAA"}
+  !12 = !{!"any pointer", !10, i64 0}
+  !13 = !{!14, !14, i64 0}
+  !14 = !{!"float", !10, i64 0}
+  !15 = !{!16, !16, i64 0}
+  !16 = !{!"int", !10, i64 0}
+  !17 = distinct !{!17, !18, !19, !20}
+  !18 = !{!"llvm.loop.mustprogress"}
+  !19 = !{!"llvm.loop.unroll.disable"}
+  !20 = !{!"llvm.loop.isvectorized", i32 1}
+  !21 = distinct !{!21, !18, !19}
+  !22 = distinct !{!22, !18, !19, !20}
+
+...
+---
+name:            a10
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gpr64sp, preferred-register: '' }
+  - { id: 1, class: gpr64, preferred-register: '' }
+  - { id: 2, class: gpr64, preferred-register: '' }
+  - { id: 3, class: gpr64, preferred-register: '' }
+  - { id: 4, class: gpr64all, preferred-register: '' }
+  - { id: 5, class: gpr64all, preferred-register: '' }
+  - { id: 6, class: gpr64all, preferred-register: '' }
+  - { id: 7, class: gpr64all, preferred-register: '' }
+  - { id: 8, class: gpr32sp, preferred-register: '' }
+  - { id: 9, class: gpr64common, preferred-register: '' }
+  - { id: 10, class: gpr64all, preferred-register: '' }
+  - { id: 11, class: gpr64all, preferred-register: '' }
+  - { id: 12, class: gpr32all, preferred-register: '' }
+  - { id: 13, class: gpr64sp, preferred-register: '' }
+  - { id: 14, class: gpr64sp, preferred-register: '' }
+  - { id: 15, class: gpr64sp, preferred-register: '' }
+  - { id: 16, class: gpr64sp, preferred-register: '' }
+  - { id: 17, class: gpr64sp, preferred-register: '' }
+  - { id: 18, class: gpr64all, preferred-register: '' }
+  - { id: 19, class: gpr64all, preferred-register: '' }
+  - { id: 20, class: gpr64all, preferred-register: '' }
+  - { id: 21, class: gpr64all, preferred-register: '' }
+  - { id: 22, class: gpr64all, preferred-register: '' }
+  - { id: 23, class: gpr64common, preferred-register: '' }
+  - { id: 24, class: gpr32all, preferred-register: '' }
+  - { id: 25, class: gpr64, preferred-register: '' }
+  - { id: 26, class: gpr64, preferred-register: '' }
+  - { id: 27, class: gpr64, preferred-register: '' }
+  - { id: 28, class: gpr64, preferred-register: '' }
+  - { id: 29, class: gpr32, preferred-register: '' }
+  - { id: 30, class: gpr64, preferred-register: '' }
+  - { id: 31, class: gpr64, preferred-register: '' }
+  - { id: 32, class: gpr64, preferred-register: '' }
+  - { id: 33, class: gpr64, preferred-register: '' }
+  - { id: 34, class: gpr64, preferred-register: '' }
+  - { id: 35, class: gpr64, preferred-register: '' }
+  - { id: 36, class: gpr64, preferred-register: '' }
+  - { id: 37, class: gpr64common, preferred-register: '' }
+  - { id: 38, class: gpr64, preferred-register: '' }
+  - { id: 39, class: gpr64common, preferred-register: '' }
+  - { id: 40, class: gpr64, preferred-register: '' }
+  - { id: 41, class: gpr64common, preferred-register: '' }
+  - { id: 42, class: gpr64, preferred-register: '' }
+  - { id: 43, class: gpr32all, preferred-register: '' }
+  - { id: 44, class: gpr64all, preferred-register: '' }
+  - { id: 45, class: gpr64all, preferred-register: '' }
+  - { id: 46, class: gpr64common, preferred-register: '' }
+  - { id: 47, class: ppr_3b, preferred-register: '' }
+  - { id: 48, class: zpr, preferred-register: '' }
+  - { id: 49, class: gpr64common, preferred-register: '' }
+  - { id: 50, class: zpr, preferred-register: '' }
+  - { id: 51, class: gpr64common, preferred-register: '' }
+  - { id: 52, class: zpr, preferred-register: '' }
+  - { id: 53, class: ppr_3b, preferred-register: '' }
+  - { id: 54, class: zpr, preferred-register: '' }
+  - { id: 55, class: zpr, preferred-register: '' }
+  - { id: 56, class: gpr64common, preferred-register: '' }
+  - { id: 57, class: gpr64, preferred-register: '' }
+  - { id: 58, class: gpr64, preferred-register: '' }
+  - { id: 59, class: gpr64sp, preferred-register: '' }
+  - { id: 60, class: fpr32, preferred-register: '' }
+  - { id: 61, class: gpr64sp, preferred-register: '' }
+  - { id: 62, class: fpr32, preferred-register: '' }
+  - { id: 63, class: gpr64sp, preferred-register: '' }
+  - { id: 64, class: fpr32, preferred-register: '' }
+  - { id: 65, class: fpr32, preferred-register: '' }
+  - { id: 66, class: fpr32, preferred-register: '' }
+  - { id: 67, class: gpr64sp, preferred-register: '' }
+  - { id: 68, class: gpr64, preferred-register: '' }
+  - { id: 69, class: gpr64common, preferred-register: '' }
+  - { id: 70, class: gpr64, preferred-register: '' }
+  - { id: 71, class: gpr64common, preferred-register: '' }
+  - { id: 72, class: gpr64common, preferred-register: '' }
+  - { id: 73, class: gpr64common, preferred-register: '' }
+  - { id: 74, class: gpr64common, preferred-register: '' }
+  - { id: 75, class: gpr64common, preferred-register: '' }
+  - { id: 76, class: gpr64common, preferred-register: '' }
+  - { id: 77, class: gpr64common, preferred-register: '' }
+  - { id: 78, class: gpr64common, preferred-register: '' }
+  - { id: 79, class: fpr32, preferred-register: '' }
+  - { id: 80, class: gpr32all, preferred-register: '' }
+  - { id: 81, class: gpr32sp, preferred-register: '' }
+  - { id: 82, class: gpr32, preferred-register: '' }
+liveins:
+  - { reg: '$x0', virtual-reg: '%23' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $x0
+  
+    %23:gpr64common = COPY $x0
+    %25:gpr64 = LDRXui %23, 4 :: (load (s64) from %ir.arg_info, !tbaa !6)
+    %0:gpr64sp = COPY %25
+    %26:gpr64 = RDVLI_XI 1
+    %27:gpr64 = UBFMXri killed %26, 4, 63
+    %28:gpr64 = CNTW_XPiI 31, 1
+    %29:gpr32 = MOVi32imm 32000
+    %30:gpr64 = SUBREG_TO_REG 0, killed %29, %subreg.sub_32
+    %31:gpr64 = UDIVXr %30, %28
+    %32:gpr64 = MADDXrrr %31, %28, $xzr
+    %33:gpr64 = SUBXrr %30, %32
+    %2:gpr64 = COPY %33
+    %34:gpr64 = MADDXrrr killed %27, %31, $xzr
+    %35:gpr64 = UBFMXri killed %34, 60, 59
+    %36:gpr64 = ADDXrr %25, %35
+    %4:gpr64all = COPY %36
+    %37:gpr64common = MOVaddr target-flags(aarch64-page) @d, target-flags(aarch64-pageoff, aarch64-nc) @d
+    %38:gpr64 = ADDXrr %37, %35
+    %5:gpr64all = COPY %38
+    %39:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    %40:gpr64 = ADDXrr %39, %35
+    %6:gpr64all = COPY %40
+    %41:gpr64common = MOVaddr target-flags(aarch64-page) @b, target-flags(aarch64-pageoff, aarch64-nc) @b
+    %42:gpr64 = ADDXrr %41, %35
+    %43:gpr32all = COPY $wzr
+    %24:gpr32all = COPY %43
+    %7:gpr64all = COPY %42
+    %47:ppr_3b = PTRUE_S 31
+    %56:gpr64common = MOVaddr target-flags(aarch64-page) @a, target-flags(aarch64-pageoff, aarch64-nc) @a
+    %75:gpr64common = MOVaddr target-flags(aarch64-page) @e, target-flags(aarch64-pageoff, aarch64-nc) @e
+    %76:gpr64common = MOVaddr target-flags(aarch64-page) @aa, target-flags(aarch64-pageoff, aarch64-nc) @aa
+    %77:gpr64common = MOVaddr target-flags(aarch64-page) @bb, target-flags(aarch64-pageoff, aarch64-nc) @bb
+    %78:gpr64common = MOVaddr target-flags(aarch64-page) @cc, target-flags(aarch64-pageoff, aarch64-nc) @cc
+    %79:fpr32 = FMOVS0
+  
+  bb.1.vector.ph:
+    successors: %bb.2(0x80000000)
+  
+    %8:gpr32sp = PHI %24, %bb.0, %12, %bb.6
+    %45:gpr64all = COPY $xzr
+    %44:gpr64all = COPY %45
+  
+  bb.2.vector.body:
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+  
+    %9:gpr64common = PHI %44, %bb.1, %10, %bb.2
+    %48:zpr = LD1W %47, %41, %9 :: (load unknown-size from %ir.uglygep, align 16, !tbaa !13)
+    %50:zpr = LD1W %47, %39, %9 :: (load unknown-size from %ir.uglygep29, align 16, !tbaa !13)
+    %52:zpr = LD1W %47, %37, %9 :: (load unknown-size from %ir.uglygep30, align 16, !tbaa !13)
+    %54:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_S %47, killed %48, killed %52, killed %50
+    %55:zpr = LD1W %47, %0, %9 :: (load unknown-size from %ir.uglygep31, align 4, !tbaa !15)
+    SST1W_SXTW_SCALED killed %54, %47, %56, killed %55 :: (store unknown-size, align 4, !tbaa !13)
+    %57:gpr64 = nuw ADDXrr %9, %28
+    %10:gpr64all = COPY %57
+    dead $xzr = SUBSXrr %32, %57, implicit-def $nzcv
+    Bcc 1, %bb.2, implicit $nzcv
+    B %bb.3
+  
+  bb.3.middle.block:
+    successors: %bb.6(0x30000000), %bb.4(0x50000000)
+  
+    CBZX %2, %bb.6
+    B %bb.4
+  
+  bb.4.for.body4.preheader:
+    successors: %bb.7(0x80000000)
+  
+    %11:gpr64all = COPY %2
+    B %bb.7
+  
+  bb.5.for.cond.cleanup:
+    RET_ReallyLR
+  
+  bb.6.for.cond.cleanup3:
+    successors: %bb.5(0x04000000), %bb.1(0x7c000000)
+  
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    $x0 = COPY %56
+    $x1 = COPY %41
+    $x2 = COPY %39
+    $x3 = COPY %37
+    $x4 = COPY %75
+    $x5 = COPY %76
+    $x6 = COPY %77
+    $x7 = COPY %78
+    $s0 = COPY %79
+    BL @dummy, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $s0, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %81:gpr32sp = nuw nsw ADDWri %8, 1, 0
+    %12:gpr32all = COPY %81
+    dead $wzr = SUBSWri %81, 10, 0, implicit-def $nzcv
+    Bcc 0, %bb.5, implicit $nzcv
+    B %bb.1
+  
+  bb.7.for.body4:
+    successors: %bb.7(0x7c000000), %bb.6(0x04000000)
+  
+    %13:gpr64sp = PHI %7, %bb.4, %21, %bb.7
+    %14:gpr64sp = PHI %6, %bb.4, %20, %bb.7
+    %15:gpr64sp = PHI %5, %bb.4, %19, %bb.7
+    %16:gpr64sp = PHI %4, %bb.4, %18, %bb.7
+    %17:gpr64sp = PHI %11, %bb.4, %22, %bb.7
+    early-clobber %59:gpr64sp, %60:fpr32 = LDRSpost %13, 4 :: (load (s32) from %ir.lsr.iv41, !tbaa !13)
+    early-clobber %61:gpr64sp, %62:fpr32 = LDRSpost %14, 4 :: (load (s32) from %ir.lsr.iv38, !tbaa !13)
+    early-clobber %63:gpr64sp, %64:fpr32 = LDRSpost %15, 4 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
+    early-clobber %A1:gpr64sp, %A2:fpr32 = LDRSpost %15, -4 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
+    %66:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDSrrr killed %64, killed %62, killed %60
+    early-clobber %67:gpr64sp, %68:gpr64 = LDRSWpost %16, 4 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
+    early-clobber %B1:gpr64sp, %B2:gpr64 = LDRSWpost %16, -4 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
+    STRSroX killed %66, %56, killed %68, 0, 1 :: (store (s32) into %ir.arrayidx12, !tbaa !13)
+    %18:gpr64all = COPY %67
+    %19:gpr64all = COPY %63
+    %20:gpr64all = COPY %61
+    %21:gpr64all = COPY %59
+    %70:gpr64 = SUBSXri %17, 1, 0, implicit-def $nzcv
+    %22:gpr64all = COPY %70
+    Bcc 1, %bb.7, implicit $nzcv
+    B %bb.6
+
+...

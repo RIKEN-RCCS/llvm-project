@@ -1,0 +1,1280 @@
+# RUN: llc -mcpu=a64fx -O1 -swpl-disable-reg-alloc -fswp -start-before=aarch64-swpipeliner -o /dev/null  -swpl-debug-prepare %s 2>&1 | FileCheck %s
+#
+# CHECK:  before:early-clobber %717:gpr64sp, %718:fpr64 = LDRDpost %715:gpr64sp(tied-def 0), 8 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
+# CHECK-NEXT:  after 1:%718:fpr64 = LDURDi %715:gpr64sp, 0 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
+# CHECK-NEXT:  after 2:%717:gpr64sp = ADDXri %715:gpr64sp, 8, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %719:gpr64sp, %720:fpr64 = LDRDpost %715:gpr64sp(tied-def 0), -8 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
+# CHECK-NEXT:  after 1:%720:fpr64 = LDURDi %715:gpr64sp, 0 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
+# CHECK-NEXT:  after 2:%719:gpr64sp = SUBXri %715:gpr64sp, 8, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %723:gpr64sp = STRDpost %722:fpr64, %714:gpr64sp(tied-def 0), 8 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
+# CHECK-NEXT:  after 1:STURDi %722:fpr64, %714:gpr64sp, 0 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
+# CHECK-NEXT:  after 2:%723:gpr64sp = ADDXri %714:gpr64sp, 8, 0
+# CHECK-NEXT: DBG(SwplLoop::convertPrePostIndexInstr)
+# CHECK-NEXT:  before:early-clobber %724:gpr64sp = STRDpost killed %722:fpr64, %714:gpr64sp(tied-def 0), -8 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
+# CHECK-NEXT:  after 1:STURDi %722:fpr64, %714:gpr64sp, 0 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
+# CHECK-NEXT:  after 2:%724:gpr64sp = SUBXri %714:gpr64sp, 8, 0
+
+--- |
+  ; ModuleID = 'n10.c'
+  source_filename = "n10.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+  
+  %struct.timespec = type { i64, i64 }
+  
+  @px = dso_local local_unnamed_addr global [8704 x double] zeroinitializer, align 256
+  @py = dso_local local_unnamed_addr global [8704 x double] zeroinitializer, align 256
+  @pz = dso_local local_unnamed_addr global [8704 x double] zeroinitializer, align 256
+  @m = dso_local local_unnamed_addr global [8704 x double] zeroinitializer, align 256
+  @vx = dso_local local_unnamed_addr global [8704 x double] zeroinitializer, align 256
+  @vy = dso_local local_unnamed_addr global [8704 x double] zeroinitializer, align 256
+  @vz = dso_local local_unnamed_addr global [8704 x double] zeroinitializer, align 256
+  @.str = private unnamed_addr constant [34 x i8] c"Ave. P(%f, %f, %f) V(%f, %f, %f)\0A\00", align 1
+  
+  ; Function Attrs: nounwind uwtable vscale_range(1,16)
+  define dso_local double @get_dtime() local_unnamed_addr #0 {
+  entry:
+    %ts = alloca %struct.timespec, align 8
+    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %ts) #7
+    %call = call i32 @clock_gettime(i32 noundef 1, ptr noundef nonnull %ts) #7
+    %0 = load i64, ptr %ts, align 8, !tbaa !6
+    %conv = sitofp i64 %0 to double
+    %tv_nsec = getelementptr inbounds %struct.timespec, ptr %ts, i64 0, i32 1
+    %1 = load i64, ptr %tv_nsec, align 8, !tbaa !11
+    %conv1 = sitofp i64 %1 to double
+    %mul = fmul fast double %conv1, 1.000000e-09
+    %add = fadd fast double %mul, %conv
+    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %ts) #7
+    ret double %add
+  }
+  
+  ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
+  declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+  
+  ; Function Attrs: nounwind
+  declare i32 @clock_gettime(i32 noundef, ptr noundef) local_unnamed_addr #2
+  
+  ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
+  declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+  
+  ; Function Attrs: nounwind uwtable vscale_range(1,16)
+  define dso_local i32 @main(i32 noundef %argc, ptr nocapture noundef readonly %argv) local_unnamed_addr #0 {
+  entry:
+    %seed = alloca i32, align 4
+    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %seed) #7
+    store i32 149, ptr %seed, align 4, !tbaa !12
+    %cmp = icmp sgt i32 %argc, 1
+    br i1 %cmp, label %if.end, label %if.end6.thread
+  
+  if.end6.thread:                                   ; preds = %entry
+    tail call void @srand(i32 noundef 149) #7
+    br label %for.body.preheader
+  
+  if.end:                                           ; preds = %entry
+    %arrayidx = getelementptr inbounds ptr, ptr %argv, i64 1
+    %0 = load ptr, ptr %arrayidx, align 8, !tbaa !14
+    %call.i = tail call i64 @strtol(ptr nocapture noundef nonnull %0, ptr noundef null, i32 noundef 10) #7
+    %conv.i = trunc i64 %call.i to i32
+    %cmp1.not = icmp eq i32 %argc, 2
+    br i1 %cmp1.not, label %if.end6, label %if.then2
+  
+  if.then2:                                         ; preds = %if.end
+    %arrayidx3 = getelementptr inbounds ptr, ptr %argv, i64 2
+    %1 = load ptr, ptr %arrayidx3, align 8, !tbaa !14
+    %call.i246 = tail call i64 @strtol(ptr nocapture noundef nonnull %1, ptr noundef null, i32 noundef 10) #7
+    %conv.i247 = trunc i64 %call.i246 to i32
+    br label %if.end6
+  
+  if.end6:                                          ; preds = %if.end, %if.then2
+    %rep.0 = phi i32 [ %conv.i247, %if.then2 ], [ 1000, %if.end ]
+    tail call void @srand(i32 noundef 149) #7
+    %cmp7251 = icmp sgt i32 %conv.i, 0
+    br i1 %cmp7251, label %for.body.preheader, label %for.cond38.preheader
+  
+  for.body.preheader:                               ; preds = %if.end6.thread, %if.end6
+    %rep.0332 = phi i32 [ 1000, %if.end6.thread ], [ %rep.0, %if.end6 ]
+    %size.0250330 = phi i32 [ 1024, %if.end6.thread ], [ %conv.i, %if.end6 ]
+    %2 = zext i32 %size.0250330 to i64
+    %wide.trip.count = zext i32 %size.0250330 to i64
+    br label %for.body
+  
+  for.cond38.preheader.loopexit:                    ; preds = %for.body
+    %tmp377 = trunc i64 %2 to i32
+    br label %for.cond38.preheader
+  
+  for.cond38.preheader:                             ; preds = %for.cond38.preheader.loopexit, %if.end6
+    %cmp7251333 = phi i1 [ false, %if.end6 ], [ true, %for.cond38.preheader.loopexit ]
+    %rep.0331 = phi i32 [ %rep.0, %if.end6 ], [ %rep.0332, %for.cond38.preheader.loopexit ]
+    %size.0250329 = phi i32 [ %conv.i, %if.end6 ], [ %tmp377, %for.cond38.preheader.loopexit ]
+    %cmp39264 = icmp sgt i32 %rep.0331, 0
+    br i1 %cmp39264, label %for.cond42.preheader.lr.ph, label %for.cond130.preheader
+  
+  for.cond42.preheader.lr.ph:                       ; preds = %for.cond38.preheader
+    br i1 %cmp7251333, label %for.cond42.preheader.us.preheader, label %for.end154
+  
+  for.cond42.preheader.us.preheader:                ; preds = %for.cond42.preheader.lr.ph
+    %wide.trip.count313 = zext i32 %size.0250329 to i64
+    br label %for.cond42.preheader.us
+  
+  for.cond42.preheader.us:                          ; preds = %for.cond42.preheader.us.preheader, %for.inc127.us
+    %t.0265.us = phi i32 [ %inc128.us, %for.inc127.us ], [ 0, %for.cond42.preheader.us.preheader ]
+    br label %for.body55.us.preheader
+  
+  for.inc127.us:                                    ; preds = %for.body105.us
+    %inc128.us = add nuw nsw i32 %t.0265.us, 1
+    %exitcond320.not = icmp eq i32 %inc128.us, %rep.0331
+    br i1 %exitcond320.not, label %for.cond130.preheader, label %for.cond42.preheader.us, !llvm.loop !16
+  
+  for.body105.us:                                   ; preds = %for.body105.us.preheader, %for.body105.us
+    %lsr.iv366 = phi ptr [ @pz, %for.body105.us.preheader ], [ %uglygep367, %for.body105.us ]
+    %lsr.iv364 = phi ptr [ @vz, %for.body105.us.preheader ], [ %uglygep365, %for.body105.us ]
+    %lsr.iv362 = phi ptr [ @py, %for.body105.us.preheader ], [ %uglygep363, %for.body105.us ]
+    %lsr.iv360 = phi ptr [ @vy, %for.body105.us.preheader ], [ %uglygep361, %for.body105.us ]
+    %lsr.iv358 = phi ptr [ @px, %for.body105.us.preheader ], [ %uglygep359, %for.body105.us ]
+    %lsr.iv356 = phi ptr [ @vx, %for.body105.us.preheader ], [ %uglygep357, %for.body105.us ]
+    %3 = phi i64 [ %19, %for.body105.us.preheader ], [ %10, %for.body105.us ]
+    %4 = load double, ptr %lsr.iv356, align 8, !tbaa !19
+    %mul108.us = fmul fast double %4, 1.000000e-02
+    %5 = load double, ptr %lsr.iv358, align 8, !tbaa !19
+    %add111.us = fadd fast double %5, %mul108.us
+    store double %add111.us, ptr %lsr.iv358, align 8, !tbaa !19
+    %6 = load double, ptr %lsr.iv360, align 8, !tbaa !19
+    %mul114.us = fmul fast double %6, 1.000000e-02
+    %7 = load double, ptr %lsr.iv362, align 8, !tbaa !19
+    %add117.us = fadd fast double %7, %mul114.us
+    store double %add117.us, ptr %lsr.iv362, align 8, !tbaa !19
+    %8 = load double, ptr %lsr.iv364, align 8, !tbaa !19
+    %mul120.us = fmul fast double %8, 1.000000e-02
+    %9 = load double, ptr %lsr.iv366, align 8, !tbaa !19
+    %add123.us = fadd fast double %9, %mul120.us
+    store double %add123.us, ptr %lsr.iv366, align 8, !tbaa !19
+    %uglygep357 = getelementptr i8, ptr %lsr.iv356, i64 8
+    %uglygep359 = getelementptr i8, ptr %lsr.iv358, i64 8
+    %uglygep361 = getelementptr i8, ptr %lsr.iv360, i64 8
+    %uglygep363 = getelementptr i8, ptr %lsr.iv362, i64 8
+    %uglygep365 = getelementptr i8, ptr %lsr.iv364, i64 8
+    %uglygep367 = getelementptr i8, ptr %lsr.iv366, i64 8
+    %10 = call i64 @llvm.loop.decrement.reg.i64(i64 %3, i64 1)
+    %11 = icmp ne i64 %10, 0
+    br i1 %11, label %for.body105.us, label %for.inc127.us, !llvm.loop !21
+  
+  for.body55.us.preheader:                          ; preds = %for.end86.us, %for.cond42.preheader.us
+    %indvars.iv310 = phi i64 [ 0, %for.cond42.preheader.us ], [ %indvars.iv.next311, %for.end86.us ]
+    %arrayidx47.us = getelementptr inbounds [8704 x double], ptr @px, i64 0, i64 %indvars.iv310
+    %12 = load double, ptr %arrayidx47.us, align 8, !tbaa !19
+    %arrayidx49.us = getelementptr inbounds [8704 x double], ptr @py, i64 0, i64 %indvars.iv310
+    %13 = load double, ptr %arrayidx49.us, align 8, !tbaa !19
+    %arrayidx51.us = getelementptr inbounds [8704 x double], ptr @pz, i64 0, i64 %indvars.iv310
+    %14 = load double, ptr %arrayidx51.us, align 8, !tbaa !19
+    %15 = call i64 @llvm.start.loop.iterations.i64(i64 %wide.trip.count313)
+    br label %for.body55.us
+  
+  for.end86.us:                                     ; preds = %for.body55.us
+    %mul87.us = fmul fast double %add79.us, 1.000000e-02
+    %arrayidx89.us = getelementptr inbounds [8704 x double], ptr @vx, i64 0, i64 %indvars.iv310
+    %16 = load double, ptr %arrayidx89.us, align 8, !tbaa !19
+    %add90.us = fadd fast double %16, %mul87.us
+    store double %add90.us, ptr %arrayidx89.us, align 8, !tbaa !19
+    %mul91.us = fmul fast double %add81.us, 1.000000e-02
+    %arrayidx93.us = getelementptr inbounds [8704 x double], ptr @vy, i64 0, i64 %indvars.iv310
+    %17 = load double, ptr %arrayidx93.us, align 8, !tbaa !19
+    %add94.us = fadd fast double %17, %mul91.us
+    store double %add94.us, ptr %arrayidx93.us, align 8, !tbaa !19
+    %mul95.us = fmul fast double %add83.us, 1.000000e-02
+    %arrayidx97.us = getelementptr inbounds [8704 x double], ptr @vz, i64 0, i64 %indvars.iv310
+    %18 = load double, ptr %arrayidx97.us, align 8, !tbaa !19
+    %add98.us = fadd fast double %18, %mul95.us
+    store double %add98.us, ptr %arrayidx97.us, align 8, !tbaa !19
+    %indvars.iv.next311 = add nuw nsw i64 %indvars.iv310, 1
+    %exitcond314.not = icmp eq i64 %indvars.iv.next311, %wide.trip.count313
+    br i1 %exitcond314.not, label %for.body105.us.preheader, label %for.body55.us.preheader, !llvm.loop !22
+  
+  for.body105.us.preheader:                         ; preds = %for.end86.us
+    %19 = call i64 @llvm.start.loop.iterations.i64(i64 %wide.trip.count313)
+    br label %for.body105.us
+  
+  for.body55.us:                                    ; preds = %for.body55.us.preheader, %for.body55.us
+    %lsr.iv352 = phi ptr [ @m, %for.body55.us.preheader ], [ %uglygep353, %for.body55.us ]
+    %lsr.iv350 = phi ptr [ @pz, %for.body55.us.preheader ], [ %uglygep351, %for.body55.us ]
+    %lsr.iv348 = phi ptr [ @py, %for.body55.us.preheader ], [ %uglygep349, %for.body55.us ]
+    %lsr.iv346 = phi ptr [ @px, %for.body55.us.preheader ], [ %uglygep347, %for.body55.us ]
+    %acc_z.0257.us = phi double [ 0.000000e+00, %for.body55.us.preheader ], [ %add83.us, %for.body55.us ]
+    %acc_y.0256.us = phi double [ 0.000000e+00, %for.body55.us.preheader ], [ %add81.us, %for.body55.us ]
+    %acc_x.0255.us = phi double [ 0.000000e+00, %for.body55.us.preheader ], [ %add79.us, %for.body55.us ]
+    %20 = phi i64 [ %15, %for.body55.us.preheader ], [ %27, %for.body55.us ]
+    %21 = load double, ptr %lsr.iv346, align 8, !tbaa !19
+    %sub58.us = fsub fast double %21, %12
+    %22 = load double, ptr %lsr.iv348, align 8, !tbaa !19
+    %sub61.us = fsub fast double %22, %13
+    %23 = load double, ptr %lsr.iv350, align 8, !tbaa !19
+    %sub64.us = fsub fast double %23, %14
+    %mul65.us = fmul fast double %sub58.us, %sub58.us
+    %mul66.us = fmul fast double %sub61.us, %sub61.us
+    %mul68.us = fmul fast double %sub64.us, %sub64.us
+    %add67.us = fadd fast double %mul65.us, 0x3EB0C6F7A0B5ED8D
+    %add69.us = fadd fast double %add67.us, %mul66.us
+    %add70.us = fadd fast double %add69.us, %mul68.us
+    %24 = call fast double @llvm.sqrt.f64(double %add70.us)
+    %div71.us = fdiv fast double 1.000000e+00, %24
+    %25 = load double, ptr %lsr.iv352, align 8, !tbaa !19
+    %26 = fmul fast double %div71.us, %div71.us
+    %mul76.us = fmul fast double %26, %25
+    %mul77.us = fmul fast double %mul76.us, %div71.us
+    %mul78.us = fmul fast double %mul77.us, %sub58.us
+    %add79.us = fadd fast double %mul78.us, %acc_x.0255.us
+    %mul80.us = fmul fast double %mul77.us, %sub61.us
+    %add81.us = fadd fast double %mul80.us, %acc_y.0256.us
+    %mul82.us = fmul fast double %mul77.us, %sub64.us
+    %add83.us = fadd fast double %mul82.us, %acc_z.0257.us
+    %uglygep347 = getelementptr i8, ptr %lsr.iv346, i64 8
+    %uglygep349 = getelementptr i8, ptr %lsr.iv348, i64 8
+    %uglygep351 = getelementptr i8, ptr %lsr.iv350, i64 8
+    %uglygep353 = getelementptr i8, ptr %lsr.iv352, i64 8
+    %27 = call i64 @llvm.loop.decrement.reg.i64(i64 %20, i64 1)
+    %28 = icmp ne i64 %27, 0
+    br i1 %28, label %for.body55.us, label %for.end86.us, !llvm.loop !23
+  
+  for.body:                                         ; preds = %for.body.preheader, %for.body
+    %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
+    %call8 = call i32 @rand_r(ptr noundef nonnull %seed) #7
+    %conv = sitofp i32 %call8 to double
+    %mul = fmul fast double %conv, 0x3E28000000300000
+    %sub = fadd fast double %mul, -3.000000e+00
+    %29 = shl i64 %indvars.iv, 3
+    %uglygep376 = getelementptr i8, ptr @px, i64 %29
+    store double %sub, ptr %uglygep376, align 8, !tbaa !19
+    %call10 = call i32 @rand_r(ptr noundef nonnull %seed) #7
+    %conv11 = sitofp i32 %call10 to double
+    %mul13 = fmul fast double %conv11, 0x3E28000000300000
+    %sub14 = fadd fast double %mul13, -3.000000e+00
+    %30 = shl i64 %indvars.iv, 3
+    %uglygep375 = getelementptr i8, ptr @py, i64 %30
+    store double %sub14, ptr %uglygep375, align 8, !tbaa !19
+    %call17 = call i32 @rand_r(ptr noundef nonnull %seed) #7
+    %conv18 = sitofp i32 %call17 to double
+    %mul20 = fmul fast double %conv18, 0x3E28000000300000
+    %sub21 = fadd fast double %mul20, -3.000000e+00
+    %31 = shl i64 %indvars.iv, 3
+    %uglygep374 = getelementptr i8, ptr @pz, i64 %31
+    store double %sub21, ptr %uglygep374, align 8, !tbaa !19
+    %call24 = call i32 @rand_r(ptr noundef nonnull %seed) #7
+    %conv25 = sitofp i32 %call24 to double
+    %div26 = fmul fast double %conv25, 0x3E00000000200000
+    %add = fadd fast double %div26, 1.000000e+00
+    %32 = shl i64 %indvars.iv, 3
+    %uglygep373 = getelementptr i8, ptr @m, i64 %32
+    store double %add, ptr %uglygep373, align 8, !tbaa !19
+    %tmp = trunc i64 %indvars.iv to i32
+    %conv29 = sitofp i32 %tmp to double
+    %33 = shl i64 %indvars.iv, 3
+    %uglygep372 = getelementptr i8, ptr @vx, i64 %33
+    store double %conv29, ptr %uglygep372, align 8, !tbaa !19
+    %34 = shl i64 %indvars.iv, 3
+    %uglygep371 = getelementptr i8, ptr @vy, i64 %34
+    store double %conv29, ptr %uglygep371, align 8, !tbaa !19
+    %35 = shl i64 %indvars.iv, 3
+    %uglygep370 = getelementptr i8, ptr @vz, i64 %35
+    store double %conv29, ptr %uglygep370, align 8, !tbaa !19
+    %indvars.iv.next = add nuw i64 %indvars.iv, 1
+    %exitcond.not = icmp eq i64 %wide.trip.count, %indvars.iv.next
+    br i1 %exitcond.not, label %for.cond38.preheader.loopexit, label %for.body, !llvm.loop !24
+  
+  for.cond130.preheader:                            ; preds = %for.inc127.us, %for.cond38.preheader
+    br i1 %cmp7251333, label %for.body133.preheader, label %for.end154
+  
+  for.body133.preheader:                            ; preds = %for.cond130.preheader
+    %wide.trip.count324 = zext i32 %size.0250329 to i64
+    %36 = call i64 @llvm.start.loop.iterations.i64(i64 %wide.trip.count324)
+    br label %for.body133
+  
+  for.body133:                                      ; preds = %for.body133.preheader, %for.body133
+    %lsr.iv343 = phi ptr [ @px, %for.body133.preheader ], [ %uglygep344, %for.body133 ]
+    %lsr.iv341 = phi ptr [ @py, %for.body133.preheader ], [ %uglygep342, %for.body133 ]
+    %lsr.iv339 = phi ptr [ @pz, %for.body133.preheader ], [ %uglygep340, %for.body133 ]
+    %lsr.iv337 = phi ptr [ @vx, %for.body133.preheader ], [ %uglygep338, %for.body133 ]
+    %lsr.iv335 = phi ptr [ @vy, %for.body133.preheader ], [ %uglygep336, %for.body133 ]
+    %lsr.iv = phi ptr [ @vz, %for.body133.preheader ], [ %uglygep, %for.body133 ]
+    %vza.0297 = phi double [ 0.000000e+00, %for.body133.preheader ], [ %add151, %for.body133 ]
+    %vya.0296 = phi double [ 0.000000e+00, %for.body133.preheader ], [ %add148, %for.body133 ]
+    %vxa.0295 = phi double [ 0.000000e+00, %for.body133.preheader ], [ %add145, %for.body133 ]
+    %pza.0294 = phi double [ 0.000000e+00, %for.body133.preheader ], [ %add142, %for.body133 ]
+    %pya.0293 = phi double [ 0.000000e+00, %for.body133.preheader ], [ %add139, %for.body133 ]
+    %pxa.0292 = phi double [ 0.000000e+00, %for.body133.preheader ], [ %add136, %for.body133 ]
+    %37 = phi i64 [ %36, %for.body133.preheader ], [ %44, %for.body133 ]
+    %38 = load double, ptr %lsr.iv343, align 8, !tbaa !19
+    %add136 = fadd fast double %38, %pxa.0292
+    %39 = load double, ptr %lsr.iv341, align 8, !tbaa !19
+    %add139 = fadd fast double %39, %pya.0293
+    %40 = load double, ptr %lsr.iv339, align 8, !tbaa !19
+    %add142 = fadd fast double %40, %pza.0294
+    %41 = load double, ptr %lsr.iv337, align 8, !tbaa !19
+    %add145 = fadd fast double %41, %vxa.0295
+    %42 = load double, ptr %lsr.iv335, align 8, !tbaa !19
+    %add148 = fadd fast double %42, %vya.0296
+    %43 = load double, ptr %lsr.iv, align 8, !tbaa !19
+    %add151 = fadd fast double %43, %vza.0297
+    %uglygep = getelementptr i8, ptr %lsr.iv, i64 8
+    %uglygep336 = getelementptr i8, ptr %lsr.iv335, i64 8
+    %uglygep338 = getelementptr i8, ptr %lsr.iv337, i64 8
+    %uglygep340 = getelementptr i8, ptr %lsr.iv339, i64 8
+    %uglygep342 = getelementptr i8, ptr %lsr.iv341, i64 8
+    %uglygep344 = getelementptr i8, ptr %lsr.iv343, i64 8
+    %44 = call i64 @llvm.loop.decrement.reg.i64(i64 %37, i64 1)
+    %45 = icmp ne i64 %44, 0
+    br i1 %45, label %for.body133, label %for.end154, !llvm.loop !25
+  
+  for.end154:                                       ; preds = %for.body133, %for.cond42.preheader.lr.ph, %for.cond130.preheader
+    %pxa.0.lcssa = phi double [ 0.000000e+00, %for.cond130.preheader ], [ 0.000000e+00, %for.cond42.preheader.lr.ph ], [ %add136, %for.body133 ]
+    %pya.0.lcssa = phi double [ 0.000000e+00, %for.cond130.preheader ], [ 0.000000e+00, %for.cond42.preheader.lr.ph ], [ %add139, %for.body133 ]
+    %pza.0.lcssa = phi double [ 0.000000e+00, %for.cond130.preheader ], [ 0.000000e+00, %for.cond42.preheader.lr.ph ], [ %add142, %for.body133 ]
+    %vxa.0.lcssa = phi double [ 0.000000e+00, %for.cond130.preheader ], [ 0.000000e+00, %for.cond42.preheader.lr.ph ], [ %add145, %for.body133 ]
+    %vya.0.lcssa = phi double [ 0.000000e+00, %for.cond130.preheader ], [ 0.000000e+00, %for.cond42.preheader.lr.ph ], [ %add148, %for.body133 ]
+    %vza.0.lcssa = phi double [ 0.000000e+00, %for.cond130.preheader ], [ 0.000000e+00, %for.cond42.preheader.lr.ph ], [ %add151, %for.body133 ]
+    %conv155 = sitofp i32 %size.0250329 to double
+    %div156 = fdiv fast double %pxa.0.lcssa, %conv155
+    %div158 = fdiv fast double %pya.0.lcssa, %conv155
+    %div160 = fdiv fast double %pza.0.lcssa, %conv155
+    %div162 = fdiv fast double %vxa.0.lcssa, %conv155
+    %div164 = fdiv fast double %vya.0.lcssa, %conv155
+    %div166 = fdiv fast double %vza.0.lcssa, %conv155
+    %call167 = call i32 (ptr, ...) @printf(ptr noundef nonnull @.str, double noundef %div156, double noundef %div158, double noundef %div160, double noundef %div162, double noundef %div164, double noundef %div166)
+    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %seed) #7
+    ret i32 0
+  }
+  
+  ; Function Attrs: nounwind
+  declare void @srand(i32 noundef) local_unnamed_addr #2
+  
+  ; Function Attrs: nounwind
+  declare i32 @rand_r(ptr noundef) local_unnamed_addr #2
+  
+  ; Function Attrs: mustprogress nocallback nofree nosync nounwind readnone speculatable willreturn
+  declare double @llvm.sqrt.f64(double) #3
+  
+  ; Function Attrs: nofree nounwind
+  declare noundef i32 @printf(ptr nocapture noundef readonly, ...) local_unnamed_addr #4
+  
+  ; Function Attrs: mustprogress nofree nounwind willreturn
+  declare i64 @strtol(ptr noundef readonly, ptr nocapture noundef, i32 noundef) local_unnamed_addr #5
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i64 @llvm.start.loop.iterations.i64(i64) #6
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #6
+  
+  attributes #0 = { nounwind uwtable vscale_range(1,16) "approx-func-fp-math"="true" "frame-pointer"="non-leaf" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" }
+  attributes #1 = { argmemonly mustprogress nocallback nofree nosync nounwind willreturn }
+  attributes #2 = { nounwind "approx-func-fp-math"="true" "frame-pointer"="non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" }
+  attributes #3 = { mustprogress nocallback nofree nosync nounwind readnone speculatable willreturn }
+  attributes #4 = { nofree nounwind "approx-func-fp-math"="true" "frame-pointer"="non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" }
+  attributes #5 = { mustprogress nofree nounwind willreturn "approx-func-fp-math"="true" "frame-pointer"="non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" }
+  attributes #6 = { nocallback noduplicate nofree nosync nounwind willreturn }
+  attributes #7 = { nounwind }
+  
+  !llvm.module.flags = !{!0, !1, !2, !3, !4}
+  !llvm.ident = !{!5}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 7, !"PIC Level", i32 2}
+  !2 = !{i32 7, !"PIE Level", i32 2}
+  !3 = !{i32 7, !"uwtable", i32 2}
+  !4 = !{i32 7, !"frame-pointer", i32 1}
+  !5 = !{!"clang version 15.0.4"}
+  !6 = !{!7, !8, i64 0}
+  !7 = !{!"timespec", !8, i64 0, !8, i64 8}
+  !8 = !{!"long", !9, i64 0}
+  !9 = !{!"omnipotent char", !10, i64 0}
+  !10 = !{!"Simple C/C++ TBAA"}
+  !11 = !{!7, !8, i64 8}
+  !12 = !{!13, !13, i64 0}
+  !13 = !{!"int", !9, i64 0}
+  !14 = !{!15, !15, i64 0}
+  !15 = !{!"any pointer", !9, i64 0}
+  !16 = distinct !{!16, !17, !18}
+  !17 = !{!"llvm.loop.mustprogress"}
+  !18 = !{!"llvm.loop.unroll.disable"}
+  !19 = !{!20, !20, i64 0}
+  !20 = !{!"double", !9, i64 0}
+  !21 = distinct !{!21, !17, !18}
+  !22 = distinct !{!22, !17, !18}
+  !23 = distinct !{!23, !17, !18}
+  !24 = distinct !{!24, !17, !18}
+  !25 = distinct !{!25, !17, !18}
+
+...
+---
+name:            get_dtime
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gpr32, preferred-register: '' }
+  - { id: 1, class: gpr64sp, preferred-register: '' }
+  - { id: 2, class: gpr32all, preferred-register: '' }
+  - { id: 3, class: fpr64, preferred-register: '' }
+  - { id: 4, class: fpr64, preferred-register: '' }
+  - { id: 5, class: fpr64, preferred-register: '' }
+  - { id: 6, class: fpr64, preferred-register: '' }
+  - { id: 7, class: gpr64common, preferred-register: '' }
+  - { id: 8, class: fpr64, preferred-register: '' }
+  - { id: 9, class: fpr64, preferred-register: '' }
+  - { id: 10, class: fpr64, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  16
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: ts, type: default, offset: 0, size: 16, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -16, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:
+  - id:              0
+    value:           double 1.000000e-09
+    alignment:       8
+    isTargetSpecific: false
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %0:gpr32 = MOVi32imm 1
+    %1:gpr64sp = ADDXri %stack.0.ts, 0, 0
+    $w0 = COPY %0
+    $x1 = COPY %1
+    BL @clock_gettime, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit $x1, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %3:fpr64 = LDRDui %stack.0.ts, 0 :: (dereferenceable load (s64) from %ir.ts)
+    %4:fpr64 = nofpexcept SCVTFv1i64 killed %3
+    %5:fpr64 = LDRDui %stack.0.ts, 1 :: (dereferenceable load (s64) from %ir.tv_nsec)
+    %6:fpr64 = nofpexcept SCVTFv1i64 killed %5
+    %7:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    %8:fpr64 = LDRDui killed %7, target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s64) from constant-pool)
+    %10:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %6, killed %8, killed %4
+    $d0 = COPY %10
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            main
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gpr32sp, preferred-register: '' }
+  - { id: 1, class: gpr32all, preferred-register: '' }
+  - { id: 2, class: gpr32all, preferred-register: '' }
+  - { id: 3, class: gpr32all, preferred-register: '' }
+  - { id: 4, class: gpr32, preferred-register: '' }
+  - { id: 5, class: gpr64all, preferred-register: '' }
+  - { id: 6, class: gpr64, preferred-register: '' }
+  - { id: 7, class: gpr32all, preferred-register: '' }
+  - { id: 8, class: gpr32, preferred-register: '' }
+  - { id: 9, class: gpr32common, preferred-register: '' }
+  - { id: 10, class: gpr32, preferred-register: '' }
+  - { id: 11, class: gpr64, preferred-register: '' }
+  - { id: 12, class: gpr32sp, preferred-register: '' }
+  - { id: 13, class: gpr32all, preferred-register: '' }
+  - { id: 14, class: gpr64sp, preferred-register: '' }
+  - { id: 15, class: gpr64sp, preferred-register: '' }
+  - { id: 16, class: gpr64sp, preferred-register: '' }
+  - { id: 17, class: gpr64sp, preferred-register: '' }
+  - { id: 18, class: gpr64sp, preferred-register: '' }
+  - { id: 19, class: gpr64sp, preferred-register: '' }
+  - { id: 20, class: gpr64sp, preferred-register: '' }
+  - { id: 21, class: gpr64all, preferred-register: '' }
+  - { id: 22, class: gpr64all, preferred-register: '' }
+  - { id: 23, class: gpr64all, preferred-register: '' }
+  - { id: 24, class: gpr64all, preferred-register: '' }
+  - { id: 25, class: gpr64all, preferred-register: '' }
+  - { id: 26, class: gpr64all, preferred-register: '' }
+  - { id: 27, class: gpr64all, preferred-register: '' }
+  - { id: 28, class: gpr64common, preferred-register: '' }
+  - { id: 29, class: fpr64, preferred-register: '' }
+  - { id: 30, class: fpr64, preferred-register: '' }
+  - { id: 31, class: fpr64, preferred-register: '' }
+  - { id: 32, class: gpr64all, preferred-register: '' }
+  - { id: 33, class: gpr64all, preferred-register: '' }
+  - { id: 34, class: gpr64all, preferred-register: '' }
+  - { id: 35, class: gpr64sp, preferred-register: '' }
+  - { id: 36, class: gpr64sp, preferred-register: '' }
+  - { id: 37, class: gpr64sp, preferred-register: '' }
+  - { id: 38, class: gpr64sp, preferred-register: '' }
+  - { id: 39, class: fpr64, preferred-register: '' }
+  - { id: 40, class: fpr64, preferred-register: '' }
+  - { id: 41, class: fpr64, preferred-register: '' }
+  - { id: 42, class: gpr64sp, preferred-register: '' }
+  - { id: 43, class: fpr64, preferred-register: '' }
+  - { id: 44, class: fpr64, preferred-register: '' }
+  - { id: 45, class: fpr64, preferred-register: '' }
+  - { id: 46, class: gpr64all, preferred-register: '' }
+  - { id: 47, class: gpr64all, preferred-register: '' }
+  - { id: 48, class: gpr64all, preferred-register: '' }
+  - { id: 49, class: gpr64all, preferred-register: '' }
+  - { id: 50, class: gpr64all, preferred-register: '' }
+  - { id: 51, class: gpr64common, preferred-register: '' }
+  - { id: 52, class: gpr64all, preferred-register: '' }
+  - { id: 53, class: gpr64all, preferred-register: '' }
+  - { id: 54, class: gpr64sp, preferred-register: '' }
+  - { id: 55, class: gpr64sp, preferred-register: '' }
+  - { id: 56, class: gpr64sp, preferred-register: '' }
+  - { id: 57, class: gpr64sp, preferred-register: '' }
+  - { id: 58, class: gpr64sp, preferred-register: '' }
+  - { id: 59, class: gpr64sp, preferred-register: '' }
+  - { id: 60, class: fpr64, preferred-register: '' }
+  - { id: 61, class: fpr64, preferred-register: '' }
+  - { id: 62, class: fpr64, preferred-register: '' }
+  - { id: 63, class: fpr64, preferred-register: '' }
+  - { id: 64, class: fpr64, preferred-register: '' }
+  - { id: 65, class: fpr64, preferred-register: '' }
+  - { id: 66, class: gpr64sp, preferred-register: '' }
+  - { id: 67, class: fpr64, preferred-register: '' }
+  - { id: 68, class: fpr64, preferred-register: '' }
+  - { id: 69, class: fpr64, preferred-register: '' }
+  - { id: 70, class: fpr64, preferred-register: '' }
+  - { id: 71, class: fpr64, preferred-register: '' }
+  - { id: 72, class: fpr64, preferred-register: '' }
+  - { id: 73, class: gpr64all, preferred-register: '' }
+  - { id: 74, class: gpr64all, preferred-register: '' }
+  - { id: 75, class: gpr64all, preferred-register: '' }
+  - { id: 76, class: gpr64all, preferred-register: '' }
+  - { id: 77, class: gpr64all, preferred-register: '' }
+  - { id: 78, class: gpr64all, preferred-register: '' }
+  - { id: 79, class: gpr64all, preferred-register: '' }
+  - { id: 80, class: fpr64, preferred-register: '' }
+  - { id: 81, class: fpr64, preferred-register: '' }
+  - { id: 82, class: fpr64, preferred-register: '' }
+  - { id: 83, class: fpr64, preferred-register: '' }
+  - { id: 84, class: fpr64, preferred-register: '' }
+  - { id: 85, class: fpr64, preferred-register: '' }
+  - { id: 86, class: gpr32common, preferred-register: '' }
+  - { id: 87, class: gpr64common, preferred-register: '' }
+  - { id: 88, class: gpr32, preferred-register: '' }
+  - { id: 89, class: gpr32, preferred-register: '' }
+  - { id: 90, class: gpr32all, preferred-register: '' }
+  - { id: 91, class: gpr32all, preferred-register: '' }
+  - { id: 92, class: gpr32, preferred-register: '' }
+  - { id: 93, class: gpr32, preferred-register: '' }
+  - { id: 94, class: gpr32, preferred-register: '' }
+  - { id: 95, class: gpr32all, preferred-register: '' }
+  - { id: 96, class: gpr64, preferred-register: '' }
+  - { id: 97, class: gpr64all, preferred-register: '' }
+  - { id: 98, class: gpr32, preferred-register: '' }
+  - { id: 99, class: gpr64all, preferred-register: '' }
+  - { id: 100, class: gpr32, preferred-register: '' }
+  - { id: 101, class: gpr32, preferred-register: '' }
+  - { id: 102, class: gpr64, preferred-register: '' }
+  - { id: 103, class: gpr64all, preferred-register: '' }
+  - { id: 104, class: gpr32, preferred-register: '' }
+  - { id: 105, class: gpr64all, preferred-register: '' }
+  - { id: 106, class: gpr32all, preferred-register: '' }
+  - { id: 107, class: gpr32, preferred-register: '' }
+  - { id: 108, class: gpr32all, preferred-register: '' }
+  - { id: 109, class: gpr32, preferred-register: '' }
+  - { id: 110, class: gpr64all, preferred-register: '' }
+  - { id: 111, class: gpr32, preferred-register: '' }
+  - { id: 112, class: gpr64all, preferred-register: '' }
+  - { id: 113, class: gpr64sp, preferred-register: '' }
+  - { id: 114, class: gpr32, preferred-register: '' }
+  - { id: 115, class: fpr64, preferred-register: '' }
+  - { id: 116, class: gpr64, preferred-register: '' }
+  - { id: 117, class: fpr64, preferred-register: '' }
+  - { id: 118, class: fpr64, preferred-register: '' }
+  - { id: 119, class: fpr64, preferred-register: '' }
+  - { id: 120, class: fpr64, preferred-register: '' }
+  - { id: 121, class: gpr64, preferred-register: '' }
+  - { id: 122, class: gpr64common, preferred-register: '' }
+  - { id: 123, class: gpr32, preferred-register: '' }
+  - { id: 124, class: fpr64, preferred-register: '' }
+  - { id: 125, class: fpr64, preferred-register: '' }
+  - { id: 126, class: fpr64, preferred-register: '' }
+  - { id: 127, class: gpr64common, preferred-register: '' }
+  - { id: 128, class: gpr32, preferred-register: '' }
+  - { id: 129, class: fpr64, preferred-register: '' }
+  - { id: 130, class: fpr64, preferred-register: '' }
+  - { id: 131, class: fpr64, preferred-register: '' }
+  - { id: 132, class: gpr64common, preferred-register: '' }
+  - { id: 133, class: gpr32, preferred-register: '' }
+  - { id: 134, class: fpr64, preferred-register: '' }
+  - { id: 135, class: gpr64, preferred-register: '' }
+  - { id: 136, class: fpr64, preferred-register: '' }
+  - { id: 137, class: fpr64, preferred-register: '' }
+  - { id: 138, class: fpr64, preferred-register: '' }
+  - { id: 139, class: fpr64, preferred-register: '' }
+  - { id: 140, class: gpr64common, preferred-register: '' }
+  - { id: 141, class: gpr32, preferred-register: '' }
+  - { id: 142, class: fpr64, preferred-register: '' }
+  - { id: 143, class: gpr64common, preferred-register: '' }
+  - { id: 144, class: gpr64common, preferred-register: '' }
+  - { id: 145, class: gpr64common, preferred-register: '' }
+  - { id: 146, class: gpr64common, preferred-register: '' }
+  - { id: 147, class: gpr64, preferred-register: '' }
+  - { id: 148, class: gpr32all, preferred-register: '' }
+  - { id: 149, class: gpr32, preferred-register: '' }
+  - { id: 150, class: gpr32, preferred-register: '' }
+  - { id: 151, class: fpr64, preferred-register: '' }
+  - { id: 152, class: gpr32all, preferred-register: '' }
+  - { id: 153, class: gpr32, preferred-register: '' }
+  - { id: 154, class: gpr32all, preferred-register: '' }
+  - { id: 155, class: gpr64all, preferred-register: '' }
+  - { id: 156, class: gpr64all, preferred-register: '' }
+  - { id: 157, class: gpr64all, preferred-register: '' }
+  - { id: 158, class: gpr64all, preferred-register: '' }
+  - { id: 159, class: gpr64all, preferred-register: '' }
+  - { id: 160, class: gpr64all, preferred-register: '' }
+  - { id: 161, class: fpr64, preferred-register: '' }
+  - { id: 162, class: gpr64, preferred-register: '' }
+  - { id: 163, class: gpr64common, preferred-register: '' }
+  - { id: 164, class: gpr64common, preferred-register: '' }
+  - { id: 165, class: gpr64common, preferred-register: '' }
+  - { id: 166, class: gpr64common, preferred-register: '' }
+  - { id: 167, class: gpr64sp, preferred-register: '' }
+  - { id: 168, class: fpr64, preferred-register: '' }
+  - { id: 169, class: fpr64, preferred-register: '' }
+  - { id: 170, class: gpr64sp, preferred-register: '' }
+  - { id: 171, class: fpr64, preferred-register: '' }
+  - { id: 172, class: fpr64, preferred-register: '' }
+  - { id: 173, class: gpr64sp, preferred-register: '' }
+  - { id: 174, class: fpr64, preferred-register: '' }
+  - { id: 175, class: fpr64, preferred-register: '' }
+  - { id: 176, class: fpr64, preferred-register: '' }
+  - { id: 177, class: fpr64, preferred-register: '' }
+  - { id: 178, class: fpr64, preferred-register: '' }
+  - { id: 179, class: gpr64common, preferred-register: '' }
+  - { id: 180, class: fpr64, preferred-register: '' }
+  - { id: 181, class: fpr64, preferred-register: '' }
+  - { id: 182, class: fpr64, preferred-register: '' }
+  - { id: 183, class: fpr64, preferred-register: '' }
+  - { id: 184, class: fpr64, preferred-register: '' }
+  - { id: 185, class: fpr64, preferred-register: '' }
+  - { id: 186, class: fpr64, preferred-register: '' }
+  - { id: 187, class: gpr64sp, preferred-register: '' }
+  - { id: 188, class: fpr64, preferred-register: '' }
+  - { id: 189, class: fpr64, preferred-register: '' }
+  - { id: 190, class: fpr64, preferred-register: '' }
+  - { id: 191, class: fpr64, preferred-register: '' }
+  - { id: 192, class: fpr64, preferred-register: '' }
+  - { id: 193, class: fpr64, preferred-register: '' }
+  - { id: 194, class: fpr64, preferred-register: '' }
+  - { id: 195, class: gpr64, preferred-register: '' }
+  - { id: 196, class: gpr64common, preferred-register: '' }
+  - { id: 197, class: fpr64, preferred-register: '' }
+  - { id: 198, class: fpr64, preferred-register: '' }
+  - { id: 199, class: gpr64, preferred-register: '' }
+  - { id: 200, class: gpr64common, preferred-register: '' }
+  - { id: 201, class: fpr64, preferred-register: '' }
+  - { id: 202, class: fpr64, preferred-register: '' }
+  - { id: 203, class: fpr64, preferred-register: '' }
+  - { id: 204, class: gpr64common, preferred-register: '' }
+  - { id: 205, class: fpr64, preferred-register: '' }
+  - { id: 206, class: fpr64, preferred-register: '' }
+  - { id: 207, class: fpr64, preferred-register: '' }
+  - { id: 208, class: gpr64common, preferred-register: '' }
+  - { id: 209, class: fpr64, preferred-register: '' }
+  - { id: 210, class: fpr64, preferred-register: '' }
+  - { id: 211, class: gpr64common, preferred-register: '' }
+  - { id: 212, class: gpr64, preferred-register: '' }
+  - { id: 213, class: gpr64all, preferred-register: '' }
+  - { id: 214, class: gpr64all, preferred-register: '' }
+  - { id: 215, class: gpr64all, preferred-register: '' }
+  - { id: 216, class: gpr64all, preferred-register: '' }
+  - { id: 217, class: gpr64all, preferred-register: '' }
+  - { id: 218, class: gpr64all, preferred-register: '' }
+  - { id: 219, class: gpr64common, preferred-register: '' }
+  - { id: 220, class: gpr64common, preferred-register: '' }
+  - { id: 221, class: gpr64common, preferred-register: '' }
+  - { id: 222, class: gpr64common, preferred-register: '' }
+  - { id: 223, class: gpr64common, preferred-register: '' }
+  - { id: 224, class: gpr64common, preferred-register: '' }
+  - { id: 225, class: gpr64sp, preferred-register: '' }
+  - { id: 226, class: fpr64, preferred-register: '' }
+  - { id: 227, class: gpr64common, preferred-register: '' }
+  - { id: 228, class: fpr64, preferred-register: '' }
+  - { id: 229, class: fpr64, preferred-register: '' }
+  - { id: 230, class: fpr64, preferred-register: '' }
+  - { id: 231, class: fpr64, preferred-register: '' }
+  - { id: 232, class: gpr64sp, preferred-register: '' }
+  - { id: 233, class: gpr64sp, preferred-register: '' }
+  - { id: 234, class: fpr64, preferred-register: '' }
+  - { id: 235, class: fpr64, preferred-register: '' }
+  - { id: 236, class: fpr64, preferred-register: '' }
+  - { id: 237, class: fpr64, preferred-register: '' }
+  - { id: 238, class: gpr64sp, preferred-register: '' }
+  - { id: 239, class: gpr64sp, preferred-register: '' }
+  - { id: 240, class: fpr64, preferred-register: '' }
+  - { id: 241, class: fpr64, preferred-register: '' }
+  - { id: 242, class: fpr64, preferred-register: '' }
+  - { id: 243, class: fpr64, preferred-register: '' }
+  - { id: 244, class: gpr64sp, preferred-register: '' }
+  - { id: 245, class: gpr64, preferred-register: '' }
+  - { id: 246, class: gpr32common, preferred-register: '' }
+  - { id: 247, class: gpr32, preferred-register: '' }
+  - { id: 248, class: fpr64, preferred-register: '' }
+  - { id: 249, class: gpr64all, preferred-register: '' }
+  - { id: 250, class: gpr64all, preferred-register: '' }
+  - { id: 251, class: gpr64all, preferred-register: '' }
+  - { id: 252, class: gpr64all, preferred-register: '' }
+  - { id: 253, class: gpr64all, preferred-register: '' }
+  - { id: 254, class: gpr64all, preferred-register: '' }
+  - { id: 255, class: fpr64, preferred-register: '' }
+  - { id: 256, class: gpr32, preferred-register: '' }
+  - { id: 257, class: gpr64common, preferred-register: '' }
+  - { id: 258, class: gpr64common, preferred-register: '' }
+  - { id: 259, class: gpr64common, preferred-register: '' }
+  - { id: 260, class: gpr64common, preferred-register: '' }
+  - { id: 261, class: gpr64common, preferred-register: '' }
+  - { id: 262, class: gpr64common, preferred-register: '' }
+  - { id: 263, class: gpr64sp, preferred-register: '' }
+  - { id: 264, class: fpr64, preferred-register: '' }
+  - { id: 265, class: gpr64sp, preferred-register: '' }
+  - { id: 266, class: fpr64, preferred-register: '' }
+  - { id: 267, class: gpr64sp, preferred-register: '' }
+  - { id: 268, class: fpr64, preferred-register: '' }
+  - { id: 269, class: gpr64sp, preferred-register: '' }
+  - { id: 270, class: fpr64, preferred-register: '' }
+  - { id: 271, class: gpr64sp, preferred-register: '' }
+  - { id: 272, class: fpr64, preferred-register: '' }
+  - { id: 273, class: gpr64sp, preferred-register: '' }
+  - { id: 274, class: fpr64, preferred-register: '' }
+  - { id: 275, class: gpr64, preferred-register: '' }
+  - { id: 276, class: fpr64, preferred-register: '' }
+  - { id: 277, class: fpr64, preferred-register: '' }
+  - { id: 278, class: fpr64, preferred-register: '' }
+  - { id: 279, class: fpr64, preferred-register: '' }
+  - { id: 280, class: fpr64, preferred-register: '' }
+  - { id: 281, class: fpr64, preferred-register: '' }
+  - { id: 282, class: fpr64, preferred-register: '' }
+  - { id: 283, class: fpr64, preferred-register: '' }
+  - { id: 284, class: fpr64, preferred-register: '' }
+  - { id: 285, class: gpr64common, preferred-register: '' }
+  - { id: 286, class: gpr32all, preferred-register: '' }
+  - { id: 287, class: gpr32all, preferred-register: '' }
+  - { id: 288, class: fpr64, preferred-register: '' }
+  - { id: 289, class: fpr64, preferred-register: '' }
+  - { id: 290, class: fpr64, preferred-register: '' }
+  - { id: 291, class: gpr64common, preferred-register: '' }
+  - { id: 292, class: gpr64common, preferred-register: '' }
+  - { id: 293, class: gpr64common, preferred-register: '' }
+  - { id: 294, class: gpr64common, preferred-register: '' }
+  - { id: 295, class: gpr64common, preferred-register: '' }
+  - { id: 296, class: gpr64common, preferred-register: '' }
+  - { id: 297, class: gpr64common, preferred-register: '' }
+liveins:
+  - { reg: '$w0', virtual-reg: '%86' }
+  - { reg: '$x1', virtual-reg: '%87' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  4
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: seed, type: default, offset: 0, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:
+  - id:              0
+    value:           double 0x3EB0C6F7A0B5ED8D
+    alignment:       8
+    isTargetSpecific: false
+  - id:              1
+    value:           double 1.000000e-02
+    alignment:       8
+    isTargetSpecific: false
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x40000000), %bb.1(0x40000000)
+    liveins: $w0, $x1
+  
+    %87:gpr64common = COPY $x1
+    %86:gpr32common = COPY $w0
+    %88:gpr32 = MOVi32imm 149
+    STRWui killed %88, %stack.0.seed, 0 :: (store (s32) into %ir.seed, !tbaa !12)
+    dead $wzr = SUBSWri %86, 1, 0, implicit-def $nzcv
+    %291:gpr64common = MOVaddr target-flags(aarch64-page) @px, target-flags(aarch64-pageoff, aarch64-nc) @px
+    %292:gpr64common = MOVaddr target-flags(aarch64-page) @py, target-flags(aarch64-pageoff, aarch64-nc) @py
+    %293:gpr64common = MOVaddr target-flags(aarch64-page) @pz, target-flags(aarch64-pageoff, aarch64-nc) @pz
+    %295:gpr64common = MOVaddr target-flags(aarch64-page) @vx, target-flags(aarch64-pageoff, aarch64-nc) @vx
+    %296:gpr64common = MOVaddr target-flags(aarch64-page) @vy, target-flags(aarch64-pageoff, aarch64-nc) @vy
+    %297:gpr64common = MOVaddr target-flags(aarch64-page) @vz, target-flags(aarch64-pageoff, aarch64-nc) @vz
+    Bcc 12, %bb.2, implicit $nzcv
+    B %bb.1
+  
+  bb.1.if.end6.thread:
+    successors: %bb.5(0x80000000)
+  
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %92:gpr32 = MOVi32imm 149
+    $w0 = COPY %92
+    BL @srand, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %93:gpr32 = MOVi32imm 1024
+    %91:gpr32all = COPY %93
+    %94:gpr32 = MOVi32imm 1000
+    %90:gpr32all = COPY %94
+    B %bb.5
+  
+  bb.2.if.end:
+    successors: %bb.22(0x40000000), %bb.3(0x40000000)
+  
+    %96:gpr64 = LDRXui %87, 1 :: (load (s64) from %ir.arrayidx, !tbaa !14)
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %97:gpr64all = COPY $xzr
+    %98:gpr32 = MOVi32imm 10
+    $x0 = COPY %96
+    $x1 = COPY %97
+    $w2 = COPY %98
+    BL @strtol, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $w2, implicit-def $sp, implicit-def $x0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %99:gpr64all = COPY $x0
+    %0:gpr32sp = COPY %99.sub_32
+    dead $wzr = SUBSWri %86, 2, 0, implicit-def $nzcv
+    Bcc 1, %bb.3, implicit $nzcv
+  
+  bb.22:
+    successors: %bb.4(0x80000000)
+  
+    %100:gpr32 = MOVi32imm 1000
+    %95:gpr32all = COPY %100
+    B %bb.4
+  
+  bb.3.if.then2:
+    successors: %bb.4(0x80000000)
+  
+    %102:gpr64 = LDRXui %87, 2 :: (load (s64) from %ir.arrayidx3, !tbaa !14)
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %103:gpr64all = COPY $xzr
+    %104:gpr32 = MOVi32imm 10
+    $x0 = COPY %102
+    $x1 = COPY %103
+    $w2 = COPY %104
+    BL @strtol, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $w2, implicit-def $sp, implicit-def $x0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %105:gpr64all = COPY $x0
+    %1:gpr32all = COPY %105.sub_32
+  
+  bb.4.if.end6:
+    successors: %bb.5(0x50000000), %bb.23(0x30000000)
+  
+    %2:gpr32all = PHI %95, %bb.22, %1, %bb.3
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %107:gpr32 = MOVi32imm 149
+    $w0 = COPY %107
+    BL @srand, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    dead $wzr = SUBSWri %0, 1, 0, implicit-def $nzcv
+    Bcc 10, %bb.5, implicit $nzcv
+  
+  bb.23:
+    successors: %bb.7(0x80000000)
+  
+    %108:gpr32all = COPY $wzr
+    %106:gpr32all = COPY %108
+    B %bb.7
+  
+  bb.5.for.body.preheader:
+    successors: %bb.17(0x80000000)
+  
+    %3:gpr32all = PHI %90, %bb.1, %2, %bb.4
+    %4:gpr32 = PHI %91, %bb.1, %0, %bb.4
+    %294:gpr64common = MOVaddr target-flags(aarch64-page) @m, target-flags(aarch64-pageoff, aarch64-nc) @m
+    %111:gpr32 = ORRWrs $wzr, %4, 0
+    %6:gpr64 = SUBREG_TO_REG 0, killed %111, %subreg.sub_32
+    %5:gpr64all = COPY %6
+    %112:gpr64all = COPY $xzr
+    %110:gpr64all = COPY %112
+    %113:gpr64sp = ADDXri %stack.0.seed, 0, 0
+    %116:gpr64 = MOVi64imm 4478829829423104000
+    %119:fpr64 = FMOVDi 136
+    %135:gpr64 = MOVi64imm 4467570830353629184
+    %138:fpr64 = FMOVDi 112
+    B %bb.17
+  
+  bb.6.for.cond38.preheader.loopexit:
+    successors: %bb.7(0x80000000)
+  
+    %7:gpr32all = COPY %5.sub_32
+    %149:gpr32 = MOVi32imm 1
+    %148:gpr32all = COPY %149
+  
+  bb.7.for.cond38.preheader:
+    successors: %bb.8(0x50000000), %bb.18(0x30000000)
+  
+    %8:gpr32 = PHI %106, %bb.23, %148, %bb.6
+    %9:gpr32common = PHI %2, %bb.23, %3, %bb.6
+    %10:gpr32 = PHI %0, %bb.23, %7, %bb.6
+    dead $wzr = SUBSWri %9, 1, 0, implicit-def $nzcv
+    Bcc 11, %bb.18, implicit $nzcv
+    B %bb.8
+  
+  bb.8.for.cond42.preheader.lr.ph:
+    successors: %bb.9(0x40000000), %bb.21(0x40000000)
+  
+    %151:fpr64 = FMOVD0
+    CBZW %8, %bb.21
+    B %bb.9
+  
+  bb.9.for.cond42.preheader.us.preheader:
+    successors: %bb.10(0x80000000)
+  
+    %153:gpr32 = ORRWrs $wzr, %10, 0
+    %11:gpr64 = SUBREG_TO_REG 0, killed %153, %subreg.sub_32
+    %154:gpr32all = COPY $wzr
+    %152:gpr32all = COPY %154
+    %166:gpr64common = MOVaddr target-flags(aarch64-page) @m, target-flags(aarch64-pageoff, aarch64-nc) @m
+    %179:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    %180:fpr64 = LDRDui %179, target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s64) from constant-pool)
+    %185:fpr64 = FMOVDi 112
+    %196:gpr64common = ADRP target-flags(aarch64-page) %const.1
+    %197:fpr64 = LDRDui %196, target-flags(aarch64-pageoff, aarch64-nc) %const.1 :: (load (s64) from constant-pool)
+  
+  bb.10.for.cond42.preheader.us:
+    successors: %bb.13(0x80000000)
+  
+    %12:gpr32sp = PHI %152, %bb.9, %13, %bb.11
+    %156:gpr64all = COPY $xzr
+    %155:gpr64all = COPY %156
+    B %bb.13
+  
+  bb.11.for.inc127.us:
+    successors: %bb.18(0x04000000), %bb.10(0x7c000000)
+  
+    %246:gpr32common = nuw nsw ADDWri %12, 1, 0
+    %13:gpr32all = COPY %246
+    dead $wzr = SUBSWrr %246, %9, implicit-def $nzcv
+    Bcc 0, %bb.18, implicit $nzcv
+    B %bb.10
+  
+  bb.12.for.body105.us:
+    successors: %bb.12(0x7c000000), %bb.11(0x04000000)
+  
+    %14:gpr64sp = PHI %213, %bb.15, %26, %bb.12
+    %15:gpr64sp = PHI %214, %bb.15, %25, %bb.12
+    %16:gpr64sp = PHI %215, %bb.15, %24, %bb.12
+    %17:gpr64sp = PHI %216, %bb.15, %23, %bb.12
+    %18:gpr64sp = PHI %217, %bb.15, %22, %bb.12
+    %19:gpr64sp = PHI %218, %bb.15, %21, %bb.12
+    %20:gpr64sp = PHI %34, %bb.15, %27, %bb.12
+    early-clobber %225:gpr64sp, %226:fpr64 = LDRDpost %19, 8 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
+    early-clobber %A1:gpr64sp, %A2:fpr64 = LDRDpost %19, -8 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
+    %230:fpr64 = LDRDui %18, 0 :: (load (s64) from %ir.lsr.iv358, !tbaa !19)
+    %231:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %226, %197, killed %230
+    early-clobber %232:gpr64sp = STRDpost %231, %18, 8 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
+    early-clobber %B1:gpr64sp = STRDpost killed %231, %18, -8 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
+    early-clobber %233:gpr64sp, %234:fpr64 = LDRDpost %17, 8 :: (load (s64) from %ir.lsr.iv360, !tbaa !19)
+    %236:fpr64 = LDRDui %16, 0 :: (load (s64) from %ir.lsr.iv362, !tbaa !19)
+    %237:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %234, %197, killed %236
+    early-clobber %238:gpr64sp = STRDpost killed %237, %16, 8 :: (store (s64) into %ir.lsr.iv362, !tbaa !19)
+    early-clobber %239:gpr64sp, %240:fpr64 = LDRDpost %15, 8 :: (load (s64) from %ir.lsr.iv364, !tbaa !19)
+    %242:fpr64 = LDRDui %14, 0 :: (load (s64) from %ir.lsr.iv366, !tbaa !19)
+    %243:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %240, %197, killed %242
+    early-clobber %244:gpr64sp = STRDpost killed %243, %14, 8 :: (store (s64) into %ir.lsr.iv366, !tbaa !19)
+    %21:gpr64all = COPY %225
+    %22:gpr64all = COPY %232
+    %23:gpr64all = COPY %233
+    %24:gpr64all = COPY %238
+    %25:gpr64all = COPY %239
+    %26:gpr64all = COPY %244
+    %245:gpr64 = SUBSXri %20, 1, 0, implicit-def $nzcv
+    %27:gpr64all = COPY %245
+    Bcc 1, %bb.12, implicit $nzcv
+    B %bb.11
+  
+  bb.13.for.body55.us.preheader:
+    successors: %bb.16(0x80000000)
+  
+    %28:gpr64common = PHI %155, %bb.10, %33, %bb.14
+    %162:gpr64 = UBFMXri %28, 61, 60
+    %29:fpr64 = LDRDroX %291, %162, 0, 0 :: (load (s64) from %ir.arrayidx47.us, !tbaa !19)
+    %30:fpr64 = LDRDroX %292, %162, 0, 0 :: (load (s64) from %ir.arrayidx49.us, !tbaa !19)
+    %31:fpr64 = LDRDroX %293, %162, 0, 0 :: (load (s64) from %ir.arrayidx51.us, !tbaa !19)
+    %161:fpr64 = FMOVD0
+    %160:gpr64all = COPY %291
+    %159:gpr64all = COPY %292
+    %158:gpr64all = COPY %293
+    %157:gpr64all = COPY %166
+    %32:gpr64all = COPY %11
+    B %bb.16
+  
+  bb.14.for.end86.us:
+    successors: %bb.15(0x04000000), %bb.13(0x7c000000)
+  
+    %201:fpr64 = LDRDroX %295, %162, 0, 0 :: (load (s64) from %ir.arrayidx89.us, !tbaa !19)
+    %202:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %43, %197, killed %201
+    STRDroX killed %202, %295, %162, 0, 0 :: (store (s64) into %ir.arrayidx89.us, !tbaa !19)
+    %205:fpr64 = LDRDroX %296, %162, 0, 0 :: (load (s64) from %ir.arrayidx93.us, !tbaa !19)
+    %206:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %44, %197, killed %205
+    STRDroX killed %206, %296, %162, 0, 0 :: (store (s64) into %ir.arrayidx93.us, !tbaa !19)
+    %209:fpr64 = LDRDroX %297, %162, 0, 0 :: (load (s64) from %ir.arrayidx97.us, !tbaa !19)
+    %210:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %45, %197, killed %209
+    STRDroX killed %210, %297, %162, 0, 0 :: (store (s64) into %ir.arrayidx97.us, !tbaa !19)
+    %211:gpr64common = nuw nsw ADDXri %28, 1, 0
+    %33:gpr64all = COPY %211
+    dead $xzr = SUBSXrr %211, %11, implicit-def $nzcv
+    Bcc 1, %bb.13, implicit $nzcv
+    B %bb.15
+  
+  bb.15.for.body105.us.preheader:
+    successors: %bb.12(0x80000000)
+  
+    %218:gpr64all = COPY %295
+    %217:gpr64all = COPY %291
+    %216:gpr64all = COPY %296
+    %215:gpr64all = COPY %292
+    %214:gpr64all = COPY %297
+    %213:gpr64all = COPY %293
+    %34:gpr64all = COPY %11
+    B %bb.12
+  
+  bb.16.for.body55.us:
+    successors: %bb.16(0x7c000000), %bb.14(0x04000000)
+  
+    %35:gpr64sp = PHI %157, %bb.13, %49, %bb.16
+    %36:gpr64sp = PHI %158, %bb.13, %48, %bb.16
+    %37:gpr64sp = PHI %159, %bb.13, %47, %bb.16
+    %38:gpr64sp = PHI %160, %bb.13, %46, %bb.16
+    %39:fpr64 = PHI %161, %bb.13, %45, %bb.16
+    %40:fpr64 = PHI %161, %bb.13, %44, %bb.16
+    %41:fpr64 = PHI %161, %bb.13, %43, %bb.16
+    %42:gpr64sp = PHI %32, %bb.13, %50, %bb.16
+    early-clobber %167:gpr64sp, %168:fpr64 = LDRDpost %38, 8 :: (load (s64) from %ir.lsr.iv346, !tbaa !19)
+    %169:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBDrr killed %168, %29
+    early-clobber %170:gpr64sp, %171:fpr64 = LDRDpost %37, 8 :: (load (s64) from %ir.lsr.iv348, !tbaa !19)
+    %172:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBDrr killed %171, %30
+    early-clobber %173:gpr64sp, %174:fpr64 = LDRDpost %36, 8 :: (load (s64) from %ir.lsr.iv350, !tbaa !19)
+    %175:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBDrr killed %174, %31
+    %181:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %169, %169, %180
+    %182:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %172, %172, killed %181
+    %183:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %175, %175, killed %182
+    %184:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSQRTDr killed %183
+    %186:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FDIVDrr %185, killed %184
+    early-clobber %187:gpr64sp, %188:fpr64 = LDRDpost %35, 8 :: (load (s64) from %ir.lsr.iv352, !tbaa !19)
+    %189:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %186, %186
+    %290:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr killed %188, %186
+    %191:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr killed %189, killed %290
+    %43:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %191, %169, %41
+    %44:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %191, %172, %40
+    %45:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %191, %175, %39
+    %46:gpr64all = COPY %167
+    %47:gpr64all = COPY %170
+    %48:gpr64all = COPY %173
+    %49:gpr64all = COPY %187
+    %195:gpr64 = SUBSXri %42, 1, 0, implicit-def $nzcv
+    %50:gpr64all = COPY %195
+    Bcc 1, %bb.16, implicit $nzcv
+    B %bb.14
+  
+  bb.17.for.body:
+    successors: %bb.6(0x04000000), %bb.17(0x7c000000)
+  
+    %51:gpr64common = PHI %110, %bb.5, %52, %bb.17
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    $x0 = COPY %113
+    BL @rand_r, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %114:gpr32 = COPY $w0
+    %115:fpr64 = nofpexcept SCVTFUWDri %114
+    %117:fpr64 = COPY %116
+    %120:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %115, %117, %119
+    %121:gpr64 = UBFMXri %51, 61, 60
+    STRDroX killed %120, %291, %121, 0, 0 :: (store (s64) into %ir.uglygep376, !tbaa !19)
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    $x0 = COPY %113
+    BL @rand_r, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %123:gpr32 = COPY $w0
+    %124:fpr64 = nofpexcept SCVTFUWDri %123
+    %126:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %124, %117, %119
+    STRDroX killed %126, %292, %121, 0, 0 :: (store (s64) into %ir.uglygep375, !tbaa !19)
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    $x0 = COPY %113
+    BL @rand_r, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %128:gpr32 = COPY $w0
+    %129:fpr64 = nofpexcept SCVTFUWDri %128
+    %131:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %129, %117, %119
+    STRDroX killed %131, %293, %121, 0, 0 :: (store (s64) into %ir.uglygep374, !tbaa !19)
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    $x0 = COPY %113
+    BL @rand_r, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %133:gpr32 = COPY $w0
+    %134:fpr64 = nofpexcept SCVTFUWDri %133
+    %136:fpr64 = COPY %135
+    %139:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %134, killed %136, %138
+    STRDroX killed %139, %294, %121, 0, 0 :: (store (s64) into %ir.uglygep373, !tbaa !19)
+    %141:gpr32 = COPY %51.sub_32
+    %142:fpr64 = nofpexcept SCVTFUWDri killed %141
+    STRDroX %142, %295, %121, 0, 0 :: (store (s64) into %ir.uglygep372, !tbaa !19)
+    STRDroX %142, %296, %121, 0, 0 :: (store (s64) into %ir.uglygep371, !tbaa !19)
+    STRDroX %142, %297, %121, 0, 0 :: (store (s64) into %ir.uglygep370, !tbaa !19)
+    %146:gpr64common = nuw ADDXri %51, 1, 0
+    %52:gpr64all = COPY %146
+    dead $xzr = SUBSXrr %6, %146, implicit-def $nzcv
+    Bcc 0, %bb.6, implicit $nzcv
+    B %bb.17
+  
+  bb.18.for.cond130.preheader:
+    successors: %bb.19(0x40000000), %bb.21(0x40000000)
+  
+    %248:fpr64 = FMOVD0
+    CBZW %8, %bb.21
+    B %bb.19
+  
+  bb.19.for.body133.preheader:
+    successors: %bb.20(0x80000000)
+  
+    %256:gpr32 = ORRWrs $wzr, %10, 0
+    %53:gpr64all = SUBREG_TO_REG 0, killed %256, %subreg.sub_32
+    %255:fpr64 = FMOVD0
+    %257:gpr64common = MOVaddr target-flags(aarch64-page) @vz, target-flags(aarch64-pageoff, aarch64-nc) @vz
+    %254:gpr64all = COPY %257
+    %258:gpr64common = MOVaddr target-flags(aarch64-page) @vy, target-flags(aarch64-pageoff, aarch64-nc) @vy
+    %253:gpr64all = COPY %258
+    %259:gpr64common = MOVaddr target-flags(aarch64-page) @vx, target-flags(aarch64-pageoff, aarch64-nc) @vx
+    %252:gpr64all = COPY %259
+    %260:gpr64common = MOVaddr target-flags(aarch64-page) @pz, target-flags(aarch64-pageoff, aarch64-nc) @pz
+    %251:gpr64all = COPY %260
+    %261:gpr64common = MOVaddr target-flags(aarch64-page) @py, target-flags(aarch64-pageoff, aarch64-nc) @py
+    %250:gpr64all = COPY %261
+    %262:gpr64common = MOVaddr target-flags(aarch64-page) @px, target-flags(aarch64-pageoff, aarch64-nc) @px
+    %249:gpr64all = COPY %262
+  
+  bb.20.for.body133:
+    successors: %bb.20(0x7c000000), %bb.21(0x04000000)
+  
+    %54:gpr64sp = PHI %249, %bb.19, %78, %bb.20
+    %55:gpr64sp = PHI %250, %bb.19, %77, %bb.20
+    %56:gpr64sp = PHI %251, %bb.19, %76, %bb.20
+    %57:gpr64sp = PHI %252, %bb.19, %75, %bb.20
+    %58:gpr64sp = PHI %253, %bb.19, %74, %bb.20
+    %59:gpr64sp = PHI %254, %bb.19, %73, %bb.20
+    %60:fpr64 = PHI %255, %bb.19, %72, %bb.20
+    %61:fpr64 = PHI %255, %bb.19, %71, %bb.20
+    %62:fpr64 = PHI %255, %bb.19, %70, %bb.20
+    %63:fpr64 = PHI %255, %bb.19, %69, %bb.20
+    %64:fpr64 = PHI %255, %bb.19, %68, %bb.20
+    %65:fpr64 = PHI %255, %bb.19, %67, %bb.20
+    %66:gpr64sp = PHI %53, %bb.19, %79, %bb.20
+    early-clobber %263:gpr64sp, %264:fpr64 = LDRDpost %54, 8 :: (load (s64) from %ir.lsr.iv343, !tbaa !19)
+    %67:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %264, %65
+    early-clobber %265:gpr64sp, %266:fpr64 = LDRDpost %55, 8 :: (load (s64) from %ir.lsr.iv341, !tbaa !19)
+    %68:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %266, %64
+    early-clobber %267:gpr64sp, %268:fpr64 = LDRDpost %56, 8 :: (load (s64) from %ir.lsr.iv339, !tbaa !19)
+    %69:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %268, %63
+    early-clobber %269:gpr64sp, %270:fpr64 = LDRDpost %57, 8 :: (load (s64) from %ir.lsr.iv337, !tbaa !19)
+    %70:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %270, %62
+    early-clobber %271:gpr64sp, %272:fpr64 = LDRDpost %58, 8 :: (load (s64) from %ir.lsr.iv335, !tbaa !19)
+    %71:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %272, %61
+    early-clobber %273:gpr64sp, %274:fpr64 = LDRDpost %59, 8 :: (load (s64) from %ir.lsr.iv, !tbaa !19)
+    %72:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %274, %60
+    %73:gpr64all = COPY %273
+    %74:gpr64all = COPY %271
+    %75:gpr64all = COPY %269
+    %76:gpr64all = COPY %267
+    %77:gpr64all = COPY %265
+    %78:gpr64all = COPY %263
+    %275:gpr64 = SUBSXri %66, 1, 0, implicit-def $nzcv
+    %79:gpr64all = COPY %275
+    Bcc 1, %bb.20, implicit $nzcv
+    B %bb.21
+  
+  bb.21.for.end154:
+    %80:fpr64 = PHI %151, %bb.8, %248, %bb.18, %67, %bb.20
+    %81:fpr64 = PHI %151, %bb.8, %248, %bb.18, %68, %bb.20
+    %82:fpr64 = PHI %151, %bb.8, %248, %bb.18, %69, %bb.20
+    %83:fpr64 = PHI %151, %bb.8, %248, %bb.18, %70, %bb.20
+    %84:fpr64 = PHI %151, %bb.8, %248, %bb.18, %71, %bb.20
+    %85:fpr64 = PHI %151, %bb.8, %248, %bb.18, %72, %bb.20
+    %276:fpr64 = nofpexcept SCVTFUWDri %10
+    %277:fpr64 = FMOVDi 112
+    %278:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FDIVDrr killed %277, killed %276
+    %279:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %80, %278
+    %280:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %81, %278
+    %281:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %82, %278
+    %282:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %83, %278
+    %283:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %84, %278
+    %284:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %85, %278
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %285:gpr64common = MOVaddr target-flags(aarch64-page) @.str, target-flags(aarch64-pageoff, aarch64-nc) @.str
+    $x0 = COPY %285
+    $d0 = COPY %279
+    $d1 = COPY %280
+    $d2 = COPY %281
+    $d3 = COPY %282
+    $d4 = COPY %283
+    $d5 = COPY %284
+    BL @printf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $d0, implicit $d1, implicit $d2, implicit $d3, implicit $d4, implicit $d5, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %287:gpr32all = COPY $wzr
+    $w0 = COPY %287
+    RET_ReallyLR implicit $w0
+
+...
