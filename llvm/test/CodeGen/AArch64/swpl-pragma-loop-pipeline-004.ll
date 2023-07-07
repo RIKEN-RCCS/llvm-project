@@ -1,4 +1,4 @@
-; RUN: llc < %s -O2 -mcpu=a64fx -fswp -swpl-debug --pass-remarks-analysis=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -O2 -fswp -mcpu=a64fx -swpl-debug --pass-remarks-analysis=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 ; CHECK: Specified Swpl disable by option/pragma.
 
 ; ModuleID = './pragma-loop-pipeline-004.c'

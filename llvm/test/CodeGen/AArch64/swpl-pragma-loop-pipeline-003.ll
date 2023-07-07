@@ -1,8 +1,8 @@
-; RUN: llc < %s -O2 -mcpu=a64fx -swpl-debug --pass-remarks-analysis=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
-; CHECK: Loop is software pipelined.
+; RUN: llc < %s -O2 -fswp -mcpu=a64fx -swpl-debug --pass-remarks-analysis=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+; CHECK: Specified Swpl disable by option/pragma.
 
-; ModuleID = './pragma-loop-pipeline-001.c'
-source_filename = "./pragma-loop-pipeline-001.c"
+; ModuleID = './pragma-loop-pipeline-003.c'
+source_filename = "./pragma-loop-pipeline-003.c"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-hurd-gnu"
 
@@ -94,7 +94,7 @@ attributes #1 = { nofree nounwind "approx-func-fp-math"="true" "frame-pointer"="
 !llvm.ident = !{!7}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 15.0.4 (git@172.16.1.70:a64fx-swpl/llvm-project.git 69cde8a4ef2dde77486223557abc5942772c96f6)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
-!1 = !DIFile(filename: "pragma-loop-pipeline-001.c", directory: "/home/xxxx", checksumkind: CSK_MD5, checksum: "1f8c779f885d351a7b531c988f5da5ed")
+!1 = !DIFile(filename: "pragma-loop-pipeline-003.c", directory: "/home/xxxx", checksumkind: CSK_MD5, checksum: "0a11afc82e2f622c2b0c4a394887af4a")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}
@@ -102,7 +102,7 @@ attributes #1 = { nofree nounwind "approx-func-fp-math"="true" "frame-pointer"="
 !6 = !{i32 7, !"frame-pointer", i32 1}
 !7 = !{!"clang version 15.0.4 (git@172.16.1.70:a64fx-swpl/llvm-project.git 69cde8a4ef2dde77486223557abc5942772c96f6)"}
 !8 = distinct !DISubprogram(name: "pipeline_enable", scope: !9, file: !9, line: 3, type: !10, scopeLine: 3, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
-!9 = !DIFile(filename: "./pragma-loop-pipeline-001.c", directory: "/home/xxxx", checksumkind: CSK_MD5, checksum: "1f8c779f885d351a7b531c988f5da5ed")
+!9 = !DIFile(filename: "./pragma-loop-pipeline-003.c", directory: "/home/xxxx", checksumkind: CSK_MD5, checksum: "0a11afc82e2f622c2b0c4a394887af4a")
 !10 = !DISubroutineType(types: !11)
 !11 = !{}
 !12 = !DILocation(line: 8, column: 20, scope: !8)
@@ -115,7 +115,7 @@ attributes #1 = { nofree nounwind "approx-func-fp-math"="true" "frame-pointer"="
 !19 = !DILocation(line: 9, column: 12, scope: !8)
 !20 = !DILocation(line: 10, column: 12, scope: !8)
 !21 = !DILocation(line: 8, column: 30, scope: !8)
-!22 = distinct !{!22, !23}
+!22 = distinct !{!22, !23, !34}
 !23 = !{!"llvm.loop.unroll.disable"}
 !24 = !DILocation(line: 0, scope: !8)
 !25 = !DILocation(line: 12, column: 2, scope: !8)
@@ -127,4 +127,4 @@ attributes #1 = { nofree nounwind "approx-func-fp-math"="true" "frame-pointer"="
 !31 = !{!"llvm.loop.vectorize.followup_all", !32}
 !32 = distinct !{!32, !13, !28, !29, !33, !34}
 !33 = !{!"llvm.loop.isvectorized"}
-!34 = !{!"llvm.loop.pipeline.enable"}
+!34 = !{!"llvm.loop.pipeline.disable", i1 true}

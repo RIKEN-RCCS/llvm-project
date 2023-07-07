@@ -1127,16 +1127,15 @@ unsigned SwplPlanSpec::getMaxIterationInterval(const SwplLoop& loop, unsigned mi
   return maxii;
 }
 
-/// \brief pragma pipeline_initiation_intervalの指定値をメタ情報を探索し取得する
-/// \details 入れ子になったメタ情報を再帰的に探索し、指定値を取得する。
-/// \param [in] MD 対象となるメタ情報
-/// \param [out] exists pipeline_initiation_intervalが指定されていればtrue
-/// \return メタ情報から取得したIIの値
+/// \brief Search metadata and get the specified value of pipeline_initiation_interval
+/// \details Recursively traverses nested meta-information to obtain the specified value.
+/// \param [in] MD Target metadata
+/// \param [out] exists True is specified in metadata
+/// \return II value
 unsigned int getIIMetadata(MDNode *MD, bool &exists) {
 
   if (MD->isDistinct()) {
-    // 例）!25 = distinct !{!25, !18, !23, !26, !27, !28}
-    // すべてのオペランドを探索する
+    // example) !25 = distinct !{!25, !18, !23, !26, !27, !28}
     for (unsigned i = 1, e = MD->getNumOperands(); i < e; ++i) {
       MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(i));
 
@@ -1149,8 +1148,7 @@ unsigned int getIIMetadata(MDNode *MD, bool &exists) {
     }
   }
   else {
-    // 例）!28 = !{!"llvm.loop.pipeline.initiationinterval", i32 30}
-    // 先頭オペランドの文字列を参照する
+    // example) !28 = !{!"llvm.loop.pipeline.initiationinterval", i32 30}
     MDString *S = dyn_cast<MDString>(MD->getOperand(0));
 
     if (S == nullptr)
@@ -1163,20 +1161,35 @@ unsigned int getIIMetadata(MDNode *MD, bool &exists) {
       return mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
     }
 
-    // 例）!28 = !{!"llvm.loop.vectorize.followup_all", !29}
-    // followupを含むメタ情報の場合は、第2オペランドを探索する
+    // example) !28 = !{!"llvm.loop.vectorize.followup_all", !29}
     if ((S->getString()).find("followup") != std::string::npos) {
+      // empty followup attribute
+      // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized"}
+      if (MD->getNumOperands() == 1)
+       return 0;
+
       MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(1));
+      MDString *secondS = dyn_cast<MDString>(childMD->getOperand(0));
+
+      // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized", !{!"llvm.loop.pipeline.initiationinterval", i32 30}}
+      if (secondS != nullptr) {
+        if (secondS->getString()=="llvm.loop.pipeline.initiationinterval") {
+          assert(childMD->getNumOperands() == 2 &&
+                 "Pipeline initiation interval hint metadata should have two operands.");
+          exists = true;
+          return mdconst::dyn_extract<ConstantInt>(childMD->getOperand(1))->getZExtValue();
+        }
+      }
       return getIIMetadata(childMD, exists);
     }
   }
   return 0;
 }
 
-/// \brief pragma pipeline_initiation_intervalの指定値をメタ情報から取得する
-/// \param [in] loop 対象となるループ情報
-/// \param [in,out] exists pipeline_initiation_intervalが指定されていればtrue
-/// \return メタ情報から取得したIIの値
+/// \brief Get the specified value of pipeline_initiation_interval from metadata
+/// \param [in] loop Target loop information
+/// \param [in,out] exists True is specified in metadata
+/// \return II value obtained from metadata
 unsigned int SwplPlanSpec::getInitiationInterval(const SwplLoop &loop, bool &exists) {
   exists = false;
 
@@ -1203,7 +1216,7 @@ unsigned int SwplPlanSpec::getInitiationInterval(const SwplLoop &loop, bool &exi
   assert(LoopID->getNumOperands() > 0 && "requires atleast one operand");
   assert(LoopID->getOperand(0) == LoopID && "invalid loop");
 
-  // メタ情報の探索
+  // Metadata Search
   unsigned int ret = getIIMetadata(LoopID, exists);
   if (exists)
     return ret;
