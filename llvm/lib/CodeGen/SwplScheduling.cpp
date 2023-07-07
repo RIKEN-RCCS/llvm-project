@@ -29,8 +29,6 @@ static cl::opt<bool> OptionDumpMrt("swpl-debug-dump-mrt",cl::init(false), cl::Re
 static cl::opt<bool> OptionBsearch("swpl-ii-by-Bsearch",cl::init(true), cl::ReallyHidden);
 static cl::opt<bool> OptionTuningMaxII("swpl-tuning-maxii",cl::init(true), cl::ReallyHidden);
 
-static cl::opt<unsigned> OptionMinIIBase("swpl-minii",cl::init(0), cl::ReallyHidden);
-static cl::opt<unsigned> OptionMaxIIBase("swpl-maxii",cl::init(0), cl::ReallyHidden);
 static cl::opt<unsigned> OptionMveLimit("swpl-mve-limit",cl::init(30), cl::ReallyHidden);
 
 static cl::opt<unsigned> OptionBudgetRatioThreshold("swpl-budget-ratio-threshold",
@@ -994,8 +992,8 @@ bool SwplPlanSpec::init(unsigned arg_res_mii) {
   }
   min_ii = res_mii;
 
-  if(OptionMinIIBase>0) {
-    min_ii = OptionMinIIBase; // option value (default:65)
+  if(SWPipeliner::nOptionMinIIBase()>0) {
+    min_ii = SWPipeliner::nOptionMinIIBase(); // option value (default:65)
   }
 
   max_ii = getMaxIterationInterval(loop, min_ii);
@@ -1021,10 +1019,10 @@ bool SwplPlanSpec::init(unsigned arg_res_mii) {
   }
 
   unable_max_ii = min_ii - 1;
-  assert(min_ii <= max_ii);
+  assert(min_ii < max_ii);
 
   if (SWPipeliner::isDebugOutput()) {
-    dbgs() << "Minimum II = " << res_mii << ".)\n";
+    dbgs() << "Minimum II = " << min_ii << ".)\n";
   }
   return true;
 }
@@ -1108,7 +1106,7 @@ unsigned SwplPlanSpec::getMaxIterationInterval(const SwplLoop& loop, unsigned mi
   unsigned maxii;
   const int instruction_num = 10;
 
-  maxii_base = (OptionMaxIIBase > 0) ? OptionMaxIIBase : DEFAULT_MAXII_BASE;
+  maxii_base = (SWPipeliner::nOptionMaxIIBase() > 0) ? SWPipeliner::nOptionMaxIIBase() : DEFAULT_MAXII_BASE;
   maxii_for_minii = (unsigned)(min_ii * 1.1);
 
   /*

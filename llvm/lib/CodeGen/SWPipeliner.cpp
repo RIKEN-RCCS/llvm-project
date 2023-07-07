@@ -40,6 +40,8 @@ static cl::opt<int> TargetLoop("swpl-choice-loop",cl::init(0), cl::ReallyHidden)
 static cl::opt<bool> DebugOutput("swpl-debug",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DebugDdgOutput("swpl-debug-ddg",cl::init(false), cl::ReallyHidden);
 
+static cl::opt<unsigned> OptionMinIIBase("swpl-minii",cl::init(0), cl::ReallyHidden);
+static cl::opt<unsigned> OptionMaxIIBase("swpl-maxii",cl::init(0), cl::ReallyHidden);
 
 
 namespace llvm {
@@ -50,6 +52,14 @@ bool SWPipeliner::isDebugOutput() {
 
 bool SWPipeliner::isDebugDdgOutput() {
   return ::DebugDdgOutput;
+}
+
+unsigned SWPipeliner::nOptionMinIIBase() {
+  return ::OptionMinIIBase;
+}
+
+unsigned SWPipeliner::nOptionMaxIIBase() {
+  return ::OptionMaxIIBase;
 }
 
 MachineOptimizationRemarkEmitter *SWPipeliner::ORE = nullptr;
@@ -229,6 +239,16 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   if (!shouldOptimize(L)) {
     printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
     return false;
+  }
+
+  // Check when minii/maxii is specified in the option.
+  // When it becomes possible to specify minii/maxii for each loop by pragma etc., add consideration to that.
+  if( (SWPipeliner::nOptionMinIIBase() > 0) && (SWPipeliner::nOptionMaxIIBase() > 0) ) {
+    if( SWPipeliner::nOptionMinIIBase() >= SWPipeliner::nOptionMaxIIBase() ) {
+      printDebug(__func__, "[canPipelineLoop:NG] Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii) ", L);
+      remarkMissed("Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii)", L);
+      return false;
+    }
   }
 
   if (!TII->canPipelineLoop(L)) {
