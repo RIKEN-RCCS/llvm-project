@@ -241,9 +241,8 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     return false;
   }
 
-  // オプションでminii/maxiiが指定されている場合のチェック
-  // pragmaなどによりループごとにminii/maxiiが指定できるようになった際には、その考慮を加える。
-  // （必要に応じて処理を関数化）
+  // Check when minii/maxii is specified in the option.
+  // When it becomes possible to specify minii/maxii for each loop by pragma etc., add consideration to that.
   if( (SWPipeliner::nOptionMinIIBase() > 0) && (SWPipeliner::nOptionMaxIIBase() > 0) ) {
     if( SWPipeliner::nOptionMinIIBase() >= SWPipeliner::nOptionMaxIIBase() ) {
       printDebug(__func__, "[canPipelineLoop:NG] Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii) ", L);
