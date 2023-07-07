@@ -1,14 +1,14 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -start-before=aarch64-swpipeliner  -swpl-debug-dump-plan=true -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1 -start-before=aarch64-swpipeliner  -swpl-debug-dump-plan=true -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK: (plan
-#CHECK:  iteration_interval  = 3
-#CHECK:  n_iteration_copies  = 13
-#CHECK:  n_renaming_versions = 7
-#CHECK:  begin_slot = 999816
-#CHECK:  end_slot   = 999984
-#CHECK:  total_cycles  = 57
+#CHECK:  iteration_interval  = 2
+#CHECK:  n_iteration_copies  = 19
+#CHECK:  n_renaming_versions = 10
+#CHECK:  begin_slot = 999840
+#CHECK:  end_slot   = 1000000
+#CHECK:  total_cycles  = 56
 #CHECK:  prolog_cycles = 18
-#CHECK:  kernel_cycles = 21
+#CHECK:  kernel_cycles = 20
 #CHECK:  epilog_cycles = 18
 
 #CHECK:        ( MachineInstr* : OpcodeName )

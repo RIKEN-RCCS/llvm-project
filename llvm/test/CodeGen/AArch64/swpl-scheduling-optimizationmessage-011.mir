@@ -1,15 +1,13 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1   -start-before=aarch64-swpipeliner  -pass-remarks-output=%t.yaml -swpl-maxii=3  -o /dev/null  > %t; \
+#RUN: llc %s -mcpu=a64fx -fswp -O1   -start-before=aarch64-swpipeliner  -pass-remarks-output=%t.yaml -swpl-maxii=3  -o /dev/null  > %t; \
 #RUN: cat   %t.yaml  | FileCheck %s
 
-#CHECK:--- !Analysis
+#CHECK:--- !Missed
 #CHECK:Pass:            aarch64-swpipeliner
 #CHECK:Name:            NotSoftwarePipleined
 #CHECK:DebugLoc:        { File: 'tp/testprg.c', Line: 6, Column: 3 }
 #CHECK:Function:        main
 #CHECK:Args:
-#CHECK:  - String:          'This loop is not software pipelined because the iteration count is smaller than '
-#CHECK:  - required_iteration: '3'
-#CHECK:  - String:          ' and the software pipelining does not improve the performance.'
+#CHECK:  - String:          This loop is not software pipelined because the iteration count is smaller than 3 and the software pipelining does not improve the performance.
 #CHECK:...
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
