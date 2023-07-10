@@ -259,6 +259,7 @@ void SwplInst::InitializeWithDefUse(llvm::MachineInstr *MI, SwplLoop *loop, Regi
       DefMO[def_i] = &(MI->getOperand(i));
       def_i++;
     } else {
+      if (SWPipeliner::TII->isFPCR(MI->getOperand(i).getReg())) { continue; }
       UseOpMap[use_i]=i+1;
       use_i++;
       construct_use(rmap, *this, MI->getOperand(i), insts);
