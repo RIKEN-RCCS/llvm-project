@@ -2230,6 +2230,14 @@ public:
     return false;
   }
 
+  /// Are the registers FPCR?
+  /// \param [in] reg
+  /// \retval true FPCR
+  /// \retval false not FPCR
+  virtual bool isFPCR(Register reg) const {
+    return false;
+  }
+
   /**
    * Determines whether the target loop is subject to Swpl optimization.
    *

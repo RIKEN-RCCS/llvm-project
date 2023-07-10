@@ -1102,7 +1102,7 @@ void SwplRegAllocInfoTbl::countRegs() {
     if (regAllocInfo.vreg==0) {
       // SWPL化前から実レジスタが割り付けてある
       std::tie(rk, units) = SWPipeliner::TII->getRegKindId(*SWPipeliner::MRI, regAllocInfo.preg);
-      if (rk == StmRegKind::getCCRegID()) {
+      if (rk == StmRegKind::getCCRegID() || rk == 0) {
         // CCレジスタは計算から除外する
         continue;
       }

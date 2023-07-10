@@ -382,7 +382,8 @@ public:
   StmRegKind* getRegKind(const MachineRegisterInfo &MRI, Register r) const override;
   StmRegKind* getRegKind(const MachineRegisterInfo &MRI) const override;
   std::tuple<unsigned, unsigned> getRegKindId(const MachineRegisterInfo &MRI, Register r) const override;
-  bool isNonTargetMI4SWPL(MachineInstr &inst)const override;
+  bool isNonTargetMI4SWPL(MachineInstr &inst) const override;
+  bool isFPCR(Register reg) const override;
   bool canPipelineLoop(MachineLoop &L) const override;
   int calcEachRegIncrement(const SwplReg *r) const override;
   SwplTargetMachine *getSwplTargetMachine() const override;

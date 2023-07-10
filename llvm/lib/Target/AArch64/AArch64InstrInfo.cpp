@@ -8925,7 +8925,11 @@ bool AArch64InstrInfo::isNonTargetMI4SWPL(MachineInstr &inst) const {
       return false;
     }
 }
-
+bool AArch64InstrInfo::isFPCR(Register reg) const {
+    if (reg == AArch64::FPCR)
+      return true;
+    return false;
+}
 std::tuple<unsigned, unsigned> AArch64InstrInfo::getRegKindId(const MachineRegisterInfo &MRI, Register reg) const {
   if (reg.isVirtual()) {
     const auto * regClass=MRI.getRegClass(reg);
@@ -9009,7 +9013,9 @@ std::tuple<unsigned, unsigned> AArch64InstrInfo::getRegKindId(const MachineRegis
     if (AArch64::CCRRegClass.contains(reg)) {
       return {AArch64StmRegKind::getCCRegID(), 1};
     }
-
+    if (reg == AArch64::FPCR) {
+      return {0, 1};
+    }
     llvm_unreachable("unknown register");
   }
   return {0, 0};
