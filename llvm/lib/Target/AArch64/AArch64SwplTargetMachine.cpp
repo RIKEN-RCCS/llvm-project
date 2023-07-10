@@ -65,7 +65,8 @@ enum MsgID {
   MsgID_swpl_not_covered_inst,
   MsgID_swpl_not_covered_loop_shape,
   MsgID_swpl_multiple_inst_update_CCR,
-  MsgID_swpl_multiple_inst_reference_CCR
+  MsgID_swpl_multiple_inst_reference_CCR,
+  MsgID_swpl_inst_update_FPCR
 };
 static void outputRemarkMissed(MachineLoop &L, int msg_id) {
   switch (msg_id) {
@@ -97,6 +98,10 @@ static void outputRemarkMissed(MachineLoop &L, int msg_id) {
   case MsgID_swpl_multiple_inst_reference_CCR:
     SWPipeliner::Reason = "This loop cannot be software pipelined"
                           " because multiple instructions to reference CCR.";
+    break;
+  case MsgID_swpl_inst_update_FPCR:
+    SWPipeliner::Reason = "This loop cannot be software pipelined"
+                          " because instruction to update FPCR.";
     break;
   }
   return;
@@ -244,6 +249,12 @@ static bool isNonTargetLoop(MachineLoop &L) {
     if (CompMI && hasRegisterImplicitDefOperand (&*I, AArch64::NZCV)) {
       printDebug(__func__, "pipeliner info:multi-defoperand==NZCV", L);
       outputRemarkMissed(L, MsgID_swpl_multiple_inst_update_CCR);
+      return true;
+    }
+    /* FPCRを更新する命令が出現した。 */
+    if (hasRegisterImplicitDefOperand (&*I, AArch64::FPCR)) {
+      printDebug(__func__, "pipeliner info:defoperand==FPCR", L);
+      outputRemarkMissed(L, MsgID_swpl_inst_update_FPCR);
       return true;
     }
     /* CCを参照する命令が複数出現した。 */
