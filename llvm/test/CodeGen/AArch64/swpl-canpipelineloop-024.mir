@@ -1,0 +1,190 @@
+# RUN: llc -mcpu=a64fx -march=aarch64 -fswp -start-after=aarch64-dead-defs -o /dev/null -pass-remarks-missed=aarch64-swpipeliner %s 2>&1 | FileCheck %s
+
+#CHECK: This loop cannot be software pipelined because multiple instructions to update CCR.
+
+--- |
+
+  ; ModuleID = '2912.c'
+  source_filename = "2912.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+  
+  @b = dso_local local_unnamed_addr global [100 x double] zeroinitializer, align 8
+  @c = dso_local local_unnamed_addr global [100 x double] zeroinitializer, align 8
+  @a = dso_local local_unnamed_addr global [100 x double] zeroinitializer, align 8
+  
+  ; Function Attrs: nofree norecurse nosync nounwind uwtable vscale_range(1,16)
+  define dso_local void @test(i32 noundef %0) local_unnamed_addr #0 {
+    %2 = icmp sgt i32 %0, 0
+    br i1 %2, label %3, label %6
+  
+  3:                                                ; preds = %1
+    %4 = zext i32 %0 to i64
+    %5 = call i64 @llvm.start.loop.iterations.i64(i64 %4)
+    br label %7
+  
+  6:                                                ; preds = %7, %1
+    ret void
+  
+  7:                                                ; preds = %3, %7
+    %8 = phi ptr [ @b, %3 ], [ %17, %7 ]
+    %9 = phi ptr [ @c, %3 ], [ %16, %7 ]
+    %10 = phi ptr [ @a, %3 ], [ %15, %7 ]
+    %11 = phi i64 [ %5, %3 ], [ %18, %7 ]
+    %12 = load double, ptr %8, align 8, !tbaa !6
+    %13 = load double, ptr %9, align 8, !tbaa !6
+    %14 = fadd double %12, %13
+    store double %14, ptr %10, align 8, !tbaa !6
+    %15 = getelementptr i8, ptr %10, i64 8
+    %16 = getelementptr i8, ptr %9, i64 8
+    %17 = getelementptr i8, ptr %8, i64 8
+    %18 = call i64 @llvm.loop.decrement.reg.i64(i64 %11, i64 1)
+    %19 = icmp ne i64 %18, 0
+    br i1 %19, label %7, label %6, !llvm.loop !10
+  }
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i64 @llvm.start.loop.iterations.i64(i64) #1
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #1
+  
+  attributes #0 = { nofree norecurse nosync nounwind uwtable vscale_range(1,16) "frame-pointer"="non-leaf" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" }
+  attributes #1 = { nocallback noduplicate nofree nosync nounwind willreturn }
+  
+  !llvm.module.flags = !{!0, !1, !2, !3, !4}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 7, !"PIC Level", i32 2}
+  !2 = !{i32 7, !"PIE Level", i32 2}
+  !3 = !{i32 7, !"uwtable", i32 2}
+  !4 = !{i32 7, !"frame-pointer", i32 1}
+  !6 = !{!7, !7, i64 0}
+  !7 = !{!"double", !8, i64 0}
+  !8 = !{!"omnipotent char", !9, i64 0}
+  !9 = !{!"Simple C/C++ TBAA"}
+  !10 = distinct !{!10, !11, !12}
+  !11 = !{!"llvm.loop.mustprogress"}
+  !12 = !{!"llvm.loop.unroll.disable"}
+
+...
+---
+name:            test
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gpr64all, preferred-register: '' }
+  - { id: 1, class: gpr64sp, preferred-register: '' }
+  - { id: 2, class: gpr64sp, preferred-register: '' }
+  - { id: 3, class: gpr64sp, preferred-register: '' }
+  - { id: 4, class: gpr64sp, preferred-register: '' }
+  - { id: 5, class: gpr64all, preferred-register: '' }
+  - { id: 6, class: gpr64all, preferred-register: '' }
+  - { id: 7, class: gpr64all, preferred-register: '' }
+  - { id: 8, class: gpr64all, preferred-register: '' }
+  - { id: 9, class: gpr32common, preferred-register: '' }
+  - { id: 10, class: gpr32, preferred-register: '' }
+  - { id: 11, class: gpr64all, preferred-register: '' }
+  - { id: 12, class: gpr64all, preferred-register: '' }
+  - { id: 13, class: gpr64all, preferred-register: '' }
+  - { id: 14, class: gpr32, preferred-register: '' }
+  - { id: 15, class: gpr64common, preferred-register: '' }
+  - { id: 16, class: gpr64common, preferred-register: '' }
+  - { id: 17, class: gpr64common, preferred-register: '' }
+  - { id: 18, class: gpr64sp, preferred-register: '' }
+  - { id: 19, class: fpr64, preferred-register: '' }
+  - { id: 20, class: gpr64sp, preferred-register: '' }
+  - { id: 21, class: fpr64, preferred-register: '' }
+  - { id: 22, class: fpr64, preferred-register: '' }
+  - { id: 23, class: gpr64sp, preferred-register: '' }
+  - { id: 24, class: gpr64, preferred-register: '' }
+liveins:
+  - { reg: '$w0', virtual-reg: '%9' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.1):
+    successors: %bb.1(0x50000000), %bb.2(0x30000000)
+    liveins: $w0
+  
+    %9:gpr32common = COPY $w0
+    dead $wzr = SUBSWri %9, 1, 0, implicit-def $nzcv
+    Bcc 11, %bb.2, implicit $nzcv
+    B %bb.1
+  
+  bb.1 (%ir-block.3):
+    successors: %bb.3(0x80000000)
+  
+    %14:gpr32 = ORRWrs $wzr, %9, 0
+    %0:gpr64all = SUBREG_TO_REG 0, killed %14, %subreg.sub_32
+    %15:gpr64common = MOVaddr target-flags(aarch64-page) @a, target-flags(aarch64-pageoff, aarch64-nc) @a
+    %13:gpr64all = COPY %15
+    %16:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    %12:gpr64all = COPY %16
+    %17:gpr64common = MOVaddr target-flags(aarch64-page) @b, target-flags(aarch64-pageoff, aarch64-nc) @b
+    %11:gpr64all = COPY %17
+    B %bb.3
+  
+  bb.2 (%ir-block.6):
+    RET_ReallyLR
+  
+  bb.3 (%ir-block.7):
+    successors: %bb.3(0x7c000000), %bb.2(0x04000000)
+  
+    %1:gpr64sp = PHI %11, %bb.1, %7, %bb.3
+    %2:gpr64sp = PHI %12, %bb.1, %6, %bb.3
+    %3:gpr64sp = PHI %13, %bb.1, %5, %bb.3
+    %4:gpr64sp = PHI %0, %bb.1, %8, %bb.3
+    early-clobber %18:gpr64sp, %19:fpr64 = LDRDpost %1, 8 :: (load (s64) from %ir.8, !tbaa !6)
+    early-clobber %20:gpr64sp, %21:fpr64 = LDRDpost %2, 8 :: (load (s64) from %ir.9, !tbaa !6)
+    %22:fpr64 = nofpexcept FADDDrr killed %19, killed %21
+    early-clobber %23:gpr64sp = STRDpost killed %22, %3, 8 :: (store (s64) into %ir.10, !tbaa !6)
+    %5:gpr64all = COPY %23
+    %6:gpr64all = COPY %20
+    %7:gpr64all = COPY %18
+    %24:gpr64 = SUBSXri %4, 1, 0, implicit-def $nzcv
+       %25:gpr64 = SUBSXri %4, 1, 0, implicit-def $nzcv
+
+    %8:gpr64all = COPY %24
+    Bcc 1, %bb.3, implicit $nzcv
+    B %bb.2
+
+...

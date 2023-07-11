@@ -1,0 +1,1571 @@
+# RUN: llc %s -o /dev/null -O2 -fswp -mcpu=a64fx -stats -start-after=aarch64-swpipeliner 2>&1 | FileCheck %s
+# CHECK: 6 machine-sink         - Number of remove useless copies
+
+--- |
+  ; ModuleID = 'postra-rm-useless-copy.mir'
+  source_filename = "s.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+  
+  @b = external global [32000 x double], align 64
+  @c = external global [32000 x double], align 64
+  @d = external global [32000 x double], align 64
+  @a = external global [32000 x double], align 64
+  @e = external global [32000 x double], align 64
+  @aa = external global [256 x [256 x double]], align 64
+  @bb = external global [256 x [256 x double]], align 64
+  @cc = external global [256 x [256 x double]], align 64
+  
+  ; Function Attrs: nounwind uwtable vscale_range(1,16)
+  define dso_local void @s() local_unnamed_addr #0 {
+  entry:
+    br label %for.cond1.preheader
+  
+  for.cond1.preheader:                              ; preds = %for.cond.cleanup3, %entry
+    %nl.036 = phi i32 [ 0, %entry ], [ %inc23, %for.cond.cleanup3 ]
+    %0 = call i64 @llvm.start.loop.iterations.i64(i64 2909)
+    %1 = call i64 @llvm.start.loop.iterations.i64(i64 2909)
+    br label %for.body4
+  
+  for.cond.cleanup:                                 ; preds = %for.cond.cleanup3
+    ret void
+  
+  for.cond.cleanup3:                                ; preds = %for.body4
+    %call = tail call i32 @dummy(ptr noundef nonnull @a, ptr noundef nonnull @b, ptr noundef nonnull @c, ptr noundef nonnull @d, ptr noundef nonnull @e, ptr noundef nonnull @aa, ptr noundef nonnull @bb, ptr noundef nonnull @cc, double noundef 0.000000e+00) #3
+    %inc23 = add nuw nsw i32 %nl.036, 1
+    %exitcond38.not = icmp eq i32 %inc23, 200000
+    br i1 %exitcond38.not, label %for.cond.cleanup, label %for.cond1.preheader, !llvm.loop !6
+  
+  for.body4:                                        ; preds = %for.body4, %for.cond1.preheader
+    %lsr.iv1 = phi i64 [ %lsr.iv.next2, %for.body4 ], [ 2909, %for.cond1.preheader ]
+    %lsr.iv = phi i64 [ %lsr.iv.next, %for.body4 ], [ 0, %for.cond1.preheader ]
+    %2 = phi i64 [ %1, %for.cond1.preheader ], [ %48, %for.body4 ]
+    %uglygep39 = getelementptr i8, ptr getelementptr (i8, ptr @b, i64 40), i64 %lsr.iv
+    %uglygep40 = getelementptr i8, ptr %uglygep39, i64 -40
+    %3 = load double, ptr %uglygep40, align 8, !tbaa !8
+    %uglygep60 = getelementptr i8, ptr getelementptr (i8, ptr @c, i64 40), i64 %lsr.iv
+    %uglygep61 = getelementptr i8, ptr %uglygep60, i64 -40
+    %4 = load double, ptr %uglygep61, align 8, !tbaa !8
+    %mul = fmul double %3, %4
+    %uglygep81 = getelementptr i8, ptr getelementptr (i8, ptr @d, i64 40), i64 %lsr.iv
+    %uglygep82 = getelementptr i8, ptr %uglygep81, i64 -40
+    %5 = load double, ptr %uglygep82, align 8, !tbaa !8
+    %mul9 = fmul double %mul, %5
+    %uglygep103 = getelementptr i8, ptr getelementptr (i8, ptr @a, i64 48), i64 %lsr.iv
+    %uglygep104 = getelementptr i8, ptr %uglygep103, i64 -48
+    store double %mul9, ptr %uglygep104, align 8, !tbaa !8
+    %uglygep113 = getelementptr i8, ptr %uglygep103, i64 -40
+    %6 = load double, ptr %uglygep113, align 8, !tbaa !8
+    %mul16 = fmul double %mul9, %6
+    %mul19 = fmul double %5, %mul16
+    store double %mul19, ptr %uglygep40, align 8, !tbaa !8
+    %uglygep43 = getelementptr i8, ptr getelementptr (i8, ptr @b, i64 40), i64 %lsr.iv
+    %uglygep44 = getelementptr i8, ptr %uglygep43, i64 -32
+    %7 = load double, ptr %uglygep44, align 8, !tbaa !8
+    %uglygep64 = getelementptr i8, ptr getelementptr (i8, ptr @c, i64 40), i64 %lsr.iv
+    %uglygep65 = getelementptr i8, ptr %uglygep64, i64 -32
+    %8 = load double, ptr %uglygep65, align 8, !tbaa !8
+    %mul.1 = fmul double %7, %8
+    %uglygep85 = getelementptr i8, ptr getelementptr (i8, ptr @d, i64 40), i64 %lsr.iv
+    %uglygep86 = getelementptr i8, ptr %uglygep85, i64 -32
+    %9 = load double, ptr %uglygep86, align 8, !tbaa !8
+    %mul9.1 = fmul double %mul.1, %9
+    %uglygep111 = getelementptr i8, ptr getelementptr (i8, ptr @a, i64 48), i64 %lsr.iv
+    %uglygep112 = getelementptr i8, ptr %uglygep111, i64 -40
+    store double %mul9.1, ptr %uglygep112, align 8, !tbaa !8
+    %uglygep116 = getelementptr i8, ptr %uglygep111, i64 -32
+    %10 = load double, ptr %uglygep116, align 8, !tbaa !8
+    %mul16.1 = fmul double %mul9.1, %10
+    %mul19.1 = fmul double %9, %mul16.1
+    store double %mul19.1, ptr %uglygep44, align 8, !tbaa !8
+    %uglygep45 = getelementptr i8, ptr getelementptr (i8, ptr @b, i64 40), i64 %lsr.iv
+    %uglygep46 = getelementptr i8, ptr %uglygep45, i64 -24
+    %11 = load double, ptr %uglygep46, align 8, !tbaa !8
+    %uglygep66 = getelementptr i8, ptr getelementptr (i8, ptr @c, i64 40), i64 %lsr.iv
+    %uglygep67 = getelementptr i8, ptr %uglygep66, i64 -24
+    %12 = load double, ptr %uglygep67, align 8, !tbaa !8
+    %mul.2 = fmul double %11, %12
+    %uglygep87 = getelementptr i8, ptr getelementptr (i8, ptr @d, i64 40), i64 %lsr.iv
+    %uglygep88 = getelementptr i8, ptr %uglygep87, i64 -24
+    %13 = load double, ptr %uglygep88, align 8, !tbaa !8
+    %mul9.2 = fmul double %mul.2, %13
+    %uglygep114 = getelementptr i8, ptr getelementptr (i8, ptr @a, i64 48), i64 %lsr.iv
+    %uglygep115 = getelementptr i8, ptr %uglygep114, i64 -32
+    store double %mul9.2, ptr %uglygep115, align 8, !tbaa !8
+    %uglygep119 = getelementptr i8, ptr %uglygep114, i64 -24
+    %14 = load double, ptr %uglygep119, align 8, !tbaa !8
+    %mul16.2 = fmul double %mul9.2, %14
+    %mul19.2 = fmul double %13, %mul16.2
+    store double %mul19.2, ptr %uglygep46, align 8, !tbaa !8
+    %uglygep47 = getelementptr i8, ptr getelementptr (i8, ptr @b, i64 40), i64 %lsr.iv
+    %uglygep48 = getelementptr i8, ptr %uglygep47, i64 -16
+    %15 = load double, ptr %uglygep48, align 8, !tbaa !8
+    %uglygep68 = getelementptr i8, ptr getelementptr (i8, ptr @c, i64 40), i64 %lsr.iv
+    %uglygep69 = getelementptr i8, ptr %uglygep68, i64 -16
+    %16 = load double, ptr %uglygep69, align 8, !tbaa !8
+    %mul.3 = fmul double %15, %16
+    %uglygep89 = getelementptr i8, ptr getelementptr (i8, ptr @d, i64 40), i64 %lsr.iv
+    %uglygep90 = getelementptr i8, ptr %uglygep89, i64 -16
+    %17 = load double, ptr %uglygep90, align 8, !tbaa !8
+    %mul9.3 = fmul double %mul.3, %17
+    %uglygep117 = getelementptr i8, ptr getelementptr (i8, ptr @a, i64 48), i64 %lsr.iv
+    %uglygep118 = getelementptr i8, ptr %uglygep117, i64 -24
+    store double %mul9.3, ptr %uglygep118, align 8, !tbaa !8
+    %uglygep122 = getelementptr i8, ptr %uglygep117, i64 -16
+    %18 = load double, ptr %uglygep122, align 8, !tbaa !8
+    %mul16.3 = fmul double %mul9.3, %18
+    %mul19.3 = fmul double %17, %mul16.3
+    store double %mul19.3, ptr %uglygep48, align 8, !tbaa !8
+    %uglygep49 = getelementptr i8, ptr getelementptr (i8, ptr @b, i64 40), i64 %lsr.iv
+    %uglygep50 = getelementptr i8, ptr %uglygep49, i64 -8
+    %19 = load double, ptr %uglygep50, align 8, !tbaa !8
+    %uglygep70 = getelementptr i8, ptr getelementptr (i8, ptr @c, i64 40), i64 %lsr.iv
+    %uglygep71 = getelementptr i8, ptr %uglygep70, i64 -8
+    %20 = load double, ptr %uglygep71, align 8, !tbaa !8
+    %mul.4 = fmul double %19, %20
+    %uglygep91 = getelementptr i8, ptr getelementptr (i8, ptr @d, i64 40), i64 %lsr.iv
+    %uglygep92 = getelementptr i8, ptr %uglygep91, i64 -8
+    %21 = load double, ptr %uglygep92, align 8, !tbaa !8
+    %mul9.4 = fmul double %mul.4, %21
+    %uglygep120 = getelementptr i8, ptr getelementptr (i8, ptr @a, i64 48), i64 %lsr.iv
+    %uglygep121 = getelementptr i8, ptr %uglygep120, i64 -16
+    store double %mul9.4, ptr %uglygep121, align 8, !tbaa !8
+    %uglygep129 = getelementptr i8, ptr %uglygep120, i64 -8
+    %22 = load double, ptr %uglygep129, align 8, !tbaa !8
+    %mul16.4 = fmul double %mul9.4, %22
+    %mul19.4 = fmul double %21, %mul16.4
+    store double %mul19.4, ptr %uglygep50, align 8, !tbaa !8
+    %uglygep = getelementptr i8, ptr getelementptr (i8, ptr @b, i64 40), i64 %lsr.iv
+    %23 = load double, ptr %uglygep, align 8, !tbaa !8
+    %uglygep59 = getelementptr i8, ptr getelementptr (i8, ptr @c, i64 40), i64 %lsr.iv
+    %24 = load double, ptr %uglygep59, align 8, !tbaa !8
+    %mul.5 = fmul double %23, %24
+    %uglygep80 = getelementptr i8, ptr getelementptr (i8, ptr @d, i64 40), i64 %lsr.iv
+    %25 = load double, ptr %uglygep80, align 8, !tbaa !8
+    %mul9.5 = fmul double %mul.5, %25
+    %uglygep127 = getelementptr i8, ptr getelementptr (i8, ptr @a, i64 48), i64 %lsr.iv
+    %uglygep128 = getelementptr i8, ptr %uglygep127, i64 -8
+    store double %mul9.5, ptr %uglygep128, align 8, !tbaa !8
+    %uglygep102 = getelementptr i8, ptr getelementptr (i8, ptr @a, i64 48), i64 %lsr.iv
+    %26 = load double, ptr %uglygep102, align 8, !tbaa !8
+    %mul16.5 = fmul double %mul9.5, %26
+    %mul19.5 = fmul double %25, %mul16.5
+    store double %mul19.5, ptr %uglygep, align 8, !tbaa !8
+    %uglygep51 = getelementptr i8, ptr getelementptr (i8, ptr @b, i64 40), i64 %lsr.iv
+    %uglygep52 = getelementptr i8, ptr %uglygep51, i64 8
+    %27 = load double, ptr %uglygep52, align 8, !tbaa !8
+    %uglygep74 = getelementptr i8, ptr getelementptr (i8, ptr @c, i64 40), i64 %lsr.iv
+    %uglygep75 = getelementptr i8, ptr %uglygep74, i64 8
+    %28 = load double, ptr %uglygep75, align 8, !tbaa !8
+    %mul.6 = fmul double %27, %28
+    %uglygep95 = getelementptr i8, ptr getelementptr (i8, ptr @d, i64 40), i64 %lsr.iv
+    %uglygep96 = getelementptr i8, ptr %uglygep95, i64 8
+    %29 = load double, ptr %uglygep96, align 8, !tbaa !8
+    %mul9.6 = fmul double %mul.6, %29
+    %uglygep101 = getelementptr i8, ptr getelementptr (i8, ptr @a, i64 48), i64 %lsr.iv
+    store double %mul9.6, ptr %uglygep101, align 8, !tbaa !8
+    %uglygep132 = getelementptr i8, ptr %uglygep101, i64 8
+    %30 = load double, ptr %uglygep132, align 8, !tbaa !8
+    %mul16.6 = fmul double %mul9.6, %30
+    %mul19.6 = fmul double %29, %mul16.6
+    store double %mul19.6, ptr %uglygep52, align 8, !tbaa !8
+    %uglygep55 = getelementptr i8, ptr getelementptr (i8, ptr @b, i64 40), i64 %lsr.iv
+    %uglygep56 = getelementptr i8, ptr %uglygep55, i64 16
+    %31 = load double, ptr %uglygep56, align 8, !tbaa !8
+    %uglygep76 = getelementptr i8, ptr getelementptr (i8, ptr @c, i64 40), i64 %lsr.iv
+    %uglygep77 = getelementptr i8, ptr %uglygep76, i64 16
+    %32 = load double, ptr %uglygep77, align 8, !tbaa !8
+    %mul.7 = fmul double %31, %32
+    %uglygep97 = getelementptr i8, ptr getelementptr (i8, ptr @d, i64 40), i64 %lsr.iv
+    %uglygep98 = getelementptr i8, ptr %uglygep97, i64 16
+    %33 = load double, ptr %uglygep98, align 8, !tbaa !8
+    %mul9.7 = fmul double %mul.7, %33
+    %uglygep130 = getelementptr i8, ptr getelementptr (i8, ptr @a, i64 48), i64 %lsr.iv
+    %uglygep131 = getelementptr i8, ptr %uglygep130, i64 8
+    store double %mul9.7, ptr %uglygep131, align 8, !tbaa !8
+    %uglygep135 = getelementptr i8, ptr %uglygep130, i64 16
+    %34 = load double, ptr %uglygep135, align 8, !tbaa !8
+    %mul16.7 = fmul double %mul9.7, %34
+    %mul19.7 = fmul double %33, %mul16.7
+    store double %mul19.7, ptr %uglygep56, align 8, !tbaa !8
+    %uglygep57 = getelementptr i8, ptr getelementptr (i8, ptr @b, i64 40), i64 %lsr.iv
+    %uglygep58 = getelementptr i8, ptr %uglygep57, i64 24
+    %35 = load double, ptr %uglygep58, align 8, !tbaa !8
+    %uglygep78 = getelementptr i8, ptr getelementptr (i8, ptr @c, i64 40), i64 %lsr.iv
+    %uglygep79 = getelementptr i8, ptr %uglygep78, i64 24
+    %36 = load double, ptr %uglygep79, align 8, !tbaa !8
+    %mul.8 = fmul double %35, %36
+    %uglygep99 = getelementptr i8, ptr getelementptr (i8, ptr @d, i64 40), i64 %lsr.iv
+    %uglygep100 = getelementptr i8, ptr %uglygep99, i64 24
+    %37 = load double, ptr %uglygep100, align 8, !tbaa !8
+    %mul9.8 = fmul double %mul.8, %37
+    %uglygep133 = getelementptr i8, ptr getelementptr (i8, ptr @a, i64 48), i64 %lsr.iv
+    %uglygep134 = getelementptr i8, ptr %uglygep133, i64 16
+    store double %mul9.8, ptr %uglygep134, align 8, !tbaa !8
+    %uglygep125 = getelementptr i8, ptr getelementptr (i8, ptr @a, i64 48), i64 %lsr.iv
+    %uglygep126 = getelementptr i8, ptr %uglygep125, i64 24
+    %38 = load double, ptr %uglygep126, align 8, !tbaa !8
+    %mul16.8 = fmul double %mul9.8, %38
+    %mul19.8 = fmul double %37, %mul16.8
+    store double %mul19.8, ptr %uglygep58, align 8, !tbaa !8
+    %uglygep53 = getelementptr i8, ptr getelementptr (i8, ptr @b, i64 40), i64 %lsr.iv
+    %uglygep54 = getelementptr i8, ptr %uglygep53, i64 32
+    %39 = load double, ptr %uglygep54, align 8, !tbaa !8
+    %uglygep72 = getelementptr i8, ptr getelementptr (i8, ptr @c, i64 40), i64 %lsr.iv
+    %uglygep73 = getelementptr i8, ptr %uglygep72, i64 32
+    %40 = load double, ptr %uglygep73, align 8, !tbaa !8
+    %mul.9 = fmul double %39, %40
+    %uglygep93 = getelementptr i8, ptr getelementptr (i8, ptr @d, i64 40), i64 %lsr.iv
+    %uglygep94 = getelementptr i8, ptr %uglygep93, i64 32
+    %41 = load double, ptr %uglygep94, align 8, !tbaa !8
+    %mul9.9 = fmul double %mul.9, %41
+    %uglygep123 = getelementptr i8, ptr getelementptr (i8, ptr @a, i64 48), i64 %lsr.iv
+    %uglygep124 = getelementptr i8, ptr %uglygep123, i64 24
+    store double %mul9.9, ptr %uglygep124, align 8, !tbaa !8
+    %uglygep109 = getelementptr i8, ptr getelementptr (i8, ptr @a, i64 48), i64 %lsr.iv
+    %uglygep110 = getelementptr i8, ptr %uglygep109, i64 32
+    %42 = load double, ptr %uglygep110, align 8, !tbaa !8
+    %mul16.9 = fmul double %mul9.9, %42
+    %mul19.9 = fmul double %41, %mul16.9
+    store double %mul19.9, ptr %uglygep54, align 8, !tbaa !8
+    %uglygep41 = getelementptr i8, ptr getelementptr (i8, ptr @b, i64 40), i64 %lsr.iv
+    %uglygep42 = getelementptr i8, ptr %uglygep41, i64 40
+    %43 = load double, ptr %uglygep42, align 8, !tbaa !8
+    %uglygep62 = getelementptr i8, ptr getelementptr (i8, ptr @c, i64 40), i64 %lsr.iv
+    %uglygep63 = getelementptr i8, ptr %uglygep62, i64 40
+    %44 = load double, ptr %uglygep63, align 8, !tbaa !8
+    %mul.10 = fmul double %43, %44
+    %uglygep83 = getelementptr i8, ptr getelementptr (i8, ptr @d, i64 40), i64 %lsr.iv
+    %uglygep84 = getelementptr i8, ptr %uglygep83, i64 40
+    %45 = load double, ptr %uglygep84, align 8, !tbaa !8
+    %mul9.10 = fmul double %mul.10, %45
+    %uglygep107 = getelementptr i8, ptr getelementptr (i8, ptr @a, i64 48), i64 %lsr.iv
+    %uglygep108 = getelementptr i8, ptr %uglygep107, i64 32
+    store double %mul9.10, ptr %uglygep108, align 8, !tbaa !8
+    %uglygep105 = getelementptr i8, ptr getelementptr (i8, ptr @a, i64 48), i64 %lsr.iv
+    %uglygep106 = getelementptr i8, ptr %uglygep105, i64 40
+    %46 = load double, ptr %uglygep106, align 8, !tbaa !8
+    %mul16.10 = fmul double %mul9.10, %46
+    %mul19.10 = fmul double %45, %mul16.10
+    store double %mul19.10, ptr %uglygep42, align 8, !tbaa !8
+    %lsr.iv.next = add nuw nsw i64 %lsr.iv, 88
+    %47 = call i64 @llvm.loop.decrement.reg.i64(i64 %lsr.iv1, i64 1)
+    %lsr.iv.next2 = add nsw i64 %lsr.iv1, -1
+    %48 = call i64 @llvm.loop.decrement.reg.i64(i64 %2, i64 1)
+    %49 = icmp ne i64 %48, 0
+    br i1 %49, label %for.body4, label %for.cond.cleanup3, !llvm.loop !12
+  }
+  
+  declare i32 @dummy(ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, ptr noundef, double noundef) local_unnamed_addr #1
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i64 @llvm.start.loop.iterations.i64(i64) #2
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #2
+  
+  attributes #0 = { nounwind uwtable vscale_range(1,16) "frame-pointer"="non-leaf" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" }
+  attributes #1 = { "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+outline-atomics,+ras,+rdm,+sha2,+sve,+v8.2a" }
+  attributes #2 = { nocallback noduplicate nofree nosync nounwind willreturn "target-cpu"="a64fx" }
+  attributes #3 = { nounwind }
+  
+  !llvm.module.flags = !{!0, !1, !2, !3, !4}
+  !llvm.ident = !{!5}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 7, !"PIC Level", i32 2}
+  !2 = !{i32 7, !"PIE Level", i32 2}
+  !3 = !{i32 7, !"uwtable", i32 2}
+  !4 = !{i32 7, !"frame-pointer", i32 1}
+  !5 = !{!"clang version 15.0.4 ()"}
+  !6 = distinct !{!6, !7}
+  !7 = !{!"llvm.loop.mustprogress"}
+  !8 = !{!9, !9, i64 0}
+  !9 = !{!"double", !10, i64 0}
+  !10 = !{!"omnipotent char", !11, i64 0}
+  !11 = !{!"Simple C/C++ TBAA"}
+  !12 = distinct !{!12, !7}
+
+...
+---
+name:            s
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gpr32sp, preferred-register: '' }
+  - { id: 1, class: gpr64all, preferred-register: '' }
+  - { id: 2, class: gpr32all, preferred-register: '' }
+  - { id: 3, class: gpr64common, preferred-register: '' }
+  - { id: 4, class: gpr64sp, preferred-register: '' }
+  - { id: 5, class: gpr64all, preferred-register: '' }
+  - { id: 6, class: gpr64all, preferred-register: '' }
+  - { id: 7, class: gpr32all, preferred-register: '' }
+  - { id: 8, class: gpr32all, preferred-register: '' }
+  - { id: 9, class: gpr64all, preferred-register: '' }
+  - { id: 10, class: gpr64all, preferred-register: '' }
+  - { id: 11, class: gpr32, preferred-register: '' }
+  - { id: 12, class: gpr64common, preferred-register: '' }
+  - { id: 13, class: gpr64common, preferred-register: '' }
+  - { id: 14, class: fpr64, preferred-register: '' }
+  - { id: 15, class: gpr64common, preferred-register: '' }
+  - { id: 16, class: gpr64common, preferred-register: '' }
+  - { id: 17, class: fpr64, preferred-register: '' }
+  - { id: 18, class: fpr64, preferred-register: '' }
+  - { id: 19, class: gpr64common, preferred-register: '' }
+  - { id: 20, class: gpr64common, preferred-register: '' }
+  - { id: 21, class: fpr64, preferred-register: '' }
+  - { id: 22, class: fpr64, preferred-register: '' }
+  - { id: 23, class: gpr64common, preferred-register: '' }
+  - { id: 24, class: gpr64common, preferred-register: '' }
+  - { id: 25, class: fpr64, preferred-register: '' }
+  - { id: 26, class: fpr64, preferred-register: '' }
+  - { id: 27, class: fpr64, preferred-register: '' }
+  - { id: 28, class: fpr64, preferred-register: '' }
+  - { id: 29, class: fpr64, preferred-register: '' }
+  - { id: 30, class: fpr64, preferred-register: '' }
+  - { id: 31, class: fpr64, preferred-register: '' }
+  - { id: 32, class: fpr64, preferred-register: '' }
+  - { id: 33, class: fpr64, preferred-register: '' }
+  - { id: 34, class: fpr64, preferred-register: '' }
+  - { id: 35, class: fpr64, preferred-register: '' }
+  - { id: 36, class: fpr64, preferred-register: '' }
+  - { id: 37, class: fpr64, preferred-register: '' }
+  - { id: 38, class: fpr64, preferred-register: '' }
+  - { id: 39, class: fpr64, preferred-register: '' }
+  - { id: 40, class: fpr64, preferred-register: '' }
+  - { id: 41, class: fpr64, preferred-register: '' }
+  - { id: 42, class: fpr64, preferred-register: '' }
+  - { id: 43, class: fpr64, preferred-register: '' }
+  - { id: 44, class: fpr64, preferred-register: '' }
+  - { id: 45, class: fpr64, preferred-register: '' }
+  - { id: 46, class: fpr64, preferred-register: '' }
+  - { id: 47, class: fpr64, preferred-register: '' }
+  - { id: 48, class: fpr64, preferred-register: '' }
+  - { id: 49, class: fpr64, preferred-register: '' }
+  - { id: 50, class: fpr64, preferred-register: '' }
+  - { id: 51, class: fpr64, preferred-register: '' }
+  - { id: 52, class: fpr64, preferred-register: '' }
+  - { id: 53, class: fpr64, preferred-register: '' }
+  - { id: 54, class: fpr64, preferred-register: '' }
+  - { id: 55, class: fpr64, preferred-register: '' }
+  - { id: 56, class: fpr64, preferred-register: '' }
+  - { id: 57, class: fpr64, preferred-register: '' }
+  - { id: 58, class: fpr64, preferred-register: '' }
+  - { id: 59, class: fpr64, preferred-register: '' }
+  - { id: 60, class: fpr64, preferred-register: '' }
+  - { id: 61, class: fpr64, preferred-register: '' }
+  - { id: 62, class: fpr64, preferred-register: '' }
+  - { id: 63, class: fpr64, preferred-register: '' }
+  - { id: 64, class: fpr64, preferred-register: '' }
+  - { id: 65, class: fpr64, preferred-register: '' }
+  - { id: 66, class: fpr64, preferred-register: '' }
+  - { id: 67, class: fpr64, preferred-register: '' }
+  - { id: 68, class: fpr64, preferred-register: '' }
+  - { id: 69, class: fpr64, preferred-register: '' }
+  - { id: 70, class: fpr64, preferred-register: '' }
+  - { id: 71, class: fpr64, preferred-register: '' }
+  - { id: 72, class: fpr64, preferred-register: '' }
+  - { id: 73, class: fpr64, preferred-register: '' }
+  - { id: 74, class: fpr64, preferred-register: '' }
+  - { id: 75, class: fpr64, preferred-register: '' }
+  - { id: 76, class: fpr64, preferred-register: '' }
+  - { id: 77, class: fpr64, preferred-register: '' }
+  - { id: 78, class: fpr64, preferred-register: '' }
+  - { id: 79, class: fpr64, preferred-register: '' }
+  - { id: 80, class: fpr64, preferred-register: '' }
+  - { id: 81, class: fpr64, preferred-register: '' }
+  - { id: 82, class: fpr64, preferred-register: '' }
+  - { id: 83, class: fpr64, preferred-register: '' }
+  - { id: 84, class: fpr64, preferred-register: '' }
+  - { id: 85, class: fpr64, preferred-register: '' }
+  - { id: 86, class: fpr64, preferred-register: '' }
+  - { id: 87, class: fpr64, preferred-register: '' }
+  - { id: 88, class: fpr64, preferred-register: '' }
+  - { id: 89, class: fpr64, preferred-register: '' }
+  - { id: 90, class: fpr64, preferred-register: '' }
+  - { id: 91, class: fpr64, preferred-register: '' }
+  - { id: 92, class: fpr64, preferred-register: '' }
+  - { id: 93, class: fpr64, preferred-register: '' }
+  - { id: 94, class: fpr64, preferred-register: '' }
+  - { id: 95, class: fpr64, preferred-register: '' }
+  - { id: 96, class: fpr64, preferred-register: '' }
+  - { id: 97, class: fpr64, preferred-register: '' }
+  - { id: 98, class: fpr64, preferred-register: '' }
+  - { id: 99, class: fpr64, preferred-register: '' }
+  - { id: 100, class: fpr64, preferred-register: '' }
+  - { id: 101, class: fpr64, preferred-register: '' }
+  - { id: 102, class: fpr64, preferred-register: '' }
+  - { id: 103, class: fpr64, preferred-register: '' }
+  - { id: 104, class: fpr64, preferred-register: '' }
+  - { id: 105, class: fpr64, preferred-register: '' }
+  - { id: 106, class: fpr64, preferred-register: '' }
+  - { id: 107, class: fpr64, preferred-register: '' }
+  - { id: 108, class: gpr64sp, preferred-register: '' }
+  - { id: 109, class: gpr64, preferred-register: '' }
+  - { id: 110, class: gpr64common, preferred-register: '' }
+  - { id: 111, class: gpr64common, preferred-register: '' }
+  - { id: 112, class: gpr64common, preferred-register: '' }
+  - { id: 113, class: gpr64common, preferred-register: '' }
+  - { id: 114, class: gpr64common, preferred-register: '' }
+  - { id: 115, class: gpr64common, preferred-register: '' }
+  - { id: 116, class: gpr64common, preferred-register: '' }
+  - { id: 117, class: gpr64common, preferred-register: '' }
+  - { id: 118, class: fpr64, preferred-register: '' }
+  - { id: 119, class: gpr32all, preferred-register: '' }
+  - { id: 120, class: gpr32common, preferred-register: '' }
+  - { id: 121, class: gpr32, preferred-register: '' }
+  - { id: 122, class: gpr32, preferred-register: '' }
+  - { id: 123, class: gpr32sp, preferred-register: '' }
+  - { id: 124, class: gpr64all, preferred-register: '' }
+  - { id: 125, class: gpr32all, preferred-register: '' }
+  - { id: 126, class: gpr64sp, preferred-register: '' }
+  - { id: 127, class: gpr64common, preferred-register: '' }
+  - { id: 128, class: gpr64sp, preferred-register: '' }
+  - { id: 129, class: gpr64all, preferred-register: '' }
+  - { id: 130, class: gpr64all, preferred-register: '' }
+  - { id: 131, class: gpr64all, preferred-register: '' }
+  - { id: 132, class: gpr32all, preferred-register: '' }
+  - { id: 133, class: gpr32all, preferred-register: '' }
+  - { id: 134, class: gpr64all, preferred-register: '' }
+  - { id: 135, class: gpr64all, preferred-register: '' }
+  - { id: 136, class: gpr64all, preferred-register: '' }
+  - { id: 137, class: gpr32, preferred-register: '' }
+  - { id: 138, class: gpr64common, preferred-register: '' }
+  - { id: 139, class: gpr64common, preferred-register: '' }
+  - { id: 140, class: fpr64, preferred-register: '' }
+  - { id: 141, class: gpr64common, preferred-register: '' }
+  - { id: 142, class: gpr64common, preferred-register: '' }
+  - { id: 143, class: fpr64, preferred-register: '' }
+  - { id: 144, class: fpr64, preferred-register: '' }
+  - { id: 145, class: gpr64common, preferred-register: '' }
+  - { id: 146, class: gpr64common, preferred-register: '' }
+  - { id: 147, class: fpr64, preferred-register: '' }
+  - { id: 148, class: fpr64, preferred-register: '' }
+  - { id: 149, class: gpr64common, preferred-register: '' }
+  - { id: 150, class: gpr64common, preferred-register: '' }
+  - { id: 151, class: fpr64, preferred-register: '' }
+  - { id: 152, class: fpr64, preferred-register: '' }
+  - { id: 153, class: fpr64, preferred-register: '' }
+  - { id: 154, class: fpr64, preferred-register: '' }
+  - { id: 155, class: fpr64, preferred-register: '' }
+  - { id: 156, class: fpr64, preferred-register: '' }
+  - { id: 157, class: fpr64, preferred-register: '' }
+  - { id: 158, class: fpr64, preferred-register: '' }
+  - { id: 159, class: fpr64, preferred-register: '' }
+  - { id: 160, class: fpr64, preferred-register: '' }
+  - { id: 161, class: fpr64, preferred-register: '' }
+  - { id: 162, class: fpr64, preferred-register: '' }
+  - { id: 163, class: fpr64, preferred-register: '' }
+  - { id: 164, class: fpr64, preferred-register: '' }
+  - { id: 165, class: fpr64, preferred-register: '' }
+  - { id: 166, class: fpr64, preferred-register: '' }
+  - { id: 167, class: fpr64, preferred-register: '' }
+  - { id: 168, class: fpr64, preferred-register: '' }
+  - { id: 169, class: fpr64, preferred-register: '' }
+  - { id: 170, class: fpr64, preferred-register: '' }
+  - { id: 171, class: fpr64, preferred-register: '' }
+  - { id: 172, class: fpr64, preferred-register: '' }
+  - { id: 173, class: fpr64, preferred-register: '' }
+  - { id: 174, class: fpr64, preferred-register: '' }
+  - { id: 175, class: fpr64, preferred-register: '' }
+  - { id: 176, class: fpr64, preferred-register: '' }
+  - { id: 177, class: fpr64, preferred-register: '' }
+  - { id: 178, class: fpr64, preferred-register: '' }
+  - { id: 179, class: fpr64, preferred-register: '' }
+  - { id: 180, class: fpr64, preferred-register: '' }
+  - { id: 181, class: fpr64, preferred-register: '' }
+  - { id: 182, class: fpr64, preferred-register: '' }
+  - { id: 183, class: fpr64, preferred-register: '' }
+  - { id: 184, class: fpr64, preferred-register: '' }
+  - { id: 185, class: fpr64, preferred-register: '' }
+  - { id: 186, class: fpr64, preferred-register: '' }
+  - { id: 187, class: fpr64, preferred-register: '' }
+  - { id: 188, class: fpr64, preferred-register: '' }
+  - { id: 189, class: fpr64, preferred-register: '' }
+  - { id: 190, class: fpr64, preferred-register: '' }
+  - { id: 191, class: fpr64, preferred-register: '' }
+  - { id: 192, class: fpr64, preferred-register: '' }
+  - { id: 193, class: fpr64, preferred-register: '' }
+  - { id: 194, class: fpr64, preferred-register: '' }
+  - { id: 195, class: fpr64, preferred-register: '' }
+  - { id: 196, class: fpr64, preferred-register: '' }
+  - { id: 197, class: fpr64, preferred-register: '' }
+  - { id: 198, class: fpr64, preferred-register: '' }
+  - { id: 199, class: fpr64, preferred-register: '' }
+  - { id: 200, class: fpr64, preferred-register: '' }
+  - { id: 201, class: fpr64, preferred-register: '' }
+  - { id: 202, class: fpr64, preferred-register: '' }
+  - { id: 203, class: fpr64, preferred-register: '' }
+  - { id: 204, class: fpr64, preferred-register: '' }
+  - { id: 205, class: fpr64, preferred-register: '' }
+  - { id: 206, class: fpr64, preferred-register: '' }
+  - { id: 207, class: fpr64, preferred-register: '' }
+  - { id: 208, class: fpr64, preferred-register: '' }
+  - { id: 209, class: fpr64, preferred-register: '' }
+  - { id: 210, class: fpr64, preferred-register: '' }
+  - { id: 211, class: fpr64, preferred-register: '' }
+  - { id: 212, class: fpr64, preferred-register: '' }
+  - { id: 213, class: fpr64, preferred-register: '' }
+  - { id: 214, class: fpr64, preferred-register: '' }
+  - { id: 215, class: fpr64, preferred-register: '' }
+  - { id: 216, class: fpr64, preferred-register: '' }
+  - { id: 217, class: fpr64, preferred-register: '' }
+  - { id: 218, class: fpr64, preferred-register: '' }
+  - { id: 219, class: fpr64, preferred-register: '' }
+  - { id: 220, class: fpr64, preferred-register: '' }
+  - { id: 221, class: fpr64, preferred-register: '' }
+  - { id: 222, class: fpr64, preferred-register: '' }
+  - { id: 223, class: fpr64, preferred-register: '' }
+  - { id: 224, class: fpr64, preferred-register: '' }
+  - { id: 225, class: fpr64, preferred-register: '' }
+  - { id: 226, class: fpr64, preferred-register: '' }
+  - { id: 227, class: fpr64, preferred-register: '' }
+  - { id: 228, class: fpr64, preferred-register: '' }
+  - { id: 229, class: fpr64, preferred-register: '' }
+  - { id: 230, class: fpr64, preferred-register: '' }
+  - { id: 231, class: fpr64, preferred-register: '' }
+  - { id: 232, class: fpr64, preferred-register: '' }
+  - { id: 233, class: fpr64, preferred-register: '' }
+  - { id: 234, class: gpr64sp, preferred-register: '' }
+  - { id: 235, class: gpr64common, preferred-register: '' }
+  - { id: 236, class: gpr64common, preferred-register: '' }
+  - { id: 237, class: gpr64, preferred-register: '' }
+  - { id: 238, class: gpr64common, preferred-register: '' }
+  - { id: 239, class: gpr64common, preferred-register: '' }
+  - { id: 240, class: gpr64common, preferred-register: '' }
+  - { id: 241, class: gpr64common, preferred-register: '' }
+  - { id: 242, class: gpr64common, preferred-register: '' }
+  - { id: 243, class: gpr64common, preferred-register: '' }
+  - { id: 244, class: gpr64common, preferred-register: '' }
+  - { id: 245, class: gpr64common, preferred-register: '' }
+  - { id: 246, class: fpr64, preferred-register: '' }
+  - { id: 247, class: gpr32all, preferred-register: '' }
+  - { id: 248, class: gpr32common, preferred-register: '' }
+  - { id: 249, class: gpr32, preferred-register: '' }
+  - { id: 250, class: gpr32, preferred-register: '' }
+  - { id: 251, class: gpr32sp, preferred-register: '' }
+  - { id: 252, class: gpr32, preferred-register: '' }
+  - { id: 253, class: gpr64common, preferred-register: '' }
+  - { id: 254, class: gpr64sp, preferred-register: '' }
+  - { id: 255, class: gpr64common, preferred-register: '' }
+  - { id: 256, class: fpr64, preferred-register: '' }
+  - { id: 257, class: gpr64common, preferred-register: '' }
+  - { id: 258, class: fpr64, preferred-register: '' }
+  - { id: 259, class: fpr64, preferred-register: '' }
+  - { id: 260, class: gpr64common, preferred-register: '' }
+  - { id: 261, class: fpr64, preferred-register: '' }
+  - { id: 262, class: fpr64, preferred-register: '' }
+  - { id: 263, class: gpr64common, preferred-register: '' }
+  - { id: 264, class: fpr64, preferred-register: '' }
+  - { id: 265, class: fpr64, preferred-register: '' }
+  - { id: 266, class: fpr64, preferred-register: '' }
+  - { id: 267, class: fpr64, preferred-register: '' }
+  - { id: 268, class: fpr64, preferred-register: '' }
+  - { id: 269, class: fpr64, preferred-register: '' }
+  - { id: 270, class: fpr64, preferred-register: '' }
+  - { id: 271, class: fpr64, preferred-register: '' }
+  - { id: 272, class: fpr64, preferred-register: '' }
+  - { id: 273, class: fpr64, preferred-register: '' }
+  - { id: 274, class: fpr64, preferred-register: '' }
+  - { id: 275, class: fpr64, preferred-register: '' }
+  - { id: 276, class: fpr64, preferred-register: '' }
+  - { id: 277, class: fpr64, preferred-register: '' }
+  - { id: 278, class: fpr64, preferred-register: '' }
+  - { id: 279, class: fpr64, preferred-register: '' }
+  - { id: 280, class: fpr64, preferred-register: '' }
+  - { id: 281, class: fpr64, preferred-register: '' }
+  - { id: 282, class: fpr64, preferred-register: '' }
+  - { id: 283, class: fpr64, preferred-register: '' }
+  - { id: 284, class: fpr64, preferred-register: '' }
+  - { id: 285, class: fpr64, preferred-register: '' }
+  - { id: 286, class: fpr64, preferred-register: '' }
+  - { id: 287, class: fpr64, preferred-register: '' }
+  - { id: 288, class: fpr64, preferred-register: '' }
+  - { id: 289, class: fpr64, preferred-register: '' }
+  - { id: 290, class: fpr64, preferred-register: '' }
+  - { id: 291, class: fpr64, preferred-register: '' }
+  - { id: 292, class: fpr64, preferred-register: '' }
+  - { id: 293, class: fpr64, preferred-register: '' }
+  - { id: 294, class: fpr64, preferred-register: '' }
+  - { id: 295, class: fpr64, preferred-register: '' }
+  - { id: 296, class: fpr64, preferred-register: '' }
+  - { id: 297, class: fpr64, preferred-register: '' }
+  - { id: 298, class: fpr64, preferred-register: '' }
+  - { id: 299, class: fpr64, preferred-register: '' }
+  - { id: 300, class: fpr64, preferred-register: '' }
+  - { id: 301, class: fpr64, preferred-register: '' }
+  - { id: 302, class: fpr64, preferred-register: '' }
+  - { id: 303, class: fpr64, preferred-register: '' }
+  - { id: 304, class: fpr64, preferred-register: '' }
+  - { id: 305, class: fpr64, preferred-register: '' }
+  - { id: 306, class: fpr64, preferred-register: '' }
+  - { id: 307, class: fpr64, preferred-register: '' }
+  - { id: 308, class: fpr64, preferred-register: '' }
+  - { id: 309, class: fpr64, preferred-register: '' }
+  - { id: 310, class: fpr64, preferred-register: '' }
+  - { id: 311, class: fpr64, preferred-register: '' }
+  - { id: 312, class: fpr64, preferred-register: '' }
+  - { id: 313, class: fpr64, preferred-register: '' }
+  - { id: 314, class: fpr64, preferred-register: '' }
+  - { id: 315, class: fpr64, preferred-register: '' }
+  - { id: 316, class: fpr64, preferred-register: '' }
+  - { id: 317, class: fpr64, preferred-register: '' }
+  - { id: 318, class: fpr64, preferred-register: '' }
+  - { id: 319, class: fpr64, preferred-register: '' }
+  - { id: 320, class: fpr64, preferred-register: '' }
+  - { id: 321, class: fpr64, preferred-register: '' }
+  - { id: 322, class: fpr64, preferred-register: '' }
+  - { id: 323, class: fpr64, preferred-register: '' }
+  - { id: 324, class: fpr64, preferred-register: '' }
+  - { id: 325, class: fpr64, preferred-register: '' }
+  - { id: 326, class: fpr64, preferred-register: '' }
+  - { id: 327, class: fpr64, preferred-register: '' }
+  - { id: 328, class: fpr64, preferred-register: '' }
+  - { id: 329, class: fpr64, preferred-register: '' }
+  - { id: 330, class: fpr64, preferred-register: '' }
+  - { id: 331, class: fpr64, preferred-register: '' }
+  - { id: 332, class: fpr64, preferred-register: '' }
+  - { id: 333, class: fpr64, preferred-register: '' }
+  - { id: 334, class: fpr64, preferred-register: '' }
+  - { id: 335, class: fpr64, preferred-register: '' }
+  - { id: 336, class: fpr64, preferred-register: '' }
+  - { id: 337, class: fpr64, preferred-register: '' }
+  - { id: 338, class: fpr64, preferred-register: '' }
+  - { id: 339, class: fpr64, preferred-register: '' }
+  - { id: 340, class: fpr64, preferred-register: '' }
+  - { id: 341, class: fpr64, preferred-register: '' }
+  - { id: 342, class: fpr64, preferred-register: '' }
+  - { id: 343, class: fpr64, preferred-register: '' }
+  - { id: 344, class: fpr64, preferred-register: '' }
+  - { id: 345, class: fpr64, preferred-register: '' }
+  - { id: 346, class: fpr64, preferred-register: '' }
+  - { id: 347, class: gpr64sp, preferred-register: '' }
+  - { id: 348, class: gpr64all, preferred-register: '' }
+  - { id: 349, class: gpr64, preferred-register: '' }
+  - { id: 350, class: gpr64all, preferred-register: '' }
+  - { id: 351, class: gpr64common, preferred-register: '' }
+  - { id: 352, class: gpr64common, preferred-register: '' }
+  - { id: 353, class: fpr64, preferred-register: '' }
+  - { id: 354, class: gpr64common, preferred-register: '' }
+  - { id: 355, class: fpr64, preferred-register: '' }
+  - { id: 356, class: fpr64, preferred-register: '' }
+  - { id: 357, class: gpr64common, preferred-register: '' }
+  - { id: 358, class: fpr64, preferred-register: '' }
+  - { id: 359, class: fpr64, preferred-register: '' }
+  - { id: 360, class: gpr64common, preferred-register: '' }
+  - { id: 361, class: fpr64, preferred-register: '' }
+  - { id: 362, class: fpr64, preferred-register: '' }
+  - { id: 363, class: fpr64, preferred-register: '' }
+  - { id: 364, class: fpr64, preferred-register: '' }
+  - { id: 365, class: fpr64, preferred-register: '' }
+  - { id: 366, class: fpr64, preferred-register: '' }
+  - { id: 367, class: fpr64, preferred-register: '' }
+  - { id: 368, class: fpr64, preferred-register: '' }
+  - { id: 369, class: fpr64, preferred-register: '' }
+  - { id: 370, class: fpr64, preferred-register: '' }
+  - { id: 371, class: fpr64, preferred-register: '' }
+  - { id: 372, class: fpr64, preferred-register: '' }
+  - { id: 373, class: fpr64, preferred-register: '' }
+  - { id: 374, class: fpr64, preferred-register: '' }
+  - { id: 375, class: fpr64, preferred-register: '' }
+  - { id: 376, class: fpr64, preferred-register: '' }
+  - { id: 377, class: fpr64, preferred-register: '' }
+  - { id: 378, class: fpr64, preferred-register: '' }
+  - { id: 379, class: fpr64, preferred-register: '' }
+  - { id: 380, class: fpr64, preferred-register: '' }
+  - { id: 381, class: fpr64, preferred-register: '' }
+  - { id: 382, class: fpr64, preferred-register: '' }
+  - { id: 383, class: fpr64, preferred-register: '' }
+  - { id: 384, class: fpr64, preferred-register: '' }
+  - { id: 385, class: fpr64, preferred-register: '' }
+  - { id: 386, class: fpr64, preferred-register: '' }
+  - { id: 387, class: fpr64, preferred-register: '' }
+  - { id: 388, class: fpr64, preferred-register: '' }
+  - { id: 389, class: fpr64, preferred-register: '' }
+  - { id: 390, class: fpr64, preferred-register: '' }
+  - { id: 391, class: fpr64, preferred-register: '' }
+  - { id: 392, class: fpr64, preferred-register: '' }
+  - { id: 393, class: fpr64, preferred-register: '' }
+  - { id: 394, class: fpr64, preferred-register: '' }
+  - { id: 395, class: fpr64, preferred-register: '' }
+  - { id: 396, class: fpr64, preferred-register: '' }
+  - { id: 397, class: fpr64, preferred-register: '' }
+  - { id: 398, class: fpr64, preferred-register: '' }
+  - { id: 399, class: fpr64, preferred-register: '' }
+  - { id: 400, class: fpr64, preferred-register: '' }
+  - { id: 401, class: fpr64, preferred-register: '' }
+  - { id: 402, class: fpr64, preferred-register: '' }
+  - { id: 403, class: fpr64, preferred-register: '' }
+  - { id: 404, class: fpr64, preferred-register: '' }
+  - { id: 405, class: fpr64, preferred-register: '' }
+  - { id: 406, class: fpr64, preferred-register: '' }
+  - { id: 407, class: fpr64, preferred-register: '' }
+  - { id: 408, class: fpr64, preferred-register: '' }
+  - { id: 409, class: fpr64, preferred-register: '' }
+  - { id: 410, class: fpr64, preferred-register: '' }
+  - { id: 411, class: fpr64, preferred-register: '' }
+  - { id: 412, class: fpr64, preferred-register: '' }
+  - { id: 413, class: fpr64, preferred-register: '' }
+  - { id: 414, class: fpr64, preferred-register: '' }
+  - { id: 415, class: fpr64, preferred-register: '' }
+  - { id: 416, class: fpr64, preferred-register: '' }
+  - { id: 417, class: fpr64, preferred-register: '' }
+  - { id: 418, class: fpr64, preferred-register: '' }
+  - { id: 419, class: fpr64, preferred-register: '' }
+  - { id: 420, class: fpr64, preferred-register: '' }
+  - { id: 421, class: fpr64, preferred-register: '' }
+  - { id: 422, class: fpr64, preferred-register: '' }
+  - { id: 423, class: fpr64, preferred-register: '' }
+  - { id: 424, class: fpr64, preferred-register: '' }
+  - { id: 425, class: fpr64, preferred-register: '' }
+  - { id: 426, class: fpr64, preferred-register: '' }
+  - { id: 427, class: fpr64, preferred-register: '' }
+  - { id: 428, class: fpr64, preferred-register: '' }
+  - { id: 429, class: fpr64, preferred-register: '' }
+  - { id: 430, class: fpr64, preferred-register: '' }
+  - { id: 431, class: fpr64, preferred-register: '' }
+  - { id: 432, class: fpr64, preferred-register: '' }
+  - { id: 433, class: fpr64, preferred-register: '' }
+  - { id: 434, class: fpr64, preferred-register: '' }
+  - { id: 435, class: fpr64, preferred-register: '' }
+  - { id: 436, class: fpr64, preferred-register: '' }
+  - { id: 437, class: fpr64, preferred-register: '' }
+  - { id: 438, class: fpr64, preferred-register: '' }
+  - { id: 439, class: fpr64, preferred-register: '' }
+  - { id: 440, class: fpr64, preferred-register: '' }
+  - { id: 441, class: fpr64, preferred-register: '' }
+  - { id: 442, class: fpr64, preferred-register: '' }
+  - { id: 443, class: fpr64, preferred-register: '' }
+  - { id: 444, class: gpr64sp, preferred-register: '' }
+  - { id: 445, class: gpr64all, preferred-register: '' }
+  - { id: 446, class: gpr64sp, preferred-register: '' }
+  - { id: 447, class: gpr64, preferred-register: '' }
+  - { id: 448, class: gpr64all, preferred-register: '' }
+  - { id: 449, class: gpr64sp, preferred-register: '' }
+  - { id: 450, class: gpr64common, preferred-register: '' }
+  - { id: 451, class: gpr64sp, preferred-register: '' }
+  - { id: 452, class: fpr64, preferred-register: '' }
+  - { id: 453, class: fpr64, preferred-register: '' }
+  - { id: 454, class: fpr64, preferred-register: '' }
+  - { id: 455, class: fpr64, preferred-register: '' }
+  - { id: 456, class: fpr64, preferred-register: '' }
+  - { id: 457, class: fpr64, preferred-register: '' }
+  - { id: 458, class: fpr64, preferred-register: '' }
+  - { id: 459, class: fpr64, preferred-register: '' }
+  - { id: 460, class: fpr64, preferred-register: '' }
+  - { id: 461, class: fpr64, preferred-register: '' }
+  - { id: 462, class: fpr64, preferred-register: '' }
+  - { id: 463, class: fpr64, preferred-register: '' }
+  - { id: 464, class: fpr64, preferred-register: '' }
+  - { id: 465, class: fpr64, preferred-register: '' }
+  - { id: 466, class: fpr64, preferred-register: '' }
+  - { id: 467, class: fpr64, preferred-register: '' }
+  - { id: 468, class: fpr64, preferred-register: '' }
+  - { id: 469, class: fpr64, preferred-register: '' }
+  - { id: 470, class: fpr64, preferred-register: '' }
+  - { id: 471, class: fpr64, preferred-register: '' }
+  - { id: 472, class: fpr64, preferred-register: '' }
+  - { id: 473, class: fpr64, preferred-register: '' }
+  - { id: 474, class: fpr64, preferred-register: '' }
+  - { id: 475, class: fpr64, preferred-register: '' }
+  - { id: 476, class: fpr64, preferred-register: '' }
+  - { id: 477, class: fpr64, preferred-register: '' }
+  - { id: 478, class: fpr64, preferred-register: '' }
+  - { id: 479, class: fpr64, preferred-register: '' }
+  - { id: 480, class: fpr64, preferred-register: '' }
+  - { id: 481, class: fpr64, preferred-register: '' }
+  - { id: 482, class: fpr64, preferred-register: '' }
+  - { id: 483, class: fpr64, preferred-register: '' }
+  - { id: 484, class: fpr64, preferred-register: '' }
+  - { id: 485, class: gpr64sp, preferred-register: '' }
+  - { id: 486, class: fpr64, preferred-register: '' }
+  - { id: 487, class: fpr64, preferred-register: '' }
+  - { id: 488, class: gpr64all, preferred-register: '' }
+  - { id: 489, class: fpr64, preferred-register: '' }
+  - { id: 490, class: gpr64common, preferred-register: '' }
+  - { id: 491, class: fpr64, preferred-register: '' }
+  - { id: 492, class: fpr64, preferred-register: '' }
+  - { id: 493, class: fpr64, preferred-register: '' }
+  - { id: 494, class: fpr64, preferred-register: '' }
+  - { id: 495, class: fpr64, preferred-register: '' }
+  - { id: 496, class: fpr64, preferred-register: '' }
+  - { id: 497, class: fpr64, preferred-register: '' }
+  - { id: 498, class: fpr64, preferred-register: '' }
+  - { id: 499, class: fpr64, preferred-register: '' }
+  - { id: 500, class: fpr64, preferred-register: '' }
+  - { id: 501, class: fpr64, preferred-register: '' }
+  - { id: 502, class: fpr64, preferred-register: '' }
+  - { id: 503, class: fpr64, preferred-register: '' }
+  - { id: 504, class: fpr64, preferred-register: '' }
+  - { id: 505, class: fpr64, preferred-register: '' }
+  - { id: 506, class: fpr64, preferred-register: '' }
+  - { id: 507, class: fpr64, preferred-register: '' }
+  - { id: 508, class: fpr64, preferred-register: '' }
+  - { id: 509, class: fpr64, preferred-register: '' }
+  - { id: 510, class: fpr64, preferred-register: '' }
+  - { id: 511, class: fpr64, preferred-register: '' }
+  - { id: 512, class: fpr64, preferred-register: '' }
+  - { id: 513, class: fpr64, preferred-register: '' }
+  - { id: 514, class: fpr64, preferred-register: '' }
+  - { id: 515, class: gpr64, preferred-register: '' }
+  - { id: 516, class: gpr64all, preferred-register: '' }
+  - { id: 517, class: gpr64sp, preferred-register: '' }
+  - { id: 518, class: gpr64common, preferred-register: '' }
+  - { id: 519, class: gpr64sp, preferred-register: '' }
+  - { id: 520, class: fpr64, preferred-register: '' }
+  - { id: 521, class: fpr64, preferred-register: '' }
+  - { id: 522, class: fpr64, preferred-register: '' }
+  - { id: 523, class: fpr64, preferred-register: '' }
+  - { id: 524, class: fpr64, preferred-register: '' }
+  - { id: 525, class: fpr64, preferred-register: '' }
+  - { id: 526, class: fpr64, preferred-register: '' }
+  - { id: 527, class: fpr64, preferred-register: '' }
+  - { id: 528, class: fpr64, preferred-register: '' }
+  - { id: 529, class: fpr64, preferred-register: '' }
+  - { id: 530, class: fpr64, preferred-register: '' }
+  - { id: 531, class: fpr64, preferred-register: '' }
+  - { id: 532, class: fpr64, preferred-register: '' }
+  - { id: 533, class: fpr64, preferred-register: '' }
+  - { id: 534, class: gpr64common, preferred-register: '' }
+  - { id: 535, class: gpr64common, preferred-register: '' }
+  - { id: 536, class: gpr64common, preferred-register: '' }
+  - { id: 537, class: gpr64common, preferred-register: '' }
+  - { id: 538, class: fpr64, preferred-register: '' }
+  - { id: 539, class: fpr64, preferred-register: '' }
+  - { id: 540, class: fpr64, preferred-register: '' }
+  - { id: 541, class: fpr64, preferred-register: '' }
+  - { id: 542, class: gpr64common, preferred-register: '' }
+  - { id: 543, class: gpr64common, preferred-register: '' }
+  - { id: 544, class: fpr64, preferred-register: '' }
+  - { id: 545, class: fpr64, preferred-register: '' }
+  - { id: 546, class: gpr64common, preferred-register: '' }
+  - { id: 547, class: gpr64common, preferred-register: '' }
+  - { id: 548, class: fpr64, preferred-register: '' }
+  - { id: 549, class: fpr64, preferred-register: '' }
+  - { id: 550, class: gpr64common, preferred-register: '' }
+  - { id: 551, class: gpr64common, preferred-register: '' }
+  - { id: 552, class: gpr64sp, preferred-register: '' }
+  - { id: 553, class: gpr64sp, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+  
+    %8:gpr32all = COPY $wzr
+    %7:gpr32all = COPY %8
+    %11:gpr32 = MOVi32imm 2909
+    %12:gpr64common = LOADgot target-flags(aarch64-got) @b
+    %15:gpr64common = LOADgot target-flags(aarch64-got) @c
+    %19:gpr64common = LOADgot target-flags(aarch64-got) @d
+    %23:gpr64common = LOADgot target-flags(aarch64-got) @a
+    %114:gpr64common = LOADgot target-flags(aarch64-got) @e
+    %115:gpr64common = LOADgot target-flags(aarch64-got) @aa
+    %116:gpr64common = LOADgot target-flags(aarch64-got) @bb
+    %117:gpr64common = LOADgot target-flags(aarch64-got) @cc
+    %118:fpr64 = FMOVD0
+    %121:gpr32 = MOVi32imm 200000
+  
+  bb.1.for.cond1.preheader:
+    successors: %bb.13(0x80000000)
+  
+    %0:gpr32sp = PHI %7, %bb.0, %2, %bb.3
+    %10:gpr64all = COPY $xzr
+    %9:gpr64all = COPY %10
+    %1:gpr64all = SUBREG_TO_REG 0, %11, %subreg.sub_32
+    B %bb.13
+  
+  bb.2.for.cond.cleanup:
+    RET_ReallyLR
+  
+  bb.3.for.cond.cleanup3:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    $x0 = COPY %23
+    $x1 = COPY %12
+    $x2 = COPY %15
+    $x3 = COPY %19
+    $x4 = COPY %114
+    $x5 = COPY %115
+    $x6 = COPY %116
+    $x7 = COPY %117
+    $d0 = COPY %118
+    BL @dummy, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $d0, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %120:gpr32common = nuw nsw ADDWri %0, 1, 0
+    %2:gpr32all = COPY %120
+    dead $wzr = SUBSWrr %120, %121, implicit-def $nzcv
+    Bcc 0, %bb.2, implicit $nzcv
+    B %bb.1
+  
+  bb.13.for.body4:
+    successors: %bb.4(0x80000000)
+  
+    %253:gpr64common = COPY %9
+    %254:gpr64sp = COPY %1
+    %351:gpr64common = COPY %253
+    %446:gpr64sp = COPY %254
+    %257:gpr64common = ADDXrr %15, %351
+    %255:gpr64common = ADDXrr %12, %351
+    %340:fpr64 = LDRDui %257, 10 :: (volatile load (s64) from %ir.uglygep63, !tbaa !8)
+    %339:fpr64 = LDRDui %255, 10 :: (volatile load (s64) from %ir.uglygep42, !tbaa !8)
+    %331:fpr64 = LDRDui %255, 9 :: (volatile load (s64) from %ir.uglygep54, !tbaa !8)
+    %332:fpr64 = LDRDui %257, 9 :: (volatile load (s64) from %ir.uglygep73, !tbaa !8)
+    %324:fpr64 = LDRDui %257, 8 :: (volatile load (s64) from %ir.uglygep79, !tbaa !8)
+    %323:fpr64 = LDRDui %255, 8 :: (volatile load (s64) from %ir.uglygep58, !tbaa !8)
+    %341:fpr64 = nofpexcept FMULDrr killed %339, killed %340
+    %260:gpr64common = ADDXrr %19, %351
+    %342:fpr64 = LDRDui %260, 10 :: (volatile load (s64) from %ir.uglygep84, !tbaa !8)
+    %315:fpr64 = LDRDui %255, 7 :: (volatile load (s64) from %ir.uglygep56, !tbaa !8)
+    %316:fpr64 = LDRDui %257, 7 :: (volatile load (s64) from %ir.uglygep77, !tbaa !8)
+    %333:fpr64 = nofpexcept FMULDrr killed %331, killed %332
+    %334:fpr64 = LDRDui %260, 9 :: (volatile load (s64) from %ir.uglygep94, !tbaa !8)
+    %325:fpr64 = nofpexcept FMULDrr killed %323, killed %324
+    %326:fpr64 = LDRDui %260, 8 :: (volatile load (s64) from %ir.uglygep100, !tbaa !8)
+    %343:fpr64 = nofpexcept FMULDrr killed %341, %342
+    %263:gpr64common = ADDXrr %23, %351
+    %344:fpr64 = LDRDui %263, 11 :: (volatile load (s64) from %ir.uglygep106, !tbaa !8)
+    %317:fpr64 = nofpexcept FMULDrr killed %315, killed %316
+    %318:fpr64 = LDRDui %260, 7 :: (volatile load (s64) from %ir.uglygep98, !tbaa !8)
+    %335:fpr64 = nofpexcept FMULDrr killed %333, %334
+    %336:fpr64 = LDRDui %263, 10 :: (volatile load (s64) from %ir.uglygep110, !tbaa !8)
+    %327:fpr64 = nofpexcept FMULDrr killed %325, %326
+    %320:fpr64 = LDRDui %263, 8 :: (volatile load (s64) from %ir.uglygep135, !tbaa !8)
+    %328:fpr64 = LDRDui %263, 9 :: (volatile load (s64) from %ir.uglygep126, !tbaa !8)
+    %345:fpr64 = nofpexcept FMULDrr %343, killed %344
+    %319:fpr64 = nofpexcept FMULDrr killed %317, %318
+    %337:fpr64 = nofpexcept FMULDrr %335, killed %336
+    %329:fpr64 = nofpexcept FMULDrr %327, killed %328
+    %346:fpr64 = nofpexcept FMULDrr %342, killed %345
+  
+  bb.4.for.body4:
+    successors: %bb.4(0x7c000000), %bb.14(0x04000000)
+  
+    %521:fpr64 = PHI %319, %bb.13, %520, %bb.4
+    %523:fpr64 = PHI %320, %bb.13, %522, %bb.4
+    %525:fpr64 = PHI %334, %bb.13, %524, %bb.4
+    %527:fpr64 = PHI %337, %bb.13, %526, %bb.4
+    %529:fpr64 = PHI %326, %bb.13, %528, %bb.4
+    %531:fpr64 = PHI %329, %bb.13, %530, %bb.4
+    %533:fpr64 = PHI %346, %bb.13, %532, %bb.4
+    %535:gpr64common = PHI %255, %bb.13, %534, %bb.4
+    %537:gpr64common = PHI %257, %bb.13, %536, %bb.4
+    %539:fpr64 = PHI %318, %bb.13, %538, %bb.4
+    %541:fpr64 = PHI %343, %bb.13, %540, %bb.4
+    %543:gpr64common = PHI %263, %bb.13, %542, %bb.4
+    %545:fpr64 = PHI %335, %bb.13, %544, %bb.4
+    %547:gpr64common = PHI %260, %bb.13, %546, %bb.4
+    %549:fpr64 = PHI %327, %bb.13, %548, %bb.4
+    %551:gpr64common = PHI %351, %bb.13, %550, %bb.4
+    %553:gpr64sp = PHI %446, %bb.13, %552, %bb.4
+    $d1 = COPY %521
+    $d2 = COPY %523
+    $d3 = COPY %525
+    $d4 = COPY %527
+    $d5 = COPY %529
+    $d6 = COPY %531
+    $d7 = COPY %533
+    $x0 = COPY %535
+    $x1 = COPY %537
+    $d8 = COPY %539
+    $d9 = COPY %541
+    $x2 = COPY %543
+    $d10 = COPY %545
+    $x3 = COPY %547
+    $d11 = COPY %549
+    $x4 = COPY %551
+    $x5 = COPY %15
+    $x7 = COPY %12
+    $x8 = COPY %19
+    $x10 = COPY %23
+    $x11 = COPY %553
+    renamable $d0 = nofpexcept FMULDrr renamable $d1, killed renamable $d2
+    renamable $d2 = nofpexcept FMULDrr renamable $d3, killed renamable $d4
+    renamable $d3 = nofpexcept FMULDrr renamable $d5, killed renamable $d6
+    STRDui killed renamable $d7, renamable $x0, 10 :: (volatile store (s64) into %ir.uglygep42, !tbaa !8)
+    renamable $d4 = LDRDui renamable $x0, 6 :: (volatile load (s64) from %ir.uglygep52, !tbaa !8)
+    renamable $d5 = LDRDui renamable $x1, 6 :: (volatile load (s64) from %ir.uglygep75, !tbaa !8)
+    renamable $d6 = nofpexcept FMULDrr renamable $d8, killed renamable $d0
+    STRDui renamable $d9, renamable $x2, 10 :: (volatile store (s64) into %ir.uglygep108, !tbaa !8)
+    STRDui killed renamable $d2, renamable $x0, 9 :: (volatile store (s64) into %ir.uglygep54, !tbaa !8)
+    renamable $d0 = LDRDui renamable $x1, 5 :: (volatile load (s64) from %ir.uglygep59, !tbaa !8)
+    renamable $d2 = LDRDui renamable $x0, 5 :: (volatile load (s64) from %ir.uglygep, !tbaa !8)
+    STRDui killed renamable $d3, renamable $x0, 8 :: (volatile store (s64) into %ir.uglygep58, !tbaa !8)
+    STRDui renamable $d10, renamable $x2, 9 :: (volatile store (s64) into %ir.uglygep124, !tbaa !8)
+    renamable $d3 = nofpexcept FMULDrr killed renamable $d4, killed renamable $d5
+    renamable $d4 = LDRDui renamable $x3, 6 :: (volatile load (s64) from %ir.uglygep96, !tbaa !8)
+    STRDui killed renamable $d6, renamable $x0, 7 :: (volatile store (s64) into %ir.uglygep56, !tbaa !8)
+    renamable $d5 = LDRDui renamable $x1, 4 :: (volatile load (s64) from %ir.uglygep71, !tbaa !8)
+    renamable $d6 = LDRDui renamable $x0, 4 :: (volatile load (s64) from %ir.uglygep50, !tbaa !8)
+    renamable $d7 = LDRDui renamable $x0, 3 :: (volatile load (s64) from %ir.uglygep48, !tbaa !8)
+    renamable $d8 = LDRDui renamable $x1, 3 :: (volatile load (s64) from %ir.uglygep69, !tbaa !8)
+    renamable $d9 = nofpexcept FMULDrr killed renamable $d2, killed renamable $d0
+    renamable $d0 = LDRDui renamable $x3, 5 :: (volatile load (s64) from %ir.uglygep80, !tbaa !8)
+    renamable $d2 = LDRDui renamable $x0, 2 :: (volatile load (s64) from %ir.uglygep46, !tbaa !8)
+    renamable $d10 = LDRDui renamable $x1, 2 :: (volatile load (s64) from %ir.uglygep67, !tbaa !8)
+    STRDui renamable $d11, renamable $x2, 8 :: (volatile store (s64) into %ir.uglygep134, !tbaa !8)
+    renamable $d11 = LDRDui renamable $x0, 1 :: (volatile load (s64) from %ir.uglygep44, !tbaa !8)
+    renamable $d12 = LDRDui renamable $x1, 1 :: (volatile load (s64) from %ir.uglygep65, !tbaa !8)
+    renamable $d13 = nofpexcept FMULDrr killed renamable $d3, renamable $d4
+    renamable $d3 = LDRDui renamable $x2, 7 :: (volatile load (s64) from %ir.uglygep132, !tbaa !8)
+    renamable $d14 = LDRDui renamable $x0, 0 :: (volatile load (s64) from %ir.uglygep40, !tbaa !8)
+    renamable $d15 = LDRDui renamable $x1, 0 :: (volatile load (s64) from %ir.uglygep61, !tbaa !8)
+    renamable $d16 = nofpexcept FMULDrr killed renamable $d6, killed renamable $d5
+    renamable $d5 = nofpexcept FMULDrr killed renamable $d7, killed renamable $d8
+    renamable $d6 = LDRDui renamable $x3, 4 :: (volatile load (s64) from %ir.uglygep92, !tbaa !8)
+    renamable $d7 = LDRDui renamable $x3, 3 :: (volatile load (s64) from %ir.uglygep90, !tbaa !8)
+    renamable $d8 = nofpexcept FMULDrr killed renamable $d9, renamable $d0
+    renamable $d9 = nofpexcept FMULDrr killed renamable $d2, killed renamable $d10
+    renamable $d2 = LDRDui renamable $x2, 6 :: (volatile load (s64) from %ir.uglygep102, !tbaa !8)
+    renamable $d10 = LDRDui renamable $x3, 2 :: (volatile load (s64) from %ir.uglygep88, !tbaa !8)
+    renamable $d17 = nofpexcept FMULDrr killed renamable $d11, killed renamable $d12
+    renamable $x1 = nuw nsw ADDXri renamable $x4, 88, 0
+    renamable $d11 = LDRDui renamable $x3, 1 :: (volatile load (s64) from %ir.uglygep86, !tbaa !8)
+    renamable $d12 = nofpexcept FMULDrr renamable $d13, killed renamable $d3
+    renamable $x4 = COPY renamable $x1
+    renamable $d3 = nofpexcept FMULDrr killed renamable $d14, killed renamable $d15
+    %518:gpr64common = COPY renamable $x4
+    renamable $d14 = LDRDui renamable $x3, 0 :: (volatile load (s64) from %ir.uglygep82, !tbaa !8)
+    renamable $x1 = ADDXrr renamable $x5, %518
+    renamable $d15 = nofpexcept FMULDrr killed renamable $d16, renamable $d6
+    renamable $x6 = ADDXrr renamable $x7, %518
+    renamable $d16 = LDRDui renamable $x1, 10 :: (volatile load (s64) from %ir.uglygep63, !tbaa !8)
+    renamable $d18 = nofpexcept FMULDrr killed renamable $d5, renamable $d7
+    renamable $d5 = LDRDui renamable $x6, 10 :: (volatile load (s64) from %ir.uglygep42, !tbaa !8)
+    renamable $d19 = LDRDui renamable $x2, 5 :: (volatile load (s64) from %ir.uglygep129, !tbaa !8)
+    renamable $d20 = LDRDui renamable $x2, 4 :: (volatile load (s64) from %ir.uglygep122, !tbaa !8)
+    renamable $d21 = nofpexcept FMULDrr renamable $d8, killed renamable $d2
+    renamable $d2 = nofpexcept FMULDrr killed renamable $d9, renamable $d10
+    renamable $d9 = LDRDui renamable $x2, 3 :: (volatile load (s64) from %ir.uglygep119, !tbaa !8)
+    renamable $d22 = nofpexcept FMULDrr killed renamable $d17, renamable $d11
+    renamable $d17 = LDRDui renamable $x6, 9 :: (volatile load (s64) from %ir.uglygep54, !tbaa !8)
+    renamable $d23 = LDRDui renamable $x1, 9 :: (volatile load (s64) from %ir.uglygep73, !tbaa !8)
+    renamable $d24 = LDRDui renamable $x2, 2 :: (volatile load (s64) from %ir.uglygep116, !tbaa !8)
+    renamable $d25 = nofpexcept FMULDrr renamable $d4, killed renamable $d12
+    renamable $d4 = nofpexcept FMULDrr killed renamable $d3, renamable $d14
+    renamable $d3 = LDRDui renamable $x1, 8 :: (volatile load (s64) from %ir.uglygep79, !tbaa !8)
+    renamable $d12 = LDRDui renamable $x2, 1 :: (volatile load (s64) from %ir.uglygep113, !tbaa !8)
+    renamable $d26 = LDRDui renamable $x6, 8 :: (volatile load (s64) from %ir.uglygep58, !tbaa !8)
+    renamable $d27 = nofpexcept FMULDrr renamable $d15, killed renamable $d19
+    renamable $d19 = nofpexcept FMULDrr killed renamable $d5, killed renamable $d16
+    renamable $x3 = ADDXrr renamable $x8, %518
+    renamable $d5 = nofpexcept FMULDrr renamable $d18, killed renamable $d20
+    renamable $d16 = LDRDui renamable $x3, 10 :: (volatile load (s64) from %ir.uglygep84, !tbaa !8)
+    renamable $d20 = nofpexcept FMULDrr renamable $d0, killed renamable $d21
+    renamable $d0 = nofpexcept FMULDrr renamable $d2, killed renamable $d9
+    renamable $d9 = LDRDui renamable $x6, 7 :: (volatile load (s64) from %ir.uglygep56, !tbaa !8)
+    renamable $d21 = LDRDui renamable $x1, 7 :: (volatile load (s64) from %ir.uglygep77, !tbaa !8)
+    STRDui renamable $d1, renamable $x2, 7 :: (volatile store (s64) into %ir.uglygep131, !tbaa !8)
+    renamable $d1 = nofpexcept FMULDrr killed renamable $d17, killed renamable $d23
+    renamable $d17 = nofpexcept FMULDrr renamable $d22, killed renamable $d24
+    renamable $d23 = LDRDui renamable $x3, 9 :: (volatile load (s64) from %ir.uglygep94, !tbaa !8)
+    STRDui killed renamable $d25, renamable $x0, 6 :: (volatile store (s64) into %ir.uglygep52, !tbaa !8)
+    renamable $d24 = nofpexcept FMULDrr renamable $d4, killed renamable $d12
+    renamable $d12 = nofpexcept FMULDrr killed renamable $d26, killed renamable $d3
+    renamable $d3 = LDRDui renamable $x3, 8 :: (volatile load (s64) from %ir.uglygep100, !tbaa !8)
+    STRDui renamable $d13, renamable $x2, 6 :: (volatile store (s64) into %ir.uglygep101, !tbaa !8)
+    renamable $d13 = nofpexcept FMULDrr killed renamable $d19, renamable $d16
+    renamable $d19 = nofpexcept FMULDrr renamable $d6, killed renamable $d27
+    renamable $x9 = ADDXrr renamable $x10, %518
+    renamable $d6 = nofpexcept FMULDrr renamable $d7, killed renamable $d5
+    renamable $d5 = LDRDui renamable $x9, 11 :: (volatile load (s64) from %ir.uglygep106, !tbaa !8)
+    STRDui killed renamable $d20, renamable $x0, 5 :: (volatile store (s64) into %ir.uglygep, !tbaa !8)
+    renamable $d7 = nofpexcept FMULDrr killed renamable $d9, killed renamable $d21
+    renamable $d9 = nofpexcept FMULDrr renamable $d10, killed renamable $d0
+    renamable $d0 = LDRDui renamable $x3, 7 :: (volatile load (s64) from %ir.uglygep98, !tbaa !8)
+    STRDui renamable $d8, renamable $x2, 5 :: (volatile store (s64) into %ir.uglygep128, !tbaa !8)
+    renamable $d8 = nofpexcept FMULDrr killed renamable $d1, renamable $d23
+    renamable $d1 = nofpexcept FMULDrr renamable $d11, killed renamable $d17
+    renamable $d10 = LDRDui renamable $x9, 10 :: (volatile load (s64) from %ir.uglygep110, !tbaa !8)
+    STRDui renamable $d15, renamable $x2, 4 :: (volatile store (s64) into %ir.uglygep121, !tbaa !8)
+    renamable $d11 = nofpexcept FMULDrr renamable $d14, killed renamable $d24
+    renamable $d14 = nofpexcept FMULDrr killed renamable $d12, renamable $d3
+    renamable $d12 = LDRDui renamable $x9, 8 :: (volatile load (s64) from %ir.uglygep135, !tbaa !8)
+    renamable $d15 = LDRDui renamable $x9, 9 :: (volatile load (s64) from %ir.uglygep126, !tbaa !8)
+    STRDui killed renamable $d19, renamable $x0, 4 :: (volatile store (s64) into %ir.uglygep50, !tbaa !8)
+    renamable $d17 = nofpexcept FMULDrr renamable $d13, killed renamable $d5
+    STRDui killed renamable $d6, renamable $x0, 3 :: (volatile store (s64) into %ir.uglygep48, !tbaa !8)
+    STRDui renamable $d18, renamable $x2, 3 :: (volatile store (s64) into %ir.uglygep118, !tbaa !8)
+    renamable $d5 = nofpexcept FMULDrr killed renamable $d7, renamable $d0
+    STRDui killed renamable $d9, renamable $x0, 2 :: (volatile store (s64) into %ir.uglygep46, !tbaa !8)
+    STRDui renamable $d2, renamable $x2, 2 :: (volatile store (s64) into %ir.uglygep115, !tbaa !8)
+    renamable $d2 = nofpexcept FMULDrr renamable $d8, killed renamable $d10
+    STRDui killed renamable $d1, renamable $x0, 1 :: (volatile store (s64) into %ir.uglygep44, !tbaa !8)
+    STRDui renamable $d22, renamable $x2, 1 :: (volatile store (s64) into %ir.uglygep112, !tbaa !8)
+    STRDui killed renamable $d11, renamable $x0, 0 :: (volatile store (s64) into %ir.uglygep40, !tbaa !8)
+    renamable $d1 = nofpexcept FMULDrr renamable $d14, killed renamable $d15
+    renamable $x0 = SUBSXri renamable $x11, 1, 0, implicit-def $nzcv
+    renamable $x4 = COPY renamable $x0
+    renamable $d6 = nofpexcept FMULDrr renamable $d16, killed renamable $d17
+    %519:gpr64sp = COPY renamable $x4
+    STRDui renamable $d4, renamable $x2, 0 :: (volatile store (s64) into %ir.uglygep104, !tbaa !8)
+    renamable $d4 = nofpexcept FMULDrr renamable $d5, killed renamable $d12
+    renamable $d7 = nofpexcept FMULDrr renamable $d23, killed renamable $d2
+    renamable $d2 = nofpexcept FMULDrr renamable $d3, killed renamable $d1
+    STRDui killed renamable $d6, renamable $x6, 10 :: (volatile store (s64) into %ir.uglygep42, !tbaa !8)
+    renamable $d1 = LDRDui renamable $x6, 6 :: (volatile load (s64) from %ir.uglygep52, !tbaa !8)
+    renamable $d3 = LDRDui renamable $x1, 6 :: (volatile load (s64) from %ir.uglygep75, !tbaa !8)
+    renamable $d6 = nofpexcept FMULDrr renamable $d0, killed renamable $d4
+    STRDui renamable $d13, renamable $x9, 10 :: (volatile store (s64) into %ir.uglygep108, !tbaa !8)
+    STRDui killed renamable $d7, renamable $x6, 9 :: (volatile store (s64) into %ir.uglygep54, !tbaa !8)
+    renamable $d0 = LDRDui renamable $x1, 5 :: (volatile load (s64) from %ir.uglygep59, !tbaa !8)
+    renamable $d4 = LDRDui renamable $x6, 5 :: (volatile load (s64) from %ir.uglygep, !tbaa !8)
+    STRDui killed renamable $d2, renamable $x6, 8 :: (volatile store (s64) into %ir.uglygep58, !tbaa !8)
+    STRDui renamable $d8, renamable $x9, 9 :: (volatile store (s64) into %ir.uglygep124, !tbaa !8)
+    renamable $d2 = nofpexcept FMULDrr killed renamable $d1, killed renamable $d3
+    renamable $d1 = LDRDui renamable $x3, 6 :: (volatile load (s64) from %ir.uglygep96, !tbaa !8)
+    STRDui killed renamable $d6, renamable $x6, 7 :: (volatile store (s64) into %ir.uglygep56, !tbaa !8)
+    renamable $d3 = LDRDui renamable $x1, 4 :: (volatile load (s64) from %ir.uglygep71, !tbaa !8)
+    renamable $d6 = LDRDui renamable $x6, 4 :: (volatile load (s64) from %ir.uglygep50, !tbaa !8)
+    renamable $d7 = LDRDui renamable $x6, 3 :: (volatile load (s64) from %ir.uglygep48, !tbaa !8)
+    renamable $d8 = LDRDui renamable $x1, 3 :: (volatile load (s64) from %ir.uglygep69, !tbaa !8)
+    renamable $d9 = nofpexcept FMULDrr killed renamable $d4, killed renamable $d0
+    renamable $d0 = LDRDui renamable $x3, 5 :: (volatile load (s64) from %ir.uglygep80, !tbaa !8)
+    renamable $d4 = LDRDui renamable $x6, 2 :: (volatile load (s64) from %ir.uglygep46, !tbaa !8)
+    renamable $d10 = LDRDui renamable $x1, 2 :: (volatile load (s64) from %ir.uglygep67, !tbaa !8)
+    STRDui renamable $d14, renamable $x9, 8 :: (volatile store (s64) into %ir.uglygep134, !tbaa !8)
+    renamable $d11 = LDRDui renamable $x6, 1 :: (volatile load (s64) from %ir.uglygep44, !tbaa !8)
+    renamable $d12 = LDRDui renamable $x1, 1 :: (volatile load (s64) from %ir.uglygep65, !tbaa !8)
+    renamable $d13 = nofpexcept FMULDrr killed renamable $d2, renamable $d1
+    renamable $d2 = LDRDui renamable $x9, 7 :: (volatile load (s64) from %ir.uglygep132, !tbaa !8)
+    renamable $d14 = LDRDui renamable $x6, 0 :: (volatile load (s64) from %ir.uglygep40, !tbaa !8)
+    renamable $d15 = LDRDui renamable $x1, 0 :: (volatile load (s64) from %ir.uglygep61, !tbaa !8)
+    renamable $d16 = nofpexcept FMULDrr killed renamable $d6, killed renamable $d3
+    renamable $d3 = nofpexcept FMULDrr killed renamable $d7, killed renamable $d8
+    renamable $d6 = LDRDui renamable $x3, 4 :: (volatile load (s64) from %ir.uglygep92, !tbaa !8)
+    renamable $d7 = LDRDui renamable $x3, 3 :: (volatile load (s64) from %ir.uglygep90, !tbaa !8)
+    renamable $d17 = nofpexcept FMULDrr killed renamable $d9, renamable $d0
+    renamable $d8 = nofpexcept FMULDrr killed renamable $d4, killed renamable $d10
+    renamable $d4 = LDRDui renamable $x9, 6 :: (volatile load (s64) from %ir.uglygep102, !tbaa !8)
+    renamable $d10 = LDRDui renamable $x3, 2 :: (volatile load (s64) from %ir.uglygep88, !tbaa !8)
+    renamable $d9 = nofpexcept FMULDrr killed renamable $d11, killed renamable $d12
+    renamable $x0 = nuw nsw ADDXri %518, 88, 0
+    renamable $d11 = LDRDui renamable $x3, 1 :: (volatile load (s64) from %ir.uglygep86, !tbaa !8)
+    renamable $d12 = nofpexcept FMULDrr renamable $d13, killed renamable $d2
+    renamable $x1 = COPY renamable $x0
+    renamable $d2 = nofpexcept FMULDrr killed renamable $d14, killed renamable $d15
+    renamable $x4 = COPY renamable $x1
+    renamable $d14 = LDRDui renamable $x3, 0 :: (volatile load (s64) from %ir.uglygep82, !tbaa !8)
+    renamable $x1 = ADDXrr renamable $x5, renamable $x4
+    renamable $d15 = nofpexcept FMULDrr killed renamable $d16, renamable $d6
+    renamable $x0 = ADDXrr renamable $x7, renamable $x4
+    renamable $d16 = LDRDui renamable $x1, 10 :: (volatile load (s64) from %ir.uglygep63, !tbaa !8)
+    renamable $d18 = nofpexcept FMULDrr killed renamable $d3, renamable $d7
+    renamable $d3 = LDRDui renamable $x0, 10 :: (volatile load (s64) from %ir.uglygep42, !tbaa !8)
+    renamable $d19 = LDRDui renamable $x9, 5 :: (volatile load (s64) from %ir.uglygep129, !tbaa !8)
+    renamable $d20 = LDRDui renamable $x9, 4 :: (volatile load (s64) from %ir.uglygep122, !tbaa !8)
+    renamable $d21 = nofpexcept FMULDrr renamable $d17, killed renamable $d4
+    renamable $d4 = nofpexcept FMULDrr killed renamable $d8, renamable $d10
+    renamable $d8 = LDRDui renamable $x9, 3 :: (volatile load (s64) from %ir.uglygep119, !tbaa !8)
+    renamable $d22 = nofpexcept FMULDrr killed renamable $d9, renamable $d11
+    renamable $d9 = LDRDui renamable $x0, 9 :: (volatile load (s64) from %ir.uglygep54, !tbaa !8)
+    renamable $d23 = LDRDui renamable $x1, 9 :: (volatile load (s64) from %ir.uglygep73, !tbaa !8)
+    renamable $d24 = LDRDui renamable $x9, 2 :: (volatile load (s64) from %ir.uglygep116, !tbaa !8)
+    renamable $d25 = nofpexcept FMULDrr renamable $d1, killed renamable $d12
+    renamable $d12 = nofpexcept FMULDrr killed renamable $d2, renamable $d14
+    renamable $d1 = LDRDui renamable $x1, 8 :: (volatile load (s64) from %ir.uglygep79, !tbaa !8)
+    renamable $d2 = LDRDui renamable $x9, 1 :: (volatile load (s64) from %ir.uglygep113, !tbaa !8)
+    renamable $d26 = LDRDui renamable $x0, 8 :: (volatile load (s64) from %ir.uglygep58, !tbaa !8)
+    renamable $d27 = nofpexcept FMULDrr renamable $d15, killed renamable $d19
+    renamable $d19 = nofpexcept FMULDrr killed renamable $d3, killed renamable $d16
+    renamable $x3 = ADDXrr renamable $x8, renamable $x4
+    renamable $d16 = nofpexcept FMULDrr renamable $d18, killed renamable $d20
+    renamable $d20 = LDRDui renamable $x3, 10 :: (volatile load (s64) from %ir.uglygep84, !tbaa !8)
+    renamable $d28 = nofpexcept FMULDrr renamable $d0, killed renamable $d21
+    renamable $d0 = nofpexcept FMULDrr renamable $d4, killed renamable $d8
+    renamable $d8 = LDRDui renamable $x0, 7 :: (volatile load (s64) from %ir.uglygep56, !tbaa !8)
+    renamable $d21 = LDRDui renamable $x1, 7 :: (volatile load (s64) from %ir.uglygep77, !tbaa !8)
+    STRDui renamable $d5, renamable $x9, 7 :: (volatile store (s64) into %ir.uglygep131, !tbaa !8)
+    renamable $d29 = nofpexcept FMULDrr killed renamable $d9, killed renamable $d23
+    renamable $d23 = nofpexcept FMULDrr renamable $d22, killed renamable $d24
+    renamable $d3 = LDRDui renamable $x3, 9 :: (volatile load (s64) from %ir.uglygep94, !tbaa !8)
+    STRDui killed renamable $d25, renamable $x6, 6 :: (volatile store (s64) into %ir.uglygep52, !tbaa !8)
+    renamable $d24 = nofpexcept FMULDrr renamable $d12, killed renamable $d2
+    renamable $d2 = nofpexcept FMULDrr killed renamable $d26, killed renamable $d1
+    renamable $d5 = LDRDui renamable $x3, 8 :: (volatile load (s64) from %ir.uglygep100, !tbaa !8)
+    STRDui renamable $d13, renamable $x9, 6 :: (volatile store (s64) into %ir.uglygep101, !tbaa !8)
+    renamable $d9 = nofpexcept FMULDrr killed renamable $d19, renamable $d20
+    renamable $d1 = nofpexcept FMULDrr renamable $d6, killed renamable $d27
+    renamable $x2 = ADDXrr renamable $x10, renamable $x4
+    renamable $d6 = nofpexcept FMULDrr renamable $d7, killed renamable $d16
+    renamable $d7 = LDRDui renamable $x2, 11 :: (volatile load (s64) from %ir.uglygep106, !tbaa !8)
+    STRDui killed renamable $d28, renamable $x6, 5 :: (volatile store (s64) into %ir.uglygep, !tbaa !8)
+    renamable $d13 = nofpexcept FMULDrr killed renamable $d8, killed renamable $d21
+    renamable $d16 = nofpexcept FMULDrr renamable $d10, killed renamable $d0
+    renamable $d8 = LDRDui renamable $x3, 7 :: (volatile load (s64) from %ir.uglygep98, !tbaa !8)
+    STRDui renamable $d17, renamable $x9, 5 :: (volatile store (s64) into %ir.uglygep128, !tbaa !8)
+    renamable $d10 = nofpexcept FMULDrr killed renamable $d29, renamable $d3
+    renamable $d0 = nofpexcept FMULDrr renamable $d11, killed renamable $d23
+    renamable $d17 = LDRDui renamable $x2, 10 :: (volatile load (s64) from %ir.uglygep110, !tbaa !8)
+    STRDui renamable $d15, renamable $x9, 4 :: (volatile store (s64) into %ir.uglygep121, !tbaa !8)
+    renamable $d15 = nofpexcept FMULDrr renamable $d14, killed renamable $d24
+    renamable $d11 = nofpexcept FMULDrr killed renamable $d2, renamable $d5
+    renamable $d2 = LDRDui renamable $x2, 8 :: (volatile load (s64) from %ir.uglygep135, !tbaa !8)
+    renamable $d14 = LDRDui renamable $x2, 9 :: (volatile load (s64) from %ir.uglygep126, !tbaa !8)
+    STRDui killed renamable $d1, renamable $x6, 4 :: (volatile store (s64) into %ir.uglygep50, !tbaa !8)
+    renamable $d19 = nofpexcept FMULDrr renamable $d9, killed renamable $d7
+    STRDui killed renamable $d6, renamable $x6, 3 :: (volatile store (s64) into %ir.uglygep48, !tbaa !8)
+    STRDui renamable $d18, renamable $x9, 3 :: (volatile store (s64) into %ir.uglygep118, !tbaa !8)
+    renamable $d1 = nofpexcept FMULDrr killed renamable $d13, renamable $d8
+    STRDui killed renamable $d16, renamable $x6, 2 :: (volatile store (s64) into %ir.uglygep46, !tbaa !8)
+    STRDui renamable $d4, renamable $x9, 2 :: (volatile store (s64) into %ir.uglygep115, !tbaa !8)
+    renamable $d4 = nofpexcept FMULDrr renamable $d10, killed renamable $d17
+    STRDui killed renamable $d0, renamable $x6, 1 :: (volatile store (s64) into %ir.uglygep44, !tbaa !8)
+    STRDui renamable $d22, renamable $x9, 1 :: (volatile store (s64) into %ir.uglygep112, !tbaa !8)
+    STRDui killed renamable $d15, renamable $x6, 0 :: (volatile store (s64) into %ir.uglygep40, !tbaa !8)
+    renamable $d6 = nofpexcept FMULDrr renamable $d11, killed renamable $d14
+    renamable $x5 = SUBSXri %519, 1, 0, implicit-def $nzcv
+    renamable $x6 = COPY renamable $x5
+    renamable $d7 = nofpexcept FMULDrr renamable $d20, killed renamable $d19
+    renamable $x11 = COPY renamable $x6
+    STRDui renamable $d12, renamable $x9, 0 :: (volatile store (s64) into %ir.uglygep104, !tbaa !8)
+    %520:fpr64 = COPY $d1
+    %522:fpr64 = COPY $d2
+    %524:fpr64 = COPY $d3
+    %526:fpr64 = COPY $d4
+    %528:fpr64 = COPY $d5
+    %530:fpr64 = COPY $d6
+    %532:fpr64 = COPY $d7
+    %534:gpr64common = COPY $x0
+    %536:gpr64common = COPY $x1
+    %538:fpr64 = COPY $d8
+    %540:fpr64 = COPY $d9
+    %542:gpr64common = COPY $x2
+    %544:fpr64 = COPY $d10
+    %546:gpr64common = COPY $x3
+    %548:fpr64 = COPY $d11
+    %550:gpr64common = COPY $x4
+    %552:gpr64sp = COPY $x11
+    $xzr = SUBSXri $x5, 3, 0, implicit-def $nzcv
+    Bcc 10, %bb.4, implicit $nzcv
+  
+  bb.14.for.body4:
+    successors: %bb.16(0x80000000)
+  
+    %452:fpr64 = nofpexcept FMULDrr %520, killed %522
+    %453:fpr64 = nofpexcept FMULDrr %524, killed %526
+    %454:fpr64 = nofpexcept FMULDrr %528, killed %530
+    STRDui killed %532, %534, 10 :: (volatile store (s64) into %ir.uglygep42, !tbaa !8)
+    %455:fpr64 = LDRDui %534, 6 :: (volatile load (s64) from %ir.uglygep52, !tbaa !8)
+    %456:fpr64 = LDRDui %536, 6 :: (volatile load (s64) from %ir.uglygep75, !tbaa !8)
+    %457:fpr64 = nofpexcept FMULDrr %538, killed %452
+    STRDui %540, %542, 10 :: (volatile store (s64) into %ir.uglygep108, !tbaa !8)
+    STRDui killed %453, %534, 9 :: (volatile store (s64) into %ir.uglygep54, !tbaa !8)
+    %458:fpr64 = LDRDui %536, 5 :: (volatile load (s64) from %ir.uglygep59, !tbaa !8)
+    %459:fpr64 = LDRDui %534, 5 :: (volatile load (s64) from %ir.uglygep, !tbaa !8)
+    STRDui killed %454, %534, 8 :: (volatile store (s64) into %ir.uglygep58, !tbaa !8)
+    STRDui %544, %542, 9 :: (volatile store (s64) into %ir.uglygep124, !tbaa !8)
+    %460:fpr64 = nofpexcept FMULDrr killed %455, killed %456
+    %461:fpr64 = LDRDui %546, 6 :: (volatile load (s64) from %ir.uglygep96, !tbaa !8)
+    STRDui killed %457, %534, 7 :: (volatile store (s64) into %ir.uglygep56, !tbaa !8)
+    %462:fpr64 = LDRDui %536, 4 :: (volatile load (s64) from %ir.uglygep71, !tbaa !8)
+    %463:fpr64 = LDRDui %534, 4 :: (volatile load (s64) from %ir.uglygep50, !tbaa !8)
+    %464:fpr64 = LDRDui %534, 3 :: (volatile load (s64) from %ir.uglygep48, !tbaa !8)
+    %465:fpr64 = LDRDui %536, 3 :: (volatile load (s64) from %ir.uglygep69, !tbaa !8)
+    %466:fpr64 = nofpexcept FMULDrr killed %459, killed %458
+    %467:fpr64 = LDRDui %546, 5 :: (volatile load (s64) from %ir.uglygep80, !tbaa !8)
+    %468:fpr64 = LDRDui %534, 2 :: (volatile load (s64) from %ir.uglygep46, !tbaa !8)
+    %469:fpr64 = LDRDui %536, 2 :: (volatile load (s64) from %ir.uglygep67, !tbaa !8)
+    STRDui %548, %542, 8 :: (volatile store (s64) into %ir.uglygep134, !tbaa !8)
+    %470:fpr64 = LDRDui %534, 1 :: (volatile load (s64) from %ir.uglygep44, !tbaa !8)
+    %471:fpr64 = LDRDui %536, 1 :: (volatile load (s64) from %ir.uglygep65, !tbaa !8)
+    %472:fpr64 = nofpexcept FMULDrr killed %460, %461
+    %473:fpr64 = LDRDui %542, 7 :: (volatile load (s64) from %ir.uglygep132, !tbaa !8)
+    %474:fpr64 = LDRDui %534, 0 :: (volatile load (s64) from %ir.uglygep40, !tbaa !8)
+    %475:fpr64 = LDRDui %536, 0 :: (volatile load (s64) from %ir.uglygep61, !tbaa !8)
+    %476:fpr64 = nofpexcept FMULDrr killed %463, killed %462
+    %477:fpr64 = nofpexcept FMULDrr killed %464, killed %465
+    %478:fpr64 = LDRDui %546, 4 :: (volatile load (s64) from %ir.uglygep92, !tbaa !8)
+    %479:fpr64 = LDRDui %546, 3 :: (volatile load (s64) from %ir.uglygep90, !tbaa !8)
+    %480:fpr64 = nofpexcept FMULDrr killed %466, %467
+    %481:fpr64 = nofpexcept FMULDrr killed %468, killed %469
+    %482:fpr64 = LDRDui %542, 6 :: (volatile load (s64) from %ir.uglygep102, !tbaa !8)
+    %483:fpr64 = LDRDui %546, 2 :: (volatile load (s64) from %ir.uglygep88, !tbaa !8)
+    %484:fpr64 = nofpexcept FMULDrr killed %470, killed %471
+    %485:gpr64sp = nuw nsw ADDXri %550, 88, 0
+    %486:fpr64 = LDRDui %546, 1 :: (volatile load (s64) from %ir.uglygep86, !tbaa !8)
+    %487:fpr64 = nofpexcept FMULDrr %472, killed %473
+    %488:gpr64all = COPY %485
+    %489:fpr64 = nofpexcept FMULDrr killed %474, killed %475
+    %490:gpr64common = COPY %488
+    %491:fpr64 = LDRDui %546, 0 :: (volatile load (s64) from %ir.uglygep82, !tbaa !8)
+    %492:fpr64 = nofpexcept FMULDrr killed %476, %478
+    %493:fpr64 = nofpexcept FMULDrr killed %477, %479
+    %494:fpr64 = LDRDui %542, 5 :: (volatile load (s64) from %ir.uglygep129, !tbaa !8)
+    %495:fpr64 = LDRDui %542, 4 :: (volatile load (s64) from %ir.uglygep122, !tbaa !8)
+    %496:fpr64 = nofpexcept FMULDrr %480, killed %482
+    %497:fpr64 = nofpexcept FMULDrr killed %481, %483
+    %498:fpr64 = LDRDui %542, 3 :: (volatile load (s64) from %ir.uglygep119, !tbaa !8)
+    %499:fpr64 = nofpexcept FMULDrr killed %484, %486
+    %500:fpr64 = LDRDui %542, 2 :: (volatile load (s64) from %ir.uglygep116, !tbaa !8)
+    %501:fpr64 = nofpexcept FMULDrr %461, killed %487
+    %502:fpr64 = nofpexcept FMULDrr killed %489, %491
+    %503:fpr64 = LDRDui %542, 1 :: (volatile load (s64) from %ir.uglygep113, !tbaa !8)
+    %504:fpr64 = nofpexcept FMULDrr %492, killed %494
+    %505:fpr64 = nofpexcept FMULDrr %493, killed %495
+    %506:fpr64 = nofpexcept FMULDrr %467, killed %496
+    %507:fpr64 = nofpexcept FMULDrr %497, killed %498
+    STRDui %520, %542, 7 :: (volatile store (s64) into %ir.uglygep131, !tbaa !8)
+    %508:fpr64 = nofpexcept FMULDrr %499, killed %500
+    STRDui killed %501, %534, 6 :: (volatile store (s64) into %ir.uglygep52, !tbaa !8)
+    %509:fpr64 = nofpexcept FMULDrr %502, killed %503
+    STRDui %472, %542, 6 :: (volatile store (s64) into %ir.uglygep101, !tbaa !8)
+    %510:fpr64 = nofpexcept FMULDrr %478, killed %504
+    %511:fpr64 = nofpexcept FMULDrr %479, killed %505
+    STRDui killed %506, %534, 5 :: (volatile store (s64) into %ir.uglygep, !tbaa !8)
+    %512:fpr64 = nofpexcept FMULDrr %483, killed %507
+    STRDui %480, %542, 5 :: (volatile store (s64) into %ir.uglygep128, !tbaa !8)
+    %513:fpr64 = nofpexcept FMULDrr %486, killed %508
+    STRDui %492, %542, 4 :: (volatile store (s64) into %ir.uglygep121, !tbaa !8)
+    %514:fpr64 = nofpexcept FMULDrr %491, killed %509
+    STRDui killed %510, %534, 4 :: (volatile store (s64) into %ir.uglygep50, !tbaa !8)
+    STRDui killed %511, %534, 3 :: (volatile store (s64) into %ir.uglygep48, !tbaa !8)
+    STRDui %493, %542, 3 :: (volatile store (s64) into %ir.uglygep118, !tbaa !8)
+    STRDui killed %512, %534, 2 :: (volatile store (s64) into %ir.uglygep46, !tbaa !8)
+    STRDui %497, %542, 2 :: (volatile store (s64) into %ir.uglygep115, !tbaa !8)
+    STRDui killed %513, %534, 1 :: (volatile store (s64) into %ir.uglygep44, !tbaa !8)
+    STRDui %499, %542, 1 :: (volatile store (s64) into %ir.uglygep112, !tbaa !8)
+    STRDui killed %514, %534, 0 :: (volatile store (s64) into %ir.uglygep40, !tbaa !8)
+    %515:gpr64 = SUBSXri %552, 1, 0, implicit-def $nzcv
+    %516:gpr64all = COPY %515
+    %517:gpr64sp = COPY %516
+    STRDui %502, %542, 0 :: (volatile store (s64) into %ir.uglygep104, !tbaa !8)
+  
+  bb.16.for.body4:
+    successors: %bb.18(0x80000000)
+  
+    %450:gpr64common = PHI %490, %bb.14
+    %451:gpr64sp = PHI %517, %bb.14
+  
+  bb.18.for.body4:
+    successors: %bb.3(0x80000000)
+  
+    B %bb.3
+  
+  bb.5.entry:
+    successors: %bb.6(0x80000000)
+  
+    %133:gpr32all = COPY $wzr
+    %132:gpr32all = COPY %133
+  
+  bb.6.for.cond1.preheader:
+    successors: %bb.9(0x80000000)
+  
+    %123:gpr32sp = PHI %132, %bb.5, %125, %bb.8
+    %136:gpr64all = COPY $xzr
+    %135:gpr64all = COPY %136
+    %137:gpr32 = MOVi32imm 2909
+    %124:gpr64all = SUBREG_TO_REG 0, killed %137, %subreg.sub_32
+    %134:gpr64all = COPY %124
+    B %bb.9
+  
+  bb.7.for.cond.cleanup:
+    RET_ReallyLR
+  
+  bb.8.for.cond.cleanup3:
+    successors: %bb.7(0x04000000), %bb.6(0x7c000000)
+  
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %238:gpr64common = LOADgot target-flags(aarch64-got) @a
+    %239:gpr64common = LOADgot target-flags(aarch64-got) @b
+    %240:gpr64common = LOADgot target-flags(aarch64-got) @c
+    %241:gpr64common = LOADgot target-flags(aarch64-got) @d
+    %242:gpr64common = LOADgot target-flags(aarch64-got) @e
+    %243:gpr64common = LOADgot target-flags(aarch64-got) @aa
+    %244:gpr64common = LOADgot target-flags(aarch64-got) @bb
+    %245:gpr64common = LOADgot target-flags(aarch64-got) @cc
+    %246:fpr64 = FMOVD0
+    $x0 = COPY %238
+    $x1 = COPY %239
+    $x2 = COPY %240
+    $x3 = COPY %241
+    $x4 = COPY %242
+    $x5 = COPY %243
+    $x6 = COPY %244
+    $x7 = COPY %245
+    $d0 = COPY %246
+    BL @dummy, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $d0, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %247:gpr32all = COPY $w0
+    %248:gpr32common = nuw nsw ADDWri %123, 1, 0
+    %125:gpr32all = COPY %248
+    %251:gpr32sp = SUBWri %248, 48, 12
+    dead $wzr = SUBSWri %251, 3392, 0, implicit-def $nzcv
+    Bcc 0, %bb.7, implicit $nzcv
+    B %bb.6
+  
+  bb.9.for.body4:
+    successors: %bb.9(0x7c000000), %bb.8(0x04000000)
+  
+    %126:gpr64sp = PHI %134, %bb.6, %130, %bb.9
+    %127:gpr64common = PHI %135, %bb.6, %129, %bb.9
+    %128:gpr64sp = PHI %124, %bb.6, %131, %bb.9
+    %138:gpr64common = LOADgot target-flags(aarch64-got) @b
+    %139:gpr64common = ADDXrr killed %138, %127
+    %140:fpr64 = LDRDui %139, 0 :: (load (s64) from %ir.uglygep40, !tbaa !8)
+    %141:gpr64common = LOADgot target-flags(aarch64-got) @c
+    %142:gpr64common = ADDXrr killed %141, %127
+    %143:fpr64 = LDRDui %142, 0 :: (load (s64) from %ir.uglygep61, !tbaa !8)
+    %144:fpr64 = nofpexcept FMULDrr killed %140, killed %143
+    %145:gpr64common = LOADgot target-flags(aarch64-got) @d
+    %146:gpr64common = ADDXrr killed %145, %127
+    %147:fpr64 = LDRDui %146, 0 :: (load (s64) from %ir.uglygep82, !tbaa !8)
+    %148:fpr64 = nofpexcept FMULDrr killed %144, %147
+    %149:gpr64common = LOADgot target-flags(aarch64-got) @a
+    %150:gpr64common = ADDXrr killed %149, %127
+    STRDui %148, %150, 0 :: (store (s64) into %ir.uglygep104, !tbaa !8)
+    %151:fpr64 = LDRDui %150, 1 :: (load (s64) from %ir.uglygep113, !tbaa !8)
+    %152:fpr64 = nofpexcept FMULDrr %148, killed %151
+    %153:fpr64 = nofpexcept FMULDrr %147, killed %152
+    STRDui killed %153, %139, 0 :: (store (s64) into %ir.uglygep40, !tbaa !8)
+    %154:fpr64 = LDRDui %139, 1 :: (load (s64) from %ir.uglygep44, !tbaa !8)
+    %155:fpr64 = LDRDui %142, 1 :: (load (s64) from %ir.uglygep65, !tbaa !8)
+    %156:fpr64 = nofpexcept FMULDrr killed %154, killed %155
+    %157:fpr64 = LDRDui %146, 1 :: (load (s64) from %ir.uglygep86, !tbaa !8)
+    %158:fpr64 = nofpexcept FMULDrr killed %156, %157
+    STRDui %158, %150, 1 :: (store (s64) into %ir.uglygep112, !tbaa !8)
+    %159:fpr64 = LDRDui %150, 2 :: (load (s64) from %ir.uglygep116, !tbaa !8)
+    %160:fpr64 = nofpexcept FMULDrr %158, killed %159
+    %161:fpr64 = nofpexcept FMULDrr %157, killed %160
+    STRDui killed %161, %139, 1 :: (store (s64) into %ir.uglygep44, !tbaa !8)
+    %162:fpr64 = LDRDui %139, 2 :: (load (s64) from %ir.uglygep46, !tbaa !8)
+    %163:fpr64 = LDRDui %142, 2 :: (load (s64) from %ir.uglygep67, !tbaa !8)
+    %164:fpr64 = nofpexcept FMULDrr killed %162, killed %163
+    %165:fpr64 = LDRDui %146, 2 :: (load (s64) from %ir.uglygep88, !tbaa !8)
+    %166:fpr64 = nofpexcept FMULDrr killed %164, %165
+    STRDui %166, %150, 2 :: (store (s64) into %ir.uglygep115, !tbaa !8)
+    %167:fpr64 = LDRDui %150, 3 :: (load (s64) from %ir.uglygep119, !tbaa !8)
+    %168:fpr64 = nofpexcept FMULDrr %166, killed %167
+    %169:fpr64 = nofpexcept FMULDrr %165, killed %168
+    STRDui killed %169, %139, 2 :: (store (s64) into %ir.uglygep46, !tbaa !8)
+    %170:fpr64 = LDRDui %139, 3 :: (load (s64) from %ir.uglygep48, !tbaa !8)
+    %171:fpr64 = LDRDui %142, 3 :: (load (s64) from %ir.uglygep69, !tbaa !8)
+    %172:fpr64 = nofpexcept FMULDrr killed %170, killed %171
+    %173:fpr64 = LDRDui %146, 3 :: (load (s64) from %ir.uglygep90, !tbaa !8)
+    %174:fpr64 = nofpexcept FMULDrr killed %172, %173
+    STRDui %174, %150, 3 :: (store (s64) into %ir.uglygep118, !tbaa !8)
+    %175:fpr64 = LDRDui %150, 4 :: (load (s64) from %ir.uglygep122, !tbaa !8)
+    %176:fpr64 = nofpexcept FMULDrr %174, killed %175
+    %177:fpr64 = nofpexcept FMULDrr %173, killed %176
+    STRDui killed %177, %139, 3 :: (store (s64) into %ir.uglygep48, !tbaa !8)
+    %178:fpr64 = LDRDui %139, 4 :: (load (s64) from %ir.uglygep50, !tbaa !8)
+    %179:fpr64 = LDRDui %142, 4 :: (load (s64) from %ir.uglygep71, !tbaa !8)
+    %180:fpr64 = nofpexcept FMULDrr killed %178, killed %179
+    %181:fpr64 = LDRDui %146, 4 :: (load (s64) from %ir.uglygep92, !tbaa !8)
+    %182:fpr64 = nofpexcept FMULDrr killed %180, %181
+    STRDui %182, %150, 4 :: (store (s64) into %ir.uglygep121, !tbaa !8)
+    %183:fpr64 = LDRDui %150, 5 :: (load (s64) from %ir.uglygep129, !tbaa !8)
+    %184:fpr64 = nofpexcept FMULDrr %182, killed %183
+    %185:fpr64 = nofpexcept FMULDrr %181, killed %184
+    STRDui killed %185, %139, 4 :: (store (s64) into %ir.uglygep50, !tbaa !8)
+    %186:fpr64 = LDRDui %139, 5 :: (load (s64) from %ir.uglygep, !tbaa !8)
+    %187:fpr64 = LDRDui %142, 5 :: (load (s64) from %ir.uglygep59, !tbaa !8)
+    %188:fpr64 = nofpexcept FMULDrr killed %186, killed %187
+    %189:fpr64 = LDRDui %146, 5 :: (load (s64) from %ir.uglygep80, !tbaa !8)
+    %190:fpr64 = nofpexcept FMULDrr killed %188, %189
+    STRDui %190, %150, 5 :: (store (s64) into %ir.uglygep128, !tbaa !8)
+    %191:fpr64 = LDRDui %150, 6 :: (load (s64) from %ir.uglygep102, !tbaa !8)
+    %192:fpr64 = nofpexcept FMULDrr %190, killed %191
+    %193:fpr64 = nofpexcept FMULDrr %189, killed %192
+    STRDui killed %193, %139, 5 :: (store (s64) into %ir.uglygep, !tbaa !8)
+    %194:fpr64 = LDRDui %139, 6 :: (load (s64) from %ir.uglygep52, !tbaa !8)
+    %195:fpr64 = LDRDui %142, 6 :: (load (s64) from %ir.uglygep75, !tbaa !8)
+    %196:fpr64 = nofpexcept FMULDrr killed %194, killed %195
+    %197:fpr64 = LDRDui %146, 6 :: (load (s64) from %ir.uglygep96, !tbaa !8)
+    %198:fpr64 = nofpexcept FMULDrr killed %196, %197
+    STRDui %198, %150, 6 :: (store (s64) into %ir.uglygep101, !tbaa !8)
+    %199:fpr64 = LDRDui %150, 7 :: (load (s64) from %ir.uglygep132, !tbaa !8)
+    %200:fpr64 = nofpexcept FMULDrr %198, killed %199
+    %201:fpr64 = nofpexcept FMULDrr %197, killed %200
+    STRDui killed %201, %139, 6 :: (store (s64) into %ir.uglygep52, !tbaa !8)
+    %202:fpr64 = LDRDui %139, 7 :: (load (s64) from %ir.uglygep56, !tbaa !8)
+    %203:fpr64 = LDRDui %142, 7 :: (load (s64) from %ir.uglygep77, !tbaa !8)
+    %204:fpr64 = nofpexcept FMULDrr killed %202, killed %203
+    %205:fpr64 = LDRDui %146, 7 :: (load (s64) from %ir.uglygep98, !tbaa !8)
+    %206:fpr64 = nofpexcept FMULDrr killed %204, %205
+    STRDui %206, %150, 7 :: (store (s64) into %ir.uglygep131, !tbaa !8)
+    %207:fpr64 = LDRDui %150, 8 :: (load (s64) from %ir.uglygep135, !tbaa !8)
+    %208:fpr64 = nofpexcept FMULDrr %206, killed %207
+    %209:fpr64 = nofpexcept FMULDrr %205, killed %208
+    STRDui killed %209, %139, 7 :: (store (s64) into %ir.uglygep56, !tbaa !8)
+    %210:fpr64 = LDRDui %139, 8 :: (load (s64) from %ir.uglygep58, !tbaa !8)
+    %211:fpr64 = LDRDui %142, 8 :: (load (s64) from %ir.uglygep79, !tbaa !8)
+    %212:fpr64 = nofpexcept FMULDrr killed %210, killed %211
+    %213:fpr64 = LDRDui %146, 8 :: (load (s64) from %ir.uglygep100, !tbaa !8)
+    %214:fpr64 = nofpexcept FMULDrr killed %212, %213
+    STRDui %214, %150, 8 :: (store (s64) into %ir.uglygep134, !tbaa !8)
+    %215:fpr64 = LDRDui %150, 9 :: (load (s64) from %ir.uglygep126, !tbaa !8)
+    %216:fpr64 = nofpexcept FMULDrr %214, killed %215
+    %217:fpr64 = nofpexcept FMULDrr %213, killed %216
+    STRDui killed %217, %139, 8 :: (store (s64) into %ir.uglygep58, !tbaa !8)
+    %218:fpr64 = LDRDui %139, 9 :: (load (s64) from %ir.uglygep54, !tbaa !8)
+    %219:fpr64 = LDRDui %142, 9 :: (load (s64) from %ir.uglygep73, !tbaa !8)
+    %220:fpr64 = nofpexcept FMULDrr killed %218, killed %219
+    %221:fpr64 = LDRDui %146, 9 :: (load (s64) from %ir.uglygep94, !tbaa !8)
+    %222:fpr64 = nofpexcept FMULDrr killed %220, %221
+    STRDui %222, %150, 9 :: (store (s64) into %ir.uglygep124, !tbaa !8)
+    %223:fpr64 = LDRDui %150, 10 :: (load (s64) from %ir.uglygep110, !tbaa !8)
+    %224:fpr64 = nofpexcept FMULDrr %222, killed %223
+    %225:fpr64 = nofpexcept FMULDrr %221, killed %224
+    STRDui killed %225, %139, 9 :: (store (s64) into %ir.uglygep54, !tbaa !8)
+    %226:fpr64 = LDRDui %139, 10 :: (load (s64) from %ir.uglygep42, !tbaa !8)
+    %227:fpr64 = LDRDui %142, 10 :: (load (s64) from %ir.uglygep63, !tbaa !8)
+    %228:fpr64 = nofpexcept FMULDrr killed %226, killed %227
+    %229:fpr64 = LDRDui %146, 10 :: (load (s64) from %ir.uglygep84, !tbaa !8)
+    %230:fpr64 = nofpexcept FMULDrr killed %228, %229
+    STRDui %230, %150, 10 :: (store (s64) into %ir.uglygep108, !tbaa !8)
+    %231:fpr64 = LDRDui %150, 11 :: (load (s64) from %ir.uglygep106, !tbaa !8)
+    %232:fpr64 = nofpexcept FMULDrr %230, killed %231
+    %233:fpr64 = nofpexcept FMULDrr %229, killed %232
+    STRDui killed %233, %139, 10 :: (store (s64) into %ir.uglygep42, !tbaa !8)
+    %234:gpr64sp = nuw nsw ADDXri %127, 88, 0
+    %129:gpr64all = COPY %234
+    %235:gpr64common = SUBXri %126, 1, 0
+    %236:gpr64common = nsw SUBXri %126, 1, 0
+    %130:gpr64all = COPY %236
+    %237:gpr64 = SUBSXri %128, 1, 0, implicit-def $nzcv
+    %131:gpr64all = COPY %237
+    Bcc 1, %bb.9, implicit $nzcv
+    B %bb.8
+
+...

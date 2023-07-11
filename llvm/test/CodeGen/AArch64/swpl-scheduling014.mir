@@ -1,0 +1,268 @@
+#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-debug-dump-plan  -swpl-debug-ddg -swpl-debug-dump-scheduling-every-inst -o /dev/null 2>&1 | FileCheck %s
+
+
+#CHECK:DBG(SwplDdg::print) SwplDdg. 
+#CHECK-NEXT:### SwplDdg: 
+#CHECK-NEXT:### SwplEdge: 
+#CHECK-NEXT:### from: %15:gpr64common = COPY %21:gpr64all, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### to  : %17:gpr64common = ADDXrr %4:gpr64, %15:gpr64common, debug-location !12; tp/testprg.c:4:12
+#CHECK-NEXT:### distance:1 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %17:gpr64common = ADDXrr %4:gpr64, %15:gpr64common, debug-location !12; tp/testprg.c:4:12
+#CHECK-NEXT:### to  : %18:fpr128 = LDRQui %17:gpr64common, 504, debug-location !12 :: (load (s128) from %ir.8, align 8, !tbaa !13); tp/testprg.c:4:12
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %18:fpr128 = LDRQui %17:gpr64common, 504, debug-location !12 :: (load (s128) from %ir.8, align 8, !tbaa !13); tp/testprg.c:4:12
+#CHECK-NEXT:### to  : %19:fpr128 = nnan ninf nsz arcp contract afn reassoc FADDv2f64 killed %18:fpr128, %11:fpr128, debug-location !17; tp/testprg.c:4:19
+#CHECK-NEXT:### distance:0 delay:8
+
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %19:fpr128 = nnan ninf nsz arcp contract afn reassoc FADDv2f64 killed %18:fpr128, %11:fpr128, debug-location !17; tp/testprg.c:4:19
+#CHECK-NEXT:### to  : STRQui killed %19:fpr128, %17:gpr64common, 500, debug-location !18 :: (store (s128) into %ir.13, align 8, !tbaa !13); tp/testprg.c:4:10
+#CHECK-NEXT:### distance:0 delay:9
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %17:gpr64common = ADDXrr %4:gpr64, %15:gpr64common, debug-location !12; tp/testprg.c:4:12
+#CHECK-NEXT:### to  : STRQui killed %19:fpr128, %17:gpr64common, 500, debug-location !18 :: (store (s128) into %ir.13, align 8, !tbaa !13); tp/testprg.c:4:10
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %15:gpr64common = COPY %21:gpr64all, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### to  : %20:gpr64sp = nsw ADDXri %15:gpr64common, 16, 0, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### distance:1 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %20:gpr64sp = nsw ADDXri %15:gpr64common, 16, 0, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### to  : %21:gpr64all = COPY %20:gpr64sp, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %16:gpr64sp = COPY %23:gpr64all, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### to  : %22:gpr64 = SUBSXri %16:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### distance:1 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %22:gpr64 = SUBSXri %16:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### to  : %23:gpr64all = COPY %22:gpr64, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %21:gpr64all = COPY %20:gpr64sp, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### to  : %15:gpr64common = COPY %21:gpr64all, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %23:gpr64all = COPY %22:gpr64, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### to  : %16:gpr64sp = COPY %23:gpr64all, debug-location !11; tp/testprg.c:3:18
+#CHECK-NEXT:### distance:0 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: %18:fpr128 = LDRQui %17:gpr64common, 504, debug-location !12 :: (load (s128) from %ir.8, align 8, !tbaa !13); tp/testprg.c:4:12
+#CHECK-NEXT:### to  : STRQui killed %19:fpr128, %17:gpr64common, 500, debug-location !18 :: (store (s128) into %ir.13, align 8, !tbaa !13); tp/testprg.c:4:10
+#CHECK-NEXT:### distance:4 delay:1
+
+#CHECK:### SwplEdge: 
+#CHECK-NEXT:### from: STRQui killed %19:fpr128, %17:gpr64common, 500, debug-location !18 :: (store (s128) into %ir.13, align 8, !tbaa !13); tp/testprg.c:4:10
+#CHECK-NEXT:### to  : %18:fpr128 = LDRQui %17:gpr64common, 504, debug-location !12 :: (load (s128) from %ir.8, align 8, !tbaa !13); tp/testprg.c:4:12
+#CHECK-NEXT:### distance:20 delay:6
+
+#CHECK:=========================================
+#CHECK:%18:fpr128 = LDRQui %17:gpr64common, 504, debug-location !12 :: (load (s128) from %ir.8, align 8, !tbaa !13); tp/testprg.c:4:12
+#CHECK:successor_inst : FADDv2f64 ( cycle:124989, latecycle:124981, delay:8 )
+#CHECK-NEXT:successor_inst : STRQui ( cycle:124998, latecycle:125013, delay:-15 )
+#CHECK-NEXT:unset (DependConstrained  ) : ADDXrr
+#CHECK-NEXT: begin_cycle          : 124981
+#CHECK-NEXT: SIP.slot             : 999853
+#CHECK-NEXT: SIP.slot.calcCycle() : 124981
+#CHECK-NEXT: iteration_interval = 4
+
+#CHECK:       FLA        FLB        EXA        EXB        EAGA       EAGB       PRX        BR         LSU1       LSU2       FLA_C      FLB_C      EXA_C      EXB_C      EAGA_C     EAGB_C     
+#CHECK-NEXT:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK-NEXT:       0          0          0          0          0          0          0          0          0          0          0          0          0          0          0          0          
+#CHECK-NEXT:       fFADDv2f64 0          fLDRQui    0          fLDRQui    0          0          0          fLDRQui    0          0          0          0          0          fLDRQui    0          
+#CHECK-NEXT:       STRQui     0          0          0          STRQui     0          0          0          STRQui     STRQui     0          0          fLDRQui    0          0          0          
+#CHECK-NEXT:       0          0          0          0          0          0          0          0          0          0          0          0          0          0          0          0          
+
+#CHECK:	(999848)	--0--		--1--		--2--		--3--		--4--		LDRQui		--6--		--7--	
+#CHECK-NEXT:	(999856)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	(999864)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	(999872)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	(999880)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	(999888)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	(999896)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	(999904)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	(999912)	--0--		--1--		--2--		--3--		FADDv2f64		--5--		--6--		--7--	
+#CHECK-NEXT:	(999920)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	(999928)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	(999936)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	(999944)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	(999952)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	(999960)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	(999968)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	(999976)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	(999984)	--0--		--1--		--2--		--3--		--4--		STRQui		--6--		--7--	
+#CHECK-NEXT:=========================================
+
+--- |
+  ; ModuleID = '/TEST/tp/testprg.c'
+  source_filename = "/TEST/tp/testprg.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+  
+  ; Function Attrs: nofree norecurse nounwind
+  define dso_local void @foo(double* noalias nocapture %0) local_unnamed_addr #0 !dbg !7 {
+    call void @llvm.set.loop.iterations.i64(i64 500), !dbg !10
+    br label %2, !dbg !10
+  
+  2:                                                ; preds = %2, %1
+    %3 = phi i64 [ %14, %2 ], [ -8000, %1 ], !dbg !11
+    %4 = phi i64 [ 500, %1 ], [ %15, %2 ]
+    %5 = bitcast double* %0 to i8*
+    %6 = getelementptr i8, i8* %5, i64 %3, !dbg !12
+    %7 = bitcast i8* %6 to <2 x double>*
+    %8 = getelementptr <2 x double>, <2 x double>* %7, i64 504, !dbg !12
+    %9 = load <2 x double>, <2 x double>* %8, align 8, !dbg !12, !tbaa !13
+    %10 = fadd fast <2 x double> %9, <double 4.000000e+00, double 4.000000e+00>, !dbg !17
+    %11 = getelementptr i8, i8* %5, i64 %3, !dbg !18
+    %12 = bitcast i8* %11 to <2 x double>*
+    %13 = getelementptr <2 x double>, <2 x double>* %12, i64 500, !dbg !18
+    store <2 x double> %10, <2 x double>* %13, align 8, !dbg !18, !tbaa !13
+    %14 = add nsw i64 %3, 16, !dbg !11
+    %15 = call i64 @llvm.loop.decrement.reg.i64(i64 %4, i64 1), !dbg !11
+    %16 = icmp ne i64 %15, 0, !dbg !11
+    br i1 %16, label %2, label %17, !dbg !11, !llvm.loop !19
+  
+  17:                                               ; preds = %2
+    ret void, !dbg !23
+  }
+  
+  ; Function Attrs: noduplicate nounwind
+  declare void @llvm.set.loop.iterations.i64(i64) #1
+  
+  ; Function Attrs: noduplicate nounwind
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+  
+  attributes #0 = { nofree norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" "use-soft-float"="false" }
+  attributes #1 = { noduplicate nounwind }
+  attributes #2 = { nounwind }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5}
+  !llvm.ident = !{!6}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "/TEST/tp/testprg.c", directory: "/TEST")
+  !2 = !{}
+  !3 = !{i32 7, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 4}
+  !6 = !{!"clang version 11.0.0 "}
+  !7 = distinct !DISubprogram(name: "foo", scope: !8, file: !8, line: 1, type: !9, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+  !8 = !DIFile(filename: "tp/testprg.c", directory: "/TEST")
+  !9 = !DISubroutineType(types: !2)
+  !10 = !DILocation(line: 3, column: 3, scope: !7)
+  !11 = !DILocation(line: 3, column: 18, scope: !7)
+  !12 = !DILocation(line: 4, column: 12, scope: !7)
+  !13 = !{!14, !14, i64 0}
+  !14 = !{!"double", !15, i64 0}
+  !15 = !{!"omnipotent char", !16, i64 0}
+  !16 = !{!"Simple C/C++ TBAA"}
+  !17 = !DILocation(line: 4, column: 19, scope: !7)
+  !18 = !DILocation(line: 4, column: 10, scope: !7)
+  !19 = distinct !{!19, !10, !20, !21, !22}
+  !20 = !DILocation(line: 5, column: 3, scope: !7)
+  !21 = !{!"llvm.loop.unroll.disable"}
+  !22 = !{!"llvm.loop.isvectorized", i32 1}
+  !23 = !DILocation(line: 6, column: 1, scope: !7)
+
+...
+---
+name:            foo
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gpr64common, preferred-register: '' }
+  - { id: 1, class: gpr64sp, preferred-register: '' }
+  - { id: 2, class: gpr64all, preferred-register: '' }
+  - { id: 3, class: gpr64all, preferred-register: '' }
+  - { id: 4, class: gpr64, preferred-register: '' }
+  - { id: 5, class: gpr64all, preferred-register: '' }
+  - { id: 6, class: gpr64all, preferred-register: '' }
+  - { id: 7, class: gpr64, preferred-register: '' }
+  - { id: 8, class: gpr32, preferred-register: '' }
+  - { id: 9, class: gpr64common, preferred-register: '' }
+  - { id: 10, class: fpr128, preferred-register: '' }
+  - { id: 11, class: fpr128, preferred-register: '' }
+  - { id: 12, class: fpr128, preferred-register: '' }
+  - { id: 13, class: gpr64sp, preferred-register: '' }
+  - { id: 14, class: gpr64, preferred-register: '' }
+liveins:
+  - { reg: '$x0', virtual-reg: '%4' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.1):
+    successors: %bb.1(0x80000000)
+    liveins: $x0
+  
+    %4:gpr64 = COPY $x0
+    %7:gpr64 = MOVi64imm -8000
+    %5:gpr64all = COPY %7
+    %8:gpr32 = MOVi32imm 500
+    %6:gpr64all = SUBREG_TO_REG 0, killed %8, %subreg.sub_32
+    %11:fpr128 = FMOVv2f64_ns 16
+  
+  bb.1 (%ir-block.2):
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  
+    %0:gpr64common = PHI %5, %bb.0, %2, %bb.1, debug-location !11
+    %1:gpr64sp = PHI %6, %bb.0, %3, %bb.1
+    %9:gpr64common = ADDXrr %4, %0, debug-location !12
+    %10:fpr128 = LDRQui %9, 504, debug-location !12 :: (load 16 from %ir.8, align 8, !tbaa !13)
+    %12:fpr128 = nnan ninf nsz arcp contract afn reassoc FADDv2f64 killed %10, %11, debug-location !17
+    STRQui killed %12, %9, 500, debug-location !18 :: (store 16 into %ir.13, align 8, !tbaa !13)
+    %13:gpr64sp = nsw ADDXri %0, 16, 0, debug-location !11
+    %2:gpr64all = COPY %13, debug-location !11
+    %14:gpr64 = SUBSXri %1, 1, 0, implicit-def $nzcv, debug-location !11
+    %3:gpr64all = COPY %14, debug-location !11
+    Bcc 1, %bb.1, implicit $nzcv, debug-location !11
+    B %bb.2, debug-location !11
+  
+  bb.2 (%ir-block.17):
+    RET_ReallyLR debug-location !23
+
+...

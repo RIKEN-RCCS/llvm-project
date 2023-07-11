@@ -163,9 +163,12 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
         State = LoopHintAttr::AssumeSafety;
       else if (StateLoc->Ident->isStr("full"))
         State = LoopHintAttr::Full;
-      else if (StateLoc->Ident->isStr("enable"))
+      else if (StateLoc->Ident->isStr("enable")) {
+        if (Option == LoopHintAttr::PipelineDisabled) {
+          Option = LoopHintAttr::PipelineEnabled;
+        }
         State = LoopHintAttr::Enable;
-      else
+      } else
         llvm_unreachable("bad loop hint argument");
     } else
       llvm_unreachable("bad loop hint");
@@ -366,6 +369,7 @@ CheckForIncompatibleAttributes(Sema &S,
       Category = Distribute;
       break;
     case LoopHintAttr::PipelineDisabled:
+    case LoopHintAttr::PipelineEnabled:
     case LoopHintAttr::PipelineInitiationInterval:
       Category = Pipeline;
       break;
@@ -382,6 +386,7 @@ CheckForIncompatibleAttributes(Sema &S,
         Option == LoopHintAttr::UnrollAndJam ||
         Option == LoopHintAttr::VectorizePredicate ||
         Option == LoopHintAttr::PipelineDisabled ||
+        Option == LoopHintAttr::PipelineEnabled ||
         Option == LoopHintAttr::Distribute) {
       // Enable|Disable|AssumeSafety hint.  For example, vectorize(enable).
       PrevAttr = CategoryState.StateAttr;

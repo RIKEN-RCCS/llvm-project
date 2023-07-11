@@ -73,6 +73,7 @@ add_llvm_target(AArch64CodeGen
   AArch64PromoteConstant.cpp
   AArch64PBQPRegAlloc.cpp
   AArch64RegisterInfo.cpp
+  AArch64SwplRegAlloc.cpp
   AArch64SLSHardening.cpp
   AArch64SelectionDAGInfo.cpp
   AArch64SpeculationHardening.cpp
@@ -86,7 +87,8 @@ add_llvm_target(AArch64CodeGen
   SMEABIPass.cpp
   SVEIntrinsicOpts.cpp
   AArch64SIMDInstrOpt.cpp
-
+  AArch64SwplTargetMachine.cpp
+  AArch64SwplSchedA64FX.cpp
   DEPENDS
   intrinsics_gen
 

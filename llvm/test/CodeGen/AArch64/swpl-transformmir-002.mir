@@ -1,0 +1,323 @@
+#RUN: llc %s -mcpu=a64fx -ffj-swp -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8  -o /dev/null 2>&1 | FileCheck %s
+#CHECK:** SwplTransformedMIRInfo begin **
+#CHECK:originalDoVReg:%4
+#CHECK:originalDoInitVar:%0
+#CHECK:doVReg:%26
+#CHECK:iterationInterval:13
+#CHECK:minimumIterationInterval:3
+#CHECK:coefficient: 1
+#CHECK:minConstant: 0
+#CHECK:expansion: 3
+#CHECK:nVersions: 1
+#CHECK:nCopies: 3
+#CHECK:requiredKernelIteration: 3
+#CHECK:prologEndIndx: 208
+#CHECK:kernelEndIndx: 312
+#CHECK:epilogEndIndx: 520
+#CHECK:isIterationCountConstant: 0
+#CHECK:doVRegInitialValue: 0
+#CHECK:originalKernelIteration: 0
+#CHECK:transformedKernelIteration: 0
+#CHECK:transformedModIteration: 0
+#CHECK:updateDoVRegMI:%17:gpr64 = SUBSXri %4:gpr64sp, 1, 0, implicit-def $nzcv
+#CHECK:branchDoVRegMI:Bcc 1, %bb.12, implicit $nzcv
+#CHECK:branchDoVRegMIKernel:Bcc 10, %bb.4, implicit $nzcv
+#CHECK:OrgPreHeader: %bb.2
+#CHECK:Check1: %bb.7
+#CHECK:Prolog: %bb.8
+#CHECK:OrgBody: %bb.4
+#CHECK:Epilog: %bb.9
+#CHECK:NewPreHeader: %bb.11
+#CHECK:Check2: %bb.10
+#CHECK:NewBody: %bb.12
+#CHECK:NewExit: %bb.13
+#CHECK:OrgExit: %bb.3
+#CHECK:mis:
+#CHECK:** SwplTransformedMIRInfo end   **
+#CHECK:target loop:Loop at depth 1 containing: %bb.4<header><latch><exiting>
+#CHECK:LAST:
+#CHECK:bb.0 (%ir-block.1):
+#CHECK:  successors: %bb.1(0x30000000), %bb.2(0x50000000); %bb.1(37.50%), %bb.2(62.50%)
+#CHECK:  liveins: $x0
+#CHECK:  %8:gpr64common = COPY $x0
+#CHECK:  TBZX %8:gpr64common, 63, %bb.2
+#CHECK:bb.1:
+#CHECK:; predecessors: %bb.0
+#CHECK:  successors: %bb.3(0x80000000); %bb.3(100.00%)
+
+#CHECK:  %9:fpr64 = FMOVD0
+#CHECK:  B %bb.3
+#CHECK:bb.2 (%ir-block.3):
+#CHECK:; predecessors: %bb.0
+#CHECK:  successors: %bb.7(0x80000000); %bb.7(100.00%)
+
+#CHECK:  %12:gpr64sp = ADDXri %8:gpr64common, 1, 0
+#CHECK:  %0:gpr64all = COPY %12:gpr64sp
+#CHECK:  %11:fpr64 = FMOVD0
+#CHECK:  %13:gpr64common = MOVaddr target-flags(aarch64-page) @A, target-flags(aarch64-pageoff, aarch64-nc) @A
+#CHECK:  %10:gpr64all = COPY %13:gpr64common
+#CHECK:  B %bb.7
+#CHECK:bb.3 (%ir-block.5):
+#CHECK:; predecessors: %bb.1, %bb.13
+
+#CHECK:  %1:fpr64 = PHI %9:fpr64, %bb.1, %33:fpr64, %bb.13
+#CHECK:  $d0 = COPY %1:fpr64
+#CHECK:  RET_ReallyLR implicit $d0
+#CHECK:bb.7 (%ir-block.7):
+#CHECK:; predecessors: %bb.2
+#CHECK:  successors: %bb.8(0x40000000), %bb.11(0x40000000); %bb.8(50.00%), %bb.11(50.00%)
+
+#CHECK:  %28:gpr64sp = COPY %0:gpr64all
+#CHECK:  $xzr = SUBSXri %28:gpr64sp, 3, 0, implicit-def $nzcv
+#CHECK:  Bcc 11, %bb.11, implicit $nzcv
+#CHECK:bb.8 (%ir-block.7):
+#CHECK:; predecessors: %bb.7
+#CHECK:  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+#CHECK:  %18:gpr64sp = COPY %10:gpr64all
+#CHECK:  %19:fpr64 = COPY %11:fpr64
+#CHECK:  %20:gpr64sp = COPY %0:gpr64all
+#CHECK:  %22:fpr32 = LDURSi %18:gpr64sp, 0
+#CHECK:  %23:fpr64 = FCVTDSr killed %22:fpr32
+#CHECK:  %21:gpr64sp = ADDXri %18:gpr64sp, 4, 0
+#CHECK:  %25:gpr64all = COPY %21:gpr64sp
+#CHECK:  %64:gpr64sp = COPY %25:gpr64all
+#CHECK:  %65:fpr32 = LDURSi %64:gpr64sp, 0
+#CHECK:bb.4 (%ir-block.7):
+#CHECK:; predecessors: %bb.4, %bb.8
+#CHECK:  successors: %bb.4(0x7c000000), %bb.9(0x04000000); %bb.4(96.88%), %bb.9(3.12%)
+
+#CHECK:  %50:fpr64 = PHI %23:fpr64, %bb.8, %49:fpr64, %bb.4
+#CHECK:  %55:gpr64sp = PHI %64:gpr64sp, %bb.8, %54:gpr64sp, %bb.4
+#CHECK:  %58:fpr32 = PHI %65:fpr32, %bb.8, %57:fpr32, %bb.4
+#CHECK:  %60:fpr64 = PHI %19:fpr64, %bb.8, %59:fpr64, %bb.4
+#CHECK:  %62:gpr64sp = PHI %20:gpr64sp, %bb.8, %61:gpr64sp, %bb.4
+#CHECK:  %48:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %60:fpr64, killed %50:fpr64
+#CHECK:  %49:fpr64 = FCVTDSr killed %58:fpr32
+#CHECK:  %51:gpr64sp = ADDXri %55:gpr64sp, 4, 0
+#CHECK:  %52:gpr64all = COPY %51:gpr64sp
+#CHECK:  %53:gpr64 = SUBSXri %62:gpr64sp, 1, 0, implicit-def $nzcv
+#CHECK:  %54:gpr64sp = COPY %52:gpr64all
+#CHECK:  %56:gpr64all = COPY %53:gpr64
+#CHECK:  %57:fpr32 = LDURSi %54:gpr64sp, 0
+#CHECK:  %59:fpr64 = COPY %48:fpr64
+#CHECK:  %61:gpr64sp = COPY %56:gpr64all
+#CHECK:  %63:gpr64sp = COPY %53:gpr64
+#CHECK:  $xzr = SUBSXri %63:gpr64sp, 3, 0, implicit-def $nzcv
+#CHECK:  Bcc 10, %bb.4, implicit $nzcv
+#CHECK:bb.9 (%ir-block.7):
+#CHECK:; predecessors: %bb.4
+#CHECK:  successors: %bb.10(0x80000000); %bb.10(100.00%)
+
+#CHECK:  %34:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %59:fpr64, killed %49:fpr64
+#CHECK:  %35:fpr64 = FCVTDSr killed %57:fpr32
+#CHECK:  %36:gpr64sp = ADDXri %54:gpr64sp, 4, 0
+#CHECK:  %37:gpr64all = COPY %36:gpr64sp
+#CHECK:  %38:gpr64 = SUBSXri %61:gpr64sp, 1, 0, implicit-def $nzcv
+#CHECK:  %39:gpr64sp = COPY %37:gpr64all
+#CHECK:  %40:gpr64all = COPY %38:gpr64
+#CHECK:  %41:fpr64 = COPY %34:fpr64
+#CHECK:  %42:gpr64sp = COPY %40:gpr64all
+#CHECK:  %43:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %41:fpr64, killed %35:fpr64
+#CHECK:  %44:gpr64 = SUBSXri %42:gpr64sp, 1, 0, implicit-def $nzcv
+#CHECK:  %45:gpr64all = COPY %44:gpr64
+#CHECK:  %46:fpr64 = COPY %43:fpr64
+#CHECK:  %47:gpr64sp = COPY %45:gpr64all
+#CHECK:bb.10 (%ir-block.7):
+#CHECK:; predecessors: %bb.9
+#CHECK:  successors: %bb.11(0x40000000), %bb.13(0x40000000); %bb.11(50.00%), %bb.13(50.00%)
+
+#CHECK:  $xzr = SUBSXri %47:gpr64sp, 0, 0, implicit-def $nzcv
+#CHECK:  Bcc 0, %bb.13, implicit $nzcv
+#CHECK:bb.11 (%ir-block.7):
+#CHECK:; predecessors: %bb.10, %bb.7
+#CHECK:  successors: %bb.12(0x80000000); %bb.12(100.00%)
+
+#CHECK:  %30:gpr64sp = PHI %10:gpr64all, %bb.7, %39:gpr64sp, %bb.10
+#CHECK:  %31:fpr64 = PHI %11:fpr64, %bb.7, %46:fpr64, %bb.10
+#CHECK:  %32:gpr64sp = PHI %0:gpr64all, %bb.7, %47:gpr64sp, %bb.10
+#CHECK:bb.12 (%ir-block.7):
+#CHECK:; predecessors: %bb.12, %bb.11
+#CHECK:  successors: %bb.12(0x40000000), %bb.13(0x40000000); %bb.12(50.00%), %bb.13(50.00%)
+#CHECK:  %2:gpr64sp = PHI %30:gpr64sp, %bb.11, %6:gpr64all, %bb.12
+#CHECK:  %3:fpr64 = PHI %31:fpr64, %bb.11, %5:fpr64, %bb.12
+#CHECK:  %4:gpr64sp = PHI %32:gpr64sp, %bb.11, %7:gpr64all, %bb.12
+#CHECK:  early-clobber %14:gpr64sp, %15:fpr32 = LDRSpost %2:gpr64sp(tied-def 0), 4
+#CHECK:  %16:fpr64 = FCVTDSr killed %15:fpr32
+#CHECK:  %5:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %3:fpr64, killed %16:fpr64
+#CHECK:  %6:gpr64all = COPY %14:gpr64sp
+#CHECK:  %17:gpr64 = SUBSXri %4:gpr64sp, 1, 0, implicit-def $nzcv
+#CHECK:  %7:gpr64all = COPY %17:gpr64
+#CHECK:  Bcc 1, %bb.12, implicit $nzcv
+#CHECK:  B %bb.13
+#CHECK:bb.13 (%ir-block.7):
+#CHECK:; predecessors: %bb.12, %bb.10
+#CHECK:  successors: %bb.3(0x80000000); %bb.3(100.00%)
+
+#CHECK:  %33:fpr64 = PHI %5:fpr64, %bb.12, %43:fpr64, %bb.10
+#CHECK:  B %bb.3
+
+
+
+
+--- |
+  ; ModuleID = 'test3044-02.c'
+  source_filename = "test3044-02.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+  
+  @A = external dso_local local_unnamed_addr global [100 x float], align 4
+  
+  ; Function Attrs: norecurse nounwind readonly
+  define dso_local double @test3044(i64 %0) local_unnamed_addr #0 {
+    %2 = icmp slt i64 %0, 0
+    br i1 %2, label %5, label %3
+  
+  3:                                                ; preds = %1
+    %4 = add i64 %0, 1
+    call void @llvm.set.loop.iterations.i64(i64 %4)
+    br label %7
+  
+  5:                                                ; preds = %7, %1
+    %6 = phi double [ 0.000000e+00, %1 ], [ %14, %7 ]
+    ret double %6
+  
+  7:                                                ; preds = %7, %3
+    %8 = phi [100 x float]* [ @A, %3 ], [ %16, %7 ]
+    %9 = phi double [ %14, %7 ], [ 0.000000e+00, %3 ]
+    %10 = phi i64 [ %4, %3 ], [ %17, %7 ]
+    %11 = bitcast [100 x float]* %8 to float*
+    %12 = load float, float* %11, align 4, !tbaa !2
+    %13 = fpext float %12 to double
+    %14 = fadd fast double %9, %13
+    %15 = getelementptr [100 x float], [100 x float]* %8, i64 0, i64 1
+    %16 = bitcast float* %15 to [100 x float]*
+    %17 = call i64 @llvm.loop.decrement.reg.i64(i64 %10, i64 1)
+    %18 = icmp ne i64 %17, 0
+    br i1 %18, label %7, label %5, !llvm.loop !6
+  }
+  
+  ; Function Attrs: noduplicate nounwind
+  declare void @llvm.set.loop.iterations.i64(i64) #1
+  
+  ; Function Attrs: noduplicate nounwind
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+  
+  attributes #0 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" "use-soft-float"="false" }
+  attributes #1 = { noduplicate nounwind }
+  attributes #2 = { nounwind }
+  
+  !llvm.module.flags = !{!0}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !2 = !{!3, !3, i64 0}
+  !3 = !{!"float", !4, i64 0}
+  !4 = !{!"omnipotent char", !5, i64 0}
+  !5 = !{!"Simple C/C++ TBAA"}
+  !6 = distinct !{!6, !7}
+  !7 = !{!"llvm.loop.unroll.disable"}
+
+...
+---
+name:            test3044
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gpr64all, preferred-register: '' }
+  - { id: 1, class: fpr64, preferred-register: '' }
+  - { id: 2, class: gpr64sp, preferred-register: '' }
+  - { id: 3, class: fpr64, preferred-register: '' }
+  - { id: 4, class: gpr64sp, preferred-register: '' }
+  - { id: 5, class: fpr64, preferred-register: '' }
+  - { id: 6, class: gpr64all, preferred-register: '' }
+  - { id: 7, class: gpr64all, preferred-register: '' }
+  - { id: 8, class: gpr64common, preferred-register: '' }
+  - { id: 9, class: fpr64, preferred-register: '' }
+  - { id: 10, class: gpr64all, preferred-register: '' }
+  - { id: 11, class: fpr64, preferred-register: '' }
+  - { id: 12, class: gpr64sp, preferred-register: '' }
+  - { id: 13, class: gpr64common, preferred-register: '' }
+  - { id: 14, class: gpr64sp, preferred-register: '' }
+  - { id: 15, class: fpr32, preferred-register: '' }
+  - { id: 16, class: fpr64, preferred-register: '' }
+  - { id: 17, class: gpr64, preferred-register: '' }
+liveins:
+  - { reg: '$x0', virtual-reg: '%8' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.1):
+    successors: %bb.4(0x30000000), %bb.1(0x50000000)
+    liveins: $x0
+  
+    %8:gpr64common = COPY $x0
+    TBZX %8, 63, %bb.1
+  
+  bb.4:
+    successors: %bb.2(0x80000000)
+  
+    %9:fpr64 = FMOVD0
+    B %bb.2
+  
+  bb.1 (%ir-block.3):
+    successors: %bb.3(0x80000000)
+  
+    %12:gpr64sp = ADDXri %8, 1, 0
+    %0:gpr64all = COPY %12
+    %11:fpr64 = FMOVD0
+    %13:gpr64common = MOVaddr target-flags(aarch64-page) @A, target-flags(aarch64-pageoff, aarch64-nc) @A
+    %10:gpr64all = COPY %13
+    B %bb.3
+  
+  bb.2 (%ir-block.5):
+    %1:fpr64 = PHI %9, %bb.4, %5, %bb.3
+    $d0 = COPY %1
+    RET_ReallyLR implicit $d0
+  
+  bb.3 (%ir-block.7):
+    successors: %bb.3(0x7c000000), %bb.2(0x04000000)
+  
+    %2:gpr64sp = PHI %10, %bb.1, %6, %bb.3
+    %3:fpr64 = PHI %11, %bb.1, %5, %bb.3
+    %4:gpr64sp = PHI %0, %bb.1, %7, %bb.3
+    early-clobber %14:gpr64sp, %15:fpr32 = LDRSpost %2, 4
+    %16:fpr64 = FCVTDSr killed %15
+    %5:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %3, killed %16
+    %6:gpr64all = COPY %14
+    %17:gpr64 = SUBSXri %4, 1, 0, implicit-def $nzcv
+    %7:gpr64all = COPY %17
+    Bcc 1, %bb.3, implicit $nzcv
+    B %bb.2
+
+...
