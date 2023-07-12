@@ -1,8 +1,5 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner   -pass-remarks-missed=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner   -pass-remarks-missed=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner -swpl-maxii=5 -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:remark: tp/testprg.c:6:3: Trial at iteration-interval=3. This loop is not software pipelined because the iteration count is smaller than 13 and the software pipelining does not improve the performance.
-#CHECK:remark: tp/testprg.c:6:3: Trial at iteration-interval=4. This loop is not software pipelined because the iteration count is smaller than 9 and the software pipelining does not improve the performance.
-#CHECK:remark: tp/testprg.c:6:3: Trial at iteration-interval=8. This loop is not software pipelined because the iteration count is smaller than 5 and the software pipelining does not improve the performance.
 #CHECK:remark: tp/testprg.c:6:3: Trial at iteration-interval=9. This loop is not software pipelined because the iteration count is smaller than 5 and the software pipelining does not improve the performance.
 
 --- |

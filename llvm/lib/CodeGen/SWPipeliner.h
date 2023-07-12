@@ -824,6 +824,10 @@ public:
   static bool isDebugOutput();
   /// -swpl-debug-ddg指定されているか
   static bool isDebugDdgOutput();
+  /// Acquiring the specified value of the -swpl-minii option
+  static unsigned nOptionMinIIBase();
+  /// Acquiring the specified value of the -swpl-maxii option
+  static unsigned nOptionMaxIIBase();
 
   /**
    * \brief SWPipelinerのコンストラクタ

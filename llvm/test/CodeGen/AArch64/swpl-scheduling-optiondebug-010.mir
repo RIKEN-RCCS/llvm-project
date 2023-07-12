@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-debug-dump-scheduling-every-inst=false  -o /dev/null 2>&1 | FileCheck --allow-empty %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner  -swpl-debug-dump-scheduling-every-inst=false  -o /dev/null 2>&1 | FileCheck --allow-empty %s
 #CHECK-NOT: successor_inst
 
 --- |

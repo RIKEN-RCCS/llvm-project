@@ -1,52 +1,13 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1   -start-before=aarch64-swpipeliner -swpl-max-preg=1 -pass-remarks-output=%t.yaml  -o /dev/null  > %t; \
+#RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-maxii=95 -start-before=aarch64-swpipeliner -swpl-max-preg=1 -pass-remarks-output=%t.yaml  -o /dev/null  > %t; \
 #RUN: cat   %t.yaml  | FileCheck %s
 
-#CHECK:--- !Analysis
+#CHECK:--- !Missed
 #CHECK:Pass:            aarch64-swpipeliner
 #CHECK:Name:            NotSoftwarePipleined
 #CHECK:Function:        s3111
 #CHECK:Args:
-#CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '81'
-#CHECK:  - String:          . This loop cannot be software pipelined because of shortage of predicate registers.
+#CHECK:  - String:          'Trial at iteration-interval=94. This loop cannot be software pipelined because of shortage of predicate registers.'
 #CHECK:...
-#CHECK:--- !Analysis
-#CHECK:Pass:            aarch64-swpipeliner
-#CHECK:Name:            NotSoftwarePipleined
-#CHECK:Function:        s3111
-#CHECK:Args:
-#CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '82'
-#CHECK:  - String:          . This loop cannot be software pipelined because of shortage of predicate registers.
-#CHECK:...
-#CHECK:--- !Analysis
-#CHECK:Pass:            aarch64-swpipeliner
-#CHECK:Name:            NotSoftwarePipleined
-#CHECK:Function:        s3111
-#CHECK:Args:
-#CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '86'
-#CHECK:  - String:          . This loop cannot be software pipelined because of shortage of predicate registers.
-#CHECK:...
-#CHECK:--- !Analysis
-#CHECK:Pass:            aarch64-swpipeliner
-#CHECK:Name:            NotSoftwarePipleined
-#CHECK:Function:        s3111
-#CHECK:Args:
-#CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '90'
-#CHECK:  - String:          . This loop cannot be software pipelined because of shortage of predicate registers.
-#CHECK:...
-#CHECK:--- !Analysis
-#CHECK:Pass:            aarch64-swpipeliner
-#CHECK:Name:            NotSoftwarePipleined
-#CHECK:Function:        s3111
-#CHECK:Args:
-#CHECK:  - String:          'Trial at iteration-interval='
-#CHECK:  - iteration_interval: '94'
-#CHECK:  - String:          . This loop cannot be software pipelined because of shortage of predicate registers.
-#CHECK:...
-
 --- |
   ; ModuleID = 's3111.c'
   source_filename = "s3111.c"

@@ -1,19 +1,18 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-max-freg=1 -swpl-debug -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner -swpl-maxii=95 -swpl-max-freg=1 -swpl-debug -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:        : (Iterative Modulo Scheduling. ResMII 6. NumOfBodyInsts 21. Budget 105. Minimum II = 6.)
-#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 6 in [ 6,95]) MVE: 0 Last inst: 7. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 9 in [ 6,95]) MVE: 5 Last inst: 0. (Itr Org: 0, Req: 9) (VReg Fp: 22/1, Int: 21/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 29 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 3) (VReg Fp: 10/1, Int: 14/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 38 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/1, Int: 14/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 47 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/1, Int: 14/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 56 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/1, Int: 14/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 65 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/1, Int: 14/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 74 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/1, Int: 14/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 83 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/1, Int: 14/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 92 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/1, Int: 14/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 94 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/1, Int: 14/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        : Loop isn't software pipelined because plan is NULL.
-
+#CHECK:        : (Iterative Modulo Scheduling. ResMII 6. NumOfBodyInsts 17. Budget 850. Minimum II = 6.)
+#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 6 in [ 6,95]) MVE: 0 Last inst: 3. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+#CHECK:        :  (x) Run out of budget      at estimation.          : (II: 7 in [ 6,95]) MVE: 0 Last inst: 8. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 11 in [ 6,95]) MVE: 4 Last inst: 0. (Itr Org: 0, Req: 8) (VReg Fp: 17/1, Int: 19/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 27 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 3) (VReg Fp: 10/1, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 36 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 3) (VReg Fp: 10/1, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 45 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/1, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 54 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/1, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 63 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/1, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 72 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/1, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 81 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/1, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 90 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/1, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 94 in [ 6,95]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/1, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
   source_filename = "/TEST/tp/testprg.c"

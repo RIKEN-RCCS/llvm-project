@@ -1,13 +1,7 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner -swpl-max-preg=1   -pass-remarks-missed=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner -swpl-max-preg=1 -swpl-maxii=95 -pass-remarks-missed=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:remark: <unknown>:0:0: SVE instruction latency is calculated at 512bit.
-#CHECK:remark: <unknown>:0:0: Trial at iteration-interval=81. This loop cannot be software pipelined because of shortage of predicate registers.
-#CHECK:remark: <unknown>:0:0: Trial at iteration-interval=82. This loop cannot be software pipelined because of shortage of predicate registers.
-#CHECK:remark: <unknown>:0:0: Trial at iteration-interval=86. This loop cannot be software pipelined because of shortage of predicate registers.
-#CHECK:remark: <unknown>:0:0: Trial at iteration-interval=90. This loop cannot be software pipelined because of shortage of predicate registers.
 #CHECK:remark: <unknown>:0:0: Trial at iteration-interval=94. This loop cannot be software pipelined because of shortage of predicate registers.
-#CHECK:remark: <unknown>:0:0: This loop is not software pipelined because no schedule is obtained.
-
 --- |
   ; ModuleID = 's3111.c'
   source_filename = "s3111.c"

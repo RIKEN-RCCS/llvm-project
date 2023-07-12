@@ -1,60 +1,61 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner -swpl-debug-dump-plan -swpl-real-fetch-width=6 -swpl-virtual-fetch-width=6  -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner -swpl-debug-dump-plan -swpl-real-fetch-width=6 -swpl-virtual-fetch-width=6  -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:(plan  {{[A-Za-z0-9]+}}:
-#CHECK-NEXT:  iteration_interval  = 4
-#CHECK-NEXT:  n_iteration_copies  = 2
-#CHECK-NEXT:  n_renaming_versions = 1
-#CHECK-NEXT:  begin_slot = 999888
-#CHECK-NEXT:  end_slot   = 999984
-#CHECK-NEXT:  total_cycles  = 12
-#CHECK-NEXT:  prolog_cycles = 4
-#CHECK-NEXT:  kernel_cycles = 4
-#CHECK-NEXT:  epilog_cycles = 4
-
-#CHECK:	( MachineInstr* : OpcodeName )
-
-#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		({{[A-Za-z0-9]+}}:COPY)		--9--		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:ADDXri)		({{[A-Za-z0-9]+}}:ADDWri)		--8--		--9--		--10--		--11--	
-#CHECK-NEXT:	({{[A-Za-z0-9]+}}:INSERT_SUBREG)		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:COPY)		--7--		--8--		--9--		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		({{[A-Za-z0-9]+}}:COPY)		({{[A-Za-z0-9]+}}:COPY)		--9--		--10--		--11--	
-
-#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:SUBSXri)		({{[A-Za-z0-9]+}}:STRWpost)		--8--		--9--		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		({{[A-Za-z0-9]+}}:COPY)		({{[A-Za-z0-9]+}}:COPY)		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		({{[A-Za-z0-9]+}}:COPY)		--8--		--9--		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:COPY)		--7--		--8--		--9--		--10--		--11--	
-#CHECK-NEXT:)
-#CHECK-NEXT:(plan {{[A-Za-z0-9]+}}:
-#CHECK-NEXT:  iteration_interval  = 8
+#CHECK:(plan {{[A-Za-z0-9]+}}:
+#CHECK-NEXT:  iteration_interval  = 3
 #CHECK-NEXT:  n_iteration_copies  = 3
 #CHECK-NEXT:  n_renaming_versions = 2
-#CHECK-NEXT:  begin_slot = 999744
-#CHECK-NEXT:  end_slot   = 999936
-#CHECK-NEXT:  total_cycles  = 32
-#CHECK-NEXT:  prolog_cycles = 8
-#CHECK-NEXT:  kernel_cycles = 16
-#CHECK-NEXT:  epilog_cycles = 8
+#CHECK-NEXT:  begin_slot = 999900
+#CHECK-NEXT:  end_slot   = 999972
+#CHECK-NEXT:  total_cycles  = 12
+#CHECK-NEXT:  prolog_cycles = 3
+#CHECK-NEXT:  kernel_cycles = 6
+#CHECK-NEXT:  epilog_cycles = 3
 
 #CHECK:	( MachineInstr* : OpcodeName )
 
 #CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
 #CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:MULv4i32)		--7--		({{[A-Za-z0-9]+}}:ADDv4i32)		--9--		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		({{[A-Za-z0-9]+}}:ADDWri)		--8--		--9--		--10--		--11--	
+
+#CHECK:	({{[A-Za-z0-9]+}}:INSERT_SUBREG)		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:COPY)		--7--		--8--		--9--		--10--		--11--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:ADDXri)		({{[A-Za-z0-9]+}}:SUBSXri)		({{[A-Za-z0-9]+}}:STRWpost)		--9--		--10--		--11--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		({{[A-Za-z0-9]+}}:COPY)		--9--		--10--		--11--	
+#CHECK-NEXT:)
+
+#CHECK:(plan {{[A-Za-z0-9]+}}:
+#CHECK-NEXT:  iteration_interval  = 2
+#CHECK-NEXT:  n_iteration_copies  = 11
+#CHECK-NEXT:  n_renaming_versions = 5
+#CHECK-NEXT:  begin_slot = 999816
+#CHECK-NEXT:  end_slot   = 999984
+#CHECK-NEXT:  total_cycles  = 34
+#CHECK-NEXT:  prolog_cycles = 12
+#CHECK-NEXT:  kernel_cycles = 10
+#CHECK-NEXT:  epilog_cycles = 12
+
+#CHECK:	( MachineInstr* : OpcodeName )
+
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		({{[A-Za-z0-9]+}}:ADDv4i32)		--8--		--9--		--10--		--11--	
+
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:MULv4i32)		--7--		--8--		--9--		--10--		--11--	
+
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
 #CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
 
 #CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:COPY)		--7--		--8--		--9--		--10--		--11--	
 #CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		({{[A-Za-z0-9]+}}:ADDXri)		--8--		({{[A-Za-z0-9]+}}:SUBSXri)		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:STRQroX)		({{[A-Za-z0-9]+}}:COPY)		--8--		({{[A-Za-z0-9]+}}:COPY)		--10--		--11--	
-#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:COPY)		({{[A-Za-z0-9]+}}:COPY)		--8--		--9--		--10--		--11--	
-#CHECK-NEXT:)
 
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
+
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		--8--		--9--		--10--		--11--	
+
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:STRQroX)		--7--		--8--		--9--		--10--		--11--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--		({{[A-Za-z0-9]+}}:ADDXri)		({{[A-Za-z0-9]+}}:SUBSXri)		--10--		--11--	
+#CHECK-NEXT:)
 --- |
   ; ModuleID = '/TEST/tp/testprg.ll'
   source_filename = "/TEST/tp/testprg.c"

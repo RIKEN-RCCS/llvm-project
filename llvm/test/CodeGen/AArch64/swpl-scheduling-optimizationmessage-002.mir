@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner -swpl-minii=50  -pass-remarks-missed=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner -swpl-minii=50  -pass-remarks-missed=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:remark: tp/testprg.c:2:3: This loop is not software pipelined because the software pipelining does not improve the performance.
 

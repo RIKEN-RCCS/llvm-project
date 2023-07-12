@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -start-before=aarch64-swpipeliner -swpl-debug -swpl-no-use-aa -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -start-before=aarch64-swpipeliner -swpl-debug -swpl-no-use-aa -o /dev/null 2>&1 | FileCheck %s
 #CHECK-NOT: aliasAnalysis is NoAlias
 
 
