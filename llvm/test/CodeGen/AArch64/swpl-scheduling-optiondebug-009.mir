@@ -1,518 +1,253 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-debug-dump-scheduling-every-inst=true  -o /dev/null 2>&1 | FileCheck --allow-empty %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner  -swpl-debug-dump-scheduling-every-inst=true  -o /dev/null 2>&1 | FileCheck --allow-empty %s
 
 #CHECK:=========================================
 #CHECK:%21:fpr64 = LDRDroX %8:gpr64common, %19:gpr64common, 0, 0, debug-location !17 :: (load (s64) from %ir.uglygep45, !tbaa !12); tp/testprg.c:6:12
 #CHECK:successor_inst : FADDDrr (not placed)
 #CHECK:successor_inst : STRDroX (not placed)
-#CHECK: begin_cycle          : 124997
-#CHECK: SIP.slot             : 999980
-#CHECK: SIP.slot.calcCycle() : 124997
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       0        0        0        0        fLDRDroX 0        0        0        
-#CHECK:        (999976)        --0--           --1--           --2--           --3--           LDRDroX --5--            --6--           --7--
+#CHECK: begin_cycle          : 124999
+#CHECK: SIP.slot             : 999996
+#CHECK: SIP.slot.calcCycle() : 124999
+#CHECK: iteration_interval = 2
+#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       LSU1     LSU2     FLA_C    FLB_C    EXA_C    EXB_C    EAGA_C   EAGB_C   FLA_E    EXA_E    EXB_E    
+#CHECK:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
+#CHECK:       0        0        0        0        fLDRDroX 0        0        0        fLDRDroX 0        0        0        0        0        fLDRDroX 0        0        0        0        
+#CHECK:	(999992)	--0--		--1--		--2--		--3--		LDRDroX		--5--		--6--		--7--	
 #CHECK:=========================================
 #CHECK:%22:fpr64 = LDRDroX %10:gpr64common, %19:gpr64common, 0, 0, debug-location !18 :: (load (s64) from %ir.uglygep23, !tbaa !12); tp/testprg.c:6:19
 #CHECK:successor_inst : FADDDrr (not placed)
 #CHECK:successor_inst : STRDroX (not placed)
-#CHECK: begin_cycle          : 124997
-#CHECK: SIP.slot             : 999981
-#CHECK: SIP.slot.calcCycle() : 124997
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       0        0        0        0        fLDRDroX fLDRDroX 0        0        
-#CHECK:        (999976)        --0--           --1--           --2--           --3--           LDRDroX LDRDroX          --6--           --7--
+#CHECK: begin_cycle          : 124999
+#CHECK: SIP.slot             : 999997
+#CHECK: SIP.slot.calcCycle() : 124999
+#CHECK: iteration_interval = 2
+#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       LSU1     LSU2     FLA_C    FLB_C    EXA_C    EXB_C    EAGA_C   EAGB_C   FLA_E    EXA_E    EXB_E    
+#CHECK:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
+#CHECK:       0        0        0        0        fLDRDroX fLDRDroX 0        0        fLDRDroX fLDRDroX 0        0        0        0        fLDRDroX fLDRDroX 0        0        0        
+#CHECK:	(999992)	--0--		--1--		--2--		--3--		LDRDroX		LDRDroX		--6--		--7--	
 #CHECK:=========================================
 #CHECK:%23:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %22:fpr64, killed %21:fpr64, debug-location !19; tp/testprg.c:6:17
 #CHECK:successor_inst : STRDroX (not placed)
 #CHECK:unset (DependConstrained  ) : LDRDroX
 #CHECK:unset (DependConstrained  ) : LDRDroX
-#CHECK: begin_cycle          : 124997
-#CHECK: SIP.slot             : 999982
-#CHECK: SIP.slot.calcCycle() : 124997
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       fFADDDrr 0        0        0        0        0        0        0        
-#CHECK:        (999976)        --0--           --1--           --2--           --3--           --4--   --5--            FADDDrr         --7--
+#CHECK: begin_cycle          : 124999
+#CHECK: SIP.slot             : 999998
+#CHECK: SIP.slot.calcCycle() : 124999
+#CHECK: iteration_interval = 2
+#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       LSU1     LSU2     FLA_C    FLB_C    EXA_C    EXB_C    EAGA_C   EAGB_C   FLA_E    EXA_E    EXB_E    
+#CHECK:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
+#CHECK:       fFADDDrr 0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
+#CHECK:	(999992)	--0--		--1--		--2--		--3--		--4--		--5--		FADDDrr		--7--	
 #CHECK:=========================================
 #CHECK:%21:fpr64 = LDRDroX %8:gpr64common, %19:gpr64common, 0, 0, debug-location !17 :: (load (s64) from %ir.uglygep45, !tbaa !12); tp/testprg.c:6:12
-#CHECK:successor_inst : FADDDrr ( cycle:124997, latecycle:124989, delay:8 )
+#CHECK:successor_inst : FADDDrr ( cycle:124999, latecycle:124991, delay:8 )
 #CHECK:successor_inst : STRDroX (not placed)
-#CHECK: begin_cycle          : 124989
-#CHECK: SIP.slot             : 999916
-#CHECK: SIP.slot.calcCycle() : 124989
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        fLDRDroX 0        0        0        
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       fFADDDrr 0        0        0        0        0        0        0        
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           LDRDroX --5--            --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999976)        --0--           --1--           --2--           --3--           --4--   --5--            FADDDrr         --7--
+#CHECK: begin_cycle          : 124991
+#CHECK: SIP.slot             : 999932
+#CHECK: SIP.slot.calcCycle() : 124991
+#CHECK: iteration_interval = 2
+#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       LSU1     LSU2     FLA_C    FLB_C    EXA_C    EXB_C    EAGA_C   EAGB_C   FLA_E    EXA_E    EXB_E    
+#CHECK:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
+#CHECK:       fFADDDrr 0        0        0        fLDRDroX 0        0        0        fLDRDroX 0        0        0        0        0        fLDRDroX 0        0        0        0        
+#CHECK:	(999928)	--0--		--1--		--2--		--3--		LDRDroX		--5--		--6--		--7--	
+#CHECK:	(999936)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999944)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999952)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999960)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999968)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999976)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999984)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999992)	--0--		--1--		--2--		--3--		--4--		--5--		FADDDrr		--7--	
 #CHECK:=========================================
 #CHECK:%22:fpr64 = LDRDroX %10:gpr64common, %19:gpr64common, 0, 0, debug-location !18 :: (load (s64) from %ir.uglygep23, !tbaa !12); tp/testprg.c:6:19
-#CHECK:successor_inst : FADDDrr ( cycle:124997, latecycle:124989, delay:8 )
+#CHECK:successor_inst : FADDDrr ( cycle:124999, latecycle:124991, delay:8 )
 #CHECK:successor_inst : STRDroX (not placed)
-#CHECK: begin_cycle          : 124989
-#CHECK: SIP.slot             : 999917
-#CHECK: SIP.slot.calcCycle() : 124989
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        fLDRDroX fLDRDroX 0        0        
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       fFADDDrr 0        0        0        0        0        0        0        
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           LDRDroX LDRDroX          --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999976)        --0--           --1--           --2--           --3--           --4--   --5--            FADDDrr         --7--
+#CHECK: begin_cycle          : 124991
+#CHECK: SIP.slot             : 999933
+#CHECK: SIP.slot.calcCycle() : 124991
+#CHECK: iteration_interval = 2
+#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       LSU1     LSU2     FLA_C    FLB_C    EXA_C    EXB_C    EAGA_C   EAGB_C   FLA_E    EXA_E    EXB_E    
+#CHECK:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK:       0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
+#CHECK:       fFADDDrr 0        0        0        fLDRDroX fLDRDroX 0        0        fLDRDroX fLDRDroX 0        0        0        0        fLDRDroX fLDRDroX 0        0        0        
+#CHECK:	(999928)	--0--		--1--		--2--		--3--		LDRDroX		LDRDroX		--6--		--7--	
+#CHECK:	(999936)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999944)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999952)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999960)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999968)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999976)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999984)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999992)	--0--		--1--		--2--		--3--		--4--		--5--		FADDDrr		--7--	
 #CHECK:=========================================
 #CHECK:STRDroX killed %23:fpr64, %13:gpr64common, %19:gpr64common, 0, 0, debug-location !20 :: (store (s64) into %ir.uglygep1, !tbaa !12); tp/testprg.c:6:10
-#CHECK:successor_inst : LDRDroX ( cycle:124989, latecycle:125043, delay:-54 )
-#CHECK:successor_inst : LDRDroX ( cycle:124989, latecycle:125043, delay:-54 )
+#CHECK:successor_inst : LDRDroX ( cycle:124991, latecycle:125025, delay:-34 )
+#CHECK:successor_inst : LDRDroX ( cycle:124991, latecycle:125025, delay:-34 )
 #CHECK:unset (DependConstrained  ) : FADDDrr
-#CHECK: begin_cycle          : 124997
-#CHECK: SIP.slot             : 999972
-#CHECK: SIP.slot.calcCycle() : 124996
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        fLDRDroX fLDRDroX 0        0        
-#CHECK:       STRDroX  0        0        0        STRDroX  0        0        0        
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           LDRDroX LDRDroX          --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           STRDroX --5--            --6--           --7--
+#CHECK: begin_cycle          : 124999
+#CHECK: SIP.slot             : 999988
+#CHECK: SIP.slot.calcCycle() : 124998
+#CHECK: iteration_interval = 2
+#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       LSU1     LSU2     FLA_C    FLB_C    EXA_C    EXB_C    EAGA_C   EAGB_C   FLA_E    EXA_E    EXB_E    
+#CHECK:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK:       STRDroX  0        0        0        STRDroX  0        0        0        STRDroX  STRDroX  0        0        0        0        0        0        0        0        0        
+#CHECK:       0        0        0        0        fLDRDroX fLDRDroX 0        0        fLDRDroX fLDRDroX 0        0        0        0        fLDRDroX fLDRDroX 0        0        0        
+#CHECK:	(999928)	--0--		--1--		--2--		--3--		LDRDroX		LDRDroX		--6--		--7--	
+#CHECK:	(999936)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999944)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999952)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999960)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999968)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999976)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999984)	--0--		--1--		--2--		--3--		STRDroX		--5--		--6--		--7--	
 #CHECK:=========================================
 #CHECK:%23:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %22:fpr64, killed %21:fpr64, debug-location !19; tp/testprg.c:6:17
-#CHECK:successor_inst : STRDroX ( cycle:124996, latecycle:124987, delay:9 )
+#CHECK:successor_inst : STRDroX ( cycle:124998, latecycle:124989, delay:9 )
 #CHECK:unset (DependConstrained  ) : LDRDroX
 #CHECK:unset (DependConstrained  ) : LDRDroX
-#CHECK: begin_cycle          : 124987
-#CHECK: SIP.slot             : 999901
-#CHECK: SIP.slot.calcCycle() : 124987
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       STRDroX  fFADDDrr 0        0        STRDroX  0        0        0        
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:        (999896)        --0--           --1--           --2--           --3--           --4--   FADDDrr          --6--           --7--
-#CHECK:        (999904)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           STRDroX --5--            --6--           --7--
+#CHECK: begin_cycle          : 124989
+#CHECK: SIP.slot             : 999918
+#CHECK: SIP.slot.calcCycle() : 124989
+#CHECK: iteration_interval = 2
+#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       LSU1     LSU2     FLA_C    FLB_C    EXA_C    EXB_C    EAGA_C   EAGB_C   FLA_E    EXA_E    EXB_E    
+#CHECK:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK:       STRDroX  0        0        0        STRDroX  0        0        0        STRDroX  STRDroX  0        0        0        0        0        0        0        0        0        
+#CHECK:       fFADDDrr 0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        0        
+#CHECK:	(999912)	--0--		--1--		--2--		--3--		--4--		--5--		FADDDrr		--7--	
+#CHECK:	(999920)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999928)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999936)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999944)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999952)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999960)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999968)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999976)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999984)	--0--		--1--		--2--		--3--		STRDroX		--5--		--6--		--7--	
 #CHECK:=========================================
 #CHECK:%21:fpr64 = LDRDroX %8:gpr64common, %19:gpr64common, 0, 0, debug-location !17 :: (load (s64) from %ir.uglygep45, !tbaa !12); tp/testprg.c:6:12
-#CHECK:successor_inst : FADDDrr ( cycle:124987, latecycle:124979, delay:8 )
-#CHECK:successor_inst : STRDroX ( cycle:124996, latecycle:125055, delay:-59 )
-#CHECK: begin_cycle          : 124979
-#CHECK: SIP.slot             : 999836
-#CHECK: SIP.slot.calcCycle() : 124979
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       STRDroX  fFADDDrr 0        0        STRDroX  0        0        0        
-#CHECK:       0        0        0        0        fLDRDroX 0        0        0        
-#CHECK:        (999832)        --0--           --1--           --2--           --3--           LDRDroX --5--            --6--           --7--
-#CHECK:        (999840)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999848)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999856)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999864)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999872)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999880)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999888)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999896)        --0--           --1--           --2--           --3--           --4--   FADDDrr          --6--           --7--
-#CHECK:        (999904)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           STRDroX --5--            --6--           --7--
+#CHECK:successor_inst : FADDDrr ( cycle:124989, latecycle:124981, delay:8 )
+#CHECK:successor_inst : STRDroX ( cycle:124998, latecycle:125037, delay:-39 )
+#CHECK: begin_cycle          : 124981
+#CHECK: SIP.slot             : 999852
+#CHECK: SIP.slot.calcCycle() : 124981
+#CHECK: iteration_interval = 2
+#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       LSU1     LSU2     FLA_C    FLB_C    EXA_C    EXB_C    EAGA_C   EAGB_C   FLA_E    EXA_E    EXB_E    
+#CHECK:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK:       STRDroX  0        0        0        STRDroX  0        0        0        STRDroX  STRDroX  0        0        0        0        0        0        0        0        0        
+#CHECK:       fFADDDrr 0        0        0        fLDRDroX 0        0        0        fLDRDroX 0        0        0        0        0        fLDRDroX 0        0        0        0        
+#CHECK:	(999848)	--0--		--1--		--2--		--3--		LDRDroX		--5--		--6--		--7--	
+#CHECK:	(999856)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999864)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999872)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999880)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999888)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999896)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999904)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999912)	--0--		--1--		--2--		--3--		--4--		--5--		FADDDrr		--7--	
+#CHECK:	(999920)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999928)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999936)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999944)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999952)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999960)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999968)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999976)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999984)	--0--		--1--		--2--		--3--		STRDroX		--5--		--6--		--7--	
 #CHECK:=========================================
 #CHECK:%22:fpr64 = LDRDroX %10:gpr64common, %19:gpr64common, 0, 0, debug-location !18 :: (load (s64) from %ir.uglygep23, !tbaa !12); tp/testprg.c:6:19
-#CHECK:successor_inst : FADDDrr ( cycle:124987, latecycle:124979, delay:8 )
-#CHECK:successor_inst : STRDroX ( cycle:124996, latecycle:125055, delay:-59 )
-#CHECK: begin_cycle          : 124979
-#CHECK: SIP.slot             : 999837
-#CHECK: SIP.slot.calcCycle() : 124979
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       STRDroX  fFADDDrr 0        0        STRDroX  0        0        0        
-#CHECK:       0        0        0        0        fLDRDroX fLDRDroX 0        0        
-#CHECK:        (999832)        --0--           --1--           --2--           --3--           LDRDroX LDRDroX          --6--           --7--
-#CHECK:        (999840)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999848)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999856)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999864)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999872)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999880)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999888)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999896)        --0--           --1--           --2--           --3--           --4--   FADDDrr          --6--           --7--
-#CHECK:        (999904)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           STRDroX --5--            --6--           --7--
-#CHECK:=========================================
-#CHECK:%24:gpr64sp = nuw nsw ADDXri %19:gpr64common, 8, 0, debug-location !21; tp/testprg.c:5:17
-#CHECK:successor_inst : COPY (not placed)
-#CHECK: begin_cycle          : 124997
-#CHECK: SIP.slot             : 999982
-#CHECK: SIP.slot.calcCycle() : 124997
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       STRDroX  fFADDDrr 0        0        STRDroX  0        0        0        
-#CHECK:       0        0        ADDXri   0        fLDRDroX fLDRDroX 0        0        
-#CHECK:        (999832)        --0--           --1--           --2--           --3--           LDRDroX LDRDroX          --6--           --7--
-#CHECK:        (999840)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999848)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999856)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999864)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999872)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999880)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999888)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999896)        --0--           --1--           --2--           --3--           --4--   FADDDrr          --6--           --7--
-#CHECK:        (999904)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           STRDroX --5--            --6--           --7--
-#CHECK:        (999976)        --0--           --1--           --2--           --3--           --4--   --5--            ADDXri          --7--
-#CHECK:=========================================
-#CHECK:%25:gpr64all = COPY %24:gpr64sp, debug-location !21; tp/testprg.c:5:17
-#CHECK:successor_inst : COPY (not placed)
-#CHECK:unset (DependConstrained  ) : ADDXri
-#CHECK: begin_cycle          : 124997
-#CHECK: SIP.slot             : 999983
-#CHECK: SIP.slot.calcCycle() : 124997
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       STRDroX  fFADDDrr 0        0        STRDroX  0        0        0        
-#CHECK:       0        0        0        COPY     fLDRDroX fLDRDroX 0        0        
-#CHECK:        (999832)        --0--           --1--           --2--           --3--           LDRDroX LDRDroX          --6--           --7--
-#CHECK:        (999840)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999848)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999856)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999864)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999872)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999880)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999888)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999896)        --0--           --1--           --2--           --3--           --4--   FADDDrr          --6--           --7--
-#CHECK:        (999904)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           STRDroX --5--            --6--           --7--
-#CHECK:        (999976)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           COPY
-#CHECK:=========================================
-#CHECK:%24:gpr64sp = nuw nsw ADDXri %19:gpr64common, 8, 0, debug-location !21; tp/testprg.c:5:17
-#CHECK:successor_inst : COPY ( cycle:124997, latecycle:124996, delay:1 )
-#CHECK: begin_cycle          : 124996
-#CHECK: SIP.slot             : 999974
-#CHECK: SIP.slot.calcCycle() : 124996
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       STRDroX  fFADDDrr ADDXri   0        STRDroX  0        0        0        
-#CHECK:       0        0        0        COPY     fLDRDroX fLDRDroX 0        0        
-#CHECK:        (999832)        --0--           --1--           --2--           --3--           LDRDroX LDRDroX          --6--           --7--
-#CHECK:        (999840)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999848)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999856)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999864)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999872)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999880)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999888)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999896)        --0--           --1--           --2--           --3--           --4--   FADDDrr          --6--           --7--
-#CHECK:        (999904)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           STRDroX --5--            ADDXri          --7--
-#CHECK:        (999976)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           COPY
-#CHECK:=========================================
-#CHECK:%26:gpr64 = SUBSXri %20:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !10; tp/testprg.c:5:3
-#CHECK:successor_inst : COPY (not placed)
-#CHECK: begin_cycle          : 124997
-#CHECK: SIP.slot             : 999982
-#CHECK: SIP.slot.calcCycle() : 124997
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       STRDroX  fFADDDrr ADDXri   0        STRDroX  0        0        0        
-#CHECK:       0        0        SUBSXri  COPY     fLDRDroX fLDRDroX 0        0        
-#CHECK:        (999832)        --0--           --1--           --2--           --3--           LDRDroX LDRDroX          --6--           --7--
-#CHECK:        (999840)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999848)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999856)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999864)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999872)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999880)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999888)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999896)        --0--           --1--           --2--           --3--           --4--   FADDDrr          --6--           --7--
-#CHECK:        (999904)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           STRDroX --5--            ADDXri          --7--
-#CHECK:        (999976)        --0--           --1--           --2--           --3--           --4--   --5--            SUBSXri         COPY
-#CHECK:=========================================
-#CHECK:%27:gpr64all = COPY %26:gpr64, debug-location !10; tp/testprg.c:5:3
-#CHECK:successor_inst : COPY (not placed)
-#CHECK:unset (DependConstrained  ) : SUBSXri
-#CHECK: begin_cycle          : 124997
-#CHECK: SIP.slot             : 999975
-#CHECK: SIP.slot.calcCycle() : 124996
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        0        0        0        0        0        0        
-#CHECK:       STRDroX  fFADDDrr ADDXri   COPY     STRDroX  0        0        0        
-#CHECK:       0        0        0        COPY     fLDRDroX fLDRDroX 0        0        
-#CHECK:        (999832)        --0--           --1--           --2--           --3--           LDRDroX LDRDroX          --6--           --7--
-#CHECK:        (999840)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999848)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999856)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999864)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999872)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999880)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999888)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999896)        --0--           --1--           --2--           --3--           --4--   FADDDrr          --6--           --7--
-#CHECK:        (999904)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           STRDroX --5--            ADDXri          COPY
-#CHECK:        (999976)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           COPY
-#CHECK:=========================================
-#CHECK:%26:gpr64 = SUBSXri %20:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !10; tp/testprg.c:5:3
-#CHECK:successor_inst : COPY ( cycle:124996, latecycle:124995, delay:1 )
-#CHECK: begin_cycle          : 124995
-#CHECK: SIP.slot             : 999964
-#CHECK: SIP.slot.calcCycle() : 124995
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        SUBSXri  0        0        0        0        0        
-#CHECK:       STRDroX  fFADDDrr ADDXri   COPY     STRDroX  0        0        0        
-#CHECK:       0        0        0        COPY     fLDRDroX fLDRDroX 0        0        
-#CHECK:        (999832)        --0--           --1--           --2--           --3--           LDRDroX LDRDroX          --6--           --7--
-#CHECK:        (999840)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999848)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999856)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999864)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999872)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999880)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999888)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999896)        --0--           --1--           --2--           --3--           --4--   FADDDrr          --6--           --7--
-#CHECK:        (999904)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           SUBSXri --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           STRDroX --5--            ADDXri          COPY
-#CHECK:        (999976)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           COPY
-#CHECK:=========================================
-#CHECK:%19:gpr64common = COPY %25:gpr64all
-#CHECK:successor_inst : LDRDroX ( cycle:124979, latecycle:124981, delay:-2 )
-#CHECK:successor_inst : LDRDroX ( cycle:124979, latecycle:124981, delay:-2 )
-#CHECK:successor_inst : STRDroX ( cycle:124996, latecycle:124998, delay:-2 )
-#CHECK:successor_inst : ADDXri ( cycle:124996, latecycle:124998, delay:-2 )
-#CHECK:unset (DependConstrained  ) : COPY
+#CHECK:successor_inst : FADDDrr ( cycle:124989, latecycle:124981, delay:8 )
+#CHECK:successor_inst : STRDroX ( cycle:124998, latecycle:125037, delay:-39 )
 #CHECK: begin_cycle          : 124981
-#CHECK: SIP.slot             : 999845
-#CHECK: SIP.slot.calcCycle() : 124980
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        SUBSXri  COPY     0        0        0        0        
-#CHECK:       STRDroX  fFADDDrr ADDXri   COPY     STRDroX  0        0        0        
-#CHECK:       0        0        0        0        fLDRDroX fLDRDroX 0        0        
-#CHECK:        (999832)        --0--           --1--           --2--           --3--           LDRDroX LDRDroX          --6--           --7--
-#CHECK:        (999840)        --0--           --1--           --2--           --3--           --4--   COPY             --6--           --7--
-#CHECK:        (999848)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999856)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999864)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999872)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999880)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999888)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999896)        --0--           --1--           --2--           --3--           --4--   FADDDrr          --6--           --7--
-#CHECK:        (999904)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           SUBSXri --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           STRDroX --5--            ADDXri          COPY
+#CHECK: SIP.slot             : 999853
+#CHECK: SIP.slot.calcCycle() : 124981
+#CHECK: iteration_interval = 2
+#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       LSU1     LSU2     FLA_C    FLB_C    EXA_C    EXB_C    EAGA_C   EAGB_C   FLA_E    EXA_E    EXB_E    
+#CHECK:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK:       STRDroX  0        0        0        STRDroX  0        0        0        STRDroX  STRDroX  0        0        0        0        0        0        0        0        0        
+#CHECK:       fFADDDrr 0        0        0        fLDRDroX fLDRDroX 0        0        fLDRDroX fLDRDroX 0        0        0        0        fLDRDroX fLDRDroX 0        0        0        
+#CHECK:	(999848)	--0--		--1--		--2--		--3--		LDRDroX		LDRDroX		--6--		--7--	
+#CHECK:	(999856)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999864)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999872)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999880)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999888)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999896)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999904)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999912)	--0--		--1--		--2--		--3--		--4--		--5--		FADDDrr		--7--	
+#CHECK:	(999920)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999928)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999936)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999944)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999952)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999960)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999968)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999976)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999984)	--0--		--1--		--2--		--3--		STRDroX		--5--		--6--		--7--	
 #CHECK:=========================================
-#CHECK:%25:gpr64all = COPY %24:gpr64sp, debug-location !21; tp/testprg.c:5:17
-#CHECK:successor_inst : COPY ( cycle:124980, latecycle:124979, delay:1 )
-#CHECK:unset (DependConstrained  ) : ADDXri
-#CHECK: begin_cycle          : 124979
-#CHECK: SIP.slot             : 999838
-#CHECK: SIP.slot.calcCycle() : 124979
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        SUBSXri  COPY     0        0        0        0        
-#CHECK:       STRDroX  fFADDDrr 0        COPY     STRDroX  0        0        0        
-#CHECK:       0        0        COPY     0        fLDRDroX fLDRDroX 0        0        
-#CHECK:        (999832)        --0--           --1--           --2--           --3--           LDRDroX LDRDroX          COPY            --7--
-#CHECK:        (999840)        --0--           --1--           --2--           --3--           --4--   COPY             --6--           --7--
-#CHECK:        (999848)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999856)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999864)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999872)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999880)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999888)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999896)        --0--           --1--           --2--           --3--           --4--   FADDDrr          --6--           --7--
-#CHECK:        (999904)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           SUBSXri --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           STRDroX --5--            --6--           COPY
+#CHECK:%19:gpr64common = nuw nsw ADDXri %19:gpr64common, 8, 0, debug-location !21; tp/testprg.c:5:17
+#CHECK:successor_inst : LDRDroX ( cycle:124981, latecycle:124982, delay:-1 )
+#CHECK:successor_inst : LDRDroX ( cycle:124981, latecycle:124982, delay:-1 )
+#CHECK:successor_inst : STRDroX ( cycle:124998, latecycle:124999, delay:-1 )
+#CHECK:successor_inst : ADDXri (not placed)
+#CHECK: begin_cycle          : 124982
+#CHECK: SIP.slot             : 999861
+#CHECK: SIP.slot.calcCycle() : 124982
+#CHECK: iteration_interval = 2
+#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       LSU1     LSU2     FLA_C    FLB_C    EXA_C    EXB_C    EAGA_C   EAGB_C   FLA_E    EXA_E    EXB_E    
+#CHECK:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK:       STRDroX  0        ADDXri   0        STRDroX  0        0        0        STRDroX  STRDroX  0        0        0        0        0        0        0        0        0        
+#CHECK:       fFADDDrr 0        0        0        fLDRDroX fLDRDroX 0        0        fLDRDroX fLDRDroX 0        0        0        0        fLDRDroX fLDRDroX 0        0        0        
+#CHECK:	(999848)	--0--		--1--		--2--		--3--		LDRDroX		LDRDroX		--6--		--7--	
+#CHECK:	(999856)	--0--		--1--		--2--		--3--		--4--		ADDXri		--6--		--7--	
+#CHECK:	(999864)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999872)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999880)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999888)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999896)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999904)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999912)	--0--		--1--		--2--		--3--		--4--		--5--		FADDDrr		--7--	
+#CHECK:	(999920)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999928)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999936)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999944)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999952)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999960)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999968)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999976)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999984)	--0--		--1--		--2--		--3--		STRDroX		--5--		--6--		--7--	
 #CHECK:=========================================
-#CHECK:%24:gpr64sp = nuw nsw ADDXri %19:gpr64common, 8, 0, debug-location !21; tp/testprg.c:5:17
-#CHECK:successor_inst : COPY ( cycle:124979, latecycle:124978, delay:1 )
-#CHECK: begin_cycle          : 124978
-#CHECK: SIP.slot             : 999830
-#CHECK: SIP.slot.calcCycle() : 124978
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        SUBSXri  COPY     0        0        0        0        
-#CHECK:       STRDroX  fFADDDrr ADDXri   COPY     STRDroX  0        0        0        
-#CHECK:       0        0        COPY     0        fLDRDroX fLDRDroX 0        0        
-#CHECK:        (999824)        --0--           --1--           --2--           --3--           --4--   --5--            ADDXri          --7--
-#CHECK:        (999832)        --0--           --1--           --2--           --3--           LDRDroX LDRDroX          COPY            --7--
-#CHECK:        (999840)        --0--           --1--           --2--           --3--           --4--   COPY             --6--           --7--
-#CHECK:        (999848)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999856)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999864)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999872)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999880)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999888)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999896)        --0--           --1--           --2--           --3--           --4--   FADDDrr          --6--           --7--
-#CHECK:        (999904)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           SUBSXri --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           STRDroX --5--            --6--           COPY
-#CHECK:=========================================
-#CHECK:%20:gpr64sp = COPY %27:gpr64all
-#CHECK:successor_inst : SUBSXri ( cycle:124995, latecycle:124997, delay:-2 )
-#CHECK: begin_cycle          : 124997
-#CHECK: SIP.slot             : 999983
-#CHECK: SIP.slot.calcCycle() : 124997
-#CHECK: iteration_interval = 3
-#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       
-#CHECK:---------------------------------------------------------------------------------
-#CHECK:       0        0        SUBSXri  COPY     0        0        0        0        
-#CHECK:       STRDroX  fFADDDrr ADDXri   COPY     STRDroX  0        0        0        
-#CHECK:       0        0        COPY     COPY     fLDRDroX fLDRDroX 0        0        
-#CHECK:        (999824)        --0--           --1--           --2--           --3--           --4--   --5--            ADDXri          --7--
-#CHECK:        (999832)        --0--           --1--           --2--           --3--           LDRDroX LDRDroX          COPY            --7--
-#CHECK:        (999840)        --0--           --1--           --2--           --3--           --4--   COPY             --6--           --7--
-#CHECK:        (999848)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999856)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999864)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999872)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999880)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999888)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999896)        --0--           --1--           --2--           --3--           --4--   FADDDrr          --6--           --7--
-#CHECK:        (999904)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999912)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999920)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999928)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999936)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999944)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999952)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           --7--
-#CHECK:        (999960)        --0--           --1--           --2--           --3--           SUBSXri --5--            --6--           --7--
-#CHECK:        (999968)        --0--           --1--           --2--           --3--           STRDroX --5--            --6--           COPY
-#CHECK:        (999976)        --0--           --1--           --2--           --3--           --4--   --5--            --6--           COPY
-
-
+#CHECK:%20:gpr64sp = SUBSXri %20:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !10; tp/testprg.c:5:3
+#CHECK:successor_inst : SUBSXri (not placed)
+#CHECK: begin_cycle          : 124999
+#CHECK: SIP.slot             : 999999
+#CHECK: SIP.slot.calcCycle() : 124999
+#CHECK: iteration_interval = 2
+#CHECK:       FLA      FLB      EXA      EXB      EAGA     EAGB     PRX      BR       LSU1     LSU2     FLA_C    FLB_C    EXA_C    EXB_C    EAGA_C   EAGB_C   FLA_E    EXA_E    EXB_E    
+#CHECK:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK:       STRDroX  0        ADDXri   0        STRDroX  0        0        0        STRDroX  STRDroX  0        0        0        0        0        0        0        0        0        
+#CHECK:       fFADDDrr 0        SUBSXri  0        fLDRDroX fLDRDroX 0        0        fLDRDroX fLDRDroX 0        0        0        0        fLDRDroX fLDRDroX 0        0        0        
+#CHECK:	(999848)	--0--		--1--		--2--		--3--		LDRDroX		LDRDroX		--6--		--7--	
+#CHECK:	(999856)	--0--		--1--		--2--		--3--		--4--		ADDXri		--6--		--7--	
+#CHECK:	(999864)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999872)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999880)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999888)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999896)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999904)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999912)	--0--		--1--		--2--		--3--		--4--		--5--		FADDDrr		--7--	
+#CHECK:	(999920)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999928)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999936)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999944)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999952)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999960)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999968)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999976)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK:	(999984)	--0--		--1--		--2--		--3--		STRDroX		--5--		--6--		--7--	
+#CHECK:	(999992)	--0--		--1--		--2--		--3--		--4--		--5--		--6--		SUBSXri	
 --- |
   ; ModuleID = '/TEST/tp/testprg.ll'
   source_filename = "/TEST/tp/testprg.c"

@@ -1,14 +1,14 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-debug-dump-mrt=true -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-minii=3 -start-before=aarch64-swpipeliner  -swpl-debug-dump-mrt=true -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:!swp-msg: line tp/testprg.c:5:3:
 #CHECK:(mrt
 #CHECK:  II = 3
 
-#CHECK:       FLA          FLB          EXA          EXB          EAGA         EAGB         PRX          BR           LSU1         LSU2         FLA_C        FLB_C        EXA_C        EXB_C        EAGA_C       EAGB_C       
-#CHECK:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#CHECK:       0            0            SUBSXri  (1) COPY     (6) 0            0            0            0            0            0            0            0            0            0            0            0            
-#CHECK:       STRDroX  (1) fFADDDrr (4) ADDXri   (7) COPY     (1) STRDroX  (1) 0            0            0            STRDroX  (1) STRDroX  (1) 0            0            0            0            fLDRDroX (7) fLDRDroX (7) 
-#CHECK:       0            0            COPY     (7) COPY     (1) fLDRDroX (7) fLDRDroX (7) 0            0            fLDRDroX (7) fLDRDroX (7) 0            0            0            0            0            0            
+#CHECK:       FLA          FLB          EXA          EXB          EAGA         EAGB         PRX          BR           LSU1         LSU2         FLA_C        FLB_C        EXA_C        EXB_C        EAGA_C       EAGB_C       FLA_E        EXA_E        EXB_E        
+#CHECK:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#CHECK:       0            0            0            0            0            0            0            0            0            0            0            0            0            0            0            0            0            0            0            
+#CHECK:       STRDroX  (1) fFADDDrr (4) ADDXri   (6) 0            STRDroX  (1) 0            0            0            STRDroX  (1) STRDroX  (1) 0            0            0            0            fLDRDroX (7) fLDRDroX (7) 0            0            0            
+#CHECK:       0            0            SUBSXri  (1) 0            fLDRDroX (7) fLDRDroX (7) 0            0            fLDRDroX (7) fLDRDroX (7) 0            0            0            0            0            0            0            0            0            
 #CHECK:)
 
 --- |
