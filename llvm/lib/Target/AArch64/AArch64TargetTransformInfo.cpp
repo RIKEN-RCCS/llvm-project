@@ -3879,11 +3879,84 @@ bool AArch64TTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
 }
 
 /**
- * Loopメタ情報からllvm.loop.pipeline.enable/disableの指定状況を取得する
- * @param [in] L
- * @param [out] exists llvm.loop.pipeline.enable/disableが指定されていればtrueとなる
- * @retval true llvm.loop.pipeline.enableが指定されている
- * @retval false llvm.loop.pipeline.disableが指定されている
+ * Search metadata to obtain the status of llvm.loop.pipeline.enable/disable specification
+ * @details Recursively search nested metadata to obtain the specified status.
+ * @param [in] L Target Loop Information
+ * @param [in] MD Target metadata
+ * @param [out] exists True is specified in metadata
+ * @retval true llvm.loop.pipeline.enable is specified
+ * @retval false llvm.loop.pipeline.disable is specified
+ */
+static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists) {
+
+  if (MD->isDistinct()) {
+    // example) !25 = distinct !{!25, !18, !23, !26, !27, !28}
+    for (unsigned i = 1, e = MD->getNumOperands(); i < e; ++i) {
+      MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(i));
+
+      if (MD == nullptr)
+        continue;
+
+      bool ret = isEnableSwp(L, childMD, exists);
+      if (exists)
+        return ret;
+    }
+  }
+  else {
+    // example) !28 = !{!"llvm.loop.pipeline.enable"}
+    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+
+    if (S == nullptr)
+      return false;
+
+    // loop metadata display
+    LLVM_DEBUG( if (L->getLocRange().getStart().get()) dbgs() << __func__ << ":loop=" << L->getLocRange().getStart().getLine() << "-" << L->getLocRange().getEnd().getLine() << " meta:" << S->getString() << "\n");
+
+    if (S->getString()=="llvm.loop.pipeline.disable") {
+      exists = true;
+      return false;
+    }
+
+    if (S->getString()=="llvm.loop.pipeline.enable") {
+      exists = true;
+      return true;
+    }
+
+    // example) !28 = !{!"llvm.loop.vectorize.followup_all", !29}
+    if ((S->getString()).find("followup") != std::string::npos) {
+      // empty followup attribute
+      // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized"}
+      if (MD->getNumOperands() == 1)
+        return false;
+      
+      MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(1));
+      MDString *secondS = dyn_cast<MDString>(childMD->getOperand(0));
+
+      // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized", !{"llvm.loop.pipeline.enable"}}
+      if (secondS != nullptr) {
+        if (secondS->getString()=="llvm.loop.pipeline.disable") {
+          exists = true;
+          return false;
+        }
+
+        if (secondS->getString()=="llvm.loop.pipeline.enable") {
+          exists = true;
+          return true;
+        }
+      }
+
+      return isEnableSwp(L, childMD, exists);
+    }
+  }
+  return false;
+}
+
+/**
+ * Obtaining the designation status of llvm.loop.pipeline.enable/disable from metadata
+ * @param [in] L Target loop information
+ * @param [out] exists True is specified in metadata
+ * @retval true llvm.loop.pipeline.enable is specified
+ * @retval false llvm.loop.pipeline.disable is specified
  */
 static int enableLoopSWP(const Loop* L, bool &exists) {
 
@@ -3892,31 +3965,9 @@ static int enableLoopSWP(const Loop* L, bool &exists) {
   if (LoopID == nullptr)
     return false;
 
-  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
-    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
+  // Metadata Search
+  return isEnableSwp(L, LoopID, exists);
 
-    if (MD == nullptr)
-      continue;
-
-    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
-
-    if (S == nullptr)
-      continue;
-
-    // loopメタ情報を表示する。
-    LLVM_DEBUG( if (L->getLocRange().getStart().get()) dbgs() << __func__ << ":loop=" << L->getLocRange().getStart().getLine() << "-" << L->getLocRange().getEnd().getLine() << " meta:" << S->getString() << "\n");
-
-    if (S->getString()=="llvm.loop.pipeline.disable") {
-      exists=true;
-      return false;
-    }
-
-    if (S->getString()=="llvm.loop.pipeline.enable") {
-      exists=true;
-      return true;
-    }
-  }
-  return false;
 }
 
 bool llvm::enableSWP(const Loop *L) {
