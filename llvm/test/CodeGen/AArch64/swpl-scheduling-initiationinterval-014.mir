@@ -160,7 +160,7 @@ body:             |
   bb.1 (%ir-block.1):
     %16:gpr64common = ADRP target-flags(aarch64-page) @a + 4000, debug-location !11
     %17:fpr64 = LDRDui killed %16, target-flags(aarch64-pageoff, aarch64-nc) @a + 4000, debug-location !11 :: (dereferenceable load 8 from `double* getelementptr inbounds ([1000 x double], [1000 x double]* @a, i64 0, i64 500)`, !tbaa !12)
-    %18:gpr32 = FCVTZSUWDr killed %17, debug-location !11
+    %18:gpr32 = FCVTZSUWDr killed %17, implicit $fpcr, debug-location !11
     $w0 = COPY %18, debug-location !16
     RET_ReallyLR implicit $w0, debug-location !16
   
@@ -171,7 +171,7 @@ body:             |
     %1:gpr64sp = PHI %5, %bb.0, %3, %bb.2, debug-location !17
     %9:fpr64 = LDRDroX %8, %0, 0, 0, debug-location !17 :: (load 8 from %ir.8, !tbaa !12)
     %11:fpr64 = LDRDroX %10, %0, 0, 0, debug-location !18 :: (load 8 from %ir.11, !tbaa !12)
-    %12:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %11, killed %9, debug-location !19
+    %12:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %11, killed %9, implicit $fpcr, debug-location !19
     STRDroX killed %12, %13, %0, 0, 0, debug-location !20 :: (store 8 into %ir.15, !tbaa !12)
     %14:gpr64sp = nuw nsw ADDXri %0, 8, 0, debug-location !21
     %2:gpr64all = COPY %14, debug-location !21
