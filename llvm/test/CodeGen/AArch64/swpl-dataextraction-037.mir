@@ -136,7 +136,7 @@ body:             |
     %1:gpr64common = PHI %5, %bb.0, %3, %bb.2
     %2:gpr64sp = PHI %6, %bb.0, %4, %bb.2
     %11:fpr64 = LDRDroX %10, %1, 0, 0 :: (load 8 from %ir.uglygep23, !tbaa !2)
-    %12:fpr64 = FADDDrr killed %11, %0
+    %12:fpr64 = FADDDrr killed %11, %0, implicit $fpcr
     STRDroX killed %12, %13, %1, 0, 0 :: (store 8 into %ir.uglygep1, !tbaa !2)
     %14:gpr64sp = nuw nsw ADDXri %1, 8, 0
     %3:gpr64all = COPY %14

@@ -309,18 +309,18 @@ body:             |
     %8:gpr64sp = PHI %6, %bb.1, %10, %bb.3
     %31:fpr64 = LDRDroX %12, %7, 0, 0, debug-location !18 :: (load 8 from %ir.35, !tbaa !13)
     %32:fpr64 = LDRDroX %13, %7, 0, 0, debug-location !19 :: (load 8 from %ir.38, !tbaa !13)
-    %37:fpr64 = FMADDDrrr killed %32, %33, %36, debug-location !21
-    %38:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %37, killed %31, debug-location !22
+    %37:fpr64 = FMADDDrrr killed %32, %33, %36, implicit $fpcr, debug-location !21
+    %38:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %37, killed %31, implicit $fpcr, debug-location !22
     STRDroX killed %38, %11, %7, 0, 0, debug-location !23 :: (store 8 into %ir.44, !tbaa !13)
     %39:fpr64 = LDRDroX %3, %7, 0, 0, debug-location !24 :: (load 8 from %ir.46, !tbaa !13)
-    %40:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %37, killed %39, debug-location !25
+    %40:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %37, killed %39, implicit $fpcr, debug-location !25
     %41:fpr64 = LDRDroX %4, %7, 0, 0, debug-location !26 :: (load 8 from %ir.50, !tbaa !13)
-    %44:fpr64 = FMADDDrrr killed %40, %42, killed %41, debug-location !27
+    %44:fpr64 = FMADDDrrr killed %40, %42, killed %41, implicit $fpcr, debug-location !27
     STRDroX killed %44, %5, %7, 0, 0, debug-location !28 :: (store 8 into %ir.55, !tbaa !13)
     %45:fpr64 = LDRDroX %0, %7, 0, 0, debug-location !29 :: (load 8 from %ir.57, !tbaa !13)
-    %46:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %45, %36, debug-location !30
+    %46:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %45, %36, implicit $fpcr, debug-location !30
     %47:fpr64 = LDRDroX %1, %7, 0, 0, debug-location !31 :: (load 8 from %ir.61, !tbaa !13)
-    %49:fpr64 = FMADDDrrr killed %47, %33, killed %46, debug-location !33
+    %49:fpr64 = FMADDDrrr killed %47, %33, killed %46, implicit $fpcr, debug-location !33
     STRDroX killed %49, %2, %7, 0, 0, debug-location !34 :: (store 8 into %ir.66, !tbaa !13)
     %50:gpr64sp = nuw nsw ADDXri %7, 8, 0, debug-location !10
     %9:gpr64all = COPY %50, debug-location !10
