@@ -29,8 +29,6 @@ static cl::opt<bool> OptionDumpMrt("swpl-debug-dump-mrt",cl::init(false), cl::Re
 static cl::opt<bool> OptionBsearch("swpl-ii-by-Bsearch",cl::init(true), cl::ReallyHidden);
 static cl::opt<bool> OptionTuningMaxII("swpl-tuning-maxii",cl::init(true), cl::ReallyHidden);
 
-static cl::opt<unsigned> OptionMinIIBase("swpl-minii",cl::init(0), cl::ReallyHidden);
-static cl::opt<unsigned> OptionMaxIIBase("swpl-maxii",cl::init(0), cl::ReallyHidden);
 static cl::opt<unsigned> OptionMveLimit("swpl-mve-limit",cl::init(30), cl::ReallyHidden);
 
 static cl::opt<unsigned> OptionBudgetRatioThreshold("swpl-budget-ratio-threshold",
@@ -994,8 +992,8 @@ bool SwplPlanSpec::init(unsigned arg_res_mii) {
   }
   min_ii = res_mii;
 
-  if(OptionMinIIBase>0) {
-    min_ii = OptionMinIIBase; // option value (default:65)
+  if(SWPipeliner::nOptionMinIIBase()>0) {
+    min_ii = SWPipeliner::nOptionMinIIBase(); // option value (default:65)
   }
 
   max_ii = getMaxIterationInterval(loop, min_ii);
@@ -1021,10 +1019,10 @@ bool SwplPlanSpec::init(unsigned arg_res_mii) {
   }
 
   unable_max_ii = min_ii - 1;
-  assert(min_ii <= max_ii);
+  assert(min_ii < max_ii);
 
   if (SWPipeliner::isDebugOutput()) {
-    dbgs() << "Minimum II = " << res_mii << ".)\n";
+    dbgs() << "Minimum II = " << min_ii << ".)\n";
   }
   return true;
 }
@@ -1108,7 +1106,7 @@ unsigned SwplPlanSpec::getMaxIterationInterval(const SwplLoop& loop, unsigned mi
   unsigned maxii;
   const int instruction_num = 10;
 
-  maxii_base = (OptionMaxIIBase > 0) ? OptionMaxIIBase : DEFAULT_MAXII_BASE;
+  maxii_base = (SWPipeliner::nOptionMaxIIBase() > 0) ? SWPipeliner::nOptionMaxIIBase() : DEFAULT_MAXII_BASE;
   maxii_for_minii = (unsigned)(min_ii * 1.1);
 
   /*
@@ -1127,10 +1125,69 @@ unsigned SwplPlanSpec::getMaxIterationInterval(const SwplLoop& loop, unsigned mi
   return maxii;
 }
 
-/// \brief pragma pipeline_initiation_intervalの指定値をメタ情報から取得する
-/// \param [in] loop 対象となるループ情報
-/// \param [in,out] exists pipeline_initiation_intervalが指定されていればtrue
-/// \return メタ情報から取得したIIの値
+/// \brief Search metadata and get the specified value of pipeline_initiation_interval
+/// \details Recursively traverses nested meta-information to obtain the specified value.
+/// \param [in] MD Target metadata
+/// \param [out] exists True is specified in metadata
+/// \return II value
+unsigned int getIIMetadata(MDNode *MD, bool &exists) {
+
+  if (MD->isDistinct()) {
+    // example) !25 = distinct !{!25, !18, !23, !26, !27, !28}
+    for (unsigned i = 1, e = MD->getNumOperands(); i < e; ++i) {
+      MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(i));
+
+      if (MD == nullptr)
+        continue;
+
+      unsigned int ret = getIIMetadata(childMD, exists);
+      if (exists)
+        return ret;
+    }
+  }
+  else {
+    // example) !28 = !{!"llvm.loop.pipeline.initiationinterval", i32 30}
+    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+
+    if (S == nullptr)
+      return 0;
+
+    if (S->getString() == "llvm.loop.pipeline.initiationinterval") {
+      assert(MD->getNumOperands() == 2 &&
+             "Pipeline initiation interval hint metadata should have two operands.");
+      exists = true;
+      return mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
+    }
+
+    // example) !28 = !{!"llvm.loop.vectorize.followup_all", !29}
+    if ((S->getString()).find("followup") != std::string::npos) {
+      // empty followup attribute
+      // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized"}
+      if (MD->getNumOperands() == 1)
+       return 0;
+
+      MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(1));
+      MDString *secondS = dyn_cast<MDString>(childMD->getOperand(0));
+
+      // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized", !{!"llvm.loop.pipeline.initiationinterval", i32 30}}
+      if (secondS != nullptr) {
+        if (secondS->getString()=="llvm.loop.pipeline.initiationinterval") {
+          assert(childMD->getNumOperands() == 2 &&
+                 "Pipeline initiation interval hint metadata should have two operands.");
+          exists = true;
+          return mdconst::dyn_extract<ConstantInt>(childMD->getOperand(1))->getZExtValue();
+        }
+      }
+      return getIIMetadata(childMD, exists);
+    }
+  }
+  return 0;
+}
+
+/// \brief Get the specified value of pipeline_initiation_interval from metadata
+/// \param [in] loop Target loop information
+/// \param [in,out] exists True is specified in metadata
+/// \return II value obtained from metadata
 unsigned int SwplPlanSpec::getInitiationInterval(const SwplLoop &loop, bool &exists) {
   exists = false;
 
@@ -1157,25 +1214,10 @@ unsigned int SwplPlanSpec::getInitiationInterval(const SwplLoop &loop, bool &exi
   assert(LoopID->getNumOperands() > 0 && "requires atleast one operand");
   assert(LoopID->getOperand(0) == LoopID && "invalid loop");
 
-  // メタ情報の探索
-  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
-    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
-
-    if (MD == nullptr)
-      continue;
-
-    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
-
-    if (S == nullptr)
-      continue;
-
-    if (S->getString() == "llvm.loop.pipeline.initiationinterval") {
-      assert(MD->getNumOperands() == 2 &&
-             "Pipeline initiation interval hint metadata should have two operands.");
-      exists = true;
-      return mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
-    }
-  }
+  // Metadata Search
+  unsigned int ret = getIIMetadata(LoopID, exists);
+  if (exists)
+    return ret;
 
   return 0;
 }

@@ -1,18 +1,15 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1  -start-before=aarch64-swpipeliner  -swpl-maxii=10 -swpl-minii=10 -swpl-tuning-maxii=true -swpl-debug -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner  -swpl-maxii=11 -swpl-minii=10 -swpl-tuning-maxii=true -swpl-debug -o /dev/null 2>&1 | FileCheck %s
 
-
-#CHECK:        : (Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 10. Budget 50. Minimum II = 3.)
-#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 10 in [ 10,12]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 3) (VReg Fp: 3/32, Int: 9/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        : (Iterative Modulo Scheduling. ResMII 2. NumOfBodyInsts 6. Budget 300. Minimum II = 10.)
+#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 10 in [ 10,11]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 3) (VReg Fp: 3/32, Int: 7/32, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Required iteration count in MIR input is        :   3 (= kernel:2 + pro/epilogue:1 + mod:0) 
 #CHECK:        : Original iteration count in MIR is found        :   100
 #CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 2, 49, 1)
 #CHECK:        :
-#CHECK:         : Loop is software pipelined. (ii=10, kernel=20 cycles, prologue,epilogue =10 cycles)
-#CHECK:        :      IPC (initial=1.00, real=1.00, rate=100.00%)
-#CHECK:        :      = Instructions(10)/II(10)
+#CHECK:        : Loop is software pipelined. (ii=10, kernel=20 cycles, prologue,epilogue =10 cycles)
+#CHECK:        :      IPC (initial=0.60, real=0.60, rate=100.00%)
+#CHECK:        :      = Instructions(6)/II(10)
 #CHECK:        :      Virtual inst:(0)
-#CHECK:        :
-
 --- |
   ; ModuleID = '/TEST/tp/testprg.ll'
   source_filename = "/TEST/tp/testprg.c"
@@ -167,7 +164,7 @@ body:             |
   bb.1 (%ir-block.1):
     %16:gpr64common = ADRP target-flags(aarch64-page) @a + 4000, debug-location !11
     %17:fpr64 = LDRDui killed %16, target-flags(aarch64-pageoff, aarch64-nc) @a + 4000, debug-location !11 :: (dereferenceable load 8 from `double* getelementptr inbounds ([1000 x double], [1000 x double]* @a, i64 0, i64 500)`, !tbaa !12)
-    %18:gpr32 = FCVTZSUWDr killed %17, debug-location !11
+    %18:gpr32 = FCVTZSUWDr killed %17, implicit $fpcr, debug-location !11
     $w0 = COPY %18, debug-location !16
     RET_ReallyLR implicit $w0, debug-location !16
   
@@ -178,7 +175,7 @@ body:             |
     %1:gpr64sp = PHI %5, %bb.0, %3, %bb.2, debug-location !17
     %9:fpr64 = LDRDroX %8, %0, 0, 0, debug-location !17 :: (load 8 from %ir.uglygep45, !tbaa !12)
     %11:fpr64 = LDRDroX %10, %0, 0, 0, debug-location !18 :: (load 8 from %ir.uglygep23, !tbaa !12)
-    %12:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %11, killed %9, debug-location !19
+    %12:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %11, killed %9, implicit $fpcr, debug-location !19
     STRDroX killed %12, %13, %0, 0, 0, debug-location !20 :: (store 8 into %ir.uglygep1, !tbaa !12)
     %14:gpr64sp = nuw nsw ADDXri %0, 8, 0, debug-location !21
     %2:gpr64all = COPY %14, debug-location !21
