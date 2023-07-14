@@ -1,13 +1,13 @@
 ## ソースコード
 git@github.com:RIKEN-RCCS/llvm-project.git  
-branch:swpl-1  
-tag:swpl-1_tag_20230324
+branch:swpl-3  
+tag:swpl-3_tag_20230714
 
 ## ビルド方法
 
 1. リポジトリからソースコードをcloneする
 
-      git clone -b swpl-1 https://github.com/RIKEN-RCCS/llvm-project.git
+      git clone -b swpl-3 https://github.com/RIKEN-RCCS/llvm-project.git
 
 2. llvm-projectディレクトリ直下でBUILD用ディレクトリを作成する
 
@@ -21,7 +21,7 @@ tag:swpl-1_tag_20230324
       cd build  
       cmake ../llvm \  
          -DCMAKE_BUILD_TYPE=Release \  
-         -DCMAKE_INSTALL_PREFIX=/home/rccs-sdt/a01043/swpl1 \  
+         -DCMAKE_INSTALL_PREFIX=../install \  
          -DLLVM_TARGETS_TO_BUILD="AArch64" \  
          -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_INCLUDE_BENCHMARKS=OFF  
 
