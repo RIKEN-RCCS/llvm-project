@@ -48,7 +48,7 @@ tag:swpl-3_tag_20230714
 
       ```
       $ cd ../install  
-      $ ./bin/clang++ -mcpu=a64fx --target=aarch64-linux-gnu -Ofast -msve-vector-bits=512 -fswp -S -c ~/axhelm-4.cpp -o ~/axhelm-4.s -foptimization-record-file=- > ~/axhelm-4.yaml
+      $ ./bin/clang++ -mcpu=a64fx --target=aarch64-linux-gnu -Ofast -msve-vector-bits=512 -fswp -S -c ~/axhelm-4.cpp -o ~/axhelm-4.s -foptimization-record-file=./axhelm-4.yaml
       ```
 
       生成されたaxhelm-4.yamlを参照し、以下のメッセージがあればSWPLが  
