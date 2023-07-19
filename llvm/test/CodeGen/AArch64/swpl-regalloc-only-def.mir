@@ -1,5 +1,5 @@
 # RUN: llc %s -fswp -mcpu=a64fx -start-before=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -swpl-enable-reg-alloc -o /dev/null 2>&1 | FileCheck %s
-# CHECK: remark: s315.c:35:5: software pipelining (IPC: 1.25, ITR: 6, MVE: 2, II: 12, Stage: 5, (VReg Fp: 13/32, Int: 5/32, Pred: 2/8)), SRA(PReg Fp: 12/32, Int: 4/29, Pred: 1/8)
+# CHECK: remark: s315.c:35:5: software pipelining (IPC: 1.25, ITR: 6, MVE: 2, II: 12, Stage: 5, (VReg Fp: 13/32, Int: 5/29, Pred: 2/8)), SRA(PReg Fp: 12/32, Int: 4/29, Pred: 1/8)
 --- |
   ; ModuleID = 's315.c'
   source_filename = "s315.c"
@@ -328,7 +328,7 @@ body:             |
     %33:zpr = LSR_ZZI_D %29, 8, debug-location !17
     %34:zpr = UMULH_ZPZZ_UNDEF_D %30, killed %33, %32, debug-location !17
     %36:zpr = MLS_ZPmZZ_D %30, %29, killed %34, %35, debug-location !17
-    %37:zpr = SCVTF_ZPmZ_StoD_UNDEF %38, %30, killed %36, debug-location !18
+    %37:zpr = SCVTF_ZPmZ_StoD_UNDEF %38, %30, killed %36, implicit $fpcr, debug-location !18
     ST1D killed %37, %30, %39, %2, debug-location !19 :: (store unknown-size into %ir.uglygep55, align 64, !tbaa !20)
     %41:gpr64sp = nuw ADDXri %2, 8, 0, debug-location !16
     %5:gpr64all = COPY %41, debug-location !16
@@ -363,7 +363,7 @@ body:             |
     BL @gettimeofday, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit-def $sp, implicit-def $w0, debug-location !31
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !31
     %72:fpr64 = FMOVDi 112
-    %73:fpr64 = nofpexcept FADDDrr %11, killed %72, debug-location !32
+    %73:fpr64 = nofpexcept FADDDrr %11, killed %72, implicit $fpcr, debug-location !32
     $d0 = COPY %73, debug-location !33
     RET_ReallyLR implicit $d0, debug-location !33
   
@@ -382,8 +382,8 @@ body:             |
   bb.5.for.cond.cleanup11:
     successors: %bb.3(0x04000000), %bb.4(0x7c000000)
   
-    %57:fpr64 = nofpexcept SCVTFUWDri %54, debug-location !36
-    %11:fpr64 = nofpexcept FADDDrr %17, killed %57, debug-location !37
+    %57:fpr64 = nofpexcept SCVTFUWDri %54, implicit $fpcr, debug-location !36
+    %11:fpr64 = nofpexcept FADDDrr %17, killed %57, implicit $fpcr, debug-location !37
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp, debug-location !38
     $x0 = COPY %39, debug-location !38
     $x1 = COPY %59, debug-location !38
@@ -410,7 +410,7 @@ body:             |
     %15:fpr64 = PHI %9, %bb.4, %17, %bb.6
     %16:gpr64sp = PHI %10, %bb.4, %20, %bb.6, debug-location !43
     %52:fpr64 = LDRDroX %39, %13, 0, 1, debug-location !43 :: (load (s64) from %ir.uglygep, !tbaa !20)
-    nofpexcept FCMPDrr %52, %15, implicit-def $nzcv, debug-location !43
+    nofpexcept FCMPDrr %52, %15, implicit-def $nzcv, implicit $fpcr, debug-location !43
     %17:fpr64 = FCSELDrrr %52, %15, 12, implicit $nzcv, debug-location !43
     %53:gpr32 = COPY %13.sub_32
     %54:gpr32 = CSELWr killed %53, %14, 12, implicit $nzcv, debug-location !43

@@ -648,7 +648,7 @@ body:             |
     %35:gpr64sp, %36:fpr64 = LD1Rv2s_POST %23, $xzr
     %38:gpr64sp, %39:fpr64 = LD1Rv2s_POST %18, $xzr
     %B1:gpr64sp, %B2:fpr64 = LD1Rv2s_POST %18, %X
-    %40:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2f32 killed %39, killed %34, killed %36
+    %40:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2f32 killed %39, killed %34, killed %36, implicit $fpcr
     STURDi killed %40, %3, -40 :: (store (s64) into %ir.uglygep233, align 4, !tbaa !8)
     %41:fpr32 = LDRSui killed %35, 0 :: (load (s32) from %ir.uglygep216, !tbaa !8)
     %42:fpr32 = LDRSui %21, 1 :: (load (s32) from %ir.uglygep197, !tbaa !8)
@@ -658,7 +658,7 @@ body:             |
     %48:fpr64 = COPY %47.dsub
     %49:fpr128 = INSERT_SUBREG %50, killed %41, %subreg.ssub
     %52:fpr64 = LD1Rv2s killed %38 :: (load (s32) from %ir.uglygep178, !tbaa !8)
-    %53:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %52, killed %48, killed %49, 0
+    %53:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %52, killed %48, killed %49, 0, implicit $fpcr
     STURDi killed %53, %3, -32 :: (store (s64) into %ir.uglygep241, align 4, !tbaa !8)
     %54:gpr64sp = ADDXri %18, 8, 0
     %55:fpr32 = LDRSui %23, 2 :: (load (s32) from %ir.uglygep218, align 8, !tbaa !8)
@@ -670,7 +670,7 @@ body:             |
     %63:fpr64 = COPY %62.dsub
     %64:fpr128 = INSERT_SUBREG %65, killed %55, %subreg.ssub
     %67:fpr64 = LD1Rv2s killed %54 :: (load (s32) from %ir.uglygep180, align 8, !tbaa !8)
-    %68:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %67, killed %63, killed %64, 0
+    %68:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %67, killed %63, killed %64, 0, implicit $fpcr
     STURDi killed %68, %3, -24 :: (store (s64) into %ir.uglygep240, align 4, !tbaa !8)
     %69:gpr64sp = ADDXri %18, 12, 0
     %70:fpr32 = LDRSui %23, 3 :: (load (s32) from %ir.uglygep220, !tbaa !8)
@@ -682,7 +682,7 @@ body:             |
     %78:fpr64 = COPY %77.dsub
     %79:fpr128 = INSERT_SUBREG %80, killed %70, %subreg.ssub
     %82:fpr64 = LD1Rv2s killed %69 :: (load (s32) from %ir.uglygep182, !tbaa !8)
-    %83:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %82, killed %78, killed %79, 0
+    %83:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %82, killed %78, killed %79, 0, implicit $fpcr
     STURDi killed %83, %3, -16 :: (store (s64) into %ir.uglygep239, align 4, !tbaa !8)
     %84:gpr64sp = ADDXri %18, 16, 0
     %85:fpr32 = LDRSui %23, 4 :: (load (s32) from %ir.uglygep222, align 8, !tbaa !8)
@@ -694,7 +694,7 @@ body:             |
     %93:fpr64 = COPY %92.dsub
     %94:fpr128 = INSERT_SUBREG %95, killed %85, %subreg.ssub
     %97:fpr64 = LD1Rv2s killed %84 :: (load (s32) from %ir.uglygep184, align 8, !tbaa !8)
-    %98:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %97, killed %93, killed %94, 0
+    %98:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %97, killed %93, killed %94, 0, implicit $fpcr
     STURDi killed %98, %3, -8 :: (store (s64) into %ir.uglygep238, align 4, !tbaa !8)
     %99:gpr64sp = ADDXri %18, 20, 0
     %100:fpr32 = LDRSui %23, 5 :: (load (s32) from %ir.uglygep224, !tbaa !8)
@@ -705,7 +705,7 @@ body:             |
     %107:fpr64 = COPY %106.dsub
     %108:fpr128 = INSERT_SUBREG %109, killed %100, %subreg.ssub
     %111:fpr64 = LD1Rv2s killed %99 :: (load (s32) from %ir.uglygep186, !tbaa !8)
-    %112:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %111, killed %107, killed %108, 0
+    %112:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %111, killed %107, killed %108, 0, implicit $fpcr
     STRDui killed %112, %3, 0 :: (store (s64) into %ir.lsr.iv231, align 4, !tbaa !8)
     %113:gpr64sp = ADDXri %18, 24, 0
     %114:fpr32 = LDRSui %23, 6 :: (load (s32) from %ir.uglygep226, align 8, !tbaa !8)
@@ -717,7 +717,7 @@ body:             |
     %122:fpr64 = COPY %121.dsub
     %123:fpr128 = INSERT_SUBREG %124, killed %114, %subreg.ssub
     %126:fpr64 = LD1Rv2s killed %113 :: (load (s32) from %ir.uglygep188, align 8, !tbaa !8)
-    %127:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %126, killed %122, killed %123, 0
+    %127:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %126, killed %122, killed %123, 0, implicit $fpcr
     STRDui killed %127, %3, 1 :: (store (s64) into %ir.uglygep237, align 4, !tbaa !8)
     %128:gpr64sp = ADDXri %18, 28, 0
     %129:fpr32 = LDRSui %23, 7 :: (load (s32) from %ir.uglygep228, !tbaa !8)
@@ -729,7 +729,7 @@ body:             |
     %137:fpr64 = COPY %136.dsub
     %138:fpr128 = INSERT_SUBREG %139, killed %129, %subreg.ssub
     %141:fpr64 = LD1Rv2s killed %128 :: (load (s32) from %ir.uglygep190, !tbaa !8)
-    %142:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %141, killed %137, killed %138, 0
+    %142:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %141, killed %137, killed %138, 0, implicit $fpcr
     STRDui killed %142, %3, 2 :: (store (s64) into %ir.uglygep236, align 4, !tbaa !8)
     %143:gpr64sp = ADDXri %18, 32, 0
     %144:fpr32 = LDRSui %23, 8 :: (load (s32) from %ir.uglygep230, align 8, !tbaa !8)
@@ -741,7 +741,7 @@ body:             |
     %152:fpr64 = COPY %151.dsub
     %153:fpr128 = INSERT_SUBREG %154, killed %144, %subreg.ssub
     %156:fpr64 = LD1Rv2s killed %143 :: (load (s32) from %ir.uglygep192, align 8, !tbaa !8)
-    %157:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %156, killed %152, killed %153, 0
+    %157:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %156, killed %152, killed %153, 0, implicit $fpcr
     STRDui killed %157, %3, 3 :: (store (s64) into %ir.uglygep235, align 4, !tbaa !8)
     %158:fpr32 = LDRSui %23, 9 :: (load (s32) from %ir.uglygep212, !tbaa !8)
     %159:gpr64sp = ADDXri %25, 36, 0
@@ -752,7 +752,7 @@ body:             |
     %166:fpr64 = COPY %165.dsub
     %167:fpr128 = INSERT_SUBREG %168, killed %158, %subreg.ssub
     %170:fpr64 = LD1Rv2s killed %19 :: (load (s32) from %ir.uglygep174, !tbaa !8)
-    %171:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %170, killed %166, killed %167, 0
+    %171:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2i32_indexed killed %170, killed %166, killed %167, 0, implicit $fpcr
     STRDui killed %171, %3, 4 :: (store (s64) into %ir.uglygep234, align 4, !tbaa !8)
     %172:gpr64sp = nuw nsw ADDXri %4, 40, 0
     %6:gpr64all = COPY %172
