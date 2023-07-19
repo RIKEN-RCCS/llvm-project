@@ -259,29 +259,28 @@ unsigned SwplRegEstimate::getNumInterferedRegs(const SwplLoop& loop,
   return counter;
 }
 
-/// \brief renamingされないレジスタを数える処理
-/// \note rename されない reg
-///      （ループの外で定義されていて、body で使われているもの、
-///        または、φで定義されていて、successor をたどると自分自身にいきつくもの）
-///       一つだけ全サイクルを通して予約する。
+/// \brief Processing to count unrenamed registers
+/// \note unrenamed registers is livein register or defined by φ, and following successor leads to itself
 unsigned SwplRegEstimate::getNumImmortalRegs(const SwplLoop& loop, unsigned regclassid ) {
   unsigned counter;
+  llvm::SmallSet<int, 20> regset;
 
   counter = 0;
-  for( auto inst : loop.getPreviousInsts() ) {
-    for( auto reg : inst->getDefRegs() ) {
+  for( auto inst : loop.getBodyInsts() ) {
+    for( auto reg : inst->getUseRegs() ) {
       if ( reg->isRegNull() ) {
         continue;
       }
       if( !(reg->isSameKind(regclassid)) ) {
         continue;
       }
-
       if ( reg->isStack() ) {
         continue;
       }
-
-      if ( reg->isUsedInBody() ) {
+      auto *def = reg->getDefInst();
+      if (def!=nullptr && !def->isInLoop()) {
+        if (regset.contains(reg->getReg())) continue;
+        regset.insert(reg->getReg());
         counter += reg->getRegSize();
       }
     }
@@ -299,6 +298,8 @@ unsigned SwplRegEstimate::getNumImmortalRegs(const SwplLoop& loop, unsigned regc
          successor != nullptr;
          successor = successor->getSuccessor()) {
       if (successor == reg) {
+        if (regset.contains(reg->getReg())) continue;
+        regset.insert(reg->getReg());
         counter += reg->getRegSize();
         break;
       }
