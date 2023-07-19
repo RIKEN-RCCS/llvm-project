@@ -1,5 +1,5 @@
 # RUN: llc %s  -fswp -O3 -mcpu=a64fx -start-before=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -swpl-disable-restrictions-check  -o /dev/null 2>&1 | FileCheck %s
-# CHECK: remark: <unknown>:0:0: software pipelining (IPC: 0.37, ITR: 3, MVE: 2, II: 54, Stage: 2, (VReg Fp: 6/32, Int: 4/32, Pred: 1/8)), SRA(PReg Fp: 7/32, Int: 9/29, Pred: 1/8)
+# CHECK: remark: <unknown>:0:0: software pipelining (IPC: 0.37, ITR: 3, MVE: 2, II: 54, Stage: 2, (VReg Fp: 7/32, Int: 9/29, Pred: 2/8)), SRA(PReg Fp: 7/32, Int: 9/29, Pred: 1/8)
 --- |
   ; ModuleID = 's.c'
   source_filename = "s.c"
@@ -356,11 +356,11 @@ body:             |
     %63:fpr64 = LDRDui %11, 0 :: (load (s64) from %ir.lsr.iv49, !tbaa !6)
     %65:gpr64common = ADDXrr %35, %10
     %68:fpr64 = LDRDroX %65, %67, 0, 0 :: (load (s64) from %ir.uglygep54, !tbaa !6)
-    %69:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBDrr killed %63, killed %68
+    %69:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBDrr killed %63, killed %68, implicit $fpcr
     %71:gpr64common = ADDXrr %40, %10
     STRDroX %69, %71, %67, 0, 0 :: (store (s64) into %ir.uglygep53, !tbaa !6)
     early-clobber %72:gpr64sp, %73:fpr64 = LDRDpost %12, 16 :: (load (s64) from %ir.lsr.iv47, !tbaa !6)
-    %74:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %73, %69
+    %74:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %73, %69, implicit $fpcr
     early-clobber %75:gpr64sp = STRDpost killed %74, %11, 16 :: (store (s64) into %ir.lsr.iv49, !tbaa !6)
     %14:gpr64all = COPY %72
     %15:gpr64all = COPY %75

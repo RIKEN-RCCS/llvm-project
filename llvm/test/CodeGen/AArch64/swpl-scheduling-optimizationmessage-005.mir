@@ -1,7 +1,7 @@
 #RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner -swpl-max-freg=2 -swpl-maxii=95 -pass-remarks=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:remark: <unknown>:0:0: SVE instruction latency is calculated at 512bit.
-#CHECK:remark: tp/testprg.c:5:3: software pipelining (IPC: 2.00, ITR: 3, MVE: 2, II: 3, Stage: 2, (VReg Fp: 0/2, Int: 8/32, Pred: 1/8)), SRA(PReg Fp: 0/32, Int: 4/29, Pred: 0/8)
+#CHECK:remark: tp/testprg.c:5:3: software pipelining (IPC: 2.00, ITR: 3, MVE: 2, II: 3, Stage: 2, (VReg Fp: 0/2, Int: 8/29, Pred: 1/8)), SRA(PReg Fp: 0/32, Int: 4/29, Pred: 0/8)
 #CHECK:remark: tp/testprg.c:5:3: Trial at iteration-interval=94. This loop cannot be software pipelined because of shortage of floating-point registers.
 --- |
   ; ModuleID = '/TEST/tp/testprg.ll'

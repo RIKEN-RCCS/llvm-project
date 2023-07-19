@@ -237,7 +237,7 @@ body:             |
     early-clobber %17:gpr64sp, %18:fpr32 = LDRSpre %4, -4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
     early-clobber %A:gpr64sp, %B:fpr32 = LDRSpre %4, 4 :: (load (s32) from %ir.uglygep25, !tbaa !9)
     %20:fpr32 = LDRSroX %19, %3, 0, 0 :: (load (s32) from %ir.uglygep24, !tbaa !9)
-    %21:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr killed %20, killed %18
+    %21:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr killed %20, implicit $fpcr, killed %18
     STRSui killed %21, %4, 0 :: (store (s32) into %ir.lsr.iv, !tbaa !9)
     %6:gpr64all = COPY %17
     %22:gpr64common = nsw SUBXri %3, 4, 0
