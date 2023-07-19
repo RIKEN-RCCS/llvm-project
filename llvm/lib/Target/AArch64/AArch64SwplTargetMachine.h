@@ -83,7 +83,7 @@ public:
   }
 
   int getNumIntReg() const override {
-    return AArch64::GPR64RegClass.getNumRegs();
+    return AArch64::GPR64RegClass.getNumRegs()-3;
   }
   int getNumFloatReg() const override {
     return AArch64::FPR64RegClass.getNumRegs();
