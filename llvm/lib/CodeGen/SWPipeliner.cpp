@@ -200,9 +200,10 @@ void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {
 static cl::opt<SWPipeliner::SwplRestrictionsFlag> DisableRestrictionsCheck("swpl-disable-restrictions-check",
                                                cl::init(SWPipeliner::SwplRestrictionsFlag::All),
                                                cl::ValueOptional, cl::ReallyHidden,
-                                              cl::values(clEnumValN(SWPipeliner::SwplRestrictionsFlag::MultipleReg, "1", "multiple register"),
-                                                          clEnumValN(SWPipeliner::SwplRestrictionsFlag::MultipleDef, "2", "multiple defined operator"),
-                                                          clEnumValN(SWPipeliner::SwplRestrictionsFlag::All, "", "")
+                                              cl::values(clEnumValN(SWPipeliner::SwplRestrictionsFlag::None, "0", ""),
+                                                         clEnumValN(SWPipeliner::SwplRestrictionsFlag::MultipleReg, "1", "multiple register"),
+                                                         clEnumValN(SWPipeliner::SwplRestrictionsFlag::MultipleDef, "2", "multiple defined operator"),
+                                                         clEnumValN(SWPipeliner::SwplRestrictionsFlag::All, "", "")
                                                                 ));
 
 bool SWPipeliner::isDisableRestrictionsCheck(SwplRestrictionsFlag f) {
