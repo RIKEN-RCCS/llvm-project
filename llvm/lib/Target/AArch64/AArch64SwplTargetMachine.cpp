@@ -576,6 +576,21 @@ static StmPipelines forNoImplMI;
 Regex RDumpResource;
 StringSet<> dumpedMIResource;
 
+AArch64SwplTargetMachine::~AArch64SwplTargetMachine() {
+  for (auto *p:forPseudoMI) delete p;
+  for (auto *p:forNoImplMI) delete p;
+  forPseudoMI.clear();
+  forNoImplMI.clear();
+  for (auto tms: stmPipelines) {
+    if (tms.getSecond()) {
+      for (auto *t:*(tms.getSecond())) {
+        delete const_cast<StmPipeline *>(t);
+      }
+      delete tms.getSecond();
+    }
+  }
+}
+
 void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
   if (MF==nullptr) {
     const TargetSubtargetInfo &ST = mf.getSubtarget();

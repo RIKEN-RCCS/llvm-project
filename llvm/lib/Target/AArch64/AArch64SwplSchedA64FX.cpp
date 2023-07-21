@@ -1406,10 +1406,10 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchRes(
   // レジスタ種別ごとに代表的なレイテンシ・演算器で定義する
   if (Opcode == AArch64::COPY) {
     Register r = mi.getOperand(0).getReg();
-    StmRegKind *rkind = SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, r);
-    if (rkind->isFloating()) {
+    auto [rkind, n] = SWPipeliner::TII->getRegKindId(*SWPipeliner::MRI, r);
+    if (rkind == StmRegKind::getFloatRegID()) {
       return MI_SIMDFP_SVE_OP_002;
-    } else if (rkind->isPredicate()) {
+    } else if (rkind == StmRegKind::getPredicateRegID()) {
       return MI_PREDICATE_OP_001;
     } else {
       return MI_INT_OP_001;

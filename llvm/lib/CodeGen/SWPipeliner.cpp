@@ -54,12 +54,16 @@ bool SWPipeliner::isDebugDdgOutput() {
   return ::DebugDdgOutput;
 }
 
+unsigned SWPipeliner::min_ii_for_retry=0;
+
 unsigned SWPipeliner::nOptionMinIIBase() {
-  return ::OptionMinIIBase;
+  return min_ii_for_retry ? min_ii_for_retry : ::OptionMinIIBase;
 }
 
 unsigned SWPipeliner::nOptionMaxIIBase() {
-  return ::OptionMaxIIBase;
+#define DEFAULT_MAXII_BASE 1000
+
+  return ::OptionMaxIIBase ? ::OptionMaxIIBase : DEFAULT_MAXII_BASE;
 }
 
 MachineOptimizationRemarkEmitter *SWPipeliner::ORE = nullptr;
@@ -169,7 +173,8 @@ bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
     scheduleLoop(*L);
     assert(Reason.empty());
   }
-
+  delete STM;
+  STM = nullptr;
   return Modified;
 }
 
@@ -283,32 +288,50 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   SwplDdg *ddg = SwplDdg::Initialize(*currentLoop);
 
   // スケジューリング
-  SwplPlan* plan = SwplPlan::generatePlan(*ddg);
-  if (plan != NULL) {
-    if ( OptionDumpPlan ) {
-      plan->dump( dbgs() );
-    }
-    if (plan->getPrologCycles() == 0) {
-      remarkMissed("This loop is not software pipelined because the software pipelining does not improve the performance.",
-                   *currentLoop->getML());
-      if (SWPipeliner::isDebugOutput()) {
-        dbgs() << "        : Loop isn't software pipelined because prologue is 0 cycle.\n";
-      }
+  bool redo;
+  do {
+    redo = false;
 
+    SwplPlan* plan = SwplPlan::generatePlan(*ddg);
+    if (plan != NULL) {
+      if ( OptionDumpPlan ) {
+        plan->dump( dbgs() );
+      }
+      if (plan->getPrologCycles() == 0) {
+        remarkMissed("This loop is not software pipelined because the software pipelining does not improve the performance.",
+                     *currentLoop->getML());
+        if (SWPipeliner::isDebugOutput()) {
+          dbgs() << "        : Loop isn't software pipelined because prologue is 0 cycle.\n";
+        }
+
+      } else {
+        SwplTransformMIR tran(*MF, *plan, liveOutReg);
+        Changed = tran.transformMIR();
+        if (!Changed) {
+          if (!plan->existsPragma && ((plan->getIterationInterval() + 1) < nOptionMaxIIBase()) ) {
+            min_ii_for_retry = plan->getIterationInterval() + 1;
+            redo = true;
+            Reason = "";
+            if (SWPipeliner::isDebugOutput()) {
+              dbgs() << "        : Reschedule with minii set to " << min_ii_for_retry << " because ran out of physical registers.\n";
+            }
+          } else {
+            remarkMissed("This loop is not software pipelined because no schedule is obtained.", *currentLoop->getML());
+            if (SWPipeliner::isDebugOutput()) {
+              dbgs() << "        : No rescheduling because II:" << OptionMaxIIBase << " reached maxii.\n";
+            }
+          }
+        }
+      }
+      SwplPlan::destroy( plan );
     } else {
-      SwplTransformMIR tran(*MF, *plan, liveOutReg);
-      Changed = tran.transformMIR();
-      if (!Changed) {
-        remarkMissed("This loop is not software pipelined because no schedule is obtained.", *currentLoop->getML());
+      remarkMissed("This loop is not software pipelined because no schedule is obtained.", *currentLoop->getML());
+      if (SWPipeliner::isDebugOutput()) {
+        dbgs() << "        : Loop isn't software pipelined because plan is NULL.\n";
       }
     }
-    SwplPlan::destroy( plan );
-  } else {
-    remarkMissed("This loop is not software pipelined because no schedule is obtained.", *currentLoop->getML());
-    if (SWPipeliner::isDebugOutput()) {
-      dbgs() << "        : Loop isn't software pipelined because plan is NULL.\n";
-    }
-  }
+  } while ( redo );
+  min_ii_for_retry = 0;
   delete ddg;
   delete currentLoop;
   currentLoop = nullptr;
