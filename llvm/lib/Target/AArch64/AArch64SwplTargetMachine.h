@@ -140,16 +140,7 @@ public:
   /// constructor
   AArch64SwplTargetMachine() {}
   /// destructor
-  virtual ~AArch64SwplTargetMachine() {
-    for (auto tms: stmPipelines) {
-      if (tms.getSecond()) {
-        for (auto *t:*(tms.getSecond())) {
-          delete const_cast<StmPipeline *>(t);
-        }
-        delete tms.getSecond();
-      }
-    }
-  }
+  virtual ~AArch64SwplTargetMachine();
 
   /// SwplTargetMachineの初期化を行う。
   /// \details

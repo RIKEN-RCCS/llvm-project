@@ -810,6 +810,7 @@ public:
   static AliasAnalysis *AA;
   static std::string Reason;
   static SwplLoop *currentLoop;
+  static unsigned min_ii_for_retry;
 
   /// 制限抑止オプション指定の結果
   enum class SwplRestrictionsFlag {None, MultipleReg, MultipleDef, All};

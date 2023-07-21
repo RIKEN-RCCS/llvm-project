@@ -28,6 +28,8 @@ namespace llvm{
 
 #define ceil_div(x, y) (((x) - 1) / (y) + 1)
 
+bool SwplPlan::existsPragma = false;
+
 /// \brief instが配置されたslot番号（begin_slot起点）を返す
 /// \details SwplPlan.inst_slot_mapに配置されたinstを探し、
 ///          begin_slot起点のslot番号を返す
@@ -336,7 +338,7 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
                                         unsigned* required_itr,
                                         SwplMsResourceResult* resource) {
   SwplPlanSpec spec(c_ddg);
-  if( !(spec.init(res_mii)) ){
+  if( !(spec.init(res_mii, existsPragma)) ){
     // SwplPlanSpec::init()復帰値は現在trueのみ。将来的にfalseがくる可能性を考えifを残す
     return TryScheduleResult::TRY_SCHEDULE_FAIL;
   }
