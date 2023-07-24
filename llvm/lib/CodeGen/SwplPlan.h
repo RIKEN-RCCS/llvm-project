@@ -135,6 +135,7 @@ public:
   unsigned getMaxIreg() const { return num_max_ireg; } ///< getter
   unsigned getMaxFreg() const { return num_max_freg; } ///< getter
   unsigned getMaxPreg() const { return num_max_preg; } ///< getter
+  static bool existsPragma;    ///< Is II specified in pragma?
 
   ////////////////////
   // setters

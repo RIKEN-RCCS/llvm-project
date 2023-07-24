@@ -1,6 +1,5 @@
-# RUN: llc -o /dev/null -mcpu=a64fx -O1 %s -start-before=aarch64-swpipeliner -fswp -pass-remarks=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null -mcpu=a64fx -O1 %s -start-before=aarch64-swpipeliner -fswp -pass-remarks=aarch64-swpipeliner  2>&1 | FileCheck %s
 # CHECK: remark: s.c:37:13: software pipelining
-# CHECK-NEXT: remark: s.c:37:13: software pipelining
 --- |
   ; ModuleID = 's.c'
   source_filename = "s.c"
@@ -422,7 +421,7 @@ body:             |
     %48:fpr64 = LDRDui %47, 252, debug-location !22 :: (load (s64) from %ir.uglygep63, !tbaa !23)
     %50:gpr64common = ADDXrr %32, %14, debug-location !27
     %51:fpr64 = LDRDui killed %50, 509, debug-location !27 :: (load (s64) from %ir.uglygep64, !tbaa !23)
-    %52:fpr64 = nofpexcept FADDDrr killed %48, killed %51, debug-location !28
+    %52:fpr64 = nofpexcept FADDDrr killed %48, killed %51, implicit $fpcr, debug-location !28
     STRDui killed %52, %47, 509, debug-location !29 :: (store (s64) into %ir.uglygep66, !tbaa !23)
     %53:gpr64sp = nuw nsw ADDXri %14, 8, 0, debug-location !44
     %16:gpr64all = COPY %53, debug-location !44

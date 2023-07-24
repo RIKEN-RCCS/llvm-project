@@ -1,5 +1,5 @@
 # RUN: llc %s -fswp -mcpu=a64fx -start-before=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -swpl-enable-reg-alloc -o /dev/null 2>&1 | FileCheck %s
-# CHECK: remark: s4117.c:36:9: software pipelining (IPC: 0.37, ITR: 3, MVE: 2, II: 35, Stage: 2, (VReg Fp: 5/32, Int: 5/32, Pred: 1/8)), SRA(PReg Fp: 5/32, Int: 6/29, Pred: 1/8)
+# CHECK: remark: s4117.c:36:9: software pipelining (IPC: 0.37, ITR: 3, MVE: 2, II: 35, Stage: 2, (VReg Fp: 5/32, Int: 9/29, Pred: 2/8)), SRA(PReg Fp: 5/32, Int: 6/29, Pred: 1/8)
 --- |
   ; ModuleID = 's4117.c'
   source_filename = "s4117.c"

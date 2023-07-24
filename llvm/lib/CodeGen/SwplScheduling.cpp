@@ -46,8 +46,6 @@ static cl::opt<bool> OptionDumpEveryInst("swpl-debug-dump-scheduling-every-inst"
 
 namespace llvm{
 
-#define DEFAULT_MAXII_BASE 1000;
-
 /// \brief 命令が使用する資源を予約する
 /// \details 命令が使用する資源をMrtに記録する。
 ///          疑似命令など資源を使用しない命令の場合は、Mrtでの予約はしない。
@@ -962,12 +960,14 @@ void SwplTrialState::destroy(SwplTrialState* state) {
 ///          - 初期化に失敗した場合は falseを返却する。
 ///
 /// \param [in] res_mii リソースMII
+/// \param [out] existsPragma Is II specified in pragma?
 /// \retval true specの初期化成功
 /// \retval false specの初期化失敗
 ///
 /// \note 現在、SwplPlanSpec.assumed_iterationは常にASSUMED_ITERATIONS_NONE (-1)
 /// \note 現在、SwplPlanSpec.pre_expand_numは常に1
-bool SwplPlanSpec::init(unsigned arg_res_mii) {
+bool SwplPlanSpec::init(unsigned arg_res_mii, bool &existsPragma) {
+  existsPragma = false;
   if (SWPipeliner::isDebugOutput()) {
     dbgs() << "        : (Iterative Modulo Scheduling"
            << ". ResMII " << arg_res_mii << ". ";
@@ -996,13 +996,12 @@ bool SwplPlanSpec::init(unsigned arg_res_mii) {
     min_ii = SWPipeliner::nOptionMinIIBase(); // option value (default:65)
   }
 
-  max_ii = getMaxIterationInterval(loop, min_ii);
+  max_ii = SWPipeliner::nOptionMaxIIBase();
 
   // pragma
-  bool exists = false;
   unsigned int ii;
-  ii = getInitiationInterval(loop, exists);
-  if (exists) {
+  ii = getInitiationInterval(loop, existsPragma);
+  if (existsPragma) {
     min_ii = ii;
     max_ii = ii + 1;
 
@@ -1094,35 +1093,6 @@ unsigned SwplPlanSpec::getBudget(unsigned n_insts) {
     ratio = OptionBudgetRatioMore; // option value (default:2.5)
   }
   return (unsigned)(ratio * (double)n_insts);
-}
-
-/// \brief スケジューリングのiiの上限値を返す
-/// \param [in] loop ループを構成する命令の情報
-/// \param [in] min_ii MinII
-/// \return 算出したスケジューリングのiiの上限値
-unsigned SwplPlanSpec::getMaxIterationInterval(const SwplLoop& loop, unsigned min_ii) {
-  unsigned maxii_base;
-  unsigned maxii_for_minii;
-  unsigned maxii;
-  const int instruction_num = 10;
-
-  maxii_base = (SWPipeliner::nOptionMaxIIBase() > 0) ? SWPipeliner::nOptionMaxIIBase() : DEFAULT_MAXII_BASE;
-  maxii_for_minii = (unsigned)(min_ii * 1.1);
-
-  /*
-   * div等のlatencyの長い命令が含まれるループでは minii が非常に大きな値
-   * となるため swpl できないケースがある。そこで、せめて小さいループの
-   * maxii を増やすようにした(いい加減な heuristic)。
-   */
-  if (OptionTuningMaxII && maxii_for_minii > maxii_base) {
-    if (loop.getSizeBodyInsts() <= instruction_num) {
-      maxii_base = maxii_base * 12 / 10;
-    }
-  }
-
-  maxii = std::max(maxii_for_minii, maxii_base);
-
-  return maxii;
 }
 
 /// \brief Search metadata and get the specified value of pipeline_initiation_interval

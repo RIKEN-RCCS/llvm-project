@@ -166,13 +166,12 @@ public:
 
   SwplPlanSpec(const SwplDdg& c_ddg) : ddg(c_ddg),loop(c_ddg.getLoop()) {} ///< constructor
 
-  bool init(unsigned res_mii);
+  bool init(unsigned res_mii, bool &existsPragma);
   void countLoadStore(unsigned *num_load, unsigned *num_store, unsigned *num_float) const;
 
 private:
   static bool isIterationCountConstant(const SwplLoop& c_loop, unsigned* iteration_count);
   static unsigned getBudget(unsigned n_insts);
-  static unsigned getMaxIterationInterval(const SwplLoop& loop, unsigned min_ii);
   static unsigned int getInitiationInterval(const SwplLoop& loop, bool& exists);
 };
 
