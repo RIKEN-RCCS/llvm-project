@@ -318,7 +318,11 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
           } else {
             remarkMissed("This loop is not software pipelined because no schedule is obtained.", *currentLoop->getML());
             if (SWPipeliner::isDebugOutput()) {
-              dbgs() << "        : No rescheduling because II:" << OptionMaxIIBase << " reached maxii.\n";
+              if (plan->existsPragma) {
+                dbgs() << "        : No rescheduling because II is specified in the pragma.\n";
+              } else {
+                dbgs() << "        : No rescheduling because II:" << nOptionMaxIIBase() << " reached maxii.\n";
+              }
             }
           }
         }
