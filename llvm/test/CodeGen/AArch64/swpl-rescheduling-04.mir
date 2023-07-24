@@ -1,9 +1,8 @@
-# RUN: llc %s -O3 -fswp -mcpu=a64fx -start-before=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -swpl-reg-alloc-prio=1 -swpl-debug -o /dev/null 2>&1 | FileCheck %s
-# CHECK:        : (Iterative Modulo Scheduling. ResMII 4. NumOfBodyInsts 14. Budget 700. Minimum II = 4.)
-# CHECK-NEXT:        :  (x) Register (F) short     at estimation.          : (II: 4 in [ 4,1000]) MVE: 7 Last inst: 0. (Itr Org: 0, Req: 16) (VReg Fp: 34/32, Int: 9/29, Pre: 1/8) Eval:0.000000e+00.
-# CHECK-NEXT:        :  (O) Scheduling succeeds    at estimation.          : (II: 6 in [ 4,1000]) MVE: 5 Last inst: 0. (Itr Org: 0, Req: 11) (VReg Fp: 24/32, Int: 8/29, Pre: 1/8) Eval:0.000000e+00.
+# RUN: llc %s -O3 -fswp -swpl-minii=5 -mcpu=a64fx -start-before=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -swpl-reg-alloc-prio=1 -swpl-debug -o /dev/null 2>&1 | FileCheck %s
+# CHECK:        : (Iterative Modulo Scheduling. ResMII 4. NumOfBodyInsts 14. Budget 700. Minimum II = 5.)
 # CHECK-NEXT:DBG(SwplTrialState::tryNext) gave up scheduling because it was arranged across more than 20 stages.(II=5)
-# CHECK-NEXT:        :  (x) Run out of budget      at binary search.       : (II: 5 in [ 4,6]) MVE: 0 Last inst: 3. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+# CHECK-NEXT:        :  (x) Run out of budget      at estimation.          : (II: 5 in [ 5,1000]) MVE: 0 Last inst: 3. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+# CHECK-NEXT:        :  (O) Scheduling succeeds    at estimation.          : (II: 6 in [ 5,1000]) MVE: 5 Last inst: 0. (Itr Org: 0, Req: 11) (VReg Fp: 24/32, Int: 8/29, Pre: 1/8) Eval:0.000000e+00.
 # CHECK-NEXT:        : Required iteration count in MIR input is        :   11 (= kernel:5 + pro/epilogue:6 + mod:0)
 # CHECK-NEXT:        : Original loop iteration is not found.
 # CHECK-NEXT:        : Reschedule with minii set to 7 because ran out of physical registers.
