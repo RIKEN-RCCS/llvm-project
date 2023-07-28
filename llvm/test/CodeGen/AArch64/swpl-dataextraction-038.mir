@@ -1,140 +1,48 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -start-before=aarch64-swpipeliner -swpl-debug-ddg -swpl-enable-instdep -o /dev/null 2>&1 | FileCheck %s
-
-#CHECK:### from: %17:gpr64sp = COPY %25:gpr64all
-#CHECK-NEXT:### to  : %21:fpr64 = LDURDi %17:gpr64sp, 0
-#CHECK-NEXT:### distance:1 delay:1
-
-#CHECK:### from: %17:gpr64sp = COPY %25:gpr64all
-#CHECK-NEXT:### to  : %20:gpr64sp = ADDXri %17:gpr64sp, 8, 0
-#CHECK-NEXT:### distance:1 delay:1
-
-#CHECK:### from: %21:fpr64 = LDURDi %17:gpr64sp, 0
-#CHECK-NEXT:### to  : %22:fpr64 = FMULDrr %21:fpr64, %21:fpr64
-#CHECK-NEXT:### distance:0 delay:8
-#CHECK-NEXT:### distance:0 delay:8
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %22:fpr64 = FMULDrr %21:fpr64, %21:fpr64
-#CHECK-NEXT:### to  : STURDi %22:fpr64, %18:gpr64sp, 0 
-#CHECK-NEXT:### distance:0 delay:9
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %18:gpr64sp = COPY %24:gpr64all
-#CHECK-NEXT:### to  : STURDi %22:fpr64, %18:gpr64sp, 0 
-#CHECK-NEXT:### distance:1 delay:1
-
-#CHECK:### from: %18:gpr64sp = COPY %24:gpr64all
-#CHECK-NEXT:### to  : %23:gpr64sp = ADDXri %18:gpr64sp, 8, 0
-#CHECK-NEXT:### distance:1 delay:1
-
-#CHECK:### from: %23:gpr64sp = ADDXri %18:gpr64sp, 8, 0
-#CHECK-NEXT:### to  : %24:gpr64all = COPY %23:gpr64sp
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %20:gpr64sp = ADDXri %17:gpr64sp, 8, 0
-#CHECK-NEXT:### to  : %25:gpr64all = COPY %20:gpr64sp
-#CHECK-NEXT:### distance:0 delay:1
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %19:gpr64sp = COPY %27:gpr64all
-#CHECK-NEXT:### to  : %26:gpr64 = SUBSXri %19:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK-NEXT:### distance:1 delay:1
-
-#CHECK:### from: %26:gpr64 = SUBSXri %19:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK-NEXT:### to  : %27:gpr64all = COPY %26:gpr64
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %25:gpr64all = COPY %20:gpr64sp
-#CHECK-NEXT:### to  : %17:gpr64sp = COPY %25:gpr64all
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %24:gpr64all = COPY %23:gpr64sp
-#CHECK-NEXT:### to  : %18:gpr64sp = COPY %24:gpr64all
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %27:gpr64all = COPY %26:gpr64
-#CHECK-NEXT:### to  : %19:gpr64sp = COPY %27:gpr64all
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %21:fpr64 = LDURDi %17:gpr64sp, 0
-#CHECK-NEXT:### to  : STURDi %22:fpr64, %18:gpr64sp, 0 
-#CHECK-NEXT:### distance:0 delay:1
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: STURDi %22:fpr64, %18:gpr64sp, 0 
-#CHECK-NEXT:### to  : %21:fpr64 = LDURDi %17:gpr64sp, 0
-#CHECK-NEXT:### distance:1 delay:6
-
-#CHECK:### from: %21:fpr64 = LDURDi %17:gpr64sp, 0
-#CHECK-NEXT:### to  : %20:gpr64sp = ADDXri %17:gpr64sp, 8, 0
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %21:fpr64 = LDURDi %17:gpr64sp, 0
-#CHECK-NEXT:### to  : %23:gpr64sp = ADDXri %18:gpr64sp, 8, 0
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %21:fpr64 = LDURDi %17:gpr64sp, 0
-#CHECK-NEXT:### to  : %24:gpr64all = COPY %23:gpr64sp
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %21:fpr64 = LDURDi %17:gpr64sp, 0
-#CHECK-NEXT:### to  : %25:gpr64all = COPY %20:gpr64sp
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %21:fpr64 = LDURDi %17:gpr64sp, 0
-#CHECK-NEXT:### to  : %26:gpr64 = SUBSXri %19:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %21:fpr64 = LDURDi %17:gpr64sp, 0
-#CHECK-NEXT:### to  : %27:gpr64all = COPY %26:gpr64
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %20:gpr64sp = ADDXri %17:gpr64sp, 8, 0
-#CHECK-NEXT:### to  : %22:fpr64 = FMULDrr %21:fpr64, %21:fpr64
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %20:gpr64sp = ADDXri %17:gpr64sp, 8, 0
-#CHECK-NEXT:### to  : STURDi %22:fpr64, %18:gpr64sp, 0 
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %20:gpr64sp = ADDXri %17:gpr64sp, 8, 0
-#CHECK-NEXT:### to  : %23:gpr64sp = ADDXri %18:gpr64sp, 8, 0
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %20:gpr64sp = ADDXri %17:gpr64sp, 8, 0
-#CHECK-NEXT:### to  : %24:gpr64all = COPY %23:gpr64sp
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %20:gpr64sp = ADDXri %17:gpr64sp, 8, 0
-#CHECK-NEXT:### to  : %26:gpr64 = SUBSXri %19:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %20:gpr64sp = ADDXri %17:gpr64sp, 8, 0
-#CHECK-NEXT:### to  : %27:gpr64all = COPY %26:gpr64
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %22:fpr64 = FMULDrr %21:fpr64, %21:fpr64
-#CHECK-NEXT:### to  : %23:gpr64sp = ADDXri %18:gpr64sp, 8, 0
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %22:fpr64 = FMULDrr %21:fpr64, %21:fpr64
-#CHECK-NEXT:### to  : %24:gpr64all = COPY %23:gpr64sp
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %22:fpr64 = FMULDrr %21:fpr64, %21:fpr64
-#CHECK-NEXT:### to  : %25:gpr64all = COPY %20:gpr64sp
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %22:fpr64 = FMULDrr %21:fpr64, %21:fpr64
-#CHECK-NEXT:### to  : %26:gpr64 = SUBSXri %19:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK-NEXT:### distance:0 delay:1
-
-#CHECK:### from: %22:fpr64 = FMULDrr %21:fpr64, %21:fpr64
-#CHECK-NEXT:### to  : %27:gpr64all = COPY %26:gpr64
-#CHECK-NEXT:### distance:0 delay:1
+#RUN: llc %s -mcpu=a64fx -fswp -start-before=aarch64-swpipeliner -swpl-debug-dump-ddg -swpl-enable-instdep -o /dev/null 2>&1 | FileCheck %s
+# CHECK:### from: %17:gpr64sp = ADDXri %17:gpr64sp, 8, 0
+# CHECK-NEXT:### to  : %21:fpr64 = LDURDi %17:gpr64sp, 0
+# CHECK-NEXT:### distance:1 delay:1
 
 
+# CHECK:### from: %17:gpr64sp = ADDXri %17:gpr64sp, 8, 0
+# CHECK-NEXT:### to  : %17:gpr64sp = ADDXri %17:gpr64sp, 8, 0
+# CHECK-NEXT:### distance:1 delay:1
 
+
+# CHECK:### from: %21:fpr64 = LDURDi %17:gpr64sp, 0
+# CHECK-NEXT:### to  : %22:fpr64 = FMULDrr %21:fpr64, %21:fpr64, implicit $fpcr
+# CHECK-NEXT:### distance:0 delay:8
+# CHECK-NEXT:### distance:0 delay:8
+
+
+# CHECK:### from: %22:fpr64 = FMULDrr %21:fpr64, %21:fpr64, implicit $fpcr
+# CHECK-NEXT:### to  : STURDi %22:fpr64, %18:gpr64sp, 0 :: (store (s64) into %ir.lsr.iv1, !tbaa !1)
+# CHECK-NEXT:### distance:0 delay:9
+
+
+# CHECK:### from: %18:gpr64sp = ADDXri %18:gpr64sp, 8, 0
+# CHECK-NEXT:### to  : STURDi %22:fpr64, %18:gpr64sp, 0 :: (store (s64) into %ir.lsr.iv1, !tbaa !1)
+# CHECK-NEXT:### distance:1 delay:1
+
+
+# CHECK:### from: %18:gpr64sp = ADDXri %18:gpr64sp, 8, 0
+# CHECK-NEXT:### to  : %18:gpr64sp = ADDXri %18:gpr64sp, 8, 0
+# CHECK-NEXT:### distance:1 delay:1
+
+
+# CHECK:### from: %19:gpr64sp = SUBSXri %19:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:### to  : %19:gpr64sp = SUBSXri %19:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:### distance:1 delay:1
+
+
+# CHECK:### from: %21:fpr64 = LDURDi %17:gpr64sp, 0
+# CHECK-NEXT:### to  : STURDi %22:fpr64, %18:gpr64sp, 0 :: (store (s64) into %ir.lsr.iv1, !tbaa !1)
+# CHECK-NEXT:### distance:0 delay:1
+
+
+# CHECK:### from: STURDi %22:fpr64, %18:gpr64sp, 0 :: (store (s64) into %ir.lsr.iv1, !tbaa !1)
+# CHECK-NEXT:### to  : %21:fpr64 = LDURDi %17:gpr64sp, 0
+# CHECK-NEXT:### distance:1 delay:6
 
 --- |
   ; ModuleID = '2937-38.ll'
@@ -281,7 +189,7 @@ body:             |
     %2:gpr64sp = PHI %8, %bb.1, %4, %bb.3
     %3:gpr64sp = PHI %0, %bb.1, %6, %bb.3
     early-clobber %12:gpr64sp, %13:fpr64 = LDRDpost %1, 8
-    %14:fpr64 = FMULDrr %13, %13
+    %14:fpr64 = FMULDrr %13, %13, implicit $fpcr
     early-clobber %15:gpr64sp = STRDpost killed %14, %2, 8 :: (store 8 into %ir.lsr.iv1, !tbaa !2)
     %4:gpr64all = COPY %15
     %5:gpr64all = COPY %12

@@ -175,7 +175,7 @@ body:             |
     %4:gpr64sp = PHI %0, %bb.1, %8, %bb.3
     early-clobber %18:gpr64sp, %19:fpr64 = LDRDpost %1, 8 :: (load (s64) from %ir.8, !tbaa !6)
     early-clobber %20:gpr64sp, %21:fpr64 = LDRDpost %2, 8 :: (load (s64) from %ir.9, !tbaa !6)
-    %22:fpr64 = nofpexcept FADDDrr killed %19, killed %21
+    %22:fpr64 = nofpexcept FADDDrr killed %19, killed %21, implicit $fpcr
     early-clobber %23:gpr64sp = STRDpost killed %22, %3, 8 :: (store (s64) into %ir.10, !tbaa !6)
     %5:gpr64all = COPY %23
     %6:gpr64all = COPY %20

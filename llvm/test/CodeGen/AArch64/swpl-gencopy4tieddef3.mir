@@ -227,9 +227,9 @@ body:             |
     %17:fpr128 = LDRQroX %16, %2, 0, 0 :: (load (s128) from %ir.uglygep53, !tbaa !6)
     %19:fpr128 = LDRQroX %18, %2, 0, 0 :: (load (s128) from %ir.uglygep54, !tbaa !6)
     %21:fpr128 = LDRQroX %20, %2, 0, 0 :: (load (s128) from %ir.uglygep55, !tbaa !6)
-    %23:fpr128 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2f64 %17, %21, killed %19
+    %23:fpr128 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2f64 %17, %21, killed %19, implicit $fpcr
     %25:fpr128 = LDRQroX %24, %2, 0, 0 :: (load (s128) from %ir.uglygep56, !tbaa !6)
-    %27:fpr128 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2f64 %17, killed %25, %21
+    %27:fpr128 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMLAv2f64 %17, killed %25, %21, implicit $fpcr
     %28:qq = REG_SEQUENCE killed %23, %subreg.qsub0, killed %27, %subreg.qsub1
     %A:gpr64sp = COPY %3
     %29:gpr64sp = ST2Twov2d_POST killed %28, %A, $xzr

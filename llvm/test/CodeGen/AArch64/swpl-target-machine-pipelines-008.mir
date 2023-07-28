@@ -1,11 +1,11 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource-filter="FSQRT_ZPmZ_UNDEF_D|FDIV_ZPZZ_UNDEF_D" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-debug-dump-resource-filter="FSQRT_ZPmZ_UNDEF_D|FDIV_ZPZZ_UNDEF_D" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %306:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_UNDEF_D %84:zpr, %62:ppr_3b, killed %305:zpr
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %240:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_UNDEF_D
 #CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+19
 #CHECK-NEXT:  latency: 80
 #CHECK-NEXT:  seqDecode: false
 #CHECK-NEXT:  stage/resource(): 0/FLA, 0/FLA_E, 1/FLA_E, 2/FLA_E, 3/FLA_E, 4/FLA_E, 5/FLA_E, 6/FLA_E, 7/FLA_E, 8/FLA_E, 9/FLA_E, 10/FLA_E, 11/FLA_E, 12/FLA_E, 13/FLA_E, 14/FLA_E, 15/FLA_E, 16/FLA_E, 17/FLA_E, 18/FLA_E, 19/FLA_E, 20/FLA_E, 21/FLA_E, 22/FLA_E, 23/FLA_E, 24/FLA_E, 25/FLA_E, 26/FLA_E, 27/FLA_E, 28/FLA_E, 29/FLA_E, 30/FLA_E, 31/FLA_E, 32/FLA_E, 33/FLA_E, 34/FLA_E, 35/FLA_E, 36/FLA_E, 37/FLA_E, 38/FLA_E, 39/FLA_E, 40/FLA_E, 41/FLA_E, 42/FLA_E, 43/FLA_E, 44/FLA_E, 45/FLA_E, 46/FLA_E, 47/FLA_E, 48/FLA_E, 49/FLA_E, 50/FLA_E, 51/FLA_E, 52/FLA_E, 53/FLA_E, 54/FLA_E, 55/FLA_E, 56/FLA_E, 57/FLA_E, 58/FLA_E, 59/FLA_E, 60/FLA_E, 61/FLA_E, 62/FLA_E, 63/FLA_E, 64/FLA_E, 65/FLA_E, 66/FLA_E, 67/FLA_E, 68/FLA_E, 69/FLA_E, 70/FLA_E, 71/FLA_E, 72/FLA_E, 73/FLA_E, 74/FLA_E, 75/FLA_E, 76/FLA_E, 77/FLA_E, 78/FLA_E, 79/FLA_E
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %308:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_UNDEF_D %62:ppr_3b, %87:zpr, killed %307:zpr
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %242:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_UNDEF_D
 #CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+19
 #CHECK-NEXT:  latency: 80
 #CHECK-NEXT:  seqDecode: false
@@ -380,10 +380,10 @@ body:             |
     %38:gpr64 = UBFMXri killed %37, 62, 61
     %39:gpr64common = MOVaddr target-flags(aarch64-page) @px, target-flags(aarch64-pageoff, aarch64-nc) @px
     %40:fpr32 = LDRSroX %39, %38, 0, 0 :: (load (s32) from %ir.arrayidx5, !tbaa !10)
-    %1:fpr64 = nofpexcept FCVTDSr killed %40
+    %1:fpr64 = nofpexcept FCVTDSr killed %40, implicit $fpcr
     %41:gpr64common = MOVaddr target-flags(aarch64-page) @py, target-flags(aarch64-pageoff, aarch64-nc) @py
     %42:fpr32 = LDRSroX %41, %38, 0, 0 :: (load (s32) from %ir.arrayidx8, !tbaa !10)
-    %2:fpr64 = nofpexcept FCVTDSr killed %42
+    %2:fpr64 = nofpexcept FCVTDSr killed %42, implicit $fpcr
     dead $wzr = SUBSWri killed %35, 8, 0, implicit-def $nzcv
     Bcc 2, %bb.2, implicit $nzcv
   
@@ -517,19 +517,19 @@ body:             |
     %24:gpr64sp = PHI %18, %bb.5, %26, %bb.7
     %25:gpr64sp = PHI %21, %bb.5, %29, %bb.7
     early-clobber %117:gpr64sp, %118:fpr32 = LDRSpost %22, 4 :: (load (s32) from %ir.lsr.iv35, !tbaa !10)
-    %119:fpr64 = nofpexcept FCVTDSr killed %118
+    %119:fpr64 = nofpexcept FCVTDSr killed %118, implicit $fpcr
     early-clobber %120:gpr64sp, %121:fpr32 = LDRSpost %23, 4 :: (load (s32) from %ir.lsr.iv32, !tbaa !10)
-    %122:fpr64 = nofpexcept FCVTDSr killed %121
-    %123:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBDrr %1, killed %119
-    %124:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBDrr %2, killed %122
-    %125:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %123, %123
-    %127:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %124, %124, killed %125
-    %128:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSQRTDr killed %127
-    %130:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FDIVDrr %129, killed %128
+    %122:fpr64 = nofpexcept FCVTDSr killed %121, implicit $fpcr
+    %123:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBDrr %1, killed %119, implicit $fpcr
+    %124:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBDrr %2, killed %122, implicit $fpcr
+    %125:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %123, %123, implicit $fpcr
+    %127:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %124, %124, killed %125, implicit $fpcr
+    %128:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSQRTDr killed %127, implicit $fpcr
+    %130:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FDIVDrr %129, killed %128, implicit $fpcr
     %131:fpr32 = LDRSui %24, 0 :: (load (s32) from %ir.lsr.iv, !tbaa !10)
-    %132:fpr64 = nofpexcept FCVTDSr killed %131
-    %133:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %130, killed %132
-    %134:fpr32 = nofpexcept FCVTSDr killed %133
+    %132:fpr64 = nofpexcept FCVTDSr killed %131, implicit $fpcr
+    %133:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %130, killed %132, implicit $fpcr
+    %134:fpr32 = nofpexcept FCVTSDr killed %133, implicit $fpcr
     early-clobber %135:gpr64sp = STRSpost killed %134, %24, 4 :: (store (s32) into %ir.lsr.iv, !tbaa !10)
     %26:gpr64all = COPY %135
     %27:gpr64all = COPY %120

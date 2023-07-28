@@ -1,6 +1,6 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource-filter=".*" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-debug-dump-resource-filter=".*" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %54:gpr32 = LDRWroX %49:gpr64common, %53:gpr64, 0, 0 :: (load (s32) from %ir.uglygep9, !tbaa !5)
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %54:gpr32 = LDRWroX
 #CHECK-NEXT:  ResourceID: INT_LD+2
 #CHECK-NEXT:  latency: 5
 #CHECK-NEXT:  seqDecode: false
@@ -9,7 +9,7 @@
 #CHECK-NEXT:  stage/resource(): 0/EAGA, 0/LSU2, 5/EAGA_C
 #CHECK-NEXT:  stage/resource(): 0/EAGB, 0/LSU2, 5/EAGB_C
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %56:gpr32 = ADDWrr killed %55:gpr32, killed %54:gpr32
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %56:gpr32 = ADDWrr
 #CHECK-NEXT:  ResourceID: INT_OP+1
 #CHECK-NEXT:  latency: 1
 #CHECK-NEXT:  seqDecode: false
@@ -18,7 +18,7 @@
 #CHECK-NEXT:  stage/resource(): 0/EAGA
 #CHECK-NEXT:  stage/resource(): 0/EAGB
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: STRWroX killed %56:gpr32, %50:gpr64common, %53:gpr64, 0, 0 :: (store (s32) into %ir.uglygep, !tbaa !5) 
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: STRWroX 
 #CHECK-NEXT:  ResourceID: INT_ST+1
 #CHECK-NEXT:  latency: 1
 #CHECK-NEXT:  seqDecode: false

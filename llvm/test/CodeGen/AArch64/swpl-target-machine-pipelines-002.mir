@@ -1,6 +1,6 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource-filter=".*" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-debug-dump-resource-filter=".*" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %372:gpr32 = ORRWrs $wzr, %368:gpr32, 0
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %372:gpr32 = ORRWrs
 #CHECK-NEXT:  ResourceID: INT_OP+1
 #CHECK-NEXT:  latency: 1
 #CHECK-NEXT:  seqDecode: false
@@ -11,21 +11,21 @@
 
 #CHECK:DBG(AArch64SwplTargetMachine::getPipelines): Pseudo-instr: SUBREG_TO_REG
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %374:gpr64 = UBFMXri killed %373:gpr64, 61, 60
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %374:gpr64 = UBFMXri
 #CHECK-NEXT:  ResourceID: INT_OP+2
 #CHECK-NEXT:  latency: 1
 #CHECK-NEXT:  seqDecode: false
 #CHECK-NEXT:  stage/resource(): 0/EXA
 #CHECK-NEXT:  stage/resource(): 0/EXB
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: STRDroX killed %376:fpr64, %236:gpr64common, %374:gpr64, 0, 0 :: (store (s64) into %ir.arrayidx17.prol, !tbaa !5)
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: STRDroX
 #CHECK-NEXT:  ResourceID: SIMDFP_SVE_ST+1
 #CHECK-NEXT:  latency: 1
 #CHECK-NEXT:  seqDecode: false
 #CHECK-NEXT:  stage/resource(): 0/EAGA, 0/FLA, 0/LSU1, 0/LSU2
 #CHECK-NEXT:  stage/resource(): 0/EAGB, 0/FLA, 0/LSU1, 0/LSU2
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %377:gpr32 = COPY %369.sub_32:gpr64sp
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %368:gpr32 = COPY
 #CHECK-NEXT:  ResourceID: INT_OP+1
 #CHECK-NEXT:  latency: 1
 #CHECK-NEXT:  seqDecode: false
@@ -34,7 +34,7 @@
 #CHECK-NEXT:  stage/resource(): 0/EAGA
 #CHECK-NEXT:  stage/resource(): 0/EAGB
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %393:gpr64common = ADDXrr %390:gpr64common, %137:gpr64
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %393:gpr64common = ADDXrr
 #CHECK-NEXT:  ResourceID: INT_OP+1
 #CHECK-NEXT:  latency: 1
 #CHECK-NEXT:  seqDecode: false
@@ -43,7 +43,7 @@
 #CHECK-NEXT:  stage/resource(): 0/EAGA
 #CHECK-NEXT:  stage/resource(): 0/EAGB
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %409:gpr64common = ADDXrs %236:gpr64common, %408:gpr64common, 3
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %409:gpr64common = ADDXrs
 #CHECK-NEXT:  ResourceID: INT_OP+3
 #CHECK-NEXT:  latency: 2
 #CHECK-NEXT:  seqDecode: false
@@ -1102,7 +1102,7 @@ body:             |
     %234:gpr64 = SUBREG_TO_REG 0, killed %233, %subreg.sub_32
     %235:gpr64 = UBFMXri killed %234, 61, 60
     %237:fpr64 = LDRDroX %236, %235, 0, 0 :: (load (s64) from %ir.arrayidx17.prol.1, !tbaa !6)
-    %238:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %237, killed %232
+    %238:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %237, killed %232, implicit $fpcr
     STRDroX killed %238, %236, %235, 0, 0 :: (store (s64) into %ir.arrayidx17.prol.1, !tbaa !6)
     %239:gpr32 = COPY %4.sub_32
     %240:gpr32 = COPY %50.sub_32
@@ -1157,7 +1157,7 @@ body:             |
     %270:gpr64 = SUBREG_TO_REG 0, killed %269, %subreg.sub_32
     %271:gpr64 = UBFMXri %270, 61, 60
     %273:fpr64 = LDRDroX %236, %271, 0, 0 :: (load (s64) from %ir.arrayidx17.157, !tbaa !6)
-    %274:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %273, killed %268
+    %274:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %273, killed %268, implicit $fpcr
     STRDroX killed %274, %236, %271, 0, 0 :: (store (s64) into %ir.arrayidx17.157, !tbaa !6)
     %275:gpr32common = COPY %26.sub_32
     %276:gpr32 = ADDWrr %275, %28
@@ -1171,7 +1171,7 @@ body:             |
     %284:gpr64common = ADDXrr %270, killed %283
     %285:gpr64common = ADDXrs %236, %284, 3
     %286:fpr64 = LDRDui %285, 1 :: (load (s64) from %ir.uglygep119, !tbaa !6)
-    %287:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %286, killed %280
+    %287:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %286, killed %280, implicit $fpcr
     STRDui killed %287, %285, 1 :: (store (s64) into %ir.uglygep119, !tbaa !6)
     %288:gpr64sp = ADDXri %26, 259, 0
     %289:gpr32 = COPY %288.sub_32
@@ -1181,7 +1181,7 @@ body:             |
     %292:gpr64common = ADDXrx %284, %278, 16
     %293:gpr64common = ADDXrs %236, %292, 3
     %294:fpr64 = LDRDui %293, 1 :: (load (s64) from %ir.uglygep129, !tbaa !6)
-    %295:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %294, killed %291
+    %295:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %294, killed %291, implicit $fpcr
     STRDui killed %295, %293, 1 :: (store (s64) into %ir.uglygep129, !tbaa !6)
     %296:gpr64sp = ADDXri %26, 260, 0
     %297:gpr32 = COPY %296.sub_32
@@ -1191,7 +1191,7 @@ body:             |
     %300:gpr64common = ADDXrx %292, %289, 16
     %301:gpr64common = ADDXrs %236, %300, 3
     %302:fpr64 = LDRDui %301, 1 :: (load (s64) from %ir.uglygep140, !tbaa !6)
-    %303:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %302, killed %299
+    %303:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %302, killed %299, implicit $fpcr
     STRDui killed %303, %301, 1 :: (store (s64) into %ir.uglygep140, !tbaa !6)
     %304:gpr64sp = ADDXri %26, 261, 0
     %305:gpr32 = COPY %304.sub_32
@@ -1201,7 +1201,7 @@ body:             |
     %308:gpr64common = ADDXrx %300, %297, 16
     %309:gpr64common = ADDXrs %236, %308, 3
     %310:fpr64 = LDRDui %309, 1 :: (load (s64) from %ir.uglygep152, !tbaa !6)
-    %311:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %310, killed %307
+    %311:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %310, killed %307, implicit $fpcr
     STRDui killed %311, %309, 1 :: (store (s64) into %ir.uglygep152, !tbaa !6)
     %312:gpr64sp = ADDXri %26, 262, 0
     %313:gpr32 = COPY %312.sub_32
@@ -1211,7 +1211,7 @@ body:             |
     %316:gpr64common = ADDXrx %308, %305, 16
     %317:gpr64common = ADDXrs %236, %316, 3
     %318:fpr64 = LDRDui %317, 1 :: (load (s64) from %ir.uglygep165, !tbaa !6)
-    %319:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %318, killed %315
+    %319:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %318, killed %315, implicit $fpcr
     STRDui killed %319, %317, 1 :: (store (s64) into %ir.uglygep165, !tbaa !6)
     %320:gpr64sp = ADDXri %26, 263, 0
     %321:gpr32 = COPY %320.sub_32
@@ -1221,7 +1221,7 @@ body:             |
     %324:gpr64common = ADDXrx %316, %313, 16
     %325:gpr64common = ADDXrs %236, %324, 3
     %326:fpr64 = LDRDui %325, 1 :: (load (s64) from %ir.uglygep179, !tbaa !6)
-    %327:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %326, killed %323
+    %327:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %326, killed %323, implicit $fpcr
     STRDui killed %327, %325, 1 :: (store (s64) into %ir.uglygep179, !tbaa !6)
     %328:gpr32common = ADDWrr killed %322, %275
     PRFMui 0, %258, 1792
@@ -1229,7 +1229,7 @@ body:             |
     %330:gpr64common = ADDXrx %324, %321, 16
     %331:gpr64common = ADDXrs %236, killed %330, 3
     %332:fpr64 = LDRDui %331, 1 :: (load (s64) from %ir.uglygep194, !tbaa !6)
-    %333:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %332, killed %329
+    %333:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %332, killed %329, implicit $fpcr
     STRDui killed %333, %331, 1 :: (store (s64) into %ir.uglygep194, !tbaa !6)
     %334:gpr32sp = ADDWri killed %328, 521, 0
     %30:gpr32all = COPY %334
@@ -1335,7 +1335,7 @@ body:             |
     %121:gpr64 = SUBREG_TO_REG 0, killed %120, %subreg.sub_32
     %122:gpr64 = UBFMXri killed %121, 61, 60
     %124:fpr64 = LDRDroX %236, %122, 0, 0 :: (load (s64) from %ir.arrayidx17.prol, !tbaa !6)
-    %125:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %124, killed %119
+    %125:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %124, killed %119, implicit $fpcr
     STRDroX killed %125, %236, %122, 0, 0 :: (store (s64) into %ir.arrayidx17.prol, !tbaa !6)
     %126:gpr32 = COPY %60.sub_32
     %127:gpr32 = COPY %50.sub_32
@@ -1395,7 +1395,7 @@ body:             |
     %148:gpr64 = SUBREG_TO_REG 0, killed %147, %subreg.sub_32
     %149:gpr64 = UBFMXri %148, 61, 60
     %151:fpr64 = LDRDroX %236, %149, 0, 0 :: (load (s64) from %ir.arrayidx17, !tbaa !6)
-    %152:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %151, killed %146
+    %152:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %151, killed %146, implicit $fpcr
     STRDroX killed %152, %236, %149, 0, 0 :: (store (s64) into %ir.arrayidx17, !tbaa !6)
     %153:gpr32common = COPY %72.sub_32
     %154:gpr32 = ADDWrr %153, %74
@@ -1409,7 +1409,7 @@ body:             |
     %163:gpr64common = ADDXrr %148, killed %162
     %164:gpr64common = ADDXrs %236, %163, 3
     %165:fpr64 = LDRDui %164, 1 :: (load (s64) from %ir.uglygep217, !tbaa !6)
-    %166:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %165, killed %159
+    %166:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %165, killed %159, implicit $fpcr
     STRDui killed %166, %164, 1 :: (store (s64) into %ir.uglygep217, !tbaa !6)
     %167:gpr64sp = ADDXri %72, 259, 0
     %168:gpr32 = COPY %167.sub_32
@@ -1419,7 +1419,7 @@ body:             |
     %172:gpr64common = ADDXrx %163, %156, 16
     %173:gpr64common = ADDXrs %236, %172, 3
     %174:fpr64 = LDRDui %173, 1 :: (load (s64) from %ir.uglygep226, !tbaa !6)
-    %175:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %174, killed %171
+    %175:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %174, killed %171, implicit $fpcr
     STRDui killed %175, %173, 1 :: (store (s64) into %ir.uglygep226, !tbaa !6)
     %176:gpr64sp = ADDXri %72, 260, 0
     %177:gpr32 = COPY %176.sub_32
@@ -1429,7 +1429,7 @@ body:             |
     %181:gpr64common = ADDXrx %172, %168, 16
     %182:gpr64common = ADDXrs %236, %181, 3
     %183:fpr64 = LDRDui %182, 1 :: (load (s64) from %ir.uglygep236, !tbaa !6)
-    %184:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %183, killed %180
+    %184:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %183, killed %180, implicit $fpcr
     STRDui killed %184, %182, 1 :: (store (s64) into %ir.uglygep236, !tbaa !6)
     %185:gpr64sp = ADDXri %72, 261, 0
     %186:gpr32 = COPY %185.sub_32
@@ -1439,7 +1439,7 @@ body:             |
     %190:gpr64common = ADDXrx %181, %177, 16
     %191:gpr64common = ADDXrs %236, %190, 3
     %192:fpr64 = LDRDui %191, 1 :: (load (s64) from %ir.uglygep247, !tbaa !6)
-    %193:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %192, killed %189
+    %193:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %192, killed %189, implicit $fpcr
     STRDui killed %193, %191, 1 :: (store (s64) into %ir.uglygep247, !tbaa !6)
     %194:gpr64sp = ADDXri %72, 262, 0
     %195:gpr32 = COPY %194.sub_32
@@ -1449,7 +1449,7 @@ body:             |
     %199:gpr64common = ADDXrx %190, %186, 16
     %200:gpr64common = ADDXrs %236, %199, 3
     %201:fpr64 = LDRDui %200, 1 :: (load (s64) from %ir.uglygep259, !tbaa !6)
-    %202:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %201, killed %198
+    %202:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %201, killed %198, implicit $fpcr
     STRDui killed %202, %200, 1 :: (store (s64) into %ir.uglygep259, !tbaa !6)
     %203:gpr64sp = ADDXri %72, 263, 0
     %204:gpr32 = COPY %203.sub_32
@@ -1459,7 +1459,7 @@ body:             |
     %208:gpr64common = ADDXrx %199, %195, 16
     %209:gpr64common = ADDXrs %236, %208, 3
     %210:fpr64 = LDRDui %209, 1 :: (load (s64) from %ir.uglygep272, !tbaa !6)
-    %211:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %210, killed %207
+    %211:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %210, killed %207, implicit $fpcr
     STRDui killed %211, %209, 1 :: (store (s64) into %ir.uglygep272, !tbaa !6)
     %212:gpr32common = ADDWrr killed %205, %153
     %213:gpr64common = SUBXri %144, 2048, 0
@@ -1468,7 +1468,7 @@ body:             |
     %215:gpr64common = ADDXrx %208, %204, 16
     %216:gpr64common = ADDXrs %236, killed %215, 3
     %217:fpr64 = LDRDui %216, 1 :: (load (s64) from %ir.uglygep286, !tbaa !6)
-    %218:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %217, killed %214
+    %218:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %217, killed %214, implicit $fpcr
     STRDui killed %218, %216, 1 :: (store (s64) into %ir.uglygep286, !tbaa !6)
     %219:gpr32sp = ADDWri killed %212, 521, 0
     %76:gpr32all = COPY %219

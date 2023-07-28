@@ -145,7 +145,7 @@ body:             |
     %13:gpr64 = UBFMXri %2, 61, 60
     %15:fpr64 = LDRDroX %14, %13, 0, 0 :: (load 8 from %ir.scevgep2, !tbaa !2)
     %17:fpr64 = LDRDroX %16, %13, 0, 0 :: (load 8 from %ir.scevgep1, !tbaa !2)
-    %18:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %17, killed %15
+    %18:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %17, killed %15, implicit $fpcr
     STRDroX killed %18, %19, %13, 0, 0 :: (store 8 into %ir.scevgep, !tbaa !2)
     %20:gpr64 = ADDXrr %2, %10
     %3:gpr64all = COPY %20

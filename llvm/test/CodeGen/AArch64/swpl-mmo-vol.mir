@@ -471,10 +471,10 @@ body:             |
     %16:gpr64sp = PHI %10, %bb.4, %21, %bb.7
     early-clobber %64:gpr64sp, %65:fpr64 = LDRDpost %12, 8 :: (load (s64) from %ir.lsr.iv54, !tbaa !6)
     early-clobber %66:gpr64sp, %67:fpr64 = LDRDpost %13, 8 :: (load (s64) from %ir.lsr.iv51, !tbaa !6)
-    %68:fpr64 = nofpexcept FADDDrr %65, killed %67
+    %68:fpr64 = nofpexcept FADDDrr %65, killed %67, implicit $fpcr
     STRDui killed %68, %15, 0 :: (store (s64) into %ir.lsr.iv, !tbaa !6)
     early-clobber %69:gpr64sp, %70:fpr64 = LDRDpost %14, 8 :: (load (s64) from %ir.lsr.iv48, !tbaa !6)
-    %71:fpr64 = nofpexcept FADDDrr %65, killed %70
+    %71:fpr64 = nofpexcept FADDDrr %65, killed %70, implicit $fpcr
     STURDi killed %71, %15, -8 :: ("aarch64-suppress-pair" store (s64) into %ir.uglygep46, !tbaa !6)
     %72:gpr64sp = ADDXri %15, 8, 0
     %17:gpr64all = COPY %72

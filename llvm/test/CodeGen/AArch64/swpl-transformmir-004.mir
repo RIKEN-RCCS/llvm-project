@@ -1,282 +1,326 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8  -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8  -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:** SwplTransformedMIRInfo begin **
-#CHECK:originalDoVReg:%18
-#CHECK:originalDoInitVar:%15
-#CHECK:doVReg:%105
-#CHECK:iterationInterval:4
-#CHECK:minimumIterationInterval:3
-#CHECK:coefficient: 1
-#CHECK:minConstant: 0
-#CHECK:expansion: 7
-#CHECK:nVersions: 3
-#CHECK:nCopies: 7
-#CHECK:requiredKernelIteration: 7
-#CHECK:prologEndIndx: 128
-#CHECK:kernelEndIndx: 224
-#CHECK:epilogEndIndx: 352
-#CHECK:isIterationCountConstant: 0
-#CHECK:doVRegInitialValue: 0
-#CHECK:originalKernelIteration: 0
-#CHECK:transformedKernelIteration: 0
-#CHECK:transformedModIteration: 0
-#CHECK:updateDoVRegMI:%73:gpr64 = SUBSXri %18:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK:branchDoVRegMI:Bcc 1, %bb.16, implicit $nzcv
-#CHECK:branchDoVRegMIKernel:Bcc 10, %bb.8, implicit $nzcv
-#CHECK:OrgPreHeader: %bb.6
-#CHECK:Check1: %bb.11
-#CHECK:Prolog: %bb.12
-#CHECK:OrgBody: %bb.8
-#CHECK:Epilog: %bb.13
-#CHECK:NewPreHeader: %bb.15
-#CHECK:Check2: %bb.14
-#CHECK:NewBody: %bb.16
-#CHECK:NewExit: %bb.17
-#CHECK:OrgExit: %bb.7
-#CHECK:mis:
-#CHECK:** SwplTransformedMIRInfo end   **
-#CHECK:target loop:Loop at depth 1 containing: %bb.8<header><latch><exiting>
-#CHECK:LAST:
-#CHECK:bb.0 (%ir-block.1):
-#CHECK:  successors: %bb.7(0x30000000), %bb.1(0x50000000); %bb.7(37.50%), %bb.1(62.50%)
-#CHECK:  liveins: $x0
-#CHECK:  %22:gpr64common = COPY $x0
-#CHECK:  TBNZX %22:gpr64common, 63, %bb.7
-#CHECK:  B %bb.1
-#CHECK:bb.1 (%ir-block.3):
-#CHECK:; predecessors: %bb.0
-#CHECK:  successors: %bb.2(0x40000000), %bb.3(0x40000000); %bb.2(50.00%), %bb.3(50.00%)
-#CHECK:  %24:gpr64common = ADDXri %22:gpr64common, 1, 0
-#CHECK:  %25:gpr64 = RDVLI_XI 1
-#CHECK:  dead $xzr = SUBSXrr %24:gpr64common, %25:gpr64, implicit-def $nzcv
-#CHECK:  %74:gpr64common = LOADgot target-flags(aarch64-got) @A
-#CHECK:  %75:gpr64common = LOADgot target-flags(aarch64-got) @B
-#CHECK:  Bcc 2, %bb.3, implicit $nzcv
-#CHECK:bb.2:
-#CHECK:; predecessors: %bb.1
-#CHECK:  successors: %bb.6(0x80000000); %bb.6(100.00%)
-#CHECK:  %26:gpr64all = COPY $xzr
-#CHECK:  %23:gpr64all = COPY %26:gpr64all
-#CHECK:  B %bb.6
-#CHECK:bb.3 (%ir-block.8):
-#CHECK:; predecessors: %bb.1
-#CHECK:  successors: %bb.4(0x80000000); %bb.4(100.00%)
-#CHECK:  %29:gpr64 = UDIVXr %24:gpr64common, %25:gpr64
-#CHECK:  %30:gpr64 = MADDXrrr killed %29:gpr64, %25:gpr64, $xzr
-#CHECK:  %31:gpr64 = SUBXrr %24:gpr64common, %30:gpr64
-#CHECK:  %2:gpr64 = COPY %31:gpr64
-#CHECK:  %3:gpr64 = COPY %30:gpr64
-#CHECK:  %33:gpr64 = UBFMXri %25:gpr64, 4, 63
-#CHECK:  %34:gpr32 = COPY %33.sub_32:gpr64
-#CHECK:  %35:gpr64common = ANDXri %33:gpr64, 4127
-#CHECK:  %36:gpr64common = ADDXrx %35:gpr64common, killed %34:gpr32, 17
-#CHECK:  %37:gpr64 = UBFMXri killed %36:gpr64common, 60, 59
-#CHECK:  %39:gpr64 = ADDXrr %75:gpr64common, %37:gpr64
-#CHECK:  %4:gpr64sp = COPY %39:gpr64
-#CHECK:  %40:gpr64 = nuw nsw UBFMXri %35:gpr64common, 59, 58
-#CHECK:  %41:gpr64 = ADDXrr %75:gpr64common, %40:gpr64
-#CHECK:  %5:gpr64sp = COPY %41:gpr64
-#CHECK:  %42:gpr64 = nuw nsw UBFMXri %35:gpr64common, 60, 59
-#CHECK:  %43:gpr64 = ADDXrr %75:gpr64common, %42:gpr64
-#CHECK:  %6:gpr64sp = COPY %43:gpr64
-#CHECK:  %45:gpr64 = ADDXrr %74:gpr64common, %37:gpr64
-#CHECK:  %7:gpr64sp = COPY %45:gpr64
-#CHECK:  %46:gpr64 = ADDXrr %74:gpr64common, %40:gpr64
-#CHECK:  %8:gpr64sp = COPY %46:gpr64
-#CHECK:  %47:gpr64 = ADDXrr %74:gpr64common, %42:gpr64
-#CHECK:  %48:gpr64all = COPY $xzr
-#CHECK:  %28:gpr64all = COPY %48:gpr64all
-#CHECK:  %9:gpr64sp = COPY %47:gpr64
-#CHECK:  %50:ppr_3b = PTRUE_S 31
-#CHECK:bb.4 (%ir-block.22):
-#CHECK:; predecessors: %bb.3, %bb.4
-#CHECK:  successors: %bb.5(0x04000000), %bb.4(0x7c000000); %bb.5(3.12%), %bb.4(96.88%)
-#CHECK:  %10:gpr64common = PHI %28:gpr64all, %bb.3, %11:gpr64all, %bb.4
-#CHECK:  %51:zpr = LD1W %50:ppr_3b, %75:gpr64common, %10:gpr64common :: (load unknown-size from %ir.25, align 4, !tbaa !6)
-#CHECK:  %52:zpr = LD1W %50:ppr_3b, %6:gpr64sp, %10:gpr64common :: (load unknown-size from %ir.27, align 4, !tbaa !6)
-#CHECK:  %53:zpr = LD1W %50:ppr_3b, %5:gpr64sp, %10:gpr64common :: (load unknown-size from %ir.29, align 4, !tbaa !6)
-#CHECK:  %54:zpr = LD1W %50:ppr_3b, %4:gpr64sp, %10:gpr64common :: (load unknown-size from %ir.32, align 4, !tbaa !6)
-#CHECK:  %55:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %51:zpr, %51:zpr
-#CHECK:  %56:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %52:zpr, %52:zpr
-#CHECK:  %57:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %53:zpr, %53:zpr
-#CHECK:  %58:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %54:zpr, %54:zpr
-#CHECK:  ST1W killed %55:zpr, %50:ppr_3b, %74:gpr64common, %10:gpr64common :: (store unknown-size into %ir.39, align 4, !tbaa !6)
-#CHECK:  ST1W killed %56:zpr, %50:ppr_3b, %9:gpr64sp, %10:gpr64common :: (store unknown-size into %ir.40, align 4, !tbaa !6)
-#CHECK:  ST1W killed %57:zpr, %50:ppr_3b, %8:gpr64sp, %10:gpr64common :: (store unknown-size into %ir.41, align 4, !tbaa !6)
-#CHECK:  ST1W killed %58:zpr, %50:ppr_3b, %7:gpr64sp, %10:gpr64common :: (store unknown-size into %ir.43, align 4, !tbaa !6)
-#CHECK:  %60:gpr64 = nuw ADDXrr %10:gpr64common, %25:gpr64
-#CHECK:  %11:gpr64all = COPY %60:gpr64
-#CHECK:  dead $xzr = SUBSXrr %30:gpr64, %60:gpr64, implicit-def $nzcv
-#CHECK:  Bcc 1, %bb.4, implicit $nzcv
-#CHECK:  B %bb.5
-#CHECK:bb.5 (%ir-block.46):
-#CHECK:; predecessors: %bb.4
-#CHECK:  successors: %bb.7(0x30000000), %bb.6(0x50000000); %bb.7(37.50%), %bb.6(62.50%)
-#CHECK:  CBZX %2:gpr64, %bb.7
-#CHECK:  B %bb.6
-#CHECK:bb.6 (%ir-block.48):
-#CHECK:; predecessors: %bb.2, %bb.5
-#CHECK:  successors: %bb.11(0x80000000); %bb.11(100.00%)
-#CHECK:  %12:gpr64 = PHI %23:gpr64all, %bb.2, %3:gpr64, %bb.5
-#CHECK:  %62:gpr64common = SUBXrr %22:gpr64common, %12:gpr64
-#CHECK:  %63:gpr64sp = ADDXri killed %62:gpr64common, 1, 0
-#CHECK:  %64:gpr64 = UBFMXri %12:gpr64, 62, 61
-#CHECK:  %66:gpr64 = ADDXrr %74:gpr64common, %64:gpr64
-#CHECK:  %13:gpr64all = COPY %66:gpr64
-#CHECK:  %68:gpr64 = ADDXrr %75:gpr64common, %64:gpr64
-#CHECK:  %14:gpr64all = COPY %68:gpr64
-#CHECK:  %15:gpr64all = COPY %63:gpr64sp
-#CHECK:  B %bb.11
-#CHECK:bb.7 (%ir-block.56):
-#CHECK:; predecessors: %bb.0, %bb.5, %bb.17
-#CHECK:  RET_ReallyLR
-#CHECK:bb.11 (%ir-block.57):
-#CHECK:; predecessors: %bb.6
-#CHECK:  successors: %bb.12(0x40000000), %bb.15(0x40000000); %bb.12(50.00%), %bb.15(50.00%)
-#CHECK:  %109:gpr64sp = COPY %15:gpr64all
-#CHECK:  $xzr = SUBSXri %109:gpr64sp, 7, 0, implicit-def $nzcv
-#CHECK:  Bcc 11, %bb.15, implicit $nzcv
-#CHECK:bb.12 (%ir-block.57):
-#CHECK:; predecessors: %bb.11
-#CHECK:  successors: %bb.8(0x80000000); %bb.8(100.00%)
-#CHECK:  %76:gpr64sp = COPY %14:gpr64all
-#CHECK:  %77:gpr64sp = COPY %13:gpr64all
-#CHECK:  %78:gpr64sp = COPY %15:gpr64all
-#CHECK:  %87:gpr64sp = COPY %76:gpr64sp
-#CHECK:  %95:gpr64sp = COPY %77:gpr64sp
-#CHECK:  %103:gpr64sp = COPY %78:gpr64sp
-#CHECK:  %80:fpr32 = LDURSi %87:gpr64sp, 0 :: (load (s32) from %ir.58, !tbaa !6)
-#CHECK:  %79:gpr64sp = ADDXri %87:gpr64sp, 4, 0
-#CHECK:  %84:gpr64all = COPY %79:gpr64sp
-#CHECK:  %182:gpr64sp = COPY %84:gpr64all
-#CHECK:  %88:fpr32 = LDURSi %182:gpr64sp, 0 :: (load (s32) from %ir.58, !tbaa !6)
-#CHECK:  %91:gpr64sp = ADDXri %182:gpr64sp, 4, 0
-#CHECK:  %101:gpr64all = COPY %91:gpr64sp
-#CHECK:  %90:gpr64sp = COPY %101:gpr64all
-#CHECK:  %81:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %80:fpr32, %80:fpr32
-#CHECK:  %89:fpr32 = LDURSi %90:gpr64sp, 0 :: (load (s32) from %ir.58, !tbaa !6)
-#CHECK:  %92:gpr64sp = ADDXri %90:gpr64sp, 4, 0
-#CHECK:  %102:gpr64all = COPY %92:gpr64sp
-#CHECK:  %183:gpr64sp = COPY %102:gpr64all
-#CHECK:  %93:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %88:fpr32, %88:fpr32
-#CHECK:  %184:fpr32 = LDURSi %183:gpr64sp, 0 :: (load (s32) from %ir.58, !tbaa !6)
-#CHECK:  %185:gpr64sp = ADDXri %183:gpr64sp, 4, 0
-#CHECK:  %186:gpr64all = COPY %185:gpr64sp
-#CHECK:bb.8 (%ir-block.57):
-#CHECK:; predecessors: %bb.8, %bb.12
-#CHECK:  successors: %bb.8(0x7c000000), %bb.13(0x04000000); %bb.8(96.88%), %bb.13(3.12%)
-#CHECK:  %154:fpr32 = PHI %81:fpr32, %bb.12, %153:fpr32, %bb.8
-#CHECK:  %156:fpr32 = PHI %89:fpr32, %bb.12, %155:fpr32, %bb.8
-#CHECK:  %167:fpr32 = PHI %93:fpr32, %bb.12, %166:fpr32, %bb.8
-#CHECK:  %169:fpr32 = PHI %184:fpr32, %bb.12, %168:fpr32, %bb.8
-#CHECK:  %176:gpr64all = PHI %186:gpr64all, %bb.12, %175:gpr64all, %bb.8
-#CHECK:  %178:gpr64sp = PHI %95:gpr64sp, %bb.12, %177:gpr64sp, %bb.8
-#CHECK:  %180:gpr64sp = PHI %103:gpr64sp, %bb.12, %179:gpr64sp, %bb.8
-#CHECK:  %141:gpr64sp = COPY %176:gpr64all
-#CHECK:  %142:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %156:fpr32, %156:fpr32
-#CHECK:  %143:fpr32 = LDURSi %141:gpr64sp, 0 :: (load (s32) from %ir.58, !tbaa !6)
-#CHECK:  %144:gpr64 = SUBSXri %180:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK:  %145:gpr64sp = ADDXri %178:gpr64sp, 4, 0
-#CHECK:  STURSi %154:fpr32, %178:gpr64sp, 0 :: (store (s32) into %ir.59, !tbaa !6)
-#CHECK:  %146:gpr64all = COPY %144:gpr64
-#CHECK:  %147:gpr64sp = ADDXri %141:gpr64sp, 4, 0
-#CHECK:  %148:gpr64all = COPY %145:gpr64sp
-#CHECK:  %149:gpr64all = COPY %147:gpr64sp
-#CHECK:  %150:gpr64sp = COPY %148:gpr64all
-#CHECK:  %151:gpr64sp = COPY %146:gpr64all
-#CHECK:  %152:gpr64sp = COPY %149:gpr64all
-#CHECK:  %153:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %169:fpr32, %169:fpr32
-#CHECK:  %155:fpr32 = LDURSi %152:gpr64sp, 0 :: (load (s32) from %ir.58, !tbaa !6)
-#CHECK:  %157:gpr64 = SUBSXri %151:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK:  %158:gpr64sp = ADDXri %150:gpr64sp, 4, 0
-#CHECK:  STURSi %167:fpr32, %150:gpr64sp, 0 :: (store (s32) into %ir.59, !tbaa !6)
-#CHECK:  %159:gpr64all = COPY %157:gpr64
-#CHECK:  %160:gpr64sp = ADDXri %152:gpr64sp, 4, 0
-#CHECK:  %161:gpr64all = COPY %158:gpr64sp
-#CHECK:  %162:gpr64all = COPY %160:gpr64sp
-#CHECK:  %163:gpr64sp = COPY %161:gpr64all
-#CHECK:  %164:gpr64sp = COPY %159:gpr64all
-#CHECK:  %165:gpr64sp = COPY %162:gpr64all
-#CHECK:  %166:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %143:fpr32, %143:fpr32
-#CHECK:  %168:fpr32 = LDURSi %165:gpr64sp, 0 :: (load (s32) from %ir.58, !tbaa !6)
-#CHECK:  %170:gpr64 = SUBSXri %164:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK:  %171:gpr64sp = ADDXri %163:gpr64sp, 4, 0
-#CHECK:  STURSi %142:fpr32, %163:gpr64sp, 0 :: (store (s32) into %ir.59, !tbaa !6)
-#CHECK:  %172:gpr64all = COPY %170:gpr64
-#CHECK:  %173:gpr64sp = ADDXri %165:gpr64sp, 4, 0
-#CHECK:  %174:gpr64all = COPY %171:gpr64sp
-#CHECK:  %175:gpr64all = COPY %173:gpr64sp
-#CHECK:  %177:gpr64sp = COPY %174:gpr64all
-#CHECK:  %179:gpr64sp = COPY %172:gpr64all
-#CHECK:  %181:gpr64sp = COPY %170:gpr64
-#CHECK:  $xzr = SUBSXri %181:gpr64sp, 7, 0, implicit-def $nzcv
-#CHECK:  Bcc 10, %bb.8, implicit $nzcv
-#CHECK:bb.13 (%ir-block.57):
-#CHECK:; predecessors: %bb.8
-#CHECK:  successors: %bb.14(0x80000000); %bb.14(100.00%)
-#CHECK:  %114:gpr64sp = COPY %175:gpr64all
-#CHECK:  %115:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %155:fpr32, %155:fpr32
-#CHECK:  %116:gpr64 = SUBSXri %179:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK:  %117:gpr64sp = ADDXri %177:gpr64sp, 4, 0
-#CHECK:  STURSi %153:fpr32, %177:gpr64sp, 0 :: (store (s32) into %ir.59, !tbaa !6)
-#CHECK:  %118:gpr64all = COPY %116:gpr64
-#CHECK:  %119:gpr64all = COPY %117:gpr64sp
-#CHECK:  %120:gpr64sp = COPY %119:gpr64all
-#CHECK:  %121:gpr64sp = COPY %118:gpr64all
-#CHECK:  %122:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %168:fpr32, %168:fpr32
-#CHECK:  %123:gpr64 = SUBSXri %121:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK:  %124:gpr64sp = ADDXri %120:gpr64sp, 4, 0
-#CHECK:  STURSi %166:fpr32, %120:gpr64sp, 0 :: (store (s32) into %ir.59, !tbaa !6)
-#CHECK:  %125:gpr64all = COPY %123:gpr64
-#CHECK:  %126:gpr64all = COPY %124:gpr64sp
-#CHECK:  %127:gpr64sp = COPY %126:gpr64all
-#CHECK:  %128:gpr64sp = COPY %125:gpr64all
-#CHECK:  %129:gpr64 = SUBSXri %128:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK:  %130:gpr64sp = ADDXri %127:gpr64sp, 4, 0
-#CHECK:  STURSi %115:fpr32, %127:gpr64sp, 0 :: (store (s32) into %ir.59, !tbaa !6)
-#CHECK:  %131:gpr64all = COPY %129:gpr64
-#CHECK:  %132:gpr64all = COPY %130:gpr64sp
-#CHECK:  %133:gpr64sp = COPY %132:gpr64all
-#CHECK:  %134:gpr64sp = COPY %131:gpr64all
-#CHECK:  %135:gpr64 = SUBSXri %134:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK:  %136:gpr64sp = ADDXri %133:gpr64sp, 4, 0
-#CHECK:  STURSi %122:fpr32, %133:gpr64sp, 0 :: (store (s32) into %ir.59, !tbaa !6)
-#CHECK:  %137:gpr64all = COPY %135:gpr64
-#CHECK:  %138:gpr64all = COPY %136:gpr64sp
-#CHECK:  %139:gpr64sp = COPY %138:gpr64all
-#CHECK:  %140:gpr64sp = COPY %137:gpr64all
-#CHECK:bb.14 (%ir-block.57):
-#CHECK:; predecessors: %bb.13
-#CHECK:  successors: %bb.15(0x40000000), %bb.17(0x40000000); %bb.15(50.00%), %bb.17(50.00%)
-#CHECK:  $xzr = SUBSXri %140:gpr64sp, 0, 0, implicit-def $nzcv
-#CHECK:  Bcc 0, %bb.17, implicit $nzcv
-#CHECK:bb.15 (%ir-block.57):
-#CHECK:; predecessors: %bb.14, %bb.11
-#CHECK:  successors: %bb.16(0x80000000); %bb.16(100.00%)
-#CHECK:  %111:gpr64sp = PHI %14:gpr64all, %bb.11, %114:gpr64sp, %bb.14
-#CHECK:  %112:gpr64sp = PHI %13:gpr64all, %bb.11, %139:gpr64sp, %bb.14
-#CHECK:  %113:gpr64sp = PHI %15:gpr64all, %bb.11, %140:gpr64sp, %bb.14
-#CHECK:bb.16 (%ir-block.57):
-#CHECK:; predecessors: %bb.16, %bb.15
-#CHECK:  successors: %bb.16(0x40000000), %bb.17(0x40000000); %bb.16(50.00%), %bb.17(50.00%)
-#CHECK:  %16:gpr64sp = PHI %111:gpr64sp, %bb.15, %20:gpr64all, %bb.16
-#CHECK:  %17:gpr64sp = PHI %112:gpr64sp, %bb.15, %19:gpr64all, %bb.16
-#CHECK:  %18:gpr64sp = PHI %113:gpr64sp, %bb.15, %21:gpr64all, %bb.16
-#CHECK:  early-clobber %69:gpr64sp, %70:fpr32 = LDRSpost %16:gpr64sp(tied-def 0), 4 :: (load (s32) from %ir.58, !tbaa !6)
-#CHECK:  %71:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %70:fpr32, %70:fpr32
-#CHECK:  early-clobber %72:gpr64sp = STRSpost killed %71:fpr32, %17:gpr64sp(tied-def 0), 4 :: (store (s32) into %ir.59, !tbaa !6)
-#CHECK:  %19:gpr64all = COPY %72:gpr64sp
-#CHECK:  %20:gpr64all = COPY %69:gpr64sp
-#CHECK:  %73:gpr64 = SUBSXri %18:gpr64sp, 1, 0, implicit-def $nzcv
-#CHECK:  %21:gpr64all = COPY %73:gpr64
-#CHECK:  Bcc 1, %bb.16, implicit $nzcv
-#CHECK:  B %bb.17
-#CHECK:bb.17 (%ir-block.57):
-#CHECK:; predecessors: %bb.16, %bb.14
-#CHECK:  successors: %bb.7(0x80000000); %bb.7(100.00%)
-#CHECK:  B %bb.7
+# CHECK:** SwplTransformedMIRInfo begin **
+# CHECK-NEXT:originalDoVReg:%18
+# CHECK-NEXT:originalDoInitVar:%15
+# CHECK-NEXT:doVReg:%104
+# CHECK-NEXT:iterationInterval:2
+# CHECK-NEXT:minimumIterationInterval:2
+# CHECK-NEXT:coefficient: 1
+# CHECK-NEXT:minConstant: 0
+# CHECK-NEXT:expansion: 14
+# CHECK-NEXT:nVersions: 5
+# CHECK-NEXT:nCopies: 14
+# CHECK-NEXT:requiredKernelIteration: 14
+# CHECK-NEXT:prologEndIndx: 144
+# CHECK-NEXT:kernelEndIndx: 224
+# CHECK-NEXT:epilogEndIndx: 368
+# CHECK-NEXT:isIterationCountConstant: 0
+# CHECK-NEXT:doVRegInitialValue: 0
+# CHECK-NEXT:originalKernelIteration: 0
+# CHECK-NEXT:transformedKernelIteration: 0
+# CHECK-NEXT:transformedModIteration: 0
+# CHECK-NEXT:updateDoVRegMI:%73:gpr64 = SUBSXri %18:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:branchDoVRegMI:Bcc 1, %bb.16, implicit $nzcv
+# CHECK-NEXT:branchDoVRegMIKernel:Bcc 10, %bb.8, implicit $nzcv
+# CHECK-NEXT:OrgPreHeader: %bb.6
+# CHECK-NEXT:Check1: %bb.11
+# CHECK-NEXT:Prolog: %bb.12
+# CHECK-NEXT:OrgBody: %bb.8
+# CHECK-NEXT:Epilog: %bb.13
+# CHECK-NEXT:NewPreHeader: %bb.15
+# CHECK-NEXT:Check2: %bb.14
+# CHECK-NEXT:NewBody: %bb.16
+# CHECK-NEXT:NewExit: %bb.17
+# CHECK-NEXT:OrgExit: %bb.7
+# CHECK-NEXT:mis:
+# CHECK-NEXT:** SwplTransformedMIRInfo end   **
+# CHECK-NEXT:target loop:Loop at depth 1 containing: %bb.8<header><latch><exiting>
+# CHECK-NEXT:LAST:
+# CHECK-NEXT:bb.0 (%ir-block.1):
+# CHECK-NEXT:  successors: %bb.7(0x30000000), %bb.1(0x50000000); %bb.7(37.50%), %bb.1(62.50%)
+# CHECK-NEXT:  liveins: $x0
+# CHECK-NEXT:  %22:gpr64common = COPY $x0
+# CHECK-NEXT:  TBNZX %22:gpr64common, 63, %bb.7
+# CHECK-NEXT:  B %bb.1
+# CHECK-NEXT:bb.1 (%ir-block.3):
+# CHECK-NEXT:; predecessors: %bb.0
+# CHECK-NEXT:  successors: %bb.2(0x40000000), %bb.3(0x40000000); %bb.2(50.00%), %bb.3(50.00%)
 
+# CHECK:  %24:gpr64common = ADDXri %22:gpr64common, 1, 0
+# CHECK-NEXT:  %25:gpr64 = RDVLI_XI 1
+# CHECK-NEXT:  dead $xzr = SUBSXrr %24:gpr64common, %25:gpr64, implicit-def $nzcv
+# CHECK-NEXT:  %74:gpr64common = LOADgot target-flags(aarch64-got) @A
+# CHECK-NEXT:  %75:gpr64common = LOADgot target-flags(aarch64-got) @B
+# CHECK-NEXT:  Bcc 2, %bb.3, implicit $nzcv
+# CHECK-NEXT:bb.2:
+# CHECK-NEXT:; predecessors: %bb.1
+# CHECK-NEXT:  successors: %bb.6(0x80000000); %bb.6(100.00%)
 
+# CHECK:  %26:gpr64all = COPY $xzr
+# CHECK-NEXT:  %23:gpr64all = COPY %26:gpr64all
+# CHECK-NEXT:  B %bb.6
+# CHECK-NEXT:bb.3 (%ir-block.8):
+# CHECK-NEXT:; predecessors: %bb.1
+# CHECK-NEXT:  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+# CHECK:  %29:gpr64 = UDIVXr %24:gpr64common, %25:gpr64
+# CHECK-NEXT:  %30:gpr64 = MADDXrrr killed %29:gpr64, %25:gpr64, $xzr
+# CHECK-NEXT:  %31:gpr64 = SUBXrr %24:gpr64common, %30:gpr64
+# CHECK-NEXT:  %2:gpr64 = COPY %31:gpr64
+# CHECK-NEXT:  %3:gpr64 = COPY %30:gpr64
+# CHECK-NEXT:  %33:gpr64 = UBFMXri %25:gpr64, 4, 63
+# CHECK-NEXT:  %34:gpr32 = COPY %33.sub_32:gpr64
+# CHECK-NEXT:  %35:gpr64common = ANDXri %33:gpr64, 4127
+# CHECK-NEXT:  %36:gpr64common = ADDXrx %35:gpr64common, killed %34:gpr32, 17
+# CHECK-NEXT:  %37:gpr64 = UBFMXri killed %36:gpr64common, 60, 59
+# CHECK-NEXT:  %39:gpr64 = ADDXrr %75:gpr64common, %37:gpr64
+# CHECK-NEXT:  %4:gpr64sp = COPY %39:gpr64
+# CHECK-NEXT:  %40:gpr64 = nuw nsw UBFMXri %35:gpr64common, 59, 58
+# CHECK-NEXT:  %41:gpr64 = ADDXrr %75:gpr64common, %40:gpr64
+# CHECK-NEXT:  %5:gpr64sp = COPY %41:gpr64
+# CHECK-NEXT:  %42:gpr64 = nuw nsw UBFMXri %35:gpr64common, 60, 59
+# CHECK-NEXT:  %43:gpr64 = ADDXrr %75:gpr64common, %42:gpr64
+# CHECK-NEXT:  %6:gpr64sp = COPY %43:gpr64
+# CHECK-NEXT:  %45:gpr64 = ADDXrr %74:gpr64common, %37:gpr64
+# CHECK-NEXT:  %7:gpr64sp = COPY %45:gpr64
+# CHECK-NEXT:  %46:gpr64 = ADDXrr %74:gpr64common, %40:gpr64
+# CHECK-NEXT:  %8:gpr64sp = COPY %46:gpr64
+# CHECK-NEXT:  %47:gpr64 = ADDXrr %74:gpr64common, %42:gpr64
+# CHECK-NEXT:  %48:gpr64all = COPY $xzr
+# CHECK-NEXT:  %28:gpr64all = COPY %48:gpr64all
+# CHECK-NEXT:  %9:gpr64sp = COPY %47:gpr64
+# CHECK-NEXT:  %50:ppr_3b = PTRUE_S 31
+# CHECK-NEXT:bb.4 (%ir-block.22):
+# CHECK-NEXT:; predecessors: %bb.3, %bb.4
+# CHECK-NEXT:  successors: %bb.5(0x04000000), %bb.4(0x7c000000); %bb.5(3.12%), %bb.4(96.88%)
+
+# CHECK:  %10:gpr64common = PHI %28:gpr64all, %bb.3, %11:gpr64all, %bb.4
+# CHECK-NEXT:  %51:zpr = LD1W %50:ppr_3b, %75:gpr64common, %10:gpr64common :: (load unknown-size from %ir.25, align 4, !tbaa !6)
+# CHECK-NEXT:  %52:zpr = LD1W %50:ppr_3b, %6:gpr64sp, %10:gpr64common :: (load unknown-size from %ir.27, align 4, !tbaa !6)
+# CHECK-NEXT:  %53:zpr = LD1W %50:ppr_3b, %5:gpr64sp, %10:gpr64common :: (load unknown-size from %ir.29, align 4, !tbaa !6)
+# CHECK-NEXT:  %54:zpr = LD1W %50:ppr_3b, %4:gpr64sp, %10:gpr64common :: (load unknown-size from %ir.32, align 4, !tbaa !6)
+# CHECK-NEXT:  %55:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %51:zpr, %51:zpr
+# CHECK-NEXT:  %56:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %52:zpr, %52:zpr
+# CHECK-NEXT:  %57:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %53:zpr, %53:zpr
+# CHECK-NEXT:  %58:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %54:zpr, %54:zpr
+# CHECK-NEXT:  ST1W killed %55:zpr, %50:ppr_3b, %74:gpr64common, %10:gpr64common :: (store unknown-size into %ir.39, align 4, !tbaa !6)
+# CHECK-NEXT:  ST1W killed %56:zpr, %50:ppr_3b, %9:gpr64sp, %10:gpr64common :: (store unknown-size into %ir.40, align 4, !tbaa !6)
+# CHECK-NEXT:  ST1W killed %57:zpr, %50:ppr_3b, %8:gpr64sp, %10:gpr64common :: (store unknown-size into %ir.41, align 4, !tbaa !6)
+# CHECK-NEXT:  ST1W killed %58:zpr, %50:ppr_3b, %7:gpr64sp, %10:gpr64common :: (store unknown-size into %ir.43, align 4, !tbaa !6)
+# CHECK-NEXT:  %60:gpr64 = nuw ADDXrr %10:gpr64common, %25:gpr64
+# CHECK-NEXT:  %11:gpr64all = COPY %60:gpr64
+# CHECK-NEXT:  dead $xzr = SUBSXrr %30:gpr64, %60:gpr64, implicit-def $nzcv
+# CHECK-NEXT:  Bcc 1, %bb.4, implicit $nzcv
+# CHECK-NEXT:  B %bb.5
+# CHECK-NEXT:bb.5 (%ir-block.46):
+# CHECK-NEXT:; predecessors: %bb.4
+# CHECK-NEXT:  successors: %bb.7(0x30000000), %bb.6(0x50000000); %bb.7(37.50%), %bb.6(62.50%)
+
+# CHECK:  CBZX %2:gpr64, %bb.7
+# CHECK-NEXT:  B %bb.6
+# CHECK-NEXT:bb.6 (%ir-block.48):
+# CHECK-NEXT:; predecessors: %bb.2, %bb.5
+# CHECK-NEXT:  successors: %bb.11(0x80000000); %bb.11(100.00%)
+
+# CHECK:  %12:gpr64 = PHI %23:gpr64all, %bb.2, %3:gpr64, %bb.5
+# CHECK-NEXT:  %62:gpr64common = SUBXrr %22:gpr64common, %12:gpr64
+# CHECK-NEXT:  %63:gpr64sp = ADDXri killed %62:gpr64common, 1, 0
+# CHECK-NEXT:  %64:gpr64 = UBFMXri %12:gpr64, 62, 61
+# CHECK-NEXT:  %66:gpr64 = ADDXrr %74:gpr64common, %64:gpr64
+# CHECK-NEXT:  %13:gpr64all = COPY %66:gpr64
+# CHECK-NEXT:  %68:gpr64 = ADDXrr %75:gpr64common, %64:gpr64
+# CHECK-NEXT:  %14:gpr64all = COPY %68:gpr64
+# CHECK-NEXT:  %15:gpr64all = COPY %63:gpr64sp
+# CHECK-NEXT:  B %bb.11
+# CHECK-NEXT:bb.7 (%ir-block.56):
+# CHECK-NEXT:; predecessors: %bb.0, %bb.5, %bb.17
+
+# CHECK:  RET_ReallyLR
+# CHECK-NEXT:bb.11 (%ir-block.57):
+# CHECK-NEXT:; predecessors: %bb.6
+# CHECK-NEXT:  successors: %bb.12(0x40000000), %bb.15(0x40000000); %bb.12(50.00%), %bb.15(50.00%)
+
+# CHECK:  %107:gpr64sp = COPY %15:gpr64all
+# CHECK-NEXT:  $xzr = SUBSXri %107:gpr64sp, 14, 0, implicit-def $nzcv
+# CHECK-NEXT:  Bcc 11, %bb.15, implicit $nzcv
+# CHECK-NEXT:bb.12 (%ir-block.57):
+# CHECK-NEXT:; predecessors: %bb.11
+# CHECK-NEXT:  successors: %bb.8(0x80000000); %bb.8(100.00%)
+
+# CHECK:  %76:gpr64sp = COPY %14:gpr64all
+# CHECK-NEXT:  %77:gpr64sp = COPY %13:gpr64all
+# CHECK-NEXT:  %78:gpr64sp = COPY %15:gpr64all
+# CHECK-NEXT:  %88:gpr64sp = COPY %76:gpr64sp
+# CHECK-NEXT:  %99:gpr64sp = COPY %77:gpr64sp
+# CHECK-NEXT:  %104:gpr64sp = COPY %78:gpr64sp
+# CHECK-NEXT:  %87:fpr32 = LDURSi %88:gpr64sp, 0 :: (volatile load (s32) from %ir.58, !tbaa !6)
+# CHECK-NEXT:  %90:gpr64sp = ADDXri %88:gpr64sp, 4, 0
+# CHECK-NEXT:  %89:fpr32 = LDURSi %90:gpr64sp, 0 :: (volatile load (s32) from %ir.58, !tbaa !6)
+# CHECK-NEXT:  %92:gpr64sp = ADDXri %90:gpr64sp, 4, 0
+# CHECK-NEXT:  %91:fpr32 = LDURSi %92:gpr64sp, 0 :: (volatile load (s32) from %ir.58, !tbaa !6)
+# CHECK-NEXT:  %93:gpr64sp = ADDXri %92:gpr64sp, 4, 0
+# CHECK-NEXT:  %80:fpr32 = LDURSi %93:gpr64sp, 0 :: (volatile load (s32) from %ir.58, !tbaa !6)
+# CHECK-NEXT:  %161:gpr64sp = ADDXri %93:gpr64sp, 4, 0
+# CHECK-NEXT:  %94:fpr32 = LDURSi %161:gpr64sp, 0 :: (volatile load (s32) from %ir.58, !tbaa !6)
+# CHECK-NEXT:  %95:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %87:fpr32, %87:fpr32, implicit $fpcr
+# CHECK-NEXT:  %162:gpr64sp = ADDXri %161:gpr64sp, 4, 0
+# CHECK-NEXT:  %163:fpr32 = LDURSi %162:gpr64sp, 0 :: (volatile load (s32) from %ir.58, !tbaa !6)
+# CHECK-NEXT:  %96:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %89:fpr32, %89:fpr32, implicit $fpcr
+# CHECK-NEXT:  %164:gpr64sp = ADDXri %162:gpr64sp, 4, 0
+# CHECK-NEXT:  %165:fpr32 = LDURSi %164:gpr64sp, 0 :: (volatile load (s32) from %ir.58, !tbaa !6)
+# CHECK-NEXT:  %97:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %91:fpr32, %91:fpr32, implicit $fpcr
+# CHECK-NEXT:  %166:gpr64sp = ADDXri %164:gpr64sp, 4, 0
+# CHECK-NEXT:  %167:fpr32 = LDURSi %166:gpr64sp, 0 :: (volatile load (s32) from %ir.58, !tbaa !6)
+# CHECK-NEXT:  %81:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %80:fpr32, %80:fpr32, implicit $fpcr
+# CHECK-NEXT:  %168:gpr64sp = ADDXri %166:gpr64sp, 4, 0
+# CHECK-NEXT:  %169:fpr32 = LDURSi %168:gpr64sp, 0 :: (volatile load (s32) from %ir.58, !tbaa !6)
+# CHECK-NEXT:  %98:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %94:fpr32, %94:fpr32, implicit $fpcr
+# CHECK-NEXT:bb.8 (%ir-block.57):
+# CHECK-NEXT:; predecessors: %bb.8, %bb.12
+# CHECK-NEXT:  successors: %bb.8(0x7c000000), %bb.13(0x04000000); %bb.8(96.88%), %bb.13(3.12%)
+
+# CHECK:  %136:gpr64sp = PHI %168:gpr64sp, %bb.12, %135:gpr64sp, %bb.8
+# CHECK-NEXT:  %138:fpr32 = PHI %95:fpr32, %bb.12, %137:fpr32, %bb.8
+# CHECK-NEXT:  %140:gpr64sp = PHI %99:gpr64sp, %bb.12, %139:gpr64sp, %bb.8
+# CHECK-NEXT:  %142:fpr32 = PHI %163:fpr32, %bb.12, %141:fpr32, %bb.8
+# CHECK-NEXT:  %144:gpr64sp = PHI %104:gpr64sp, %bb.12, %143:gpr64sp, %bb.8
+# CHECK-NEXT:  %146:fpr32 = PHI %96:fpr32, %bb.12, %145:fpr32, %bb.8
+# CHECK-NEXT:  %148:fpr32 = PHI %165:fpr32, %bb.12, %147:fpr32, %bb.8
+# CHECK-NEXT:  %150:fpr32 = PHI %97:fpr32, %bb.12, %149:fpr32, %bb.8
+# CHECK-NEXT:  %152:fpr32 = PHI %167:fpr32, %bb.12, %151:fpr32, %bb.8
+# CHECK-NEXT:  %154:fpr32 = PHI %81:fpr32, %bb.12, %153:fpr32, %bb.8
+# CHECK-NEXT:  %156:fpr32 = PHI %169:fpr32, %bb.12, %155:fpr32, %bb.8
+# CHECK-NEXT:  %160:fpr32 = PHI %98:fpr32, %bb.12, %159:fpr32, %bb.8
+# CHECK-NEXT:  $x1 = COPY %136:gpr64sp
+# CHECK-NEXT:  $s0 = COPY %138:fpr32
+# CHECK-NEXT:  $x2 = COPY %140:gpr64sp
+# CHECK-NEXT:  $s2 = COPY %142:fpr32
+# CHECK-NEXT:  $x3 = COPY %144:gpr64sp
+# CHECK-NEXT:  $s3 = COPY %146:fpr32
+# CHECK-NEXT:  $s4 = COPY %148:fpr32
+# CHECK-NEXT:  $s5 = COPY %150:fpr32
+# CHECK-NEXT:  $s6 = COPY %152:fpr32
+# CHECK-NEXT:  $s7 = COPY %154:fpr32
+# CHECK-NEXT:  $s8 = COPY %156:fpr32
+# CHECK-NEXT:  $s9 = COPY %160:fpr32
+# CHECK-NEXT:  renamable $x0 = ADDXri renamable $x1, 4, 0
+# CHECK-NEXT:  STURSi renamable $s0, renamable $x2, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  renamable $s1 = LDURSi renamable $x0, 0 :: (volatile load (s32) from %ir.58, !tbaa !6)
+# CHECK-NEXT:  renamable $s0 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr renamable $s2, renamable $s2, implicit $fpcr
+# CHECK-NEXT:  renamable $x1 = ADDXri renamable $x2, 4, 0
+# CHECK-NEXT:  renamable $x2 = SUBSXri renamable $x3, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  renamable $x3 = ADDXri renamable $x0, 4, 0
+# CHECK-NEXT:  STURSi renamable $s3, renamable $x1, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  renamable $s2 = LDURSi renamable $x3, 0 :: (volatile load (s32) from %ir.58, !tbaa !6)
+# CHECK-NEXT:  renamable $s3 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr renamable $s4, renamable $s4, implicit $fpcr
+# CHECK-NEXT:  renamable $x0 = ADDXri renamable $x1, 4, 0
+# CHECK-NEXT:  renamable $x1 = SUBSXri renamable $x2, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  renamable $x2 = ADDXri renamable $x3, 4, 0
+# CHECK-NEXT:  STURSi renamable $s5, renamable $x0, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  renamable $s4 = LDURSi renamable $x2, 0 :: (volatile load (s32) from %ir.58, !tbaa !6)
+# CHECK-NEXT:  renamable $s5 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr renamable $s6, renamable $s6, implicit $fpcr
+# CHECK-NEXT:  renamable $x3 = ADDXri renamable $x0, 4, 0
+# CHECK-NEXT:  renamable $x0 = SUBSXri renamable $x1, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  renamable $x4 = ADDXri renamable $x2, 4, 0
+# CHECK-NEXT:  STURSi renamable $s7, renamable $x3, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  renamable $s6 = LDURSi renamable $x4, 0 :: (volatile load (s32) from %ir.58, !tbaa !6)
+# CHECK-NEXT:  renamable $s7 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr renamable $s8, renamable $s8, implicit $fpcr
+# CHECK-NEXT:  renamable $x5 = ADDXri renamable $x3, 4, 0
+# CHECK-NEXT:  renamable $x6 = SUBSXri renamable $x0, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  renamable $x1 = ADDXri renamable $x4, 4, 0
+# CHECK-NEXT:  STURSi renamable $s9, renamable $x5, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  renamable $s8 = LDURSi renamable $x1, 0 :: (volatile load (s32) from %ir.58, !tbaa !6)
+# CHECK-NEXT:  renamable $s9 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr renamable $s1, renamable $s1, implicit $fpcr
+# CHECK-NEXT:  renamable $x2 = ADDXri renamable $x5, 4, 0
+# CHECK-NEXT:  renamable $x3 = SUBSXri renamable $x6, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  %134:gpr64sp = COPY $x0
+# CHECK-NEXT:  %135:gpr64sp = COPY $x1
+# CHECK-NEXT:  %137:fpr32 = COPY $s0
+# CHECK-NEXT:  %139:gpr64sp = COPY $x2
+# CHECK-NEXT:  %141:fpr32 = COPY $s2
+# CHECK-NEXT:  %143:gpr64sp = COPY $x3
+# CHECK-NEXT:  %145:fpr32 = COPY $s3
+# CHECK-NEXT:  %147:fpr32 = COPY $s4
+# CHECK-NEXT:  %149:fpr32 = COPY $s5
+# CHECK-NEXT:  %151:fpr32 = COPY $s6
+# CHECK-NEXT:  %153:fpr32 = COPY $s7
+# CHECK-NEXT:  %155:fpr32 = COPY $s8
+# CHECK-NEXT:  %157:gpr64sp = COPY $x5
+# CHECK-NEXT:  %158:gpr64sp = COPY $x6
+# CHECK-NEXT:  %159:fpr32 = COPY $s9
+# CHECK-NEXT:  $xzr = SUBSXri $x3, 14, 0, implicit-def $nzcv
+# CHECK-NEXT:  Bcc 10, %bb.8, implicit $nzcv
+# CHECK-NEXT:bb.13 (%ir-block.57):
+# CHECK-NEXT:; predecessors: %bb.8
+# CHECK-NEXT:  successors: %bb.14(0x80000000); %bb.14(100.00%)
+
+# CHECK:  %111:gpr64sp = ADDXri %135:gpr64sp, 4, 0
+# CHECK-NEXT:  STURSi %137:fpr32, %139:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %112:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %141:fpr32, %141:fpr32, implicit $fpcr
+# CHECK-NEXT:  %113:gpr64sp = ADDXri %139:gpr64sp, 4, 0
+# CHECK-NEXT:  %114:gpr64sp = SUBSXri %143:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %145:fpr32, %113:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %115:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %147:fpr32, %147:fpr32, implicit $fpcr
+# CHECK-NEXT:  %116:gpr64sp = ADDXri %113:gpr64sp, 4, 0
+# CHECK-NEXT:  %117:gpr64sp = SUBSXri %114:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %149:fpr32, %116:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %118:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %151:fpr32, %151:fpr32, implicit $fpcr
+# CHECK-NEXT:  %119:gpr64sp = ADDXri %116:gpr64sp, 4, 0
+# CHECK-NEXT:  %120:gpr64sp = SUBSXri %117:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %153:fpr32, %119:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %121:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %155:fpr32, %155:fpr32, implicit $fpcr
+# CHECK-NEXT:  %122:gpr64sp = ADDXri %119:gpr64sp, 4, 0
+# CHECK-NEXT:  %123:gpr64sp = SUBSXri %120:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %159:fpr32, %122:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %124:gpr64sp = ADDXri %122:gpr64sp, 4, 0
+# CHECK-NEXT:  %125:gpr64sp = SUBSXri %123:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %112:fpr32, %124:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %126:gpr64sp = ADDXri %124:gpr64sp, 4, 0
+# CHECK-NEXT:  %127:gpr64sp = SUBSXri %125:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %115:fpr32, %126:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %128:gpr64sp = ADDXri %126:gpr64sp, 4, 0
+# CHECK-NEXT:  %129:gpr64sp = SUBSXri %127:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %118:fpr32, %128:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %130:gpr64sp = ADDXri %128:gpr64sp, 4, 0
+# CHECK-NEXT:  %131:gpr64sp = SUBSXri %129:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %121:fpr32, %130:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %132:gpr64sp = ADDXri %130:gpr64sp, 4, 0
+# CHECK-NEXT:  %133:gpr64sp = SUBSXri %131:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:bb.14 (%ir-block.57):
+# CHECK-NEXT:; predecessors: %bb.13
+# CHECK-NEXT:  successors: %bb.15(0x40000000), %bb.17(0x40000000); %bb.15(50.00%), %bb.17(50.00%)
+
+# CHECK:  $xzr = SUBSXri %133:gpr64sp, 0, 0, implicit-def $nzcv
+# CHECK-NEXT:  Bcc 0, %bb.17, implicit $nzcv
+# CHECK-NEXT:bb.15 (%ir-block.57):
+# CHECK-NEXT:; predecessors: %bb.14, %bb.11
+# CHECK-NEXT:  successors: %bb.16(0x80000000); %bb.16(100.00%)
+
+# CHECK:  %108:gpr64sp = PHI %14:gpr64all, %bb.11, %111:gpr64sp, %bb.14
+# CHECK-NEXT:  %109:gpr64sp = PHI %13:gpr64all, %bb.11, %132:gpr64sp, %bb.14
+# CHECK-NEXT:  %110:gpr64sp = PHI %15:gpr64all, %bb.11, %133:gpr64sp, %bb.14
+# CHECK-NEXT:bb.16 (%ir-block.57):
+# CHECK-NEXT:; predecessors: %bb.16, %bb.15
+# CHECK-NEXT:  successors: %bb.16(0x40000000), %bb.17(0x40000000); %bb.16(50.00%), %bb.17(50.00%)
+
+# CHECK:  %16:gpr64sp = PHI %108:gpr64sp, %bb.15, %20:gpr64all, %bb.16
+# CHECK-NEXT:  %17:gpr64sp = PHI %109:gpr64sp, %bb.15, %19:gpr64all, %bb.16
+# CHECK-NEXT:  %18:gpr64sp = PHI %110:gpr64sp, %bb.15, %21:gpr64all, %bb.16
+# CHECK-NEXT:  early-clobber %69:gpr64sp, %70:fpr32 = LDRSpost %16:gpr64sp(tied-def 0), 4 :: (volatile load (s32) from %ir.58, !tbaa !6)
+# CHECK-NEXT:  %71:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %70:fpr32, %70:fpr32, implicit $fpcr
+# CHECK-NEXT:  early-clobber %72:gpr64sp = STRSpost killed %71:fpr32, %17:gpr64sp(tied-def 0), 4 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %19:gpr64all = COPY %72:gpr64sp
+# CHECK-NEXT:  %20:gpr64all = COPY %69:gpr64sp
+# CHECK-NEXT:  %73:gpr64 = SUBSXri %18:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  %21:gpr64all = COPY %73:gpr64
+# CHECK-NEXT:  Bcc 1, %bb.16, implicit $nzcv
+# CHECK-NEXT:  B %bb.17
+# CHECK-NEXT:bb.17 (%ir-block.57):
+# CHECK-NEXT:; predecessors: %bb.16, %bb.14
+# CHECK-NEXT:  successors: %bb.7(0x80000000); %bb.7(100.00%)
+
+# CHECK:  B %bb.7
 
 --- |
   ; ModuleID = 'test3044-04.c'
@@ -644,7 +688,7 @@ body:             |
     %17:gpr64sp = PHI %13, %bb.5, %19, %bb.7
     %18:gpr64sp = PHI %15, %bb.5, %21, %bb.7
     early-clobber %69:gpr64sp, %70:fpr32 = LDRSpost %16, 4 :: (load (s32) from %ir.58, !tbaa !6)
-    %71:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %70, %70
+    %71:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %70, %70, implicit $fpcr
     early-clobber %72:gpr64sp = STRSpost killed %71, %17, 4 :: (store (s32) into %ir.59, !tbaa !6)
     %19:gpr64all = COPY %72
     %20:gpr64all = COPY %69

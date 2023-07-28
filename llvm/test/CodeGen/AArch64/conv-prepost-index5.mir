@@ -417,7 +417,7 @@ body:             |
     early-clobber %61:gpr64sp, %62:fpr32 = LDRSpost %14, 4 :: (load (s32) from %ir.lsr.iv38, !tbaa !13)
     early-clobber %63:gpr64sp, %64:fpr32 = LDRSpost %15, 4 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
     early-clobber %A1:gpr64sp, %A2:fpr32 = LDRSpost %15, -4 :: (load (s32) from %ir.lsr.iv35, !tbaa !13)
-    %66:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDSrrr killed %64, killed %62, killed %60
+    %66:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDSrrr killed %64, killed %62, killed %60, implicit $fpcr
     early-clobber %67:gpr64sp, %68:gpr64 = LDRSWpost %16, 4 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
     early-clobber %B1:gpr64sp, %B2:gpr64 = LDRSWpost %16, -4 :: (load (s32) from %ir.lsr.iv, !tbaa !15)
     STRSroX killed %66, %56, killed %68, 0, 1 :: (store (s32) into %ir.arrayidx12, !tbaa !13)

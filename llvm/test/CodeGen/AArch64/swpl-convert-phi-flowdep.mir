@@ -194,12 +194,12 @@ body:             |
     %7:fpr64 = PHI %1, %bb.1, %10, %bb.2
     %8:fpr64 = PHI %0, %bb.1, %7, %bb.2
     %9:gpr64sp = PHI %4, %bb.1, %13, %bb.2
-    %23:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr %7, %8
+    %23:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr %7, %8, implicit $fpcr
     %10:fpr64 = LDURDi %5, -32 :: (load (s64) from %ir.uglygep61, !tbaa !6)
-    %32:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %23, %6
+    %32:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %23, %6, implicit $fpcr
     %26:fpr64 = LDRDui %5, 0 :: (load (s64) from %ir.lsr.iv, !tbaa !6)
-    %34:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr %10, killed %26
-    %11:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %32, killed %34
+    %34:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr %10, killed %26, implicit $fpcr
+    %11:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %32, killed %34, implicit $fpcr
     STRDui %11, %5, 0 :: (store (s64) into %ir.lsr.iv, !tbaa !6)
     %27:gpr64sp = ADDXri %5, 8, 0
     %12:gpr64all = COPY %27
