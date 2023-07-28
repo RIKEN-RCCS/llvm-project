@@ -1,12 +1,12 @@
 #RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner  -swpl-mve-limit=1 -swpl-debug -o /dev/null -swpl-maxii=20 2>&1 | FileCheck %s
 
 #CHECK:        : (Iterative Modulo Scheduling. ResMII 2. NumOfBodyInsts 6. Budget 300. Minimum II = 2.)
-#CHECK:        :  (X) Too large mve          at estimation.          : (II: 2 in [ 2,20]) MVE: 10 Last inst: 0. (Itr Org: 100, Req: 19) (VReg Fp: 16/32, Int: 25/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (X) Too large mve          at estimation.          : (II: 3 in [ 2,20]) MVE: 7 Last inst: 0. (Itr Org: 100, Req: 13) (VReg Fp: 11/32, Int: 19/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (X) Too large mve          at estimation.          : (II: 7 in [ 2,20]) MVE: 3 Last inst: 0. (Itr Org: 100, Req: 5) (VReg Fp: 10/32, Int: 11/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (X) Too large mve          at estimation.          : (II: 11 in [ 2,20]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 3) (VReg Fp: 3/32, Int: 7/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (X) Too large mve          at estimation.          : (II: 15 in [ 2,20]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 3) (VReg Fp: 3/32, Int: 7/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (X) Too large mve          at estimation.          : (II: 19 in [ 2,20]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 2) (VReg Fp: 3/32, Int: 7/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (X) Too large mve          at estimation.          : (II: 2 in [ 2,20]) MVE: 10 Last inst: 0. (Itr Org: 100, Req: 19) (VReg Fp: 16/32, Int: 25/29, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (X) Too large mve          at estimation.          : (II: 3 in [ 2,20]) MVE: 7 Last inst: 0. (Itr Org: 100, Req: 13) (VReg Fp: 11/32, Int: 19/29, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (X) Too large mve          at estimation.          : (II: 7 in [ 2,20]) MVE: 3 Last inst: 0. (Itr Org: 100, Req: 5) (VReg Fp: 10/32, Int: 11/29, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (X) Too large mve          at estimation.          : (II: 11 in [ 2,20]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 3) (VReg Fp: 3/32, Int: 7/29, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (X) Too large mve          at estimation.          : (II: 15 in [ 2,20]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 3) (VReg Fp: 3/32, Int: 7/29, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (X) Too large mve          at estimation.          : (II: 19 in [ 2,20]) MVE: 2 Last inst: 0. (Itr Org: 100, Req: 2) (VReg Fp: 3/32, Int: 7/29, Pre: 1/8) Eval:0.000000e+00.
 --- |
   ; ModuleID = '/TEST/tp/testprg.ll'
   source_filename = "/TEST/tp/testprg.c"

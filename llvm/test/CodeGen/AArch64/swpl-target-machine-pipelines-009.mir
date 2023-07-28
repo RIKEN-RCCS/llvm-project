@@ -1,11 +1,11 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource-filter="FSQRT_ZPmZ_UNDEF_S|FDIV_ZPZZ_UNDEF_S" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-debug-dump-resource-filter="FSQRT_ZPmZ_UNDEF_S|FDIV_ZPZZ_UNDEF_S" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %270:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_UNDEF_S %95:zpr, %74:ppr_3b, killed %257:zpr
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %232:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_UNDEF_S
 #CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+24
 #CHECK-NEXT:  latency: 98
 #CHECK-NEXT:  seqDecode: false
 #CHECK-NEXT:  stage/resource(): 0/FLA, 0/FLA_E, 1/FLA_E, 2/FLA_E, 3/FLA_E, 4/FLA_E, 5/FLA_E, 6/FLA_E, 7/FLA_E, 8/FLA_E, 9/FLA_E, 10/FLA_E, 11/FLA_E, 12/FLA_E, 13/FLA_E, 14/FLA_E, 15/FLA_E, 16/FLA_E, 17/FLA_E, 18/FLA_E, 19/FLA_E, 20/FLA_E, 21/FLA_E, 22/FLA_E, 23/FLA_E, 24/FLA_E, 25/FLA_E, 26/FLA_E, 27/FLA_E, 28/FLA_E, 29/FLA_E, 30/FLA_E, 31/FLA_E, 32/FLA_E, 33/FLA_E, 34/FLA_E, 35/FLA_E, 36/FLA_E, 37/FLA_E, 38/FLA_E, 39/FLA_E, 40/FLA_E, 41/FLA_E, 42/FLA_E, 43/FLA_E, 44/FLA_E, 45/FLA_E, 46/FLA_E, 47/FLA_E, 48/FLA_E, 49/FLA_E, 50/FLA_E, 51/FLA_E, 52/FLA_E, 53/FLA_E, 54/FLA_E, 55/FLA_E, 56/FLA_E, 57/FLA_E, 58/FLA_E, 59/FLA_E, 60/FLA_E, 61/FLA_E, 62/FLA_E, 63/FLA_E, 64/FLA_E, 65/FLA_E, 66/FLA_E, 67/FLA_E, 68/FLA_E, 69/FLA_E, 70/FLA_E, 71/FLA_E, 72/FLA_E, 73/FLA_E, 74/FLA_E, 75/FLA_E, 76/FLA_E, 77/FLA_E, 78/FLA_E, 79/FLA_E, 80/FLA_E, 81/FLA_E, 82/FLA_E, 83/FLA_E, 84/FLA_E, 85/FLA_E, 86/FLA_E, 87/FLA_E, 88/FLA_E, 89/FLA_E, 90/FLA_E, 91/FLA_E, 92/FLA_E, 93/FLA_E, 94/FLA_E, 95/FLA_E, 96/FLA_E, 97/FLA_E
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %278:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_UNDEF_S %74:ppr_3b, killed %266:zpr, %270:zpr
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %240:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_UNDEF_S
 #CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+24
 #CHECK-NEXT:  latency: 98
 #CHECK-NEXT:  seqDecode: false
@@ -568,13 +568,13 @@ body:             |
     %38:fpr32 = PHI %29, %bb.5, %41, %bb.7
     %39:gpr64sp = PHI %32, %bb.5, %44, %bb.7
     early-clobber %122:gpr64sp, %123:fpr32 = LDRSpost %35, 4 :: (load (s32) from %ir.lsr.iv73, !tbaa !4)
-    %125:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBSrr %124, killed %123
+    %125:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBSrr %124, killed %123, implicit $fpcr
     early-clobber %126:gpr64sp, %127:fpr32 = LDRSpost %36, 4 :: (load (s32) from %ir.lsr.iv, !tbaa !4)
-    %128:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBSrr killed %127, %124
-    %129:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSQRTSr killed %125
-    %40:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBSrr %37, %129
-    %130:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FDIVSrr killed %128, %129
-    %41:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %38, killed %130
+    %128:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBSrr killed %127, %124, implicit $fpcr
+    %129:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSQRTSr killed %125, implicit $fpcr
+    %40:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBSrr %37, %129, implicit $fpcr
+    %130:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FDIVSrr killed %128, %129, implicit $fpcr
+    %41:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %38, killed %130, implicit $fpcr
     %42:gpr64all = COPY %126
     %43:gpr64all = COPY %122
     %131:gpr64 = SUBSXri %39, 1, 0, implicit-def $nzcv

@@ -1,18 +1,18 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource-filter=".*" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-debug-dump-resource-filter=".*" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %361:gpr64 = MADDXrrr killed %359:gpr64common, killed %360:gpr64, $xzr
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %361:gpr64 = MADDXrrr
 #CHECK-NEXT:  ResourceID: INT_OP+7
 #CHECK-NEXT:  latency: 5
 #CHECK-NEXT:  seqDecode: false
 #CHECK-NEXT:  stage/resource(): 0/EXA
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %364:gpr64 = UMADDLrrr %355:gpr32common, %70:gpr32, $xzr
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %364:gpr64 = UMADDLrrr
 #CHECK-NEXT:  ResourceID: INT_OP+7
 #CHECK-NEXT:  latency: 5
 #CHECK-NEXT:  seqDecode: false
 #CHECK-NEXT:  stage/resource(): 0/EXA
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %391:gpr32 = MADDWrrr killed %363:gpr32, %75:gpr32, %358:gpr32
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %391:gpr32 = MADDWrrr
 #CHECK-NEXT:  ResourceID: INT_OP+8
 #CHECK-NEXT:  latency: 6
 #CHECK-NEXT:  seqDecode: false
@@ -999,43 +999,43 @@ body:             |
     %110:gpr64 = UBFMXri killed %109, 43, 63
     %111:gpr32 = COPY %110.sub_32
     %113:gpr32 = MADDWrrr killed %74, %75, %68
-    %114:fpr64 = nofpexcept SCVTFUWDri killed %113
+    %114:fpr64 = nofpexcept SCVTFUWDri killed %113, implicit $fpcr
     STURDi killed %114, %8, -40 :: (store (s64) into %ir.uglygep250, align 16, !tbaa !6)
     %115:gpr32common = MADDWrrr killed %103, %75, %68
     %116:gpr32common = ADDWri killed %115, 7, 0
-    %117:fpr64 = nofpexcept SCVTFUWDri killed %116
+    %117:fpr64 = nofpexcept SCVTFUWDri killed %116, implicit $fpcr
     STURDi killed %117, %8, -32 :: (store (s64) into %ir.uglygep258, !tbaa !6)
     %118:gpr32common = MADDWrrr killed %79, %75, %68
     %119:gpr32common = ADDWri killed %118, 14, 0
-    %120:fpr64 = nofpexcept SCVTFUWDri killed %119
+    %120:fpr64 = nofpexcept SCVTFUWDri killed %119, implicit $fpcr
     STURDi killed %120, %8, -24 :: (store (s64) into %ir.uglygep257, align 16, !tbaa !6)
     %121:gpr32common = MADDWrrr killed %83, %75, %68
     %122:gpr32common = ADDWri killed %121, 21, 0
-    %123:fpr64 = nofpexcept SCVTFUWDri killed %122
+    %123:fpr64 = nofpexcept SCVTFUWDri killed %122, implicit $fpcr
     STURDi killed %123, %8, -16 :: (store (s64) into %ir.uglygep256, !tbaa !6)
     %124:gpr32common = MADDWrrr killed %87, %75, %68
     %125:gpr32common = ADDWri killed %124, 28, 0
-    %126:fpr64 = nofpexcept SCVTFUWDri killed %125
+    %126:fpr64 = nofpexcept SCVTFUWDri killed %125, implicit $fpcr
     STURDi killed %126, %8, -8 :: (store (s64) into %ir.uglygep255, align 16, !tbaa !6)
     %127:gpr32common = MADDWrrr killed %91, %75, %68
     %128:gpr32common = ADDWri killed %127, 35, 0
-    %129:fpr64 = nofpexcept SCVTFUWDri killed %128
+    %129:fpr64 = nofpexcept SCVTFUWDri killed %128, implicit $fpcr
     STRDui killed %129, %8, 0 :: (store (s64) into %ir.lsr.iv248, !tbaa !6)
     %130:gpr32common = MADDWrrr killed %95, %75, %68
     %131:gpr32common = ADDWri killed %130, 42, 0
-    %132:fpr64 = nofpexcept SCVTFUWDri killed %131
+    %132:fpr64 = nofpexcept SCVTFUWDri killed %131, implicit $fpcr
     STRDui killed %132, %8, 1 :: (store (s64) into %ir.uglygep254, align 16, !tbaa !6)
     %133:gpr32common = MADDWrrr killed %99, %75, %68
     %134:gpr32common = ADDWri killed %133, 49, 0
-    %135:fpr64 = nofpexcept SCVTFUWDri killed %134
+    %135:fpr64 = nofpexcept SCVTFUWDri killed %134, implicit $fpcr
     STRDui killed %135, %8, 2 :: (store (s64) into %ir.uglygep253, !tbaa !6)
     %136:gpr32common = MADDWrrr killed %111, %75, %68
     %137:gpr32common = ADDWri killed %136, 56, 0
-    %138:fpr64 = nofpexcept SCVTFUWDri killed %137
+    %138:fpr64 = nofpexcept SCVTFUWDri killed %137, implicit $fpcr
     STRDui killed %138, %8, 3 :: (store (s64) into %ir.uglygep252, align 16, !tbaa !6)
     %139:gpr32common = MADDWrrr killed %107, %75, %68
     %140:gpr32common = ADDWri killed %139, 63, 0
-    %141:fpr64 = nofpexcept SCVTFUWDri killed %140
+    %141:fpr64 = nofpexcept SCVTFUWDri killed %140, implicit $fpcr
     STRDui killed %141, %8, 4 :: (store (s64) into %ir.uglygep251, !tbaa !6)
     %142:gpr64sp = nuw nsw ADDXri %11, 70, 0
     %13:gpr64all = COPY %142
@@ -1090,8 +1090,8 @@ body:             |
     BL @gettimeofday, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit-def $sp, implicit-def $w0
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     %343:fpr64 = FMOVDi 112
-    %344:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr %35, killed %343
-    %345:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %344, %28
+    %344:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr %35, killed %343, implicit $fpcr
+    %345:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %344, %28, implicit $fpcr
     $d0 = COPY %345
     RET_ReallyLR implicit $d0
   
@@ -1111,8 +1111,8 @@ body:             |
   bb.5.for.cond.cleanup11:
     successors: %bb.3(0x04000000), %bb.4(0x7c000000)
   
-    %28:fpr64 = nofpexcept SCVTFUWDri %323
-    %327:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr %35, %28
+    %28:fpr64 = nofpexcept SCVTFUWDri %323, implicit $fpcr
+    %327:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr %35, %28, implicit $fpcr
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     $x0 = COPY %56
     $x1 = COPY %329
@@ -1141,203 +1141,203 @@ body:             |
     %34:gpr64sp = PHI %27, %bb.4, %39, %bb.6
     %164:gpr32common = COPY %31.sub_32
     %165:fpr64 = LDURDi %30, -160 :: (load (s64) from %ir.uglygep200, align 64, !tbaa !6)
-    %166:fpr64 = nofpexcept FMAXNMDrr %165, %33
-    nofpexcept FCMPDrr %165, %33, implicit-def $nzcv
+    %166:fpr64 = nofpexcept FMAXNMDrr %165, %33, implicit $fpcr
+    nofpexcept FCMPDrr %165, %33, implicit-def $nzcv, implicit $fpcr
     %167:gpr32 = CSELWr %164, %32, 12, implicit $nzcv
     %168:gpr32common = ORRWri %164, 0
     %169:fpr64 = LDURDi %30, -152 :: (load (s64) from %ir.uglygep204, !tbaa !6)
-    %170:fpr64 = nofpexcept FMAXNMDrr %169, %166
-    nofpexcept FCMPDrr %169, %166, implicit-def $nzcv
+    %170:fpr64 = nofpexcept FMAXNMDrr %169, %166, implicit $fpcr
+    nofpexcept FCMPDrr %169, %166, implicit-def $nzcv, implicit $fpcr
     %171:gpr32 = CSELWr killed %168, killed %167, 12, implicit $nzcv
     %172:gpr32common = ORRWri %164, 1984
     %173:fpr64 = LDURDi %30, -144 :: (load (s64) from %ir.uglygep205, align 16, !tbaa !6)
-    %174:fpr64 = nofpexcept FMAXNMDrr %173, %170
-    nofpexcept FCMPDrr %173, %170, implicit-def $nzcv
+    %174:fpr64 = nofpexcept FMAXNMDrr %173, %170, implicit $fpcr
+    nofpexcept FCMPDrr %173, %170, implicit-def $nzcv, implicit $fpcr
     %175:gpr32 = CSELWr killed %172, killed %171, 12, implicit $nzcv
     %176:gpr32common = ORRWri %164, 1
     %177:fpr64 = LDURDi %30, -136 :: (load (s64) from %ir.uglygep206, !tbaa !6)
-    %178:fpr64 = nofpexcept FMAXNMDrr %177, %174
-    nofpexcept FCMPDrr %177, %174, implicit-def $nzcv
+    %178:fpr64 = nofpexcept FMAXNMDrr %177, %174, implicit $fpcr
+    nofpexcept FCMPDrr %177, %174, implicit-def $nzcv, implicit $fpcr
     %179:gpr32 = CSELWr killed %176, killed %175, 12, implicit $nzcv
     %180:gpr32common = ORRWri %164, 1920
     %181:fpr64 = LDURDi %30, -128 :: (load (s64) from %ir.uglygep207, align 32, !tbaa !6)
-    %182:fpr64 = nofpexcept FMAXNMDrr %181, %178
-    nofpexcept FCMPDrr %181, %178, implicit-def $nzcv
+    %182:fpr64 = nofpexcept FMAXNMDrr %181, %178, implicit $fpcr
+    nofpexcept FCMPDrr %181, %178, implicit-def $nzcv, implicit $fpcr
     %183:gpr32 = CSELWr killed %180, killed %179, 12, implicit $nzcv
     %185:gpr32 = ORRWrr %164, %184
     %186:fpr64 = LDURDi %30, -120 :: (load (s64) from %ir.uglygep208, !tbaa !6)
-    %187:fpr64 = nofpexcept FMAXNMDrr %186, %182
-    nofpexcept FCMPDrr %186, %182, implicit-def $nzcv
+    %187:fpr64 = nofpexcept FMAXNMDrr %186, %182, implicit $fpcr
+    nofpexcept FCMPDrr %186, %182, implicit-def $nzcv, implicit $fpcr
     %188:gpr32 = CSELWr killed %185, killed %183, 12, implicit $nzcv
     %189:gpr32common = ORRWri %164, 1985
     %190:fpr64 = LDURDi %30, -112 :: (load (s64) from %ir.uglygep209, align 16, !tbaa !6)
-    %191:fpr64 = nofpexcept FMAXNMDrr %190, %187
-    nofpexcept FCMPDrr %190, %187, implicit-def $nzcv
+    %191:fpr64 = nofpexcept FMAXNMDrr %190, %187, implicit $fpcr
+    nofpexcept FCMPDrr %190, %187, implicit-def $nzcv, implicit $fpcr
     %192:gpr32 = CSELWr killed %189, killed %188, 12, implicit $nzcv
     %193:gpr32common = ORRWri %164, 2
     %194:fpr64 = LDURDi %30, -104 :: (load (s64) from %ir.uglygep210, !tbaa !6)
-    %195:fpr64 = nofpexcept FMAXNMDrr %194, %191
-    nofpexcept FCMPDrr %194, %191, implicit-def $nzcv
+    %195:fpr64 = nofpexcept FMAXNMDrr %194, %191, implicit $fpcr
+    nofpexcept FCMPDrr %194, %191, implicit-def $nzcv, implicit $fpcr
     %196:gpr32 = CSELWr killed %193, killed %192, 12, implicit $nzcv
     %197:gpr32common = ADDWri %164, 8, 0
     %198:fpr64 = LDURDi %30, -96 :: (load (s64) from %ir.uglygep211, align 64, !tbaa !6)
-    %199:fpr64 = nofpexcept FMAXNMDrr %198, %195
-    nofpexcept FCMPDrr %198, %195, implicit-def $nzcv
+    %199:fpr64 = nofpexcept FMAXNMDrr %198, %195, implicit $fpcr
+    nofpexcept FCMPDrr %198, %195, implicit-def $nzcv, implicit $fpcr
     %200:gpr32 = CSELWr killed %197, killed %196, 12, implicit $nzcv
     %201:gpr32common = ADDWri %164, 9, 0
     %202:fpr64 = LDURDi %30, -88 :: (load (s64) from %ir.uglygep212, !tbaa !6)
-    %203:fpr64 = nofpexcept FMAXNMDrr %202, %199
-    nofpexcept FCMPDrr %202, %199, implicit-def $nzcv
+    %203:fpr64 = nofpexcept FMAXNMDrr %202, %199, implicit $fpcr
+    nofpexcept FCMPDrr %202, %199, implicit-def $nzcv, implicit $fpcr
     %204:gpr32 = CSELWr killed %201, killed %200, 12, implicit $nzcv
     %205:gpr32common = ADDWri %164, 10, 0
     %206:fpr64 = LDURDi %30, -80 :: (load (s64) from %ir.uglygep213, align 16, !tbaa !6)
-    %207:fpr64 = nofpexcept FMAXNMDrr %206, %203
-    nofpexcept FCMPDrr %206, %203, implicit-def $nzcv
+    %207:fpr64 = nofpexcept FMAXNMDrr %206, %203, implicit $fpcr
+    nofpexcept FCMPDrr %206, %203, implicit-def $nzcv, implicit $fpcr
     %208:gpr32 = CSELWr killed %205, killed %204, 12, implicit $nzcv
     %209:gpr32common = ADDWri %164, 11, 0
     %210:fpr64 = LDURDi %30, -72 :: (load (s64) from %ir.uglygep214, !tbaa !6)
-    %211:fpr64 = nofpexcept FMAXNMDrr %210, %207
-    nofpexcept FCMPDrr %210, %207, implicit-def $nzcv
+    %211:fpr64 = nofpexcept FMAXNMDrr %210, %207, implicit $fpcr
+    nofpexcept FCMPDrr %210, %207, implicit-def $nzcv, implicit $fpcr
     %212:gpr32 = CSELWr killed %209, killed %208, 12, implicit $nzcv
     %213:gpr32common = ADDWri %164, 12, 0
     %214:fpr64 = LDURDi %30, -64 :: (load (s64) from %ir.uglygep215, align 32, !tbaa !6)
-    %215:fpr64 = nofpexcept FMAXNMDrr %214, %211
-    nofpexcept FCMPDrr %214, %211, implicit-def $nzcv
+    %215:fpr64 = nofpexcept FMAXNMDrr %214, %211, implicit $fpcr
+    nofpexcept FCMPDrr %214, %211, implicit-def $nzcv, implicit $fpcr
     %216:gpr32 = CSELWr killed %213, killed %212, 12, implicit $nzcv
     %217:gpr32common = ADDWri %164, 13, 0
     %218:fpr64 = LDURDi %30, -56 :: (load (s64) from %ir.uglygep216, !tbaa !6)
-    %219:fpr64 = nofpexcept FMAXNMDrr %218, %215
-    nofpexcept FCMPDrr %218, %215, implicit-def $nzcv
+    %219:fpr64 = nofpexcept FMAXNMDrr %218, %215, implicit $fpcr
+    nofpexcept FCMPDrr %218, %215, implicit-def $nzcv, implicit $fpcr
     %220:gpr32 = CSELWr killed %217, killed %216, 12, implicit $nzcv
     %221:gpr32common = ADDWri %164, 14, 0
     %222:fpr64 = LDURDi %30, -48 :: (load (s64) from %ir.uglygep217, align 16, !tbaa !6)
-    %223:fpr64 = nofpexcept FMAXNMDrr %222, %219
-    nofpexcept FCMPDrr %222, %219, implicit-def $nzcv
+    %223:fpr64 = nofpexcept FMAXNMDrr %222, %219, implicit $fpcr
+    nofpexcept FCMPDrr %222, %219, implicit-def $nzcv, implicit $fpcr
     %224:gpr32 = CSELWr killed %221, killed %220, 12, implicit $nzcv
     %225:gpr32common = ADDWri %164, 15, 0
     %226:fpr64 = LDURDi %30, -40 :: (load (s64) from %ir.uglygep218, !tbaa !6)
-    %227:fpr64 = nofpexcept FMAXNMDrr %226, %223
-    nofpexcept FCMPDrr %226, %223, implicit-def $nzcv
+    %227:fpr64 = nofpexcept FMAXNMDrr %226, %223, implicit $fpcr
+    nofpexcept FCMPDrr %226, %223, implicit-def $nzcv, implicit $fpcr
     %228:gpr32 = CSELWr killed %225, killed %224, 12, implicit $nzcv
     %229:gpr32common = ADDWri %164, 16, 0
     %230:fpr64 = LDURDi %30, -32 :: (load (s64) from %ir.uglygep219, align 64, !tbaa !6)
-    %231:fpr64 = nofpexcept FMAXNMDrr %230, %227
-    nofpexcept FCMPDrr %230, %227, implicit-def $nzcv
+    %231:fpr64 = nofpexcept FMAXNMDrr %230, %227, implicit $fpcr
+    nofpexcept FCMPDrr %230, %227, implicit-def $nzcv, implicit $fpcr
     %232:gpr32 = CSELWr killed %229, killed %228, 12, implicit $nzcv
     %233:gpr32common = ADDWri %164, 17, 0
     %234:fpr64 = LDURDi %30, -24 :: (load (s64) from %ir.uglygep220, !tbaa !6)
-    %235:fpr64 = nofpexcept FMAXNMDrr %234, %231
-    nofpexcept FCMPDrr %234, %231, implicit-def $nzcv
+    %235:fpr64 = nofpexcept FMAXNMDrr %234, %231, implicit $fpcr
+    nofpexcept FCMPDrr %234, %231, implicit-def $nzcv, implicit $fpcr
     %236:gpr32 = CSELWr killed %233, killed %232, 12, implicit $nzcv
     %237:gpr32common = ADDWri %164, 18, 0
     %238:fpr64 = LDURDi %30, -16 :: (load (s64) from %ir.uglygep221, align 16, !tbaa !6)
-    %239:fpr64 = nofpexcept FMAXNMDrr %238, %235
-    nofpexcept FCMPDrr %238, %235, implicit-def $nzcv
+    %239:fpr64 = nofpexcept FMAXNMDrr %238, %235, implicit $fpcr
+    nofpexcept FCMPDrr %238, %235, implicit-def $nzcv, implicit $fpcr
     %240:gpr32 = CSELWr killed %237, killed %236, 12, implicit $nzcv
     %241:gpr32common = ADDWri %164, 19, 0
     %242:fpr64 = LDURDi %30, -8 :: (load (s64) from %ir.uglygep222, !tbaa !6)
-    %243:fpr64 = nofpexcept FMAXNMDrr %242, %239
-    nofpexcept FCMPDrr %242, %239, implicit-def $nzcv
+    %243:fpr64 = nofpexcept FMAXNMDrr %242, %239, implicit $fpcr
+    nofpexcept FCMPDrr %242, %239, implicit-def $nzcv, implicit $fpcr
     %244:gpr32 = CSELWr killed %241, killed %240, 12, implicit $nzcv
     %245:gpr32common = ADDWri %164, 20, 0
     %246:fpr64 = LDRDui %30, 0 :: (load (s64) from %ir.lsr.iv198, align 32, !tbaa !6)
-    %247:fpr64 = nofpexcept FMAXNMDrr %246, %243
-    nofpexcept FCMPDrr %246, %243, implicit-def $nzcv
+    %247:fpr64 = nofpexcept FMAXNMDrr %246, %243, implicit $fpcr
+    nofpexcept FCMPDrr %246, %243, implicit-def $nzcv, implicit $fpcr
     %248:gpr32 = CSELWr killed %245, killed %244, 12, implicit $nzcv
     %249:gpr32common = ADDWri %164, 21, 0
     %250:fpr64 = LDRDui %30, 1 :: (load (s64) from %ir.uglygep224, !tbaa !6)
-    %251:fpr64 = nofpexcept FMAXNMDrr %250, %247
-    nofpexcept FCMPDrr %250, %247, implicit-def $nzcv
+    %251:fpr64 = nofpexcept FMAXNMDrr %250, %247, implicit $fpcr
+    nofpexcept FCMPDrr %250, %247, implicit-def $nzcv, implicit $fpcr
     %252:gpr32 = CSELWr killed %249, killed %248, 12, implicit $nzcv
     %253:gpr32common = ADDWri %164, 22, 0
     %254:fpr64 = LDRDui %30, 2 :: (load (s64) from %ir.uglygep225, align 16, !tbaa !6)
-    %255:fpr64 = nofpexcept FMAXNMDrr %254, %251
-    nofpexcept FCMPDrr %254, %251, implicit-def $nzcv
+    %255:fpr64 = nofpexcept FMAXNMDrr %254, %251, implicit $fpcr
+    nofpexcept FCMPDrr %254, %251, implicit-def $nzcv, implicit $fpcr
     %256:gpr32 = CSELWr killed %253, killed %252, 12, implicit $nzcv
     %257:gpr32common = ADDWri %164, 23, 0
     %258:fpr64 = LDRDui %30, 3 :: (load (s64) from %ir.uglygep226, !tbaa !6)
-    %259:fpr64 = nofpexcept FMAXNMDrr %258, %255
-    nofpexcept FCMPDrr %258, %255, implicit-def $nzcv
+    %259:fpr64 = nofpexcept FMAXNMDrr %258, %255, implicit $fpcr
+    nofpexcept FCMPDrr %258, %255, implicit-def $nzcv, implicit $fpcr
     %260:gpr32 = CSELWr killed %257, killed %256, 12, implicit $nzcv
     %261:gpr32common = ADDWri %164, 24, 0
     %262:fpr64 = LDRDui %30, 4 :: (load (s64) from %ir.uglygep227, align 64, !tbaa !6)
-    %263:fpr64 = nofpexcept FMAXNMDrr %262, %259
-    nofpexcept FCMPDrr %262, %259, implicit-def $nzcv
+    %263:fpr64 = nofpexcept FMAXNMDrr %262, %259, implicit $fpcr
+    nofpexcept FCMPDrr %262, %259, implicit-def $nzcv, implicit $fpcr
     %264:gpr32 = CSELWr killed %261, killed %260, 12, implicit $nzcv
     %265:gpr32common = ADDWri %164, 25, 0
     %266:fpr64 = LDRDui %30, 5 :: (load (s64) from %ir.uglygep228, !tbaa !6)
-    %267:fpr64 = nofpexcept FMAXNMDrr %266, %263
-    nofpexcept FCMPDrr %266, %263, implicit-def $nzcv
+    %267:fpr64 = nofpexcept FMAXNMDrr %266, %263, implicit $fpcr
+    nofpexcept FCMPDrr %266, %263, implicit-def $nzcv, implicit $fpcr
     %268:gpr32 = CSELWr killed %265, killed %264, 12, implicit $nzcv
     %269:gpr32common = ADDWri %164, 26, 0
     %270:fpr64 = LDRDui %30, 6 :: (load (s64) from %ir.uglygep229, align 16, !tbaa !6)
-    %271:fpr64 = nofpexcept FMAXNMDrr %270, %267
-    nofpexcept FCMPDrr %270, %267, implicit-def $nzcv
+    %271:fpr64 = nofpexcept FMAXNMDrr %270, %267, implicit $fpcr
+    nofpexcept FCMPDrr %270, %267, implicit-def $nzcv, implicit $fpcr
     %272:gpr32 = CSELWr killed %269, killed %268, 12, implicit $nzcv
     %273:gpr32common = ADDWri %164, 27, 0
     %274:fpr64 = LDRDui %30, 7 :: (load (s64) from %ir.uglygep230, !tbaa !6)
-    %275:fpr64 = nofpexcept FMAXNMDrr %274, %271
-    nofpexcept FCMPDrr %274, %271, implicit-def $nzcv
+    %275:fpr64 = nofpexcept FMAXNMDrr %274, %271, implicit $fpcr
+    nofpexcept FCMPDrr %274, %271, implicit-def $nzcv, implicit $fpcr
     %276:gpr32 = CSELWr killed %273, killed %272, 12, implicit $nzcv
     %277:gpr32common = ADDWri %164, 28, 0
     %278:fpr64 = LDRDui %30, 8 :: (load (s64) from %ir.uglygep231, align 32, !tbaa !6)
-    %279:fpr64 = nofpexcept FMAXNMDrr %278, %275
-    nofpexcept FCMPDrr %278, %275, implicit-def $nzcv
+    %279:fpr64 = nofpexcept FMAXNMDrr %278, %275, implicit $fpcr
+    nofpexcept FCMPDrr %278, %275, implicit-def $nzcv, implicit $fpcr
     %280:gpr32 = CSELWr killed %277, killed %276, 12, implicit $nzcv
     %281:gpr32common = ADDWri %164, 29, 0
     %282:fpr64 = LDRDui %30, 9 :: (load (s64) from %ir.uglygep232, !tbaa !6)
-    %283:fpr64 = nofpexcept FMAXNMDrr %282, %279
-    nofpexcept FCMPDrr %282, %279, implicit-def $nzcv
+    %283:fpr64 = nofpexcept FMAXNMDrr %282, %279, implicit $fpcr
+    nofpexcept FCMPDrr %282, %279, implicit-def $nzcv, implicit $fpcr
     %284:gpr32 = CSELWr killed %281, killed %280, 12, implicit $nzcv
     %285:gpr32common = ADDWri %164, 30, 0
     %286:fpr64 = LDRDui %30, 10 :: (load (s64) from %ir.uglygep233, align 16, !tbaa !6)
-    %287:fpr64 = nofpexcept FMAXNMDrr %286, %283
-    nofpexcept FCMPDrr %286, %283, implicit-def $nzcv
+    %287:fpr64 = nofpexcept FMAXNMDrr %286, %283, implicit $fpcr
+    nofpexcept FCMPDrr %286, %283, implicit-def $nzcv, implicit $fpcr
     %288:gpr32 = CSELWr killed %285, killed %284, 12, implicit $nzcv
     %289:gpr32common = ADDWri %164, 31, 0
     %290:fpr64 = LDRDui %30, 11 :: (load (s64) from %ir.uglygep234, !tbaa !6)
-    %291:fpr64 = nofpexcept FMAXNMDrr %290, %287
-    nofpexcept FCMPDrr %290, %287, implicit-def $nzcv
+    %291:fpr64 = nofpexcept FMAXNMDrr %290, %287, implicit $fpcr
+    nofpexcept FCMPDrr %290, %287, implicit-def $nzcv, implicit $fpcr
     %292:gpr32 = CSELWr killed %289, killed %288, 12, implicit $nzcv
     %293:gpr32common = ADDWri %164, 32, 0
     %294:fpr64 = LDRDui %30, 12 :: (load (s64) from %ir.uglygep235, align 64, !tbaa !6)
-    %295:fpr64 = nofpexcept FMAXNMDrr %294, %291
-    nofpexcept FCMPDrr %294, %291, implicit-def $nzcv
+    %295:fpr64 = nofpexcept FMAXNMDrr %294, %291, implicit $fpcr
+    nofpexcept FCMPDrr %294, %291, implicit-def $nzcv, implicit $fpcr
     %296:gpr32 = CSELWr killed %293, killed %292, 12, implicit $nzcv
     %297:gpr32common = ADDWri %164, 33, 0
     %298:fpr64 = LDRDui %30, 13 :: (load (s64) from %ir.uglygep236, !tbaa !6)
-    %299:fpr64 = nofpexcept FMAXNMDrr %298, %295
-    nofpexcept FCMPDrr %298, %295, implicit-def $nzcv
+    %299:fpr64 = nofpexcept FMAXNMDrr %298, %295, implicit $fpcr
+    nofpexcept FCMPDrr %298, %295, implicit-def $nzcv, implicit $fpcr
     %300:gpr32 = CSELWr killed %297, killed %296, 12, implicit $nzcv
     %301:gpr32common = ADDWri %164, 34, 0
     %302:fpr64 = LDRDui %30, 14 :: (load (s64) from %ir.uglygep237, align 16, !tbaa !6)
-    %303:fpr64 = nofpexcept FMAXNMDrr %302, %299
-    nofpexcept FCMPDrr %302, %299, implicit-def $nzcv
+    %303:fpr64 = nofpexcept FMAXNMDrr %302, %299, implicit $fpcr
+    nofpexcept FCMPDrr %302, %299, implicit-def $nzcv, implicit $fpcr
     %304:gpr32 = CSELWr killed %301, killed %300, 12, implicit $nzcv
     %305:gpr32common = ADDWri %164, 35, 0
     %306:fpr64 = LDRDui %30, 15 :: (load (s64) from %ir.uglygep238, !tbaa !6)
-    %307:fpr64 = nofpexcept FMAXNMDrr %306, %303
-    nofpexcept FCMPDrr %306, %303, implicit-def $nzcv
+    %307:fpr64 = nofpexcept FMAXNMDrr %306, %303, implicit $fpcr
+    nofpexcept FCMPDrr %306, %303, implicit-def $nzcv, implicit $fpcr
     %308:gpr32 = CSELWr killed %305, killed %304, 12, implicit $nzcv
     %309:gpr32common = ADDWri %164, 36, 0
     %310:fpr64 = LDRDui %30, 16 :: (load (s64) from %ir.uglygep223, align 32, !tbaa !6)
-    %311:fpr64 = nofpexcept FMAXNMDrr %310, %307
-    nofpexcept FCMPDrr %310, %307, implicit-def $nzcv
+    %311:fpr64 = nofpexcept FMAXNMDrr %310, %307, implicit $fpcr
+    nofpexcept FCMPDrr %310, %307, implicit-def $nzcv, implicit $fpcr
     %312:gpr32 = CSELWr killed %309, killed %308, 12, implicit $nzcv
     %313:gpr32common = ADDWri %164, 37, 0
     %314:fpr64 = LDRDui %30, 17 :: (load (s64) from %ir.uglygep203, !tbaa !6)
-    %315:fpr64 = nofpexcept FMAXNMDrr %314, %311
-    nofpexcept FCMPDrr %314, %311, implicit-def $nzcv
+    %315:fpr64 = nofpexcept FMAXNMDrr %314, %311, implicit $fpcr
+    nofpexcept FCMPDrr %314, %311, implicit-def $nzcv, implicit $fpcr
     %316:gpr32 = CSELWr killed %313, killed %312, 12, implicit $nzcv
     %317:gpr32common = ADDWri %164, 38, 0
     %318:fpr64 = LDRDui %30, 18 :: (load (s64) from %ir.uglygep202, align 16, !tbaa !6)
-    %319:fpr64 = nofpexcept FMAXNMDrr %318, %315
-    nofpexcept FCMPDrr %318, %315, implicit-def $nzcv
+    %319:fpr64 = nofpexcept FMAXNMDrr %318, %315, implicit $fpcr
+    nofpexcept FCMPDrr %318, %315, implicit-def $nzcv, implicit $fpcr
     %320:gpr32 = CSELWr killed %317, killed %316, 12, implicit $nzcv
     %321:gpr32common = ADDWri %164, 39, 0
     %322:fpr64 = LDRDui %30, 19 :: (load (s64) from %ir.uglygep201, !tbaa !6)
-    %35:fpr64 = nofpexcept FMAXNMDrr %322, %319
-    nofpexcept FCMPDrr %322, %319, implicit-def $nzcv
+    %35:fpr64 = nofpexcept FMAXNMDrr %322, %319, implicit $fpcr
+    nofpexcept FCMPDrr %322, %319, implicit-def $nzcv, implicit $fpcr
     %323:gpr32 = CSELWr killed %321, killed %320, 12, implicit $nzcv
     %36:gpr32 = COPY %323
     %324:gpr64sp = nuw nsw ADDXri %31, 40, 0

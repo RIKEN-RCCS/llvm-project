@@ -480,12 +480,12 @@ body:             |
     BL @clock_gettime, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit $x1, implicit-def $sp, implicit-def $w0
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     %3:fpr64 = LDRDui %stack.0.ts, 0 :: (dereferenceable load (s64) from %ir.ts)
-    %4:fpr64 = nofpexcept SCVTFv1i64 killed %3
+    %4:fpr64 = nofpexcept SCVTFv1i64 killed %3, implicit $fpcr
     %5:fpr64 = LDRDui %stack.0.ts, 1 :: (dereferenceable load (s64) from %ir.tv_nsec)
-    %6:fpr64 = nofpexcept SCVTFv1i64 killed %5
+    %6:fpr64 = nofpexcept SCVTFv1i64 killed %5, implicit $fpcr
     %7:gpr64common = ADRP target-flags(aarch64-page) %const.0
     %8:fpr64 = LDRDui killed %7, target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s64) from constant-pool)
-    %10:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %6, killed %8, killed %4
+    %10:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %6, killed %8, killed %4, implicit $fpcr, implicit $fpcr
     $d0 = COPY %10
     RET_ReallyLR implicit $d0
 
@@ -1025,16 +1025,16 @@ body:             |
     early-clobber %225:gpr64sp, %226:fpr64 = LDRDpost %19, 8 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
     early-clobber %A1:gpr64sp, %A2:fpr64 = LDRDpost %19, -8 :: (load (s64) from %ir.lsr.iv356, !tbaa !19)
     %230:fpr64 = LDRDui %18, 0 :: (load (s64) from %ir.lsr.iv358, !tbaa !19)
-    %231:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %226, %197, killed %230
+    %231:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %226, %197, killed %230, implicit $fpcr
     early-clobber %232:gpr64sp = STRDpost %231, %18, 8 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
     early-clobber %B1:gpr64sp = STRDpost killed %231, %18, -8 :: (store (s64) into %ir.lsr.iv358, !tbaa !19)
     early-clobber %233:gpr64sp, %234:fpr64 = LDRDpost %17, 8 :: (load (s64) from %ir.lsr.iv360, !tbaa !19)
     %236:fpr64 = LDRDui %16, 0 :: (load (s64) from %ir.lsr.iv362, !tbaa !19)
-    %237:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %234, %197, killed %236
+    %237:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %234, %197, killed %236, implicit $fpcr
     early-clobber %238:gpr64sp = STRDpost killed %237, %16, 8 :: (store (s64) into %ir.lsr.iv362, !tbaa !19)
     early-clobber %239:gpr64sp, %240:fpr64 = LDRDpost %15, 8 :: (load (s64) from %ir.lsr.iv364, !tbaa !19)
     %242:fpr64 = LDRDui %14, 0 :: (load (s64) from %ir.lsr.iv366, !tbaa !19)
-    %243:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %240, %197, killed %242
+    %243:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %240, %197, killed %242, implicit $fpcr
     early-clobber %244:gpr64sp = STRDpost killed %243, %14, 8 :: (store (s64) into %ir.lsr.iv366, !tbaa !19)
     %21:gpr64all = COPY %225
     %22:gpr64all = COPY %232
@@ -1067,13 +1067,13 @@ body:             |
     successors: %bb.15(0x04000000), %bb.13(0x7c000000)
   
     %201:fpr64 = LDRDroX %295, %162, 0, 0 :: (load (s64) from %ir.arrayidx89.us, !tbaa !19)
-    %202:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %43, %197, killed %201
+    %202:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %43, %197, killed %201, implicit $fpcr
     STRDroX killed %202, %295, %162, 0, 0 :: (store (s64) into %ir.arrayidx89.us, !tbaa !19)
     %205:fpr64 = LDRDroX %296, %162, 0, 0 :: (load (s64) from %ir.arrayidx93.us, !tbaa !19)
-    %206:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %44, %197, killed %205
+    %206:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %44, %197, killed %205, implicit $fpcr
     STRDroX killed %206, %296, %162, 0, 0 :: (store (s64) into %ir.arrayidx93.us, !tbaa !19)
     %209:fpr64 = LDRDroX %297, %162, 0, 0 :: (load (s64) from %ir.arrayidx97.us, !tbaa !19)
-    %210:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %45, %197, killed %209
+    %210:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %45, %197, killed %209, implicit $fpcr
     STRDroX killed %210, %297, %162, 0, 0 :: (store (s64) into %ir.arrayidx97.us, !tbaa !19)
     %211:gpr64common = nuw nsw ADDXri %28, 1, 0
     %33:gpr64all = COPY %211
@@ -1105,23 +1105,23 @@ body:             |
     %41:fpr64 = PHI %161, %bb.13, %43, %bb.16
     %42:gpr64sp = PHI %32, %bb.13, %50, %bb.16
     early-clobber %167:gpr64sp, %168:fpr64 = LDRDpost %38, 8 :: (load (s64) from %ir.lsr.iv346, !tbaa !19)
-    %169:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBDrr killed %168, %29
+    %169:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBDrr killed %168, %29, implicit $fpcr
     early-clobber %170:gpr64sp, %171:fpr64 = LDRDpost %37, 8 :: (load (s64) from %ir.lsr.iv348, !tbaa !19)
-    %172:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBDrr killed %171, %30
+    %172:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBDrr killed %171, %30, implicit $fpcr
     early-clobber %173:gpr64sp, %174:fpr64 = LDRDpost %36, 8 :: (load (s64) from %ir.lsr.iv350, !tbaa !19)
-    %175:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBDrr killed %174, %31
-    %181:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %169, %169, %180
-    %182:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %172, %172, killed %181
-    %183:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %175, %175, killed %182
-    %184:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSQRTDr killed %183
-    %186:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FDIVDrr %185, killed %184
+    %175:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUBDrr killed %174, %31, implicit $fpcr
+    %181:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %169, %169, %180, implicit $fpcr
+    %182:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %172, %172, killed %181, implicit $fpcr
+    %183:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %175, %175, killed %182, implicit $fpcr
+    %184:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSQRTDr killed %183, implicit $fpcr
+    %186:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FDIVDrr %185, killed %184, implicit $fpcr
     early-clobber %187:gpr64sp, %188:fpr64 = LDRDpost %35, 8 :: (load (s64) from %ir.lsr.iv352, !tbaa !19)
-    %189:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %186, %186
-    %290:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr killed %188, %186
-    %191:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr killed %189, killed %290
-    %43:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %191, %169, %41
-    %44:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %191, %172, %40
-    %45:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %191, %175, %39
+    %189:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %186, %186, implicit $fpcr
+    %290:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr killed %188, %186, implicit $fpcr
+    %191:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr killed %189, killed %290, implicit $fpcr
+    %43:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %191, %169, %41, implicit $fpcr
+    %44:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %191, %172, %40, implicit $fpcr
+    %45:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr %191, %175, %39, implicit $fpcr
     %46:gpr64all = COPY %167
     %47:gpr64all = COPY %170
     %48:gpr64all = COPY %173
@@ -1140,9 +1140,9 @@ body:             |
     BL @rand_r, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def $w0
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     %114:gpr32 = COPY $w0
-    %115:fpr64 = nofpexcept SCVTFUWDri %114
+    %115:fpr64 = nofpexcept SCVTFUWDri %114, implicit $fpcr
     %117:fpr64 = COPY %116
-    %120:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %115, %117, %119
+    %120:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %115, %117, %119, implicit $fpcr
     %121:gpr64 = UBFMXri %51, 61, 60
     STRDroX killed %120, %291, %121, 0, 0 :: (store (s64) into %ir.uglygep376, !tbaa !19)
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
@@ -1150,28 +1150,28 @@ body:             |
     BL @rand_r, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def $w0
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     %123:gpr32 = COPY $w0
-    %124:fpr64 = nofpexcept SCVTFUWDri %123
-    %126:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %124, %117, %119
+    %124:fpr64 = nofpexcept SCVTFUWDri %123, implicit $fpcr
+    %126:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %124, %117, %119, implicit $fpcr
     STRDroX killed %126, %292, %121, 0, 0 :: (store (s64) into %ir.uglygep375, !tbaa !19)
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     $x0 = COPY %113
     BL @rand_r, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def $w0
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     %128:gpr32 = COPY $w0
-    %129:fpr64 = nofpexcept SCVTFUWDri %128
-    %131:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %129, %117, %119
+    %129:fpr64 = nofpexcept SCVTFUWDri %128, implicit $fpcr
+    %131:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %129, %117, %119, implicit $fpcr
     STRDroX killed %131, %293, %121, 0, 0 :: (store (s64) into %ir.uglygep374, !tbaa !19)
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     $x0 = COPY %113
     BL @rand_r, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def $w0
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     %133:gpr32 = COPY $w0
-    %134:fpr64 = nofpexcept SCVTFUWDri %133
+    %134:fpr64 = nofpexcept SCVTFUWDri %133, implicit $fpcr
     %136:fpr64 = COPY %135
-    %139:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %134, killed %136, %138
+    %139:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %134, killed %136, %138, implicit $fpcr
     STRDroX killed %139, %294, %121, 0, 0 :: (store (s64) into %ir.uglygep373, !tbaa !19)
     %141:gpr32 = COPY %51.sub_32
-    %142:fpr64 = nofpexcept SCVTFUWDri killed %141
+    %142:fpr64 = nofpexcept SCVTFUWDri killed %141, implicit $fpcr
     STRDroX %142, %295, %121, 0, 0 :: (store (s64) into %ir.uglygep372, !tbaa !19)
     STRDroX %142, %296, %121, 0, 0 :: (store (s64) into %ir.uglygep371, !tbaa !19)
     STRDroX %142, %297, %121, 0, 0 :: (store (s64) into %ir.uglygep370, !tbaa !19)
@@ -1224,17 +1224,17 @@ body:             |
     %65:fpr64 = PHI %255, %bb.19, %67, %bb.20
     %66:gpr64sp = PHI %53, %bb.19, %79, %bb.20
     early-clobber %263:gpr64sp, %264:fpr64 = LDRDpost %54, 8 :: (load (s64) from %ir.lsr.iv343, !tbaa !19)
-    %67:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %264, %65
+    %67:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %264, %65, implicit $fpcr
     early-clobber %265:gpr64sp, %266:fpr64 = LDRDpost %55, 8 :: (load (s64) from %ir.lsr.iv341, !tbaa !19)
-    %68:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %266, %64
+    %68:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %266, %64, implicit $fpcr
     early-clobber %267:gpr64sp, %268:fpr64 = LDRDpost %56, 8 :: (load (s64) from %ir.lsr.iv339, !tbaa !19)
-    %69:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %268, %63
+    %69:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %268, %63, implicit $fpcr
     early-clobber %269:gpr64sp, %270:fpr64 = LDRDpost %57, 8 :: (load (s64) from %ir.lsr.iv337, !tbaa !19)
-    %70:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %270, %62
+    %70:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %270, %62, implicit $fpcr
     early-clobber %271:gpr64sp, %272:fpr64 = LDRDpost %58, 8 :: (load (s64) from %ir.lsr.iv335, !tbaa !19)
-    %71:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %272, %61
+    %71:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %272, %61, implicit $fpcr
     early-clobber %273:gpr64sp, %274:fpr64 = LDRDpost %59, 8 :: (load (s64) from %ir.lsr.iv, !tbaa !19)
-    %72:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %274, %60
+    %72:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDDrr killed %274, %60, implicit $fpcr
     %73:gpr64all = COPY %273
     %74:gpr64all = COPY %271
     %75:gpr64all = COPY %269
@@ -1253,15 +1253,15 @@ body:             |
     %83:fpr64 = PHI %151, %bb.8, %248, %bb.18, %70, %bb.20
     %84:fpr64 = PHI %151, %bb.8, %248, %bb.18, %71, %bb.20
     %85:fpr64 = PHI %151, %bb.8, %248, %bb.18, %72, %bb.20
-    %276:fpr64 = nofpexcept SCVTFUWDri %10
+    %276:fpr64 = nofpexcept SCVTFUWDri %10, implicit $fpcr
     %277:fpr64 = FMOVDi 112
-    %278:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FDIVDrr killed %277, killed %276
-    %279:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %80, %278
-    %280:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %81, %278
-    %281:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %82, %278
-    %282:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %83, %278
-    %283:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %84, %278
-    %284:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %85, %278
+    %278:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FDIVDrr killed %277, killed %276, implicit $fpcr
+    %279:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %80, %278, implicit $fpcr
+    %280:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %81, %278, implicit $fpcr
+    %281:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %82, %278, implicit $fpcr
+    %282:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %83, %278, implicit $fpcr
+    %283:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %84, %278, implicit $fpcr
+    %284:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMULDrr %85, %278, implicit $fpcr
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     %285:gpr64common = MOVaddr target-flags(aarch64-page) @.str, target-flags(aarch64-pageoff, aarch64-nc) @.str
     $x0 = COPY %285

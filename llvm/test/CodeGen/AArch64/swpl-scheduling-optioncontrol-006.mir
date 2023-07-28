@@ -2,8 +2,8 @@
 
 #CHECK:        : (Iterative Modulo Scheduling. ResMII 2. NumOfBodyInsts 6. Budget 300. Minimum II = 10.)
 #CHECK:        :  (x) Run out of budget      at estimation.          : (II: 10 in [ 10,1000]) MVE: 0 Last inst: 4. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 12 in [ 10,1000]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 11 in [ 10,12]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 12 in [ 10,1000]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/29, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 11 in [ 10,12]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/29, Pre: 1/8) Eval:0.000000e+00.
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
   source_filename = "/TEST/tp/testprg.c"
