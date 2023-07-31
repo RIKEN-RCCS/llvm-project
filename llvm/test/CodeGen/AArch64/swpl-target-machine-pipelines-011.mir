@@ -1,12 +1,12 @@
-#RUN: llc %s -mcpu=a64fx -ffj-swp -O1 -swpl-debug-dump-resource-filter="BIC_PPzPP|FCMGT_PPzZ0_D" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-debug-dump-resource-filter="BIC_PPzPP|FCMGT_PPzZ0_D" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %167:ppr_3b = FCMGT_PPzZ0_D %21:ppr_3b, %166:zpr
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %167:ppr_3b = FCMGT_PPzZ0_D
 #CHECK-NEXT:  ResourceID: SVE_CMP_INST+1
 #CHECK-NEXT:  latency: 4
 #CHECK-NEXT:  seqDecode: false
 #CHECK-NEXT:  stage/resource(): 0/FLA, 4/FLA_C
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %180:ppr_3b = BIC_PPzPP %168:ppr_3b, %168:ppr_3b, killed %174:ppr
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %180:ppr_3b = BIC_PPzPP
 #CHECK-NEXT:  ResourceID: PREDICATE_OP+1
 #CHECK-NEXT:  latency: 3
 #CHECK-NEXT:  seqDecode: false

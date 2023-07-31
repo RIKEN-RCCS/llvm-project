@@ -3,17 +3,17 @@
 #CHECK:        : (Iterative Modulo Scheduling. ResMII 6. NumOfBodyInsts 17. Budget 850. Minimum II = 6.)
 #CHECK:        :  (x) Run out of budget      at estimation.          : (II: 6 in [ 6,1000]) MVE: 0 Last inst: 3. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
 #CHECK:        :  (x) Run out of budget      at estimation.          : (II: 7 in [ 6,1000]) MVE: 0 Last inst: 8. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 11 in [ 6,1000]) MVE: 4 Last inst: 0. (Itr Org: 0, Req: 8) (VReg Fp: 17/10, Int: 19/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 18 in [ 6,1000]) MVE: 3 Last inst: 0. (Itr Org: 0, Req: 5) (VReg Fp: 16/10, Int: 17/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 24 in [ 6,1000]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 3) (VReg Fp: 11/10, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at estimation.          : (II: 28 in [ 6,1000]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 3) (VReg Fp: 10/10, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 11 in [ 6,1000]) MVE: 4 Last inst: 0. (Itr Org: 0, Req: 8) (VReg Fp: 17/10, Int: 19/29, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 18 in [ 6,1000]) MVE: 3 Last inst: 0. (Itr Org: 0, Req: 5) (VReg Fp: 16/10, Int: 17/29, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (x) Register (F) short     at estimation.          : (II: 24 in [ 6,1000]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 3) (VReg Fp: 11/10, Int: 13/29, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at estimation.          : (II: 28 in [ 6,1000]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 3) (VReg Fp: 10/10, Int: 13/29, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Change ii range for moderate schedule search:[ 6, 1000 ] -> [ 29, 56 ]
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 29 in [ 29,56]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 3) (VReg Fp: 10/10, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 34 in [ 29,56]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 3) (VReg Fp: 10/10, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 39 in [ 29,56]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/10, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 44 in [ 29,56]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/10, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 49 in [ 29,56]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/10, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 54 in [ 29,56]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/10, Int: 13/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 29 in [ 29,56]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 3) (VReg Fp: 10/10, Int: 13/29, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 34 in [ 29,56]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 3) (VReg Fp: 10/10, Int: 13/29, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 39 in [ 29,56]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/10, Int: 13/29, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 44 in [ 29,56]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/10, Int: 13/29, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 49 in [ 29,56]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/10, Int: 13/29, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 54 in [ 29,56]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 10/10, Int: 13/29, Pre: 1/8) Eval:0.000000e+00.
 #CHECK:        : Required iteration count in MIR input is        :   3 (= kernel:2 + pro/epilogue:1 + mod:0) 
 #CHECK:        : Original loop iteration is not found.
 #CHECK:        :

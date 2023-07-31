@@ -5,8 +5,8 @@
 #CHECK:        :  (x) Run out of budget      at estimation.          : (II: 3 in [ 2,1000]) MVE: 0 Last inst: 4. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
 #CHECK:        :  (x) Run out of budget      at estimation.          : (II: 5 in [ 2,1000]) MVE: 0 Last inst: 4. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
 #CHECK:        :  (x) Run out of budget      at estimation.          : (II: 9 in [ 2,1000]) MVE: 0 Last inst: 4. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 13 in [ 2,1000]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/32, Pre: 1/10) Eval:0.000000e+00.
-#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 11 in [ 9,13]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/32, Pre: 1/10) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 13 in [ 2,1000]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/29, Pre: 1/10) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at binary search.       : (II: 11 in [ 9,13]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/29, Pre: 1/10) Eval:0.000000e+00.
 #CHECK:        :  (x) Run out of budget      at binary search.       : (II: 10 in [ 9,11]) MVE: 0 Last inst: 4. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'

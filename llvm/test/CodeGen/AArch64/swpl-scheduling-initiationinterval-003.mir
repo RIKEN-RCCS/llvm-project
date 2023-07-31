@@ -1,7 +1,7 @@
 #RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-debug -start-before=aarch64-swpipeliner -swpl-minii=3 -swpl-ii-by-Bsearch=false   -o /dev/null 2>&1 | FileCheck %s
 
 
-#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 3 in [ 3,1000]) MVE: 2 Last inst: 0. (Itr Org: 99, Req: 3) (VReg Fp: 0/32, Int: 8/32, Pre: 1/8) Eval:0.000000e+00.
+#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 3 in [ 3,1000]) MVE: 2 Last inst: 0. (Itr Org: 99, Req: 3)
 #CHECK:        : Required iteration count in MIR input is        :   3 (= kernel:2 + pro/epilogue:1 + mod:0) 
 #CHECK:        : Original iteration count in MIR is found        :   99
 #CHECK:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 2, 49, 0)

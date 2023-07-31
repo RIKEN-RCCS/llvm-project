@@ -1,4 +1,4 @@
-# RUN: llc -mcpu=a64fx -O1 -fswp -swpl-max-preg=32 -start-before=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner -swpl-enable-reg-alloc %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mcpu=a64fx -O1 -fswp -swpl-max-preg=32 -start-before=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner -swpl-maxii=47 %s -o /dev/null 2>&1 | FileCheck %s
 # CHECK: remark: a.c:14:4: Failed to allocate physical register. VReg=%107:ppr_3b
 
 --- |

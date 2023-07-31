@@ -5,14 +5,14 @@
 #CHECK:        :  (x) Run out of budget      at estimation.          : (II: 3 in [ 2,1000]) MVE: 0 Last inst: 4. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
 #CHECK:        :  (x) Run out of budget      at estimation.          : (II: 5 in [ 2,1000]) MVE: 0 Last inst: 4. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
 #CHECK:        :  (x) Run out of budget      at estimation.          : (II: 9 in [ 2,1000]) MVE: 0 Last inst: 4. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at estimation.          : (II: 13 in [ 2,1000]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/32, Pre: 1/1) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at estimation.          : (II: 13 in [ 2,1000]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/29, Pre: 1/1) Eval:0.000000e+00.
 #CHECK:        : Change ii range for moderate schedule search:[ 2, 1000 ] -> [ 14, 26 ]
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 14 in [ 14,26]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/32, Pre: 1/1) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 16 in [ 14,26]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/32, Pre: 1/1) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 18 in [ 14,26]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/32, Pre: 1/1) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 20 in [ 14,26]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/32, Pre: 1/1) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 22 in [ 14,26]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/32, Pre: 1/1) Eval:0.000000e+00.
-#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 24 in [ 14,26]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/32, Pre: 1/1) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 14 in [ 14,26]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/29, Pre: 1/1) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 16 in [ 14,26]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/29, Pre: 1/1) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 18 in [ 14,26]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/29, Pre: 1/1) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 20 in [ 14,26]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/29, Pre: 1/1) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 22 in [ 14,26]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/29, Pre: 1/1) Eval:0.000000e+00.
+#CHECK:        :  (@) Scheduling tight       at recollect moderate.  : (II: 24 in [ 14,26]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 6/29, Pre: 1/1) Eval:0.000000e+00.
 --- |
   ; ModuleID = '/TEST/tp/testprg.c'
   source_filename = "/TEST/tp/testprg.c"

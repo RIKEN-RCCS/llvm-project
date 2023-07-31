@@ -173,7 +173,7 @@ body:             |
     %4:gpr64sp = PHI %0, %bb.1, %8, %bb.3
     early-clobber %19:gpr64sp, %20:fpr64 = LDRDpost %1, 8
     early-clobber %21:gpr64sp, %22:fpr64 = LDRDpost %2, 8
-    %23:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %22, killed %20
+    %23:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %22, killed %20, implicit $fpcr
     early-clobber %24:gpr64sp = STRDpost killed %23, %3, 8 :: (store 8 into %ir.lsr.iv12, !tbaa !2)
     %5:gpr64all = COPY %24
     %6:gpr64all = COPY %21
