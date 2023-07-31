@@ -485,7 +485,7 @@ body:             |
     %6:fpr64 = nofpexcept SCVTFv1i64 killed %5, implicit $fpcr
     %7:gpr64common = ADRP target-flags(aarch64-page) %const.0
     %8:fpr64 = LDRDui killed %7, target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s64) from constant-pool)
-    %10:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %6, killed %8, killed %4, implicit $fpcr, implicit $fpcr
+    %10:fpr64 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADDDrrr killed %6, killed %8, killed %4, implicit $fpcr
     $d0 = COPY %10
     RET_ReallyLR implicit $d0
 
