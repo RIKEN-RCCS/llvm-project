@@ -1,7 +1,7 @@
 ## ソースコード
 git@github.com:RIKEN-RCCS/llvm-project.git  
 branch:swpl-2023-1-llvm16  
-tag:swpl-2023-1-llvm16_tag_20230728
+tag:swpl-2023-1-llvm16_tag_202308
 
 ## ビルド方法
 
@@ -20,7 +20,7 @@ tag:swpl-2023-1-llvm16_tag_20230728
 
 3. cmakeコマンドでMakefileを生成する
 
-      cmakeで指定可能なパラメータはBuilding LLVM with CMake(https://llvm.org/docs/CMake.html)を参照してください。
+      cmakeで指定可能なパラメータはBuilding LLVM with CMake(https://llvm.org/docs/CMake.html )を参照してください。
 
       ```
       $ cd build  
