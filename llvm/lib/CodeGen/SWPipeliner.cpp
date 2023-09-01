@@ -31,7 +31,6 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-swpipeliner"
 
 static cl::opt<bool> OptionDumpPlan("swpl-debug-dump-plan",cl::init(false), cl::ReallyHidden);
-static cl::opt<bool> EnablesplitInst_swp_pre("swpl-splitinst-swppre",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableSwpl("swpl-disable",cl::init(false), cl::ReallyHidden);
 
 
@@ -439,20 +438,6 @@ bool SWPipelinerPre::check(MachineLoop &L) {
 
   if (!hasPreHeader(L)) Changed|=createPreHeader(L);
   if (!hasExit(L)) Changed|=createExit(L);
-
-  if (EnablesplitInst_swp_pre) {
-    SmallVector<MachineInstr *, 2> delete_mi;
-    for (auto &mi:*body) {
-      if (TII->splitPrePostIndexInstr(*body, mi, nullptr, nullptr)) {
-        Changed=true;
-
-        // MBBから削除する命令の収集
-        delete_mi.push_back(&mi);
-      }
-    }
-    for (auto *m : delete_mi)
-      m->eraseFromParent();
-  }
 
   return Changed;
 }
