@@ -27,7 +27,6 @@ using namespace ore; // for NV
 
 static cl::opt<bool> OptionDumpMrt("swpl-debug-dump-mrt",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> OptionBsearch("swpl-ii-by-Bsearch",cl::init(true), cl::ReallyHidden);
-static cl::opt<bool> OptionTuningMaxII("swpl-tuning-maxii",cl::init(true), cl::ReallyHidden);
 
 static cl::opt<unsigned> OptionMveLimit("swpl-mve-limit",cl::init(30), cl::ReallyHidden);
 
