@@ -31,8 +31,6 @@ static cl::opt<bool> DisableRmCopy("swpl-disable-rm-copy",cl::init(false), cl::R
 static cl::opt<bool> DisableSuppressCopy("swpl-disable-suppress-copy",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool>
     IgnoreRegClass_SuppressCopy("swpl-ignore-class-suppress-copy",cl::init(false), cl::ReallyHidden);
-static cl::opt<bool>
-    GenCopy4AllTiedDef("swpl-gen-copy-for-all-tieddef",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableNormalizeTieddef("swpl-enable-normalize-tieddef",cl::init(true), cl::ReallyHidden);
 
 // rm-copyを強化する（reg-alloc時と同じ処理にする）
@@ -848,13 +846,6 @@ bool SwplLoop::convertSSAtoNonSSA(MachineLoop &L, const SwplScr::UseMap &LiveOut
 
 bool SwplLoop::check_need_copy4TiedUseReg(const MachineBasicBlock* body, const MachineInstr* tiedInstr,
                                       Register tiedDefReg, Register tiedUseReg) const {
-
-  if (GenCopy4AllTiedDef) {
-    if (DebugPrepare) {
-      dbgs() << "DEBUG(SwplLoop::check_need_copy4TiedUseReg): GenCopy4AllTiedDef is true\n";
-    }
-    return true;
-  }
 
   // 1) tiedInstrの定義参照が同じレジスタの場合のみ不要
 
