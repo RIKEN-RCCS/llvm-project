@@ -21,7 +21,6 @@ using namespace llvm;
 
 static cl::opt<bool> DebugDumpDdg("swpl-debug-dump-ddg",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableInstDep("swpl-enable-instdep",cl::init(false), cl::ReallyHidden);
-static cl::opt<bool> EnableCheckEarlyClobber("swpl-enable-check-early-clobber",cl::init(false), cl::ReallyHidden);
 
 static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplInst &latter_inst, int distance, int delay);
 
@@ -232,13 +231,7 @@ void SwplDdg::analysisRegsFlowDependence() {
       if (def_inst == nullptr) { continue; }
       assert(def_indx >= 0);
       int distance = (getLoop()->areBodyInstsOrder(def_inst, use_inst) ? 0 : 1);
-      int delay;
-      if (EnableCheckEarlyClobber && def_inst->getDefRegs(def_indx).isEarlyClobber()) {
-        // def-regがearly-clobberの場合は、命令のLatencyに関係なく１とする
-        delay = 1;
-      } else {
-        delay = SWPipeliner::STM->computeRegFlowDependence(def_inst->getMI(), use_inst->getMI());
-      }
+      int delay = SWPipeliner::STM->computeRegFlowDependence(def_inst->getMI(), use_inst->getMI());
       if (SWPipeliner::isDebugDdgOutput()) {
         dbgs() << "DBG(SwplDdg::analysisRegsFlowDependence):\n"
                << " former_inst:" << *(def_inst->getMI())
