@@ -33,7 +33,6 @@ static cl::opt<bool>
     IgnoreRegClass_SuppressCopy("swpl-ignore-class-suppress-copy",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool>
     GenCopy4AllTiedDef("swpl-gen-copy-for-all-tieddef",cl::init(false), cl::ReallyHidden);
-static cl::opt<bool> NoMMOIsNoDep("swpl-nommo-is-nodep",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableNormalizeTieddef("swpl-enable-normalize-tieddef",cl::init(true), cl::ReallyHidden);
 
 // rm-copyを強化する（reg-alloc時と同じ処理にする）
@@ -394,13 +393,6 @@ unsigned SwplLoop::getMemsMinOverlapDistance(SwplMem *former_mem, SwplMem *latte
   if (NoDep) {
     if (SWPipeliner::isDebugDdgOutput())
       dbgs() << "DBG(getMemIncrement): NoDep is true: return MAX_LOOP_DISTANCE\n"
-             << " formaer_mi:" << *former_mi
-             << " latter_mi:" << *latter_mi;
-    return SwplMem::MAX_LOOP_DISTANCE;
-  }
-  if (NoMMOIsNoDep && (memop1==nullptr || memop2==nullptr)) {
-    if (SWPipeliner::isDebugDdgOutput())
-      dbgs() << "DBG(getMemIncrement): NoMMOIsNoDep is true: return MAX_LOOP_DISTANCE\n"
              << " formaer_mi:" << *former_mi
              << " latter_mi:" << *latter_mi;
     return SwplMem::MAX_LOOP_DISTANCE;
