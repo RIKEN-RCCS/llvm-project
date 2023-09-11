@@ -3912,6 +3912,12 @@ static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists) {
     // loop metadata display
     LLVM_DEBUG( if (L->getLocRange().getStart().get()) dbgs() << __func__ << ":loop=" << L->getLocRange().getStart().getLine() << "-" << L->getLocRange().getEnd().getLine() << " meta:" << S->getString() << "\n");
 
+    // remainder loop
+    if (S->getString()=="llvm.remainder.pipeline.disable") {
+      exists = true;
+      return false;
+    }
+
     if (S->getString()=="llvm.loop.pipeline.disable") {
       exists = true;
       return false;
@@ -3934,6 +3940,12 @@ static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists) {
 
       // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized", !{"llvm.loop.pipeline.enable"}}
       if (secondS != nullptr) {
+        // remainder loop
+        if (secondS->getString()=="llvm.remainder.pipeline.disable") {
+          exists = true;
+          return false;
+        }
+
         if (secondS->getString()=="llvm.loop.pipeline.disable") {
           exists = true;
           return false;

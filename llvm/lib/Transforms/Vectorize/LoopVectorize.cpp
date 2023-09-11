@@ -390,6 +390,9 @@ static cl::opt<cl::boolOrDefault> ForceSafeDivisor(
     cl::desc(
         "Override cost based safe divisor widening for div/rem instructions"));
 
+static cl::opt<bool> EnablePipelineRemainderLoop(
+    "swpl-enable-pipeline-remainder", cl::init(false), cl::Hidden);
+
 /// A helper function that returns true if the given type is irregular. The
 /// type is irregular if its allocated size doesn't equal the store size of an
 /// element of the corresponding vector type.
@@ -7726,6 +7729,23 @@ static void AddRuntimeUnrollDisableMetaData(Loop *L) {
   }
 }
 
+static void AddSWPLDisableMetaData(Loop *L) {
+  SmallVector<Metadata *, 4> MDs;
+  // Reserve first location for self reference to the LoopID metadata node.
+  MDs.push_back(nullptr);
+  // Add runtime pipline disable metadata.
+  LLVMContext &Context = L->getHeader()->getContext();
+  SmallVector<Metadata *, 4> DisableOperands;
+  DisableOperands.push_back(
+      MDString::get(Context, "llvm.remainder.pipeline.disable"));
+  MDNode *DisableNode = MDNode::get(Context, DisableOperands);
+  MDs.push_back(DisableNode);
+  MDNode *NewLoopID = MDNode::get(Context, MDs);
+  // Set operand 0 to refer to the loop id itself.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  L->setLoopID(NewLoopID);
+}
+
 SCEV2ValueTy LoopVectorizationPlanner::executePlan(
     ElementCount BestVF, unsigned BestUF, VPlan &BestVPlan,
     InnerLoopVectorizer &ILV, DominatorTree *DT, bool IsEpilogueVectorization,
@@ -7826,10 +7846,15 @@ SCEV2ValueTy LoopVectorizationPlanner::executePlan(
     LoopVectorizeHints Hints(L, true, *ORE);
     Hints.setAlreadyVectorized();
   }
+
   TargetTransformInfo::UnrollingPreferences UP;
   TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);
-  if (!UP.UnrollVectorizedLoop || CanonicalIVStartValue)
+  if (!UP.UnrollVectorizedLoop || CanonicalIVStartValue) {
     AddRuntimeUnrollDisableMetaData(L);
+    if (!EnablePipelineRemainderLoop) {
+      AddSWPLDisableMetaData(L);
+    }
+  }
 
   // 3. Fix the vectorized code: take care of header phi's, live-outs,
   //    predication, updating analyses.
@@ -10608,6 +10633,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   } else {
     if (DisableRuntimeUnroll)
       AddRuntimeUnrollDisableMetaData(L);
+    if (!EnablePipelineRemainderLoop) {
+      AddSWPLDisableMetaData(L);
+    }
 
     // Mark the loop as already vectorized to avoid vectorizing again.
     Hints.setAlreadyVectorized();
