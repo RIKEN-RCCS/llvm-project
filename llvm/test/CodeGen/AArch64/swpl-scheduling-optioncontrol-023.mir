@@ -1,5 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner  -swpl-maxii=9 -swpl-minii=10 -swpl-tuning-maxii=false -pass-remarks-output=%t.yaml  -o /dev/null  > %t; \
-#RUN: cat   %t.yaml  | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner  -swpl-maxii=9 -swpl-minii=10 -swpl-tuning-maxii=false -pass-remarks-output=- -o /dev/null | FileCheck %s
 
 #CHECK:--- !Missed
 #CHECK:Pass:            aarch64-swpipeliner
