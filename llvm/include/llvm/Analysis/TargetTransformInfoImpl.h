@@ -203,6 +203,11 @@ public:
     return std::nullopt;
   }
 
+  bool isSwpDirected(Loop *L) const {
+    return false;
+  }
+
+
   void getUnrollingPreferences(Loop *, ScalarEvolution &,
                                TTI::UnrollingPreferences &,
                                OptimizationRemarkEmitter *) const {}

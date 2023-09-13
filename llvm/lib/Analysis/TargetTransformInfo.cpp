@@ -373,6 +373,11 @@ std::optional<Value *> TargetTransformInfo::simplifyDemandedVectorEltsIntrinsic(
       SimplifyAndSetOp);
 }
 
+bool TargetTransformInfo::isSwpDirected(
+    Loop *L) const {
+  return TTIImpl->isSwpDirected(L);
+}
+
 void TargetTransformInfo::getUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, UnrollingPreferences &UP,
     OptimizationRemarkEmitter *ORE) const {

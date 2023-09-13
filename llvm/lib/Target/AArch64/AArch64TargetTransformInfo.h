@@ -412,6 +412,8 @@ public:
                     DominatorTree *DT, AssumptionCache *AC,
                     TargetLibraryInfo *LibInfo);
 
+    bool isSwpDirected(Loop *L);
+
 
   /// @}
 

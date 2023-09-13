@@ -7851,7 +7851,7 @@ SCEV2ValueTy LoopVectorizationPlanner::executePlan(
   TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);
   if (!UP.UnrollVectorizedLoop || CanonicalIVStartValue) {
     AddRuntimeUnrollDisableMetaData(L);
-    if (!EnablePipelineRemainderLoop) {
+    if (TTI.isSwpDirected(L) && !EnablePipelineRemainderLoop) {
       AddSWPLDisableMetaData(L);
     }
   }
@@ -10633,7 +10633,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   } else {
     if (DisableRuntimeUnroll)
       AddRuntimeUnrollDisableMetaData(L);
-    if (!EnablePipelineRemainderLoop) {
+    if (TTI->isSwpDirected(L) && !EnablePipelineRemainderLoop) {
       AddSWPLDisableMetaData(L);
     }
 

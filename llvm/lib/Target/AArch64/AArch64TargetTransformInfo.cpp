@@ -4058,3 +4058,19 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     return AM.Scale != 0 && AM.Scale != 1;
   return -1;
 }
+
+/**
+ * Obtain the status of SWPL application instructions
+ * @param [in] L Target loop information
+ * @retval true enable
+ * @retval false disable
+ */
+bool AArch64TTIImpl::isSwpDirected(Loop *L) {
+
+  if (L!=nullptr && !llvm::enableSWP(L)) {
+    printDebug(__func__, "enableSWP() is false", L);
+    return false;
+  }
+
+  return true;
+}

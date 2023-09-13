@@ -663,6 +663,10 @@ public:
         SimplifyAndSetOp);
   }
 
+  bool isSwpDirected(Loop *L) {
+    return BaseT::isSwpDirected(L);
+  }
+
   virtual std::optional<unsigned>
   getCacheSize(TargetTransformInfo::CacheLevel Level) const {
     return std::optional<unsigned>(
