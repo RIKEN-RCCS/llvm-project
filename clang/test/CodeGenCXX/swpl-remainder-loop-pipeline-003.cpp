@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-unknown-hurd-gnu -emit-llvm -target-cpu a64fx -Ofast -vectorize-loops -fno-unroll-loops -o - %s | FileCheck %s
-// CHECK: !{!"llvm.loop.pipeline.enable"}
+// RUN: %clang_cc1 -triple aarch64-unknown-hurd-gnu -emit-llvm -target-cpu a64fx -Ofast -vectorize-loops -fno-unroll-loops -mllvm -fswp -o - %s | FileCheck %s
 // CHECK: !{!"llvm.remainder.pipeline.disable"}
 
 #define N 999
@@ -11,7 +10,6 @@ void pipeline_initiation_interval(void) {
     int a[N], b[N], c[N];
     int x[N], y[N], z[N];
 	int sum=0;
-#pragma clang loop pipeline(enable)
     for (i = 0; i < N; i++) {
         z[i] = x[i] + y[i];
         c[i] = a[i] - b[i];

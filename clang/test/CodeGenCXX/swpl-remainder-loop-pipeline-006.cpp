@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-unknown-hurd-gnu -emit-llvm -target-cpu a64fx -Ofast -vectorize-loops -fno-unroll-loops -mllvm -fswp -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-unknown-hurd-gnu -emit-llvm -target-cpu a64fx -Ofast -vectorize-loops -fno-unroll-loops -mllvm -fswp -mllvm -swpl-enable-pipeline-remainder -o - %s | FileCheck %s
 // CHECK: !{!"llvm.loop.pipeline.disable", i1 true}
 // CHECK-NOT: !{!"llvm.remainder.pipeline.disable"}
 
