@@ -34,8 +34,6 @@ static cl::opt<bool> OptionDumpPlan("swpl-debug-dump-plan",cl::init(false), cl::
 static cl::opt<bool> DisableSwpl("swpl-disable",cl::init(false), cl::ReallyHidden);
 
 
-/// Pragmaによるswpのon/offの代わりにSWPL化Loopを絞り込む
-static cl::opt<int> TargetLoop("swpl-choice-loop",cl::init(0), cl::ReallyHidden);
 static cl::opt<bool> DebugOutput("swpl-debug",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DebugDdgOutput("swpl-debug-ddg",cl::init(false), cl::ReallyHidden);
 
@@ -150,7 +148,6 @@ FunctionPass *createSWPipelinerPass() {
  */
 bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
   bool Modified = false;
-  loopCountForDebug=0;
   if (!mf.getSubtarget().getSchedModel().hasInstrSchedModel()) {
     // schedmodelを持たないプロセッサ用のコードなので、本最適化は適用しない。
     // llcでmcpuを指定しても意味がない（Clangで-mcpu=a64fx指定が必須）のようだ
@@ -263,9 +260,6 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     return Changed;
   }
 
-  loopCountForDebug++;
-  // TargetLoopが指定された場合、それ以外のSWPL処理はおこなわない
-  if (TargetLoop>0 && TargetLoop!=loopCountForDebug) return Changed;
 
   SwplScr swplScr(L);
   SwplScr::UseMap liveOutReg;

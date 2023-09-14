@@ -798,8 +798,6 @@ private:
 
 /// SWPL pass
 struct SWPipeliner : public MachineFunctionPass {
-  /// swpl-choice-loopで対象Loop特定に利用する
-  int loopCountForDebug=0;
 public:
   static char ID;               ///< PassのID
   static MachineOptimizationRemarkEmitter *ORE;
