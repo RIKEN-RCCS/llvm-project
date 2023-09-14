@@ -24,10 +24,10 @@ tag:swpl-2023-1-llvm16_tag_202308
 
       ```
       $ cd build  
-      $ cmake ../llvm \  
-         -DCMAKE_BUILD_TYPE=Release \  
-         -DCMAKE_INSTALL_PREFIX=../install \  
-         -DLLVM_TARGETS_TO_BUILD="AArch64" \  
+      $ cmake ../llvm \
+         -DCMAKE_BUILD_TYPE=Release \
+         -DCMAKE_INSTALL_PREFIX=../install \
+         -DLLVM_TARGETS_TO_BUILD="AArch64" \
          -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_INCLUDE_BENCHMARKS=OFF  
       ```
 
@@ -55,3 +55,4 @@ tag:swpl-2023-1-llvm16_tag_202308
       動作しています（メッセージ内の数字は異なる場合があります）。
 
        「software pipelining (IPC: 2.03, ITR: 4, MVE: 2, II: 65, Stage: 4, 」
+;;
