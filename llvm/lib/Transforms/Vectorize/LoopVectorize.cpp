@@ -390,8 +390,8 @@ static cl::opt<cl::boolOrDefault> ForceSafeDivisor(
     cl::desc(
         "Override cost based safe divisor widening for div/rem instructions"));
 
-static cl::opt<bool> EnablePipelineRemainderLoop(
-    "swpl-enable-pipeline-remainder", cl::init(false), cl::Hidden);
+static cl::opt<bool> EnablePipelineRemainderLoopVec(
+    "swpl-enable-pipeline-remainder-vec", cl::init(false), cl::Hidden);
 
 /// A helper function that returns true if the given type is irregular. The
 /// type is irregular if its allocated size doesn't equal the store size of an
@@ -7851,7 +7851,9 @@ SCEV2ValueTy LoopVectorizationPlanner::executePlan(
   TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);
   if (!UP.UnrollVectorizedLoop || CanonicalIVStartValue) {
     AddRuntimeUnrollDisableMetaData(L);
-    if (TTI.isSwpDirected(L) && !EnablePipelineRemainderLoop) {
+    // Generate meta information only for SWPL target loops.
+    // This is done so as not to affect the existing lit.
+    if (TTI.isSwpDirected(L) && !EnablePipelineRemainderLoopVec) {
       AddSWPLDisableMetaData(L);
     }
   }
@@ -10633,7 +10635,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   } else {
     if (DisableRuntimeUnroll)
       AddRuntimeUnrollDisableMetaData(L);
-    if (TTI->isSwpDirected(L) && !EnablePipelineRemainderLoop) {
+    // Generate meta information only for SWPL target loops.
+    // This is done so as not to affect the existing lit.
+    if (TTI->isSwpDirected(L) && !EnablePipelineRemainderLoopVec) {
       AddSWPLDisableMetaData(L);
     }
 
