@@ -173,6 +173,9 @@ static cl::opt<unsigned>
                            cl::desc("Default threshold (max size of unrolled "
                                     "loop), used in all but O3 optimizations"));
 
+static cl::opt<bool> EnablePipelineRemainderLoopUnroll(
+    "swpl-enable-pipeline-remainder-unroll", cl::init(false), cl::Hidden);
+
 /// A magic value for use with the Threshold parameter to indicate
 /// that the loop unroll should be performed regardless of how much
 /// code expansion would result.
@@ -1119,6 +1122,23 @@ bool llvm::computeUnrollCount(
   return ExplicitUnroll;
 }
 
+static void AddSWPLDisableMetaData(Loop *L) {
+  SmallVector<Metadata *, 4> MDs;
+  // Reserve first location for self reference to the LoopID metadata node.
+  MDs.push_back(nullptr);
+  // Add runtime pipline disable metadata.
+  LLVMContext &Context = L->getHeader()->getContext();
+  SmallVector<Metadata *, 4> DisableOperands;
+  DisableOperands.push_back(
+      MDString::get(Context, "llvm.remainder.pipeline.disable"));
+  MDNode *DisableNode = MDNode::get(Context, DisableOperands);
+  MDs.push_back(DisableNode);
+  MDNode *NewLoopID = MDNode::get(Context, MDs);
+  // Set operand 0 to refer to the loop id itself.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  L->setLoopID(NewLoopID);
+}
+
 static LoopUnrollResult
 tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
                 const TargetTransformInfo &TTI, AssumptionCache &AC,
@@ -1338,6 +1358,12 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
                                         LLVMLoopUnrollFollowupRemainder});
     if (RemainderLoopID)
       RemainderLoop->setLoopID(*RemainderLoopID);
+
+    // Generate meta information only for SWPL target loops.
+    // This is done so as not to affect the existing lit.
+    if (TTI.isSwpDirected(L) && !EnablePipelineRemainderLoopUnroll) {
+      AddSWPLDisableMetaData(RemainderLoop);
+    }
   }
 
   if (UnrollResult != LoopUnrollResult::FullyUnrolled) {
