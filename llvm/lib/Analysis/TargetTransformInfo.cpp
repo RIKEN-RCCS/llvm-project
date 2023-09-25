@@ -132,16 +132,24 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
     }
 
     const SCEV *EC = SE.getExitCount(L, BB);
-    if (isa<SCEVCouldNotCompute>(EC))
+    if (isa<SCEVCouldNotCompute>(EC)) {
+      Reason="Loop count cannot be calculated";
       continue;
+    }
     if (const SCEVConstant *ConstEC = dyn_cast<SCEVConstant>(EC)) {
-      if (ConstEC->getValue()->isZero())
+      if (ConstEC->getValue()->isZero()) {
+        Reason="SCEV is Zero";
         continue;
-    } else if (!SE.isLoopInvariant(EC, L))
+      }
+    } else if (!SE.isLoopInvariant(EC, L)) {
+      Reason="SCEV is changing in the specified loop";
       continue;
+    }
 
-    if (SE.getTypeSizeInBits(EC->getType()) > CountType->getBitWidth())
+    if (SE.getTypeSizeInBits(EC->getType()) > CountType->getBitWidth()) {
+      Reason="SCEV type > CountType";
       continue;
+    }
 
     // If this exiting block is contained in a nested loop, it is not eligible
     // for insertion of the branch-and-decrement since the inner loop would

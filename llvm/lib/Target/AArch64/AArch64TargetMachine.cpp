@@ -55,6 +55,13 @@
 
 using namespace llvm;
 
+
+static cl::opt<bool>
+    DisableHWLOOP("disable-hwloop",
+                                cl::desc("Disable the HardwareLoop Insertion pass"),
+                                cl::init(false), cl::ReallyHidden);
+
+
 static cl::opt<bool> EnableCCMP("aarch64-enable-ccmp",
                                 cl::desc("Enable the CCMP formation pass"),
                                 cl::init(true), cl::Hidden);
@@ -236,6 +243,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64SLSHardeningPass(*PR);
   initializeAArch64StackTaggingPass(*PR);
   initializeAArch64StackTaggingPreRAPass(*PR);
+
+  initializeSWPipelinerPrePass(*PR);
+  initializeSWPipelinerPass(*PR);
+
   initializeAArch64LowerHomogeneousPrologEpilogPass(*PR);
   initializeAArch64DAGToDAGISelPass(*PR);
   initializeAArch64GlobalsTaggingPass(*PR);
@@ -654,6 +665,9 @@ bool AArch64PassConfig::addPreISel() {
                                   MergeExternalByDefault));
   }
 
+  if (TM->getTargetCPU().equals_insensitive("a64fx") && (TM->getOptLevel() != CodeGenOpt::None) && !DisableHWLOOP) {
+    addPass(createHardwareLoopsLegacyPass());
+  }
   return false;
 }
 
@@ -757,6 +771,11 @@ void AArch64PassConfig::addPreRegAlloc() {
     // The AdvSIMD pass may produce copies that can be rewritten to
     // be register coalescer friendly.
     addPass(&PeepholeOptimizerID);
+  }
+
+  if (TM->getTargetCPU().equals_insensitive("a64fx") && TM->getOptLevel() != CodeGenOpt::None) {
+    addPass(createSWPipelinerPrePass());
+    addPass(createSWPipelinerPass());
   }
 }
 

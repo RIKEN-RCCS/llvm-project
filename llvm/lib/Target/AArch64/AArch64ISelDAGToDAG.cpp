@@ -4297,6 +4297,24 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     switch (IntNo) {
     default:
       break;
+
+    case Intrinsic::start_loop_iterations: {
+      // assert：入力が３つ（chain、Intrinsic-ID、回転数）であること
+      assert(Node->getNumOperands() == 3 && "unexpected parameter in start_loop_iterations.");
+
+      // llvm.start.loop.iterations.i64のみ展開対象とする
+      MVT VT = Node->getOperand(2).getSimpleValueType();
+      assert( VT == MVT::i64 && "unexpected type in start_loop_iterations.(not i64)");
+      if( VT != MVT::i64 ) {
+        break;
+      }
+
+      SDValue tos[2] = {Node->getOperand(2), Node->getOperand(0)};
+      CurDAG->ReplaceAllUsesWith(Node, tos);
+      CurDAG->RemoveDeadNode(Node);
+      return;
+    }
+
     case Intrinsic::aarch64_ldaxp:
     case Intrinsic::aarch64_ldxp: {
       unsigned Op =
@@ -4634,6 +4652,48 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         return;
       }
       break;
+
+    case Intrinsic::loop_decrement_reg: {
+      // 以下のように展開する。
+      // before: i64,ch = llvm.loop.decrement.reg t31:2, TargetConstant:i64<166>, t17, Constant:i64<1>
+      // after : i64,ch = SUBSXri t17, TargetConstant:i64<1>, TargetConstant:i64<0>, t31:2
+
+      SDLoc dl(Node);
+      ConstantSDNode *CN;
+
+      // assert：出力が２つ（デクリメント結果、chain）であること
+      // assert：入力が４つ（chain、Intrinsic-ID、デクリメント対象、デクリメントする値）であること
+      assert( Node->getNumValues() == 2 &&
+	      Node->getNumOperands() == 4 && "unexpected parameter in loop_decrement_reg.");
+
+      // llvm.loop.decrement.reg.i64のみ展開対象とする。
+      MVT VT = Node->getSimpleValueType(0);
+      assert( VT == MVT::i64 && "unexpected type in loop_decrement_reg.(not i64)");
+      if( VT != MVT::i64 ) {
+        break;
+      }
+
+      // assert：引き算する値は即値のハズ
+      CN = dyn_cast<ConstantSDNode>(Node->getOperand(3));
+      if( !CN ) {
+        report_fatal_error( "decrement-value is not constant in loop_decrement_reg.");
+      }
+
+      // デクリメントに使用する引き算命令には、SUBSXriを使用している。
+      //
+      // SUBSXri命令を使用することの正当性については、
+      // 単純なISD::subの展開にこの命令が使用されることくらいしか根拠がない。
+      // 富士通様ISelが提供されたら再検討する。
+      std::vector<SDValue> Ops = { Node->getOperand(2),
+				   CurDAG->getTargetConstant(CN->getSExtValue(), dl, VT ), /* decrement value */
+				   CurDAG->getTargetConstant(0, dl, VT ), /* shifter */
+				   Node->getOperand(0) /* chain */
+      };
+      SDNode *N = CurDAG->getMachineNode( AArch64::SUBSXri, dl, {VT, MVT::Other}, Ops );
+      ReplaceNode(Node, N);
+      return;
+    }
+
     case Intrinsic::aarch64_ld64b:
       SelectLoad(Node, 8, AArch64::LD64B, AArch64::x8sub_0);
       return;
@@ -5780,6 +5840,32 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       }
       break;
     }
+
+    case Intrinsic::set_loop_iterations: {
+      // A64FXにおいてはset_loop_iterationsに該当する命令は存在しない。
+      // 回転数を特定のレジスタに格納し、HWLoop命令が参照する、
+      // といったアーキテクチャでないため、set_loop_iterationsは削除する。
+
+      // assert：出力が１つ（chain）であること
+      // assert：入力が３つ（chain、Intrinsic-ID、回転数）であること
+      assert( Node->getNumValues() == 1 &&
+              Node->getNumOperands() == 3 && "unexpected parameter in loop_set_iterations.");
+
+      // llvm.set.loop.iterations.i64のみ展開対象とする。
+      MVT VT = Node->getOperand(2).getSimpleValueType();
+      assert( VT == MVT::i64 && "unexpected type in loop_set_iterations.(not i64)");
+      if( VT != MVT::i64 ) {
+        break;
+      }
+
+      // set_loop_iterationsのdef(chain)をuseしている箇所を、
+      // set_loop_iterationsの引数のchainに置き換える。
+      CurDAG->ReplaceAllUsesWith( Node, &(Node->getOperand(0)) );
+      // set_loop_iterationのdefをuseする命令が無くなったので、削除できる。
+      CurDAG->RemoveDeadNode(Node);
+      return;
+    }
+
     }
     break;
   }

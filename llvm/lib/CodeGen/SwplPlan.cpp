@@ -17,6 +17,7 @@
 #include "SwplScheduling.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <cmath>
 
 using namespace llvm; // for NV
 using namespace ore; // for NV
@@ -280,7 +281,7 @@ unsigned SwplPlan::calculateResourceII(const SwplLoop& c_loop) {
   }
   max_counter = 0;
   for(auto val : resource_appears ) {
-    int count = ceil(val); // 小数点切り上げ
+    int count = std::ceil(val); // 小数点切り上げ
     max_counter = std::max( max_counter, count );
   }
   return max_counter;

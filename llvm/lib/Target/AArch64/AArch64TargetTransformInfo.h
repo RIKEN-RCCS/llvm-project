@@ -39,6 +39,14 @@ class Type;
 class Value;
 class VectorType;
 
+/**
+ * オプションとPragmaから、指定ループがSWP適用候補かどうか返す
+ * @param L 対象のLoop情報を指定する
+ * @retval true SWP適用候補
+ * @retval false SWP適用しない
+ */
+bool enableSWP(const Loop*);
+
 class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   using BaseT = BasicTTIImplBase<AArch64TTIImpl>;
   using TTI = TargetTransformInfo;
@@ -393,6 +401,18 @@ public:
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        int64_t BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;
+
+
+    bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
+                                  AssumptionCache &AC,
+                                  TargetLibraryInfo *LibInfo,
+                                  HardwareLoopInfo &HWLoopInfo);
+
+    bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
+                    DominatorTree *DT, AssumptionCache *AC,
+                    TargetLibraryInfo *LibInfo);
+
+
   /// @}
 
   bool enableSelectOptimize() { return ST->enableSelectOptimize(); }

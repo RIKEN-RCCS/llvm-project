@@ -340,6 +340,55 @@ public:
   static void decomposeStackOffsetForDwarfOffsets(const StackOffset &Offset,
                                                   int64_t &ByteSized,
                                                   int64_t &VGSized);
+
+  bool canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI,
+                     const MachineRegisterInfo &MRI, bool enableRegalloc) const override;
+
+  bool splitPrePostIndexInstr(MachineBasicBlock &MBB,
+                              MachineInstr &MI,
+                              MachineInstr **ldst,
+                              MachineInstr **add) const override;
+  bool isMultipleReg(const TargetRegisterClass *TR) const override;
+
+  MachineInstr* makeKernelIterationBranch(MachineRegisterInfo &MRI,
+                                          MachineBasicBlock &MBB,
+                                          const DebugLoc &debugLoc,
+                                          Register doVReg,
+                                          int iterationCount,
+                                          int coefficient,
+                                          Register preg) const override;
+
+  bool isPrefetch(unsigned opcode) const override;
+  void makeBypassKernel(MachineRegisterInfo &MRI,
+                        Register doInitVar,
+                        const DebugLoc &dbgloc,
+                        MachineBasicBlock &from,
+                        MachineBasicBlock &to,
+                        int n) const override;
+
+  void makeBypassMod(Register doUpdateVar,
+                     const DebugLoc &dbgloc,
+                     MachineOperand &CC,
+                     MachineBasicBlock &from,
+                     MachineBasicBlock &to) const override;
+
+  bool isNE(unsigned imm) const override;
+  bool isGE(unsigned imm) const override;
+  bool findMIsForLoop(MachineBasicBlock &MBB,
+                      MachineInstr **Branch,
+                      MachineInstr **Cmp,
+                      MachineInstr **Addsub) const override;
+
+  StmRegKind* getRegKind(const MachineRegisterInfo &MRI, Register r) const override;
+  StmRegKind* getRegKind(const MachineRegisterInfo &MRI) const override;
+  std::tuple<unsigned, unsigned> getRegKindId(const MachineRegisterInfo &MRI, Register r) const override;
+  bool isNonTargetMI4SWPL(MachineInstr &inst)const override;
+  bool canPipelineLoop(MachineLoop &L) const override;
+  int calcEachRegIncrement(const SwplReg *r) const override;
+  SwplTargetMachine *getSwplTargetMachine() const override;
+  bool SwplRegAlloc(SwplTransformedMIRInfo *tmi, MachineFunction &MF) const override;
+
+
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 

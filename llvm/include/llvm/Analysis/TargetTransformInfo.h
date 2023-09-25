@@ -115,6 +115,7 @@ struct HardwareLoopInfo {
                                DominatorTree &DT, bool ForceNestedLoop = false,
                                bool ForceHardwareLoopPHI = false);
   bool canAnalyze(LoopInfo &LI);
+  StringRef Reason;
 };
 
 class IntrinsicCostAttributes {

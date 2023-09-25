@@ -106,11 +106,17 @@ static cl::opt<unsigned> SinkIntoCycleLimit(
     cl::desc("The maximum number of instructions considered for cycle sinking."),
     cl::init(50), cl::Hidden);
 
+static cl::opt<bool> DisableRemoveUselessCopy(
+    "machine-sink-disable-rm-useless-copy",
+    cl::desc("Do not delete uselessly COPY."),
+    cl::init(false), cl::Hidden);
+
 STATISTIC(NumSunk,      "Number of machine instructions sunk");
 STATISTIC(NumCycleSunk,  "Number of machine instructions sunk into a cycle");
 STATISTIC(NumSplit,     "Number of critical edges split");
 STATISTIC(NumCoalesces, "Number of copies coalesced");
 STATISTIC(NumPostRACopySink, "Number of copies sunk after RA");
+STATISTIC(NumRemoveUselessCopy, "Number of remove useless copies");
 
 namespace {
 
@@ -1875,9 +1881,28 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
   return Changed;
 }
 
+static bool isReassign(MachineInstr &MI, MachineOperand &MO, const TargetRegisterInfo *TRI) {
+  Register r=MO.getReg();
+  for (MachineInstr *t=MI.getNextNode(); t!=nullptr; t=t->getNextNode()) {
+    for (auto &use:t->uses()) {
+      if (use.isReg()) {
+        if (TRI->regsOverlap(r, use.getReg())) return false;
+      }
+    }
+    for (auto def: t->defs()) {
+      if (def.isReg()) {
+        if (TRI->regsOverlap(r, def.getReg())) return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool PostRAMachineSinking::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
+
+  LLVM_DEBUG(dbgs() << "******** Post RA Machine Sinking ********\n");
 
   bool Changed = false;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
@@ -1887,6 +1912,63 @@ bool PostRAMachineSinking::runOnMachineFunction(MachineFunction &MF) {
   UsedRegUnits.init(*TRI);
   for (auto &BB : MF)
     Changed |= tryToSinkCopy(BB, MF, TRI, TII);
+
+  if (!DisableRemoveUselessCopy) {
+    // TODO: only SWPL-MBBs(prolog, kernek, epilog)
+    SmallVector<MachineInstr*, 100> eraseCopys;
+    SmallVector<Register, 100> usedRegisters;
+
+    for (auto &MBB:MF) {
+      for (auto &MI:MBB) {
+        for (auto &MO:MI.uses()) {
+          if (MO.isReg() && MO.getReg().isPhysical()) {
+            Register use_reg=MO.getReg();
+            bool used=false;
+            for (auto r:usedRegisters) {
+              if (r == use_reg) {
+                // rがz1でuse_regがz1_z2の場合、z1_z2をusedRegisterに残したいが、それの標準的な確認方法が不明なため、
+                // z1/z1_z2両方をusedRegisterに登録しておく。
+                // TODO: rとuse_regで大きい方をusedRegisterに登録する
+                used=true;
+                break;
+              }
+            }
+            if (!used) usedRegisters.push_back(use_reg);
+          }
+        }
+      }
+    }
+    auto regsReserved=TRI->getReservedRegs(MF);
+    for (auto &MBB:MF) {
+      for (auto &MI:MBB) {
+        if (!MI.isCopy()) continue;
+        if (isReassign(MI, MI.getOperand(0), TRI)) {
+          eraseCopys.push_back(&MI);
+        } else {
+          bool used=false;
+          Register def_reg = MI.getOperand(0).getReg();
+          if (regsReserved.test(def_reg.id())) {
+            used=true;
+          } else {
+            for (auto r:usedRegisters) {
+              if (TRI->regsOverlap(r, def_reg)) {
+                used=true;
+                break;
+              }
+            }
+          }
+          if (!used)
+            eraseCopys.push_back(&MI);
+        }
+      }
+    }
+    for (auto *MI:eraseCopys) {
+      Changed=true;
+      LLVM_DEBUG(dbgs() << "PostRAMachineSinking delete useless copy:" << *MI);
+      NumRemoveUselessCopy++;
+      MI->eraseFromParent();
+    }
+  }
 
   return Changed;
 }

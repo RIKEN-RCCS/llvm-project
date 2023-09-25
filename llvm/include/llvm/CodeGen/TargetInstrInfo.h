@@ -60,6 +60,13 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class TargetSubtargetInfo;
+class StmRegKind;
+class SwplReg;
+class SwplTargetMachine;
+class SwplRegAllocInfoTbl;
+class SwplExcKernelRegInfoTbl;
+struct SwplTransformedMIRInfo;
+
 enum class MachineCombinerPattern;
 enum class MachineTraceStrategy;
 
@@ -2113,6 +2120,144 @@ public:
   virtual bool isExplicitTargetIndexDef(const MachineInstr &MI, int &Index,
                                         int64_t &Offset) const {
     return false;
+  }
+
+  /// Split pre/post index instructions
+  virtual bool splitPrePostIndexInstr(
+      MachineBasicBlock &MBB, MachineInstr &MI, MachineInstr **ldst, MachineInstr **add ) const {
+    return false;
+  }
+
+  /// check multiple reg class
+  virtual bool isMultipleReg(const TargetRegisterClass *TR) const {
+    return false;
+  }
+
+  /// Can Remove copy-mi
+  virtual bool canRemoveCopy(MachineBasicBlock &MBB, MachineInstr &MI,
+                             const MachineRegisterInfo &MRI, bool enableRegaloc) const {
+    return false;
+  }
+
+  /// generate iteration branch
+  virtual MachineInstr* makeKernelIterationBranch(MachineRegisterInfo &MRI,
+                                                  MachineBasicBlock &MBB, const DebugLoc &debugLoc, Register doVReg, int iterationCount, int coefficient, Register preg) const {
+    return nullptr;
+  }
+
+  /// check prefetch
+  virtual bool isPrefetch(unsigned opcode) const {
+    return false;
+  }
+
+  /// Create a branch before the kernel to pass the sequential route if the number of rotations is not enough.
+  /// \param [in] doInitVar
+  /// \param [in] dbgloc
+  /// \param [out] from
+  /// \param [out] to
+  /// \param [in] n
+  virtual void makeBypassKernel(MachineRegisterInfo &MRI,
+                                Register doInitVar,
+                                const DebugLoc &dbgloc,
+                                MachineBasicBlock &from,
+                                MachineBasicBlock &to,
+                                int n) const {
+    return;
+  }
+
+  /// Generate remainder loop avoidance branches.
+  /// \param [in] doUpdateVar
+  /// \param [in] dbgloc
+  /// \param [in] CC
+  /// \param [out] from
+  /// \param [out] to
+  virtual void makeBypassMod(
+      Register doUpdateVar, const DebugLoc &dbgloc, MachineOperand &CC, MachineBasicBlock &from, MachineBasicBlock &to
+      ) const {
+    return;
+  }
+
+  /// instruction controlling the loop
+  /// \param [in] MBB
+  /// \param [out] Branch
+  /// \param [out] Cmp
+  /// \param [out] AddSub
+  ///
+  /// \retval true found
+  /// \retval false
+  virtual bool findMIsForLoop(
+      MachineBasicBlock &MBB, MachineInstr **Branch, MachineInstr **Cmp, MachineInstr **Addsub) const {
+    return false;
+  }
+
+  /// Is the branch operand NE
+  /// \param [in] imm branch operand
+  virtual bool isNE(unsigned imm) const {
+    return false;
+  }
+
+  /// Is the branch operand GE
+  /// \param [in] imm branch operand
+  virtual bool isGE(unsigned imm) const {
+    return false;
+  }
+
+  /// Generate StmRegKind from the specified register
+  /// \param [in] MRI
+  /// \param [in] r register
+  virtual StmRegKind* getRegKind(const MachineRegisterInfo &MRI, Register r) const {
+    return nullptr;
+  }
+
+  /// get StmRegKind::id
+  /// \param [in] MRI
+  /// \param [in] r register
+  virtual std::tuple<unsigned, unsigned> getRegKindId(const MachineRegisterInfo &MRI, Register r) const {
+    return {0, 0};
+  }
+
+  /// get StmRegKind object
+  /// \param [in] MRI
+  virtual StmRegKind* getRegKind(const MachineRegisterInfo &MRI) const {
+    return nullptr;
+  }
+
+  /// Determination of non-target instructions
+  /// \param [in] inst
+  /// \retval true non-target instructions
+  /// \retval false target instructions
+  virtual bool isNonTargetMI4SWPL(MachineInstr &inst) const {
+    return false;
+  }
+
+  /**
+   * Determines whether the target loop is subject to Swpl optimization.
+   *
+   * \param[in] L MachineLoop
+   * \retval true  The loop is subject to Swpl optimization。
+   * \retval false The loop isnot subject to Swpl optimization
+   */
+  virtual bool canPipelineLoop(MachineLoop &L) const {
+    return false;
+  }
+  /// Calculate incremental value
+  /// \return incremental value
+  virtual int calcEachRegIncrement(const SwplReg *r) const {
+    return 0;
+  }
+
+  /// new SwplTargetMachine
+  /// \return SwplTargetMachine object
+  virtual SwplTargetMachine *getSwplTargetMachine() const {
+    return nullptr;
+  }
+
+  /// Register allocation for software pipelined loops.
+  /// \param [in] tmi Information for the SwplTransformMIR
+  /// \param [in] MF MachineFunction
+  virtual bool SwplRegAlloc(SwplTransformedMIRInfo *tmi,
+                            MachineFunction &MF) const {
+    return true;
   }
 
 private:
