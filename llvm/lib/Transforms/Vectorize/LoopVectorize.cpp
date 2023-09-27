@@ -7849,8 +7849,10 @@ SCEV2ValueTy LoopVectorizationPlanner::executePlan(
 
   TargetTransformInfo::UnrollingPreferences UP;
   TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);
-  if (!UP.UnrollVectorizedLoop || CanonicalIVStartValue) {
+  if (!UP.UnrollVectorizedLoop || CanonicalIVStartValue)
     AddRuntimeUnrollDisableMetaData(L);
+
+  if (CanonicalIVStartValue) {
     // Generate meta information only for SWPL target loops.
     // This is done so as not to affect the existing lit.
     if (TTI.isSwpDirected(L) && !EnablePipelineRemainderLoopVec) {
