@@ -3884,11 +3884,11 @@ bool AArch64TTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
  * @param [in] L Target Loop Information
  * @param [in] MD Target metadata
  * @param [out] exists True is specified in metadata
- * @param [in] remainderFlag true ignore SWP suppression metadata for remainder loops
+ * @param [in] ignoreMetadataOfRemainder true Ignore remainder loop metadata
  * @retval true llvm.loop.pipeline.enable is specified
  * @retval false llvm.loop.pipeline.disable is specified
  */
-static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists, bool remainderFlag) {
+static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists, bool ignoreMetadataOfRemainder) {
 
   if (MD->isDistinct()) {
     // example) !25 = distinct !{!25, !18, !23, !26, !27, !28}
@@ -3898,7 +3898,7 @@ static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists, bool remainderF
       if (MD == nullptr)
         continue;
 
-      bool ret = isEnableSwp(L, childMD, exists, remainderFlag);
+      bool ret = isEnableSwp(L, childMD, exists, ignoreMetadataOfRemainder);
       if (exists)
         return ret;
     }
@@ -3914,7 +3914,7 @@ static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists, bool remainderF
     LLVM_DEBUG( if (L->getLocRange().getStart().get()) dbgs() << __func__ << ":loop=" << L->getLocRange().getStart().getLine() << "-" << L->getLocRange().getEnd().getLine() << " meta:" << S->getString() << "\n");
 
     // remainder loop
-    if (!remainderFlag) {
+    if (!ignoreMetadataOfRemainder) {
       if (S->getString()=="llvm.remainder.pipeline.disable") {
         exists = true;
         return false;
@@ -3944,7 +3944,7 @@ static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists, bool remainderF
       // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized", !{"llvm.loop.pipeline.enable"}}
       if (secondS != nullptr) {
         // remainder loop
-        if (!remainderFlag) {
+        if (!ignoreMetadataOfRemainder) {
           if (secondS->getString()=="llvm.remainder.pipeline.disable") {
             exists = true;
             return false;
@@ -3962,7 +3962,7 @@ static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists, bool remainderF
         }
       }
 
-      return isEnableSwp(L, childMD, exists, remainderFlag);
+      return isEnableSwp(L, childMD, exists, ignoreMetadataOfRemainder);
     }
   }
   return false;
@@ -3972,11 +3972,11 @@ static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists, bool remainderF
  * Obtaining the designation status of llvm.loop.pipeline.enable/disable from metadata
  * @param [in] L Target loop information
  * @param [out] exists True is specified in metadata
- * @param [in] remainderFlag true ignore SWP suppression metadata for remainder loops
+ * @param [in] ignoreMetadataOfRemainder true Ignore remainder loop metadata
  * @retval true llvm.loop.pipeline.enable is specified
  * @retval false llvm.loop.pipeline.disable is specified
  */
-static int enableLoopSWP(const Loop* L, bool &exists, bool remainderFlag) {
+static int enableLoopSWP(const Loop* L, bool &exists, bool ignoreMetadataOfRemainder) {
 
   exists=false;
   MDNode *LoopID = L->getLoopID();
@@ -3984,18 +3984,18 @@ static int enableLoopSWP(const Loop* L, bool &exists, bool remainderFlag) {
     return false;
 
   // Metadata Search
-  return isEnableSwp(L, LoopID, exists, remainderFlag);
+  return isEnableSwp(L, LoopID, exists, ignoreMetadataOfRemainder);
 
 }
 
-bool llvm::enableSWP(const Loop *L, bool remainderFlag) {
+bool llvm::enableSWP(const Loop *L, bool ignoreMetadataOfRemainder) {
   bool exists=false;
   bool enabled=false;
   assert(L!=nullptr);
   if (EnableSWP)
     enabled=true;
 
-  bool r=enableLoopSWP(L, exists, remainderFlag);
+  bool r=enableLoopSWP(L, exists, ignoreMetadataOfRemainder);
   if (exists)
     enabled = r;
 

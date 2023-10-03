@@ -42,11 +42,11 @@ class VectorType;
 /**
  * Returns whether or not the specified loop is a candidate for SWP application from the options and Pragma.
  * @param L Specify target Loop information
- * @param remainderFlag true ignore SWP suppression metadata for remainder loops
+ * @param ignoreMetadataOfRemainder true Ignore remainder loop metadata
  * @retval true Candidate for SWP application
  * @retval false SWP not applied
  */
-bool enableSWP(const Loop*, bool remainderFlag);
+bool enableSWP(const Loop*, bool ignoreMetadataOfRemainder);
 
 class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   using BaseT = BasicTTIImplBase<AArch64TTIImpl>;
