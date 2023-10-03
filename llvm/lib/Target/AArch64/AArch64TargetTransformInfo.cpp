@@ -3764,7 +3764,7 @@ bool AArch64TTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                               HardwareLoopInfo &HWLoopInfo) {
 
   // optionのチェックは上位で行うことも考えられるが、本関数はCanSaveCmpでも利用されるため、ここでチェックをおこなう
-  if (L!=nullptr && !llvm::enableSWP(L)) {
+  if (L!=nullptr && !llvm::enableSWP(L, false)) {
     printDebug(__func__, "enableSWP() is false", L);
     return false;
   }
@@ -3884,10 +3884,11 @@ bool AArch64TTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
  * @param [in] L Target Loop Information
  * @param [in] MD Target metadata
  * @param [out] exists True is specified in metadata
+ * @param [in] remainderFlag true ignore SWP suppression metadata for remainder loops
  * @retval true llvm.loop.pipeline.enable is specified
  * @retval false llvm.loop.pipeline.disable is specified
  */
-static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists) {
+static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists, bool remainderFlag) {
 
   if (MD->isDistinct()) {
     // example) !25 = distinct !{!25, !18, !23, !26, !27, !28}
@@ -3897,7 +3898,7 @@ static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists) {
       if (MD == nullptr)
         continue;
 
-      bool ret = isEnableSwp(L, childMD, exists);
+      bool ret = isEnableSwp(L, childMD, exists, remainderFlag);
       if (exists)
         return ret;
     }
@@ -3913,9 +3914,11 @@ static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists) {
     LLVM_DEBUG( if (L->getLocRange().getStart().get()) dbgs() << __func__ << ":loop=" << L->getLocRange().getStart().getLine() << "-" << L->getLocRange().getEnd().getLine() << " meta:" << S->getString() << "\n");
 
     // remainder loop
-    if (S->getString()=="llvm.remainder.pipeline.disable") {
-      exists = true;
-      return false;
+    if (!remainderFlag) {
+      if (S->getString()=="llvm.remainder.pipeline.disable") {
+        exists = true;
+        return false;
+      }
     }
 
     if (S->getString()=="llvm.loop.pipeline.disable") {
@@ -3941,9 +3944,11 @@ static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists) {
       // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized", !{"llvm.loop.pipeline.enable"}}
       if (secondS != nullptr) {
         // remainder loop
-        if (secondS->getString()=="llvm.remainder.pipeline.disable") {
-          exists = true;
-          return false;
+        if (!remainderFlag) {
+          if (secondS->getString()=="llvm.remainder.pipeline.disable") {
+            exists = true;
+            return false;
+          }
         }
 
         if (secondS->getString()=="llvm.loop.pipeline.disable") {
@@ -3957,7 +3962,7 @@ static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists) {
         }
       }
 
-      return isEnableSwp(L, childMD, exists);
+      return isEnableSwp(L, childMD, exists, remainderFlag);
     }
   }
   return false;
@@ -3967,10 +3972,11 @@ static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists) {
  * Obtaining the designation status of llvm.loop.pipeline.enable/disable from metadata
  * @param [in] L Target loop information
  * @param [out] exists True is specified in metadata
+ * @param [in] remainderFlag true ignore SWP suppression metadata for remainder loops
  * @retval true llvm.loop.pipeline.enable is specified
  * @retval false llvm.loop.pipeline.disable is specified
  */
-static int enableLoopSWP(const Loop* L, bool &exists) {
+static int enableLoopSWP(const Loop* L, bool &exists, bool remainderFlag) {
 
   exists=false;
   MDNode *LoopID = L->getLoopID();
@@ -3978,18 +3984,18 @@ static int enableLoopSWP(const Loop* L, bool &exists) {
     return false;
 
   // Metadata Search
-  return isEnableSwp(L, LoopID, exists);
+  return isEnableSwp(L, LoopID, exists, remainderFlag);
 
 }
 
-bool llvm::enableSWP(const Loop *L) {
+bool llvm::enableSWP(const Loop *L, bool remainderFlag) {
   bool exists=false;
   bool enabled=false;
   assert(L!=nullptr);
   if (EnableSWP)
     enabled=true;
 
-  bool r=enableLoopSWP(L, exists);
+  bool r=enableLoopSWP(L, exists, remainderFlag);
   if (exists)
     enabled = r;
 
@@ -4067,7 +4073,7 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
  */
 bool AArch64TTIImpl::isSwpDirected(Loop *L) {
 
-  if (L!=nullptr && !llvm::enableSWP(L)) {
+  if (L!=nullptr && !llvm::enableSWP(L, true)) {
     printDebug(__func__, "enableSWP() is false", L);
     return false;
   }

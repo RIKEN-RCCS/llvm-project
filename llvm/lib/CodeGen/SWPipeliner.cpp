@@ -344,7 +344,7 @@ bool SWPipeliner::shouldOptimize(MachineLoop &L) {
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   const Loop *BBLoop = LI->getLoopFor(BB);
 
-  if (!enableSWP(BBLoop)) {
+  if (!enableSWP(BBLoop, false)) {
     return false;
   }
   return true;
@@ -428,7 +428,7 @@ bool SWPipelinerPre::check(MachineLoop &L) {
   const BasicBlock *BB = body->getBasicBlock();
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   const Loop *BBLoop = LI->getLoopFor(BB);
-  if (!enableSWP(BBLoop)) return Changed;
+  if (!enableSWP(BBLoop, false)) return Changed;
 
   if (!hasPreHeader(L)) Changed|=createPreHeader(L);
   if (!hasExit(L)) Changed|=createExit(L);
