@@ -13,7 +13,7 @@
 #include "SWPipeliner.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-
+#include "llvm/ADT/DenseSet.h"
 
 using namespace llvm;
 
@@ -21,6 +21,7 @@ using namespace llvm;
 
 static cl::opt<bool> DebugDumpDdg("swpl-debug-dump-ddg",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableInstDep("swpl-enable-instdep",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> DisableRegDep4tied("swpl-disable-regdep-4-tied",cl::init(false), cl::ReallyHidden);
 
 static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplInst &latter_inst, int distance, int delay);
 
@@ -217,6 +218,75 @@ void SwplDdg::analysisRegDependence() {
   analysisRegsAntiDependence();
   /// 3. analysisRegsOutputDependence() を呼び出し、レジスタによる出力依存を解析する。
   analysisRegsOutputDependence();
+  if (!DisableRegDep4tied) {
+    /// 4. analysisRegsDependence_for_tieddef() を呼び出し、tied-def向けの依存を追加する。
+    analysisRegDependence_for_tieddef();
+  }
+}
+
+void SwplDdg::analysisRegDependence_for_tieddef() {
+
+  for (auto *def_inst : getLoopBodyInsts()) {
+    auto *mi = def_inst->getMI();
+    for (unsigned def_ix=0; def_ix < mi->getNumDefs(); def_ix++) {
+      unsigned int use_ix = 0;
+      if (!mi->isRegTiedToUseOperand(def_ix, &use_ix)) {
+        continue;
+      }
+      auto mi_def_reg = mi->getOperand(def_ix).getReg();
+      auto mi_use_reg = mi->getOperand(use_ix).getReg();
+
+      auto findUseOperand = [&](Register x)->SwplReg * {
+        for (auto *p:def_inst->getUseRegs()) {
+          if (p->getReg() == mi_use_reg) return p;
+        }
+        assert(0 && "register not found");
+        return nullptr;
+      };
+      auto findDefOperand = [&](Register x)->SwplReg * {
+        for (auto *p:def_inst->getDefRegs()) {
+          if (p->getReg() == mi_def_reg) return p;
+        }
+        assert(0 && "register not found");
+        return nullptr;
+      };
+      auto *def_op = findDefOperand(mi_def_reg);
+      auto *use_op = findUseOperand(mi_use_reg);
+      auto *COPY = use_op->getDefInst();
+      if (!COPY->isCopy()) {
+        continue;
+      }
+      if (SWPipeliner::isDebugDdgOutput()) {
+        dbgs() << "SwplDdg::analysisRegDependence_for_tieddef target:" << *mi;
+      }
+
+      for (auto *p : def_op->getUseInsts()) {
+        int distance = 0;
+        int delay = 1;
+        if (SWPipeliner::isDebugDdgOutput()) {
+          dbgs() << "DBG(SwplDdg::analysisRegsFlowDependence for tied):\n"
+                 << " former_inst:" << *(COPY->getMI())
+                 << " latter_inst:" << *(p->getMI())
+                 << " use reg:" << printReg(def_op->getReg(), SWPipeliner::TRI)
+                 << "\n"
+                 << " distance:" << distance << "\n"
+                 << " delay:" << delay << "\n";
+        }
+        update_distance_and_delay(*this, *COPY, *p, distance, delay);
+        distance = 1;
+        if (SWPipeliner::isDebugDdgOutput()) {
+          dbgs() << "DBG(SwplDdg::analysisRegsAntiDependence for tied):\n"
+                 << " former_inst:" << *(p->getMI())
+                 << " latter_inst:" << *(COPY->getMI())
+                 << " use reg:" << printReg(def_op->getReg(), SWPipeliner::TRI)
+                 << "\n"
+                 << " distance:" << distance << "\n"
+                 << " delay:" << delay << "\n";
+        }
+        update_distance_and_delay(*this, *p, *COPY, distance, delay);
+      }
+    }
+  }
 }
 
 /// ループボディ内の全ての SwplInst (inst)に対して、

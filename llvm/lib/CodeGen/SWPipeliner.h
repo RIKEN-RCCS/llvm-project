@@ -789,6 +789,8 @@ private:
   void analysisRegsAntiDependence();
   /// レジスタによる出力依存を解析する
   void analysisRegsOutputDependence();
+  /// Analyzing register dependencies for tied-def
+  void analysisRegDependence_for_tieddef();
   /// メモリによる依存を解析する
   void analysisMemDependence();
   /// 命令による依存を解析する
