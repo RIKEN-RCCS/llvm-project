@@ -40,12 +40,13 @@ class Value;
 class VectorType;
 
 /**
- * オプションとPragmaから、指定ループがSWP適用候補かどうか返す
- * @param L 対象のLoop情報を指定する
- * @retval true SWP適用候補
- * @retval false SWP適用しない
+ * Returns whether or not the specified loop is a candidate for SWP application from the options and Pragma.
+ * @param L Specify target Loop information
+ * @param ignoreMetadataOfRemainder true Ignore remainder loop metadata
+ * @retval true Candidate for SWP application
+ * @retval false SWP not applied
  */
-bool enableSWP(const Loop*);
+bool enableSWP(const Loop*, bool ignoreMetadataOfRemainder);
 
 class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   using BaseT = BasicTTIImplBase<AArch64TTIImpl>;
