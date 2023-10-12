@@ -261,19 +261,9 @@ void SwplDdg::analysisRegDependence_for_tieddef() {
       }
 
       for (auto *p : def_op->getUseInsts()) {
-        int distance = 0;
+        int distance = 1;
         int delay = 1;
-        if (SWPipeliner::isDebugDdgOutput()) {
-          dbgs() << "DBG(SwplDdg::analysisRegsFlowDependence for tied):\n"
-                 << " former_inst:" << *(COPY->getMI())
-                 << " latter_inst:" << *(p->getMI())
-                 << " use reg:" << printReg(def_op->getReg(), SWPipeliner::TRI)
-                 << "\n"
-                 << " distance:" << distance << "\n"
-                 << " delay:" << delay << "\n";
-        }
-        update_distance_and_delay(*this, *COPY, *p, distance, delay);
-        distance = 1;
+
         if (SWPipeliner::isDebugDdgOutput()) {
           dbgs() << "DBG(SwplDdg::analysisRegsAntiDependence for tied):\n"
                  << " former_inst:" << *(p->getMI())
