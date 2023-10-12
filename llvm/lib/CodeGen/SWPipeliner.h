@@ -57,12 +57,13 @@ using SwplInstList_iterator = SwplInstList::iterator;
 
 
 /**
- * オプションとPragmaから、指定ループがSWP適用候補かどうか返す
- * @param L 対象のLoop情報を指定する
- * @retval true SWP適用候補
- * @retval false SWP適用しない
+ * Returns whether or not the specified loop is a candidate for SWP application from the options and Pragma.
+ * @param L Specify target Loop information
+ * @param ignoreMetadataOfRemainder true Ignore remainder loop metadata
+ * @retval true Candidate for SWP application
+ * @retval false SWP not applie
  */
-bool enableSWP(const Loop*);
+bool enableSWP(const Loop*, bool ignoreMetadataOfRemainder);
 
 /// \class SwplLoop
 /// \brief ループ内の命令情報を管理する
