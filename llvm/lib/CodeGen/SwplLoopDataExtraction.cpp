@@ -874,7 +874,7 @@ void SwplLoop::normalizeTiedDef(MachineBasicBlock *body) {
   // tied-defを検索する
 
   // tied-def operandのCOPYが必要な命令
-  DenseMap<MachineInstr*, MachineOperand*> targets;
+  SmallVector<std::tuple<MachineInstr*, MachineOperand*>, 20> targets;
 
   for (auto &MI:*body) {
     for (auto &MO:MI.defs()) {
@@ -887,7 +887,7 @@ void SwplLoop::normalizeTiedDef(MachineBasicBlock *body) {
       auto use_tied_r = useMO.getReg();
 
       if (check_need_copy4TiedUseReg(body, &MI, MO.getReg(), use_tied_r)) {
-        targets[&MI]=&useMO;
+        targets.push_back({&MI, &useMO});
         if (DebugPrepare) {
           dbgs() << "DEBUG(SwplLoop::normalizeTiedDef): Copy is required.: " << MI;
         }
@@ -900,8 +900,8 @@ void SwplLoop::normalizeTiedDef(MachineBasicBlock *body) {
   }
 
   for (auto &p:targets) {
-    auto *mi = p.first;
-    auto *tied_mo = p.second;
+    auto *mi  = std::get<0>(p);
+    auto *tied_mo = std::get<1>(p);
     auto tied_reg = tied_mo->getReg();
     auto new_reg = SWPipeliner::MRI->cloneVirtualRegister(tied_reg);
     auto dbgloc = mi->getDebugLoc();

@@ -226,8 +226,19 @@ void SwplDdg::analysisRegDependence() {
 
 void SwplDdg::analysisRegDependence_for_tieddef() {
 
+  auto findSwplReg = [](SwplRegs& regs, Register r)->SwplReg * {
+    for (auto *p:regs) {
+      if (p->getReg() == r) return p;
+    }
+    assert(0 && "register not found");
+    return nullptr;
+  };
   for (auto *def_inst : getLoopBodyInsts()) {
+
     auto *mi = def_inst->getMI();
+
+//    dbgs() << *mi;
+
     for (unsigned def_ix=0; def_ix < mi->getNumDefs(); def_ix++) {
       unsigned int use_ix = 0;
       if (!mi->isRegTiedToUseOperand(def_ix, &use_ix)) {
@@ -236,22 +247,8 @@ void SwplDdg::analysisRegDependence_for_tieddef() {
       auto mi_def_reg = mi->getOperand(def_ix).getReg();
       auto mi_use_reg = mi->getOperand(use_ix).getReg();
 
-      auto findUseOperand = [&](Register x)->SwplReg * {
-        for (auto *p:def_inst->getUseRegs()) {
-          if (p->getReg() == mi_use_reg) return p;
-        }
-        assert(0 && "register not found");
-        return nullptr;
-      };
-      auto findDefOperand = [&](Register x)->SwplReg * {
-        for (auto *p:def_inst->getDefRegs()) {
-          if (p->getReg() == mi_def_reg) return p;
-        }
-        assert(0 && "register not found");
-        return nullptr;
-      };
-      auto *def_op = findDefOperand(mi_def_reg);
-      auto *use_op = findUseOperand(mi_use_reg);
+      auto *def_op = findSwplReg(def_inst->getDefRegs(), mi_def_reg);
+      auto *use_op = findSwplReg(def_inst->getUseRegs(),mi_use_reg);
       auto *COPY = use_op->getDefInst();
       if (!COPY->isCopy()) {
         continue;
