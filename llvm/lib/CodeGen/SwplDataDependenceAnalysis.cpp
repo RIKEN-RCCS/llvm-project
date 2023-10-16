@@ -13,7 +13,7 @@
 #include "SWPipeliner.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-
+#include "llvm/ADT/DenseSet.h"
 
 using namespace llvm;
 
@@ -21,24 +21,25 @@ using namespace llvm;
 
 static cl::opt<bool> DebugDumpDdg("swpl-debug-dump-ddg",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableInstDep("swpl-enable-instdep",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> DisableRegDep4tied("swpl-disable-regdep-4-tied",cl::init(false), cl::ReallyHidden);
 
 static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplInst &latter_inst, int distance, int delay);
 
 SwplDdg *SwplDdg::Initialize (SwplLoop &loop) {
   SwplDdg *ddg = new SwplDdg(loop);
 
-  /// 1. generateInstGraph() を呼び出し、命令の依存グラフ情報 SwplInstGraph を初期化する。
+  /// 1. Call generateInstGraph() to initialize instruction dependency graph information SwplInstGraph.
   ddg->generateInstGraph();
-  /// 2. analysisRegDependence() を呼び出し、レジスタ間の依存情報を解析する。
+  /// 2. Call analysisRegDependence() to analyze dependency information between registers.
   ddg->analysisRegDependence();
-  /// 3. analysisMemDependence() を呼び出し、メモリ間の依存情報を解析する。
+  /// 3. Call analysisMemDependence() to analyze dependency information between memories.
   ddg->analysisMemDependence();
-  /// 4. analysisInstDependence() を呼び出し、命令依存情報を解析する。
+  /// 4. Call analysisInstDependence() to analyze instruction dependency information.
   if (EnableInstDep)
     ddg->analysisInstDependence();
 
-  /// 5. SwplLoop::recollectPhiInsts() を呼び出し、
-  /// SwplDdg を生成後に SwplLoop::BodyInsts に含まれるPhiを PhiInsts に再収集する。
+  /// 5. Call SwplLoop::recollectPhiInsts() to recollect Phi contained in SwplLoop::BodyInsts
+  /// into PhiInsts after generating SwplDdg.
   loop.recollectPhiInsts();
 
   if (DebugDumpDdg) {
@@ -211,12 +212,68 @@ void SwplDdg::analysisInstDependence() {
 }
 
 void SwplDdg::analysisRegDependence() {
-  /// 1. analysisRegsFlowDependence() を呼び出し、レジスタによる真依存を解析する。
+  /// 1. Call analysisRegsFlowDependence() to analyze flow dependence by registers.
   analysisRegsFlowDependence();
-  /// 2. analysisRegsAntiDependence() を呼び出し、レジスタによる逆依存を解析する。
+  /// 2. Call analysisRegsAntiDependence() to analyze anti-dependence caused by registers.
   analysisRegsAntiDependence();
-  /// 3. analysisRegsOutputDependence() を呼び出し、レジスタによる出力依存を解析する。
+  /// 3. Call analysisRegsOutputDependence() to analyze output dependence by registers.
   analysisRegsOutputDependence();
+  if (!DisableRegDep4tied) {
+    /// 4. Call analysisRegsDependence_for_tieddef() to add dependency for tied-def.
+    analysisRegDependence_for_tieddef();
+  }
+}
+
+void SwplDdg::analysisRegDependence_for_tieddef() {
+
+  auto findSwplReg = [](SwplRegs& regs, Register r)->SwplReg * {
+    for (auto *p:regs) {
+      if (p->getReg() == r) return p;
+    }
+    assert(0 && "register not found");
+    return nullptr;
+  };
+  for (auto *def_inst : getLoopBodyInsts()) {
+
+    auto *mi = def_inst->getMI();
+
+//    dbgs() << *mi;
+
+    for (unsigned def_ix=0; def_ix < mi->getNumDefs(); def_ix++) {
+      unsigned int use_ix = 0;
+      if (!mi->isRegTiedToUseOperand(def_ix, &use_ix)) {
+        continue;
+      }
+      auto mi_def_reg = mi->getOperand(def_ix).getReg();
+      auto mi_use_reg = mi->getOperand(use_ix).getReg();
+
+      auto *def_op = findSwplReg(def_inst->getDefRegs(), mi_def_reg);
+      auto *use_op = findSwplReg(def_inst->getUseRegs(),mi_use_reg);
+      auto *COPY = use_op->getDefInst();
+      if (!COPY->isCopy()) {
+        continue;
+      }
+      if (SWPipeliner::isDebugDdgOutput()) {
+        dbgs() << "SwplDdg::analysisRegDependence_for_tieddef target:" << *mi;
+      }
+
+      for (auto *p : def_op->getUseInsts()) {
+        int distance = 1;
+        int delay = 1;
+
+        if (SWPipeliner::isDebugDdgOutput()) {
+          dbgs() << "DBG(SwplDdg::analysisRegsAntiDependence for tied):\n"
+                 << " former_inst:" << *(p->getMI())
+                 << " latter_inst:" << *(COPY->getMI())
+                 << " use reg:" << printReg(def_op->getReg(), SWPipeliner::TRI)
+                 << "\n"
+                 << " distance:" << distance << "\n"
+                 << " delay:" << delay << "\n";
+        }
+        update_distance_and_delay(*this, *p, *COPY, distance, delay);
+      }
+    }
+  }
 }
 
 /// ループボディ内の全ての SwplInst (inst)に対して、

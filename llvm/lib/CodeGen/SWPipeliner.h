@@ -782,17 +782,19 @@ private:
     }
   }
 
-  /// レジスタによる依存を解析する
+  /// Analyzing register dependencies
   void analysisRegDependence();
-  /// レジスタによる真依存を解析する
+  /// Analyze flow dependence by registers
   void analysisRegsFlowDependence();
-  /// レジスタによる逆依存を解析する
+  /// Analyzing anti-dependencies due to registers
   void analysisRegsAntiDependence();
-  /// レジスタによる出力依存を解析する
+  /// Analyze output dependence by registers
   void analysisRegsOutputDependence();
-  /// メモリによる依存を解析する
+  /// Analyzing register dependencies for tied-def
+  void analysisRegDependence_for_tieddef();
+  /// Analyze memory dependencies
   void analysisMemDependence();
-  /// 命令による依存を解析する
+  /// Analyze instruction dependencies
   void analysisInstDependence();
 
 };
