@@ -871,9 +871,8 @@ bool SwplLoop::check_need_copy4TiedUseReg(const MachineBasicBlock* body, const M
 }
 
 void SwplLoop::normalizeTiedDef(MachineBasicBlock *body) {
-  // tied-defを検索する
 
-  // tied-def operandのCOPYが必要な命令
+  // tied-def operands that require COPY
   SmallVector<std::tuple<MachineInstr*, MachineOperand*>, 20> targets;
 
   for (auto &MI:*body) {
