@@ -28,18 +28,18 @@ static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplI
 SwplDdg *SwplDdg::Initialize (SwplLoop &loop) {
   SwplDdg *ddg = new SwplDdg(loop);
 
-  /// 1. generateInstGraph() を呼び出し、命令の依存グラフ情報 SwplInstGraph を初期化する。
+  /// 1. Call generateInstGraph() to initialize instruction dependency graph information SwplInstGraph.
   ddg->generateInstGraph();
-  /// 2. analysisRegDependence() を呼び出し、レジスタ間の依存情報を解析する。
+  /// 2. Call analysisRegDependence() to analyze dependency information between registers.
   ddg->analysisRegDependence();
-  /// 3. analysisMemDependence() を呼び出し、メモリ間の依存情報を解析する。
+  /// 3. Call analysisMemDependence() to analyze dependency information between memories.
   ddg->analysisMemDependence();
-  /// 4. analysisInstDependence() を呼び出し、命令依存情報を解析する。
+  /// 4. Call analysisInstDependence() to analyze instruction dependency information.
   if (EnableInstDep)
     ddg->analysisInstDependence();
 
-  /// 5. SwplLoop::recollectPhiInsts() を呼び出し、
-  /// SwplDdg を生成後に SwplLoop::BodyInsts に含まれるPhiを PhiInsts に再収集する。
+  /// 5. Call SwplLoop::recollectPhiInsts() to recollect Phi contained in SwplLoop::BodyInsts
+  /// into PhiInsts after generating SwplDdg.
   loop.recollectPhiInsts();
 
   if (DebugDumpDdg) {
@@ -212,14 +212,14 @@ void SwplDdg::analysisInstDependence() {
 }
 
 void SwplDdg::analysisRegDependence() {
-  /// 1. analysisRegsFlowDependence() を呼び出し、レジスタによる真依存を解析する。
+  /// 1. Call analysisRegsFlowDependence() to analyze flow dependence by registers.
   analysisRegsFlowDependence();
-  /// 2. analysisRegsAntiDependence() を呼び出し、レジスタによる逆依存を解析する。
+  /// 2. Call analysisRegsAntiDependence() to analyze anti-dependence caused by registers.
   analysisRegsAntiDependence();
-  /// 3. analysisRegsOutputDependence() を呼び出し、レジスタによる出力依存を解析する。
+  /// 3. Call analysisRegsOutputDependence() to analyze output dependence by registers.
   analysisRegsOutputDependence();
   if (!DisableRegDep4tied) {
-    /// 4. analysisRegsDependence_for_tieddef() を呼び出し、tied-def向けの依存を追加する。
+    /// 4. Call analysisRegsDependence_for_tieddef() to add dependency for tied-def.
     analysisRegDependence_for_tieddef();
   }
 }
