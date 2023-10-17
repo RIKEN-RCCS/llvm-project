@@ -365,7 +365,7 @@ body:             |
     %38:zpr = LD1D_IMM %37, %36, 0, debug-location !22 :: (load (s256) from %ir.uglygep54, !tbaa !23)
     %39:gpr64common = ADDXrr %33, %6, debug-location !27
     %41:zpr = LD1D %37, killed %39, %40, debug-location !27 :: (load (s256) from %ir.uglygep57, align 8, !tbaa !23)
-    %42:zpr = FADD_ZPZZ_UNDEF_D %37, killed %38, killed %41, debug-location !28
+    %42:zpr = FADD_ZPZZ_D_UNDEF %37, killed %38, killed %41, debug-location !28
     ST1D killed %42, %37, %36, %40, debug-location !29 :: (store (s256) into %ir.uglygep59, align 8, !tbaa !23)
     %43:gpr64sp = nuw nsw ADDXri %6, 32, 0
     %8:gpr64all = COPY %43

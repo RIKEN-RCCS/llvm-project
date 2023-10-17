@@ -236,7 +236,7 @@ body:             |
     %2:gpr64common = PHI %14, %bb.1, %4, %bb.2
     %3:gpr64sp = PHI %1, %bb.1, %5, %bb.2
     %19:zpr = LD1D %18, %17, %2 :: (load unknown-size from %ir.uglygep, align 64, !tbaa !6)
-    %21:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZPZI_UNDEF_D %18, killed %19, 1
+    %21:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZPZI_D_UNDEF %18, killed %19, 1
     ST1D killed %21, %18, %22, %2 :: (store unknown-size into %ir.uglygep23, align 64, !tbaa !6)
     %23:gpr64sp = nuw ADDXri %2, 8, 0
     %4:gpr64all = COPY %23

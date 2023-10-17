@@ -11,25 +11,12 @@
 # CHECK-NEXT:        :  (x) Run out of budget      at estimation.          : (II: 8 in [ 3,1000]) MVE: 0 Last inst: 2. (Itr Org: 5, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
 # CHECK-NEXT:        :  (x) Run out of budget      at estimation.          : (II: 12 in [ 3,1000]) MVE: 0 Last inst: 1. (Itr Org: 5, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
 # CHECK-NEXT:        :  (O) Scheduling succeeds    at estimation.          : (II: 13 in [ 3,1000]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (VReg Fp: 5/32, Int: 10/29, Pre: 1/8) Eval:0.000000e+00.
-# CHECK-NEXT:        : Required iteration count in MIR input is        :   6 (= kernel:3 + pro/epilogue:3 + mod:0) 
-# CHECK-NEXT:        : Original iteration count in MIR is found        :   5
-# CHECK-NEXT:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 3, 0, 5)
-# CHECK-NEXT:        :
-# CHECK-NEXT:        : Swpl kernel is not generated because of shortage of iteration.
-# CHECK-NEXT:        :
-# CHECK-NEXT:        : Reschedule with minii set to 11 because ran out of physical registers.
-# CHECK-NEXT:        : (Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 7. Budget 350. Minimum II = 11.)
-# CHECK-NEXT:        :  (x) Run out of budget      at estimation.          : (II: 11 in [ 11,1000]) MVE: 0 Last inst: 1. (Itr Org: 5, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-# CHECK-NEXT:        :  (x) Run out of budget      at estimation.          : (II: 12 in [ 11,1000]) MVE: 0 Last inst: 1. (Itr Org: 5, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
-# CHECK-NEXT:        :  (O) Scheduling succeeds    at estimation.          : (II: 16 in [ 11,1000]) MVE: 2 Last inst: 0. (Itr Org: 5, Req: 3) (VReg Fp: 4/32, Int: 6/29, Pre: 1/8) Eval:0.000000e+00.
-# CHECK-NEXT:        :  (O) Scheduling succeeds    at binary search.       : (II: 14 in [ 12,16]) MVE: 2 Last inst: 0. (Itr Org: 5, Req: 3) (VReg Fp: 4/32, Int: 6/29, Pre: 1/8) Eval:0.000000e+00.
-# CHECK-NEXT:        :  (O) Scheduling succeeds    at binary search.       : (II: 13 in [ 12,14]) MVE: 3 Last inst: 0. (Itr Org: 5, Req: 5) (VReg Fp: 5/32, Int: 10/29, Pre: 1/8) Eval:0.000000e+00.
 # CHECK-NEXT:        : Required iteration count in MIR input is        :   5 (= kernel:3 + pro/epilogue:2 + mod:0) 
 # CHECK-NEXT:        : Original iteration count in MIR is found        :   5
 # CHECK-NEXT:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 3, 1, 0)
 # CHECK-NEXT:        :
 # CHECK-NEXT:        : Loop is software pipelined. (ii=13, kernel=39 cycles, prologue,epilogue =26 cycles)
-# CHECK-NEXT:        :      IPC (initial=0.64, real=0.54, rate=84.62%)
+# CHECK-NEXT:        :      IPC (initial=2.33, real=0.54, rate=23.08%)
 # CHECK-NEXT:        :      = Instructions(7)/II(13)
 # CHECK-NEXT:        :      Virtual inst:(0)
 # CHECK-NEXT:        :

@@ -1,5 +1,21 @@
-# RUN: llc %s -o /dev/null -O2 -fswp -mcpu=a64fx -stats -start-after=aarch64-swpipeliner 2>&1 | FileCheck %s
-# CHECK: 6 machine-sink         - Number of remove useless copies
+# RUN: llc %s -o /dev/null -O2 -fswp -mcpu=a64fx -start-after=aarch64-swpipeliner -print-after=postra-machine-sink 2>&1 | FileCheck %s
+# CHECK: bb.5.for.body4:
+# CHECK-NEXT: ; predecessors: %bb.4, %bb.5
+# CHECK-NEXT:   successors: %bb.5(0x7c000000), %bb.6(0x04000000); %bb.5(96.88%), %bb.6(3.12%)
+# CHECK:   liveins: $d1, $d2, $d3, $d4, $d5, $d6, $d7, $d8, $d9, $d10, $d11, $w27, $w28, $x0, $x1, $x2, $x3, $x4, $x11, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26
+# CHECK-NOT: $x5 = COPY renamable $x20
+# CHECK:   $x7 = COPY renamable $x19
+# CHECK-NOT: $x8 = COPY renamable $x21
+# CHECK-NOT: $x10 = COPY renamable $x22
+# CHECK-NEXT:   renamable $d0 = nofpexcept FMULDrr renamable $d1, renamable $d2, implicit $fpcr
+# CHECK: renamable $d3 = nofpexcept FMULDrr renamable $d14, renamable $d15, implicit $fpcr
+# CHECK-NOT: renamable $x4 = COPY renamable $x1
+# CHECK-NEXT: renamable $x12 = COPY $x1
+# CHECK: renamable $d17 = nofpexcept FMULDrr renamable $d9, renamable $d0, implicit $fpcr
+# CHECK-NOT: renamable $x4 = COPY renamable $x0
+# CHECK-NEXT: renamable $x11 = COPY $x0
+# CHECK: renamable $x0 = nuw nsw ADDXri killed renamable $x12, 88, 0
+# CHECK-NOT: renamable $x1 = COPY renamable $x0
 
 --- |
   ; ModuleID = 'postra-rm-useless-copy.mir'

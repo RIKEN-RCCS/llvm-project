@@ -306,7 +306,7 @@ body:             |
     %25:zpr = AND_ZI %23, 4126, debug-location !25
     %27:zpr = GLD1D_SCALED %21, %26, killed %25, debug-location !25 :: (load unknown-size, align 8, !tbaa !20)
     %29:zpr = LD1D %21, %28, %3, debug-location !26 :: (load unknown-size from %ir.uglygep31, align 64, !tbaa !20)
-    %30:zpr = FMLA_ZPZZZ_UNDEF_D %21, killed %22, killed %27, killed %29, debug-location !27
+    %30:zpr = FMLA_ZPZZZ_D_UNDEF %21, killed %22, killed %27, killed %29, debug-location !27
     ST1D killed %30, %21, %31, %3, debug-location !28 :: (store unknown-size into %ir.uglygep32, align 64, !tbaa !20)
     %32:gpr64sp = nuw ADDXri %3, 8, 0, debug-location !18
     %6:gpr64all = COPY %32, debug-location !18
