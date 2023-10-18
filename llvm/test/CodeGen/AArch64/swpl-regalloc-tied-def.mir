@@ -1,5 +1,5 @@
 # RUN: llc %s -fswp -mcpu=a64fx -start-before=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -swpl-enable-reg-alloc -o /dev/null 2>&1 | FileCheck %s
-# CHECK: remark: s254.c:38:9: software pipelining (IPC: 1.80, ITR: 17, MVE: 9, II: 5, Stage: 9, (VReg Fp: 14/32, Int: 22/29, Pred: 3/8)), SRA(PReg Fp: 13/32, Int: 12/29, Pred: 2/8)
+# CHECK: remark: s254.c:38:9: software pipelining (IPC: 0.81, ITR: 7, MVE: 4, II: 11, Stage: 4, (VReg Fp: 7/32, Int: 12/29, Pred: 3/8)), SRA(PReg Fp: 6/32, Int: 7/29, Pred: 2/8)
 
 --- |
   ; ModuleID = 's254.c'
@@ -308,7 +308,7 @@ body:             |
     %6:zpr = LD1D %26, %18, %3, debug-location !23 :: (load unknown-size from %ir.uglygep, align 64, !tbaa !17)
     %35:zpr = SPLICE_ZPZ_D %34, %4, %6
     %36:zpr = FADD_ZZZ_D killed %35, %6, debug-location !24
-    %38:zpr = FMUL_ZPZI_UNDEF_D %26, killed %36, 0, debug-location !25
+    %38:zpr = FMUL_ZPZI_D_UNDEF %26, killed %36, 0, debug-location !25
     ST1D killed %38, %26, %39, %3, debug-location !26 :: (store unknown-size into %ir.uglygep28, align 64, !tbaa !17)
     %40:gpr64sp = nuw ADDXri %3, 8, 0, debug-location !22
     %7:gpr64all = COPY %40, debug-location !22
