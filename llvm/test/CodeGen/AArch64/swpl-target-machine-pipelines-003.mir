@@ -1037,10 +1037,10 @@ body:             |
     %44:zpr = LD1D %33, %22, %32 :: (load unknown-size from %ir.uglygep557, align 64, !tbaa !6)
     %45:zpr = LD1D %33, %22, %35 :: (load unknown-size from %ir.uglygep555, align 64, !tbaa !6)
     %46:zpr = LD1D %33, %22, %37 :: (load unknown-size from %ir.uglygep553, align 64, !tbaa !6)
-    %48:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %31, killed %43, killed %39
-    %49:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %34, killed %44, killed %40
-    %50:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %36, killed %45, killed %41
-    %51:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %38, killed %46, killed %42
+    %48:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %31, killed %43, killed %39
+    %49:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %34, killed %44, killed %40
+    %50:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %36, killed %45, killed %41
+    %51:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %38, killed %46, killed %42
     %53:gpr64common = ADDXrs %52, killed %27, 157
     ST1D killed %48, %33, %53, %54 :: (store unknown-size into %ir.uglygep159, align 8, !tbaa !6)
     ST1D killed %49, %33, %53, %55 :: (store unknown-size into %ir.12, align 8, !tbaa !6)
@@ -1061,10 +1061,10 @@ body:             |
     %71:zpr = LD1D %33, %22, %60 :: (load unknown-size from %ir.uglygep549, align 64, !tbaa !6)
     %72:zpr = LD1D %33, %22, %62 :: (load unknown-size from %ir.uglygep547, align 64, !tbaa !6)
     %73:zpr = LD1D %33, %22, %64 :: (load unknown-size from %ir.uglygep545, align 64, !tbaa !6)
-    %74:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %59, killed %70, killed %66
-    %75:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %61, killed %71, killed %67
-    %76:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %63, killed %72, killed %68
-    %77:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %65, killed %73, killed %69
+    %74:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %59, killed %70, killed %66
+    %75:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %61, killed %71, killed %67
+    %76:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %63, killed %72, killed %68
+    %77:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %65, killed %73, killed %69
     ST1D killed %74, %33, %53, %78 :: (store unknown-size into %ir.uglygep185, align 8, !tbaa !6)
     ST1D killed %75, %33, %53, %79 :: (store unknown-size into %ir.23, align 8, !tbaa !6)
     ST1D killed %76, %33, %53, %80 :: (store unknown-size into %ir.24, align 8, !tbaa !6)
@@ -1084,10 +1084,10 @@ body:             |
     %95:zpr = LD1D %33, %22, %84 :: (load unknown-size from %ir.uglygep541, align 64, !tbaa !6)
     %96:zpr = LD1D %33, %22, %86 :: (load unknown-size from %ir.uglygep539, align 64, !tbaa !6)
     %97:zpr = LD1D %33, %22, %88 :: (load unknown-size from %ir.uglygep537, align 64, !tbaa !6)
-    %98:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %83, killed %94, killed %90
-    %99:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %85, killed %95, killed %91
-    %100:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %87, killed %96, killed %92
-    %101:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %89, killed %97, killed %93
+    %98:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %83, killed %94, killed %90
+    %99:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %85, killed %95, killed %91
+    %100:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %87, killed %96, killed %92
+    %101:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %89, killed %97, killed %93
     ST1D killed %98, %33, %53, %102 :: (store unknown-size into %ir.uglygep211, align 8, !tbaa !6)
     ST1D killed %99, %33, %53, %103 :: (store unknown-size into %ir.34, align 8, !tbaa !6)
     ST1D killed %100, %33, %53, %104 :: (store unknown-size into %ir.35, align 8, !tbaa !6)
@@ -1107,10 +1107,10 @@ body:             |
     %119:zpr = LD1D %33, %22, %108 :: (load unknown-size from %ir.uglygep533, align 64, !tbaa !6)
     %120:zpr = LD1D %33, %22, %110 :: (load unknown-size from %ir.uglygep531, align 64, !tbaa !6)
     %121:zpr = LD1D %33, %22, %112 :: (load unknown-size from %ir.uglygep529, align 64, !tbaa !6)
-    %122:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %107, killed %118, killed %114
-    %123:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %109, killed %119, killed %115
-    %124:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %111, killed %120, killed %116
-    %125:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %113, killed %121, killed %117
+    %122:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %107, killed %118, killed %114
+    %123:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %109, killed %119, killed %115
+    %124:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %111, killed %120, killed %116
+    %125:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %113, killed %121, killed %117
     ST1D killed %122, %33, %53, %126 :: (store unknown-size into %ir.uglygep237, align 8, !tbaa !6)
     ST1D killed %123, %33, %53, %127 :: (store unknown-size into %ir.45, align 8, !tbaa !6)
     ST1D killed %124, %33, %53, %128 :: (store unknown-size into %ir.46, align 8, !tbaa !6)
@@ -1130,10 +1130,10 @@ body:             |
     %143:zpr = LD1D %33, %22, %132 :: (load unknown-size from %ir.uglygep525, align 64, !tbaa !6)
     %144:zpr = LD1D %33, %22, %134 :: (load unknown-size from %ir.uglygep523, align 64, !tbaa !6)
     %145:zpr = LD1D %33, %22, %136 :: (load unknown-size from %ir.uglygep521, align 64, !tbaa !6)
-    %146:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %131, killed %142, killed %138
-    %147:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %133, killed %143, killed %139
-    %148:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %135, killed %144, killed %140
-    %149:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %137, killed %145, killed %141
+    %146:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %131, killed %142, killed %138
+    %147:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %133, killed %143, killed %139
+    %148:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %135, killed %144, killed %140
+    %149:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %137, killed %145, killed %141
     ST1D killed %146, %33, %53, %150 :: (store unknown-size into %ir.uglygep263, align 8, !tbaa !6)
     ST1D killed %147, %33, %53, %151 :: (store unknown-size into %ir.56, align 8, !tbaa !6)
     ST1D killed %148, %33, %53, %152 :: (store unknown-size into %ir.57, align 8, !tbaa !6)
@@ -1153,10 +1153,10 @@ body:             |
     %167:zpr = LD1D %33, %22, %156 :: (load unknown-size from %ir.uglygep517, align 64, !tbaa !6)
     %168:zpr = LD1D %33, %22, %158 :: (load unknown-size from %ir.uglygep515, align 64, !tbaa !6)
     %169:zpr = LD1D %33, %22, %160 :: (load unknown-size from %ir.uglygep513, align 64, !tbaa !6)
-    %170:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %155, killed %166, killed %162
-    %171:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %157, killed %167, killed %163
-    %172:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %159, killed %168, killed %164
-    %173:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %161, killed %169, killed %165
+    %170:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %155, killed %166, killed %162
+    %171:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %157, killed %167, killed %163
+    %172:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %159, killed %168, killed %164
+    %173:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %161, killed %169, killed %165
     ST1D killed %170, %33, %53, %174 :: (store unknown-size into %ir.uglygep289, align 8, !tbaa !6)
     ST1D killed %171, %33, %53, %175 :: (store unknown-size into %ir.67, align 8, !tbaa !6)
     ST1D killed %172, %33, %53, %176 :: (store unknown-size into %ir.68, align 8, !tbaa !6)
@@ -1176,10 +1176,10 @@ body:             |
     %191:zpr = LD1D %33, %22, %180 :: (load unknown-size from %ir.uglygep509, align 64, !tbaa !6)
     %192:zpr = LD1D %33, %22, %182 :: (load unknown-size from %ir.uglygep507, align 64, !tbaa !6)
     %193:zpr = LD1D %33, %22, %184 :: (load unknown-size from %ir.uglygep505, align 64, !tbaa !6)
-    %194:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %179, killed %190, killed %186
-    %195:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %181, killed %191, killed %187
-    %196:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %183, killed %192, killed %188
-    %197:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %185, killed %193, killed %189
+    %194:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %179, killed %190, killed %186
+    %195:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %181, killed %191, killed %187
+    %196:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %183, killed %192, killed %188
+    %197:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %185, killed %193, killed %189
     ST1D killed %194, %33, %53, %198 :: (store unknown-size into %ir.uglygep315, align 8, !tbaa !6)
     ST1D killed %195, %33, %53, %199 :: (store unknown-size into %ir.78, align 8, !tbaa !6)
     ST1D killed %196, %33, %53, %200 :: (store unknown-size into %ir.79, align 8, !tbaa !6)
@@ -1199,10 +1199,10 @@ body:             |
     %215:zpr = LD1D %33, %22, %204 :: (load unknown-size from %ir.uglygep501, align 64, !tbaa !6)
     %216:zpr = LD1D %33, %22, %206 :: (load unknown-size from %ir.uglygep499, align 64, !tbaa !6)
     %217:zpr = LD1D %33, %22, %208 :: (load unknown-size from %ir.uglygep497, align 64, !tbaa !6)
-    %218:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %203, killed %214, killed %210
-    %219:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %205, killed %215, killed %211
-    %220:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %207, killed %216, killed %212
-    %221:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %33, killed %209, killed %217, killed %213
+    %218:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %203, killed %214, killed %210
+    %219:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %205, killed %215, killed %211
+    %220:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %207, killed %216, killed %212
+    %221:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %33, killed %209, killed %217, killed %213
     ST1D killed %218, %33, %53, %222 :: (store unknown-size into %ir.uglygep341, align 8, !tbaa !6)
     ST1D killed %219, %33, %53, %223 :: (store unknown-size into %ir.89, align 8, !tbaa !6)
     ST1D killed %220, %33, %53, %224 :: (store unknown-size into %ir.90, align 8, !tbaa !6)

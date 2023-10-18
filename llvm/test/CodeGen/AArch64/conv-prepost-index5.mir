@@ -360,7 +360,7 @@ body:             |
     %48:zpr = LD1W %47, %41, %9 :: (load unknown-size from %ir.uglygep, align 16, !tbaa !13)
     %50:zpr = LD1W %47, %39, %9 :: (load unknown-size from %ir.uglygep29, align 16, !tbaa !13)
     %52:zpr = LD1W %47, %37, %9 :: (load unknown-size from %ir.uglygep30, align 16, !tbaa !13)
-    %54:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_S %47, killed %48, killed %52, killed %50
+    %54:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_S_UNDEF %47, killed %48, killed %52, killed %50
     %55:zpr = LD1W %47, %0, %9 :: (load unknown-size from %ir.uglygep31, align 4, !tbaa !15)
     SST1W_SXTW_SCALED killed %54, %47, %56, killed %55 :: (store unknown-size, align 4, !tbaa !13)
     %57:gpr64 = nuw ADDXrr %9, %28

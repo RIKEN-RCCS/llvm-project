@@ -284,7 +284,7 @@ body:             |
     %32:zpr = LD1D %22, %31, %2 :: (load unknown-size from %ir.15, align 64, !tbaa !6)
     %5:zpr = nnan ninf nsz arcp contract afn reassoc FMUL_ZZZ_D %32, %30
     %36:zpr = SPLICE_ZPZ_D %35, %3, %5
-    %37:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %22, killed %36, %32, %30
+    %37:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %22, killed %36, %32, %30
     ST1D killed %37, %22, %38, %2 :: (store unknown-size into %ir.21, align 64, !tbaa !6)
     %39:gpr64sp = nuw ADDXri %2, 8, 0
     %6:gpr64all = COPY %39

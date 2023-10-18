@@ -1,5 +1,6 @@
 # RUN: llc %s -fswp -mcpu=a64fx -start-before=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -swpl-enable-reg-alloc -o /dev/null 2>&1 | FileCheck %s
-# CHECK: remark: s315.c:35:5: software pipelining (IPC: 1.25, ITR: 6, MVE: 2, II: 12, Stage: 5, (VReg Fp: 13/32, Int: 5/29, Pred: 2/8)), SRA(PReg Fp: 12/32, Int: 4/29, Pred: 1/8)
+# CHECK: remark: s315.c:35:5: software pipelining (IPC: 0.93, ITR: 5, MVE: 2, II: 16, Stage: 4, (VReg Fp: 10/32, Int: 5/29, Pred: 2/8)), SRA(PReg Fp: 10/32, Int: 4/29, Pred: 1/8)
+
 --- |
   ; ModuleID = 's315.c'
   source_filename = "s315.c"
@@ -326,7 +327,7 @@ body:             |
     %28:zpr = MUL_ZI_D %3, 7, debug-location !17
     %29:zpr = AND_ZI %28, 4127, debug-location !17
     %33:zpr = LSR_ZZI_D %29, 8, debug-location !17
-    %34:zpr = UMULH_ZPZZ_UNDEF_D %30, killed %33, %32, debug-location !17
+    %34:zpr = UMULH_ZPZZ_D_UNDEF %30, killed %33, %32, debug-location !17
     %36:zpr = MLS_ZPmZZ_D %30, %29, killed %34, %35, debug-location !17
     %37:zpr = SCVTF_ZPmZ_StoD_UNDEF %38, %30, killed %36, implicit $fpcr, debug-location !18
     ST1D killed %37, %30, %39, %2, debug-location !19 :: (store unknown-size into %ir.uglygep55, align 64, !tbaa !20)

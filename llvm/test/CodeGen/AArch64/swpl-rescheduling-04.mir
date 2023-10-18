@@ -353,7 +353,7 @@ body:             |
     %60:zpr = nnan ninf nsz arcp contract afn reassoc FMUL_ZZZ_D %56, killed %59
     %61:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_D %56, %54
     %62:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_D killed %61, %58
-    %64:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_UNDEF_D %53, killed %60, killed %62, %54
+    %64:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %53, killed %60, killed %62, %54
     %65:zpr = nuw nsw LSL_ZZI_D %11, 1
     SST1D_SCALED killed %64, %53, %47, killed %65 :: (store unknown-size, align 16, !tbaa !6)
     %67:gpr64 = nuw ADDXrr %10, %29

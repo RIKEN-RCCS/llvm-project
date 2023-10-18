@@ -1,11 +1,11 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-debug-dump-resource-filter="FSQRT_ZPmZ_UNDEF_S|FDIV_ZPZZ_UNDEF_S" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-debug-dump-resource-filter="FSQRT_ZPmZ_S_UNDEF|FDIV_ZPZZ_S_UNDEF" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %232:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_UNDEF_S
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %232:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_S_UNDEF
 #CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+24
 #CHECK-NEXT:  latency: 98
 #CHECK-NEXT:  seqDecode: false
 #CHECK-NEXT:  stage/resource(): 0/FLA, 0/FLA_E, 1/FLA_E, 2/FLA_E, 3/FLA_E, 4/FLA_E, 5/FLA_E, 6/FLA_E, 7/FLA_E, 8/FLA_E, 9/FLA_E, 10/FLA_E, 11/FLA_E, 12/FLA_E, 13/FLA_E, 14/FLA_E, 15/FLA_E, 16/FLA_E, 17/FLA_E, 18/FLA_E, 19/FLA_E, 20/FLA_E, 21/FLA_E, 22/FLA_E, 23/FLA_E, 24/FLA_E, 25/FLA_E, 26/FLA_E, 27/FLA_E, 28/FLA_E, 29/FLA_E, 30/FLA_E, 31/FLA_E, 32/FLA_E, 33/FLA_E, 34/FLA_E, 35/FLA_E, 36/FLA_E, 37/FLA_E, 38/FLA_E, 39/FLA_E, 40/FLA_E, 41/FLA_E, 42/FLA_E, 43/FLA_E, 44/FLA_E, 45/FLA_E, 46/FLA_E, 47/FLA_E, 48/FLA_E, 49/FLA_E, 50/FLA_E, 51/FLA_E, 52/FLA_E, 53/FLA_E, 54/FLA_E, 55/FLA_E, 56/FLA_E, 57/FLA_E, 58/FLA_E, 59/FLA_E, 60/FLA_E, 61/FLA_E, 62/FLA_E, 63/FLA_E, 64/FLA_E, 65/FLA_E, 66/FLA_E, 67/FLA_E, 68/FLA_E, 69/FLA_E, 70/FLA_E, 71/FLA_E, 72/FLA_E, 73/FLA_E, 74/FLA_E, 75/FLA_E, 76/FLA_E, 77/FLA_E, 78/FLA_E, 79/FLA_E, 80/FLA_E, 81/FLA_E, 82/FLA_E, 83/FLA_E, 84/FLA_E, 85/FLA_E, 86/FLA_E, 87/FLA_E, 88/FLA_E, 89/FLA_E, 90/FLA_E, 91/FLA_E, 92/FLA_E, 93/FLA_E, 94/FLA_E, 95/FLA_E, 96/FLA_E, 97/FLA_E
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %240:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_UNDEF_S
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %240:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_S_UNDEF
 #CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+24
 #CHECK-NEXT:  latency: 98
 #CHECK-NEXT:  seqDecode: false
@@ -479,31 +479,31 @@ body:             |
     %75:zpr = LD1W %74, %70, %73 :: (load unknown-size from %ir.uglygep82, align 4, !tbaa !4)
     %77:zpr = LD1W %74, %70, %76 :: (load unknown-size from %ir.uglygep81, align 4, !tbaa !4)
     %79:zpr = LD1W %74, %70, %78 :: (load unknown-size from %ir.uglygep80, align 4, !tbaa !4)
-    %81:zpr = nnan ninf nsz arcp contract afn reassoc FSUBR_ZPZI_UNDEF_S %74, killed %72, 1
-    %82:zpr = nnan ninf nsz arcp contract afn reassoc FSUBR_ZPZI_UNDEF_S %74, killed %75, 1
-    %83:zpr = nnan ninf nsz arcp contract afn reassoc FSUBR_ZPZI_UNDEF_S %74, killed %77, 1
-    %84:zpr = nnan ninf nsz arcp contract afn reassoc FSUBR_ZPZI_UNDEF_S %74, killed %79, 1
+    %81:zpr = nnan ninf nsz arcp contract afn reassoc FSUBR_ZPZI_S_UNDEF %74, killed %72, 1
+    %82:zpr = nnan ninf nsz arcp contract afn reassoc FSUBR_ZPZI_S_UNDEF %74, killed %75, 1
+    %83:zpr = nnan ninf nsz arcp contract afn reassoc FSUBR_ZPZI_S_UNDEF %74, killed %77, 1
+    %84:zpr = nnan ninf nsz arcp contract afn reassoc FSUBR_ZPZI_S_UNDEF %74, killed %79, 1
     %85:gpr64common = ADDXrr %55, %5
     %86:zpr = LD1B %71, %2, %5 :: (load unknown-size from %ir.uglygep83, align 4, !tbaa !4)
     %87:zpr = LD1W %74, %85, %73 :: (load unknown-size from %ir.uglygep87, align 4, !tbaa !4)
     %88:zpr = LD1W %74, %85, %76 :: (load unknown-size from %ir.uglygep86, align 4, !tbaa !4)
     %89:zpr = LD1W %74, %85, %78 :: (load unknown-size from %ir.uglygep85, align 4, !tbaa !4)
-    %90:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZPZI_UNDEF_S %74, killed %86, 1
-    %91:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZPZI_UNDEF_S %74, killed %87, 1
-    %92:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZPZI_UNDEF_S %74, killed %88, 1
-    %93:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZPZI_UNDEF_S %74, killed %89, 1
-    %94:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_UNDEF_S %95, %74, killed %81
-    %96:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_UNDEF_S %97, %74, killed %82
-    %98:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_UNDEF_S %99, %74, killed %83
-    %100:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_UNDEF_S %101, %74, killed %84
+    %90:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZPZI_S_UNDEF %74, killed %86, 1
+    %91:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZPZI_S_UNDEF %74, killed %87, 1
+    %92:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZPZI_S_UNDEF %74, killed %88, 1
+    %93:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZPZI_S_UNDEF %74, killed %89, 1
+    %94:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_S_UNDEF %95, %74, killed %81
+    %96:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_S_UNDEF %97, %74, killed %82
+    %98:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_S_UNDEF %99, %74, killed %83
+    %100:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_S_UNDEF %101, %74, killed %84
     %15:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZZZ_S %6, %94
     %16:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZZZ_S %7, %96
     %17:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZZZ_S %8, %98
     %18:zpr = nnan ninf nsz arcp contract afn reassoc FSUB_ZZZ_S %9, %100
-    %102:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_UNDEF_S %74, killed %90, %94
-    %103:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_UNDEF_S %74, killed %91, %96
-    %104:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_UNDEF_S %74, killed %92, %98
-    %105:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_UNDEF_S %74, killed %93, %100
+    %102:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_S_UNDEF %74, killed %90, %94
+    %103:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_S_UNDEF %74, killed %91, %96
+    %104:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_S_UNDEF %74, killed %92, %98
+    %105:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_S_UNDEF %74, killed %93, %100
     %19:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %10, killed %102
     %20:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %11, killed %103
     %21:zpr = nnan ninf nsz arcp contract afn reassoc FADD_ZZZ_S %12, killed %104

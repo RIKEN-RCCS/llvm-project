@@ -563,18 +563,18 @@ body:             |
     %27:zpr = LD1B %19, %25, %2 :: (load unknown-size from %ir.uglygep122, align 64, !tbaa !6)
     %29:gpr64common = ADDXrr %28, %2
     %30:zpr = LD1B %19, %28, %2 :: (load unknown-size from %ir.uglygep123, align 64, !tbaa !6)
-    %31:zpr = FNMLS_ZPZZZ_UNDEF_D %21, killed %27, %30, %30
+    %31:zpr = FNMLS_ZPZZZ_D_UNDEF %21, killed %27, %30, %30
     ST1D_IMM %31, %24, %26, 0 :: (store unknown-size into %ir.uglygep122, align 8, !tbaa !6)
     %32:ppr = FCMGE_PPzZZ_D %21, %20, %31
     %34:gpr64common = ADDXrr %33, %2
     %35:zpr = LD1B %19, %33, %2 :: (load unknown-size from %ir.uglygep124, align 64, !tbaa !6)
     %37:gpr64common = ADDXrr %36, %2
     %38:zpr = LD1B %19, %36, %2 :: (load unknown-size from %ir.uglygep125, align 64, !tbaa !6)
-    %39:zpr = FMLA_ZPZZZ_UNDEF_D %21, %35, %30, %38
+    %39:zpr = FMLA_ZPZZZ_D_UNDEF %21, %35, %30, %38
     %40:ppr_3b = BIC_PPzPP %24, %24, killed %32
     ST1D_IMM %39, %40, %34, 0 :: (store unknown-size into %ir.uglygep124, align 8, !tbaa !6)
     %41:zpr = LD1B %19, %33, %2 :: (load unknown-size from %ir.uglygep124, align 64, !tbaa !6)
-    %42:zpr = FNMLS_ZPZZZ_UNDEF_D %21, killed %41, %38, %38
+    %42:zpr = FNMLS_ZPZZZ_D_UNDEF %21, killed %41, %38, %38
     ST1D_IMM %42, %22, %34, 0 :: (store unknown-size into %ir.uglygep124, align 8, !tbaa !6)
     %43:zpr = LD1B %19, %25, %2 :: (load unknown-size from %ir.uglygep122, align 64, !tbaa !6)
     %44:zpr = LD1B %19, %28, %2 :: (load unknown-size from %ir.uglygep123, align 64, !tbaa !6)
@@ -584,23 +584,23 @@ body:             |
     %48:zpr = SEL_ZPZZ_D %40, %39, killed %47
     %49:zpr = SEL_ZPZZ_D %22, killed %43, %31
     %50:zpr = SEL_ZPZZ_D %40, %31, killed %49
-    %51:zpr = FMLA_ZPZZZ_UNDEF_D %21, killed %50, killed %48, killed %46
+    %51:zpr = FMLA_ZPZZZ_D_UNDEF %21, killed %50, killed %48, killed %46
     ST1B killed %51, %19, %17, %2 :: (store unknown-size into %ir.uglygep121, align 64, !tbaa !6)
     %53:zpr = LD1D %21, %18, %52 :: (load unknown-size from %ir.uglygep135, align 64, !tbaa !6)
     %54:ppr_3b = FCMGT_PPzZ0_D %21, %53
     %55:ppr_3b = EOR_PPzPP %21, %54, %21
     %56:zpr = LD1D %21, %26, %52 :: (load unknown-size from %ir.uglygep133, align 64, !tbaa !6)
     %57:zpr = LD1D %21, %29, %52 :: (load unknown-size from %ir.uglygep131, align 64, !tbaa !6)
-    %58:zpr = FNMLS_ZPZZZ_UNDEF_D %21, killed %56, %57, %57
+    %58:zpr = FNMLS_ZPZZZ_D_UNDEF %21, killed %56, %57, %57
     ST1D %58, %55, %26, %52 :: (store unknown-size into %ir.uglygep133, align 8, !tbaa !6)
     %59:ppr = FCMGE_PPzZZ_D %21, %53, %58
     %60:zpr = LD1D %21, %34, %52 :: (load unknown-size from %ir.uglygep129, align 64, !tbaa !6)
     %61:zpr = LD1D %21, %37, %52 :: (load unknown-size from %ir.uglygep127, align 64, !tbaa !6)
-    %62:zpr = FMLA_ZPZZZ_UNDEF_D %21, %60, %57, %61
+    %62:zpr = FMLA_ZPZZZ_D_UNDEF %21, %60, %57, %61
     %63:ppr_3b = BIC_PPzPP %55, %55, killed %59
     ST1D %62, %63, %34, %52 :: (store unknown-size into %ir.uglygep129, align 8, !tbaa !6)
     %64:zpr = LD1D %21, %34, %52 :: (load unknown-size from %ir.uglygep129, align 64, !tbaa !6)
-    %65:zpr = FNMLS_ZPZZZ_UNDEF_D %21, killed %64, %61, %61
+    %65:zpr = FNMLS_ZPZZZ_D_UNDEF %21, killed %64, %61, %61
     ST1D %65, %54, %34, %52 :: (store unknown-size into %ir.uglygep129, align 8, !tbaa !6)
     %66:zpr = LD1D %21, %26, %52 :: (load unknown-size from %ir.uglygep133, align 64, !tbaa !6)
     %67:zpr = LD1D %21, %29, %52 :: (load unknown-size from %ir.uglygep131, align 64, !tbaa !6)
@@ -610,23 +610,23 @@ body:             |
     %71:zpr = SEL_ZPZZ_D %63, %62, killed %70
     %72:zpr = SEL_ZPZZ_D %54, killed %66, %58
     %73:zpr = SEL_ZPZZ_D %63, %58, killed %72
-    %74:zpr = FMLA_ZPZZZ_UNDEF_D %21, killed %73, killed %71, killed %69
+    %74:zpr = FMLA_ZPZZZ_D_UNDEF %21, killed %73, killed %71, killed %69
     ST1D killed %74, %21, %18, %52 :: (store unknown-size into %ir.uglygep135, align 64, !tbaa !6)
     %76:zpr = LD1D %21, %18, %75 :: (load unknown-size from %ir.uglygep120, align 64, !tbaa !6)
     %77:ppr_3b = FCMGT_PPzZ0_D %21, %76
     %78:ppr_3b = EOR_PPzPP %21, %77, %21
     %79:zpr = LD1D %21, %26, %75 :: (load unknown-size from %ir.uglygep118, align 64, !tbaa !6)
     %80:zpr = LD1D %21, %29, %75 :: (load unknown-size from %ir.uglygep116, align 64, !tbaa !6)
-    %81:zpr = FNMLS_ZPZZZ_UNDEF_D %21, killed %79, %80, %80
+    %81:zpr = FNMLS_ZPZZZ_D_UNDEF %21, killed %79, %80, %80
     ST1D %81, %78, %26, %75 :: (store unknown-size into %ir.uglygep118, align 8, !tbaa !6)
     %82:ppr = FCMGE_PPzZZ_D %21, %76, %81
     %83:zpr = LD1D %21, %34, %75 :: (load unknown-size from %ir.uglygep114, align 64, !tbaa !6)
     %84:zpr = LD1D %21, %37, %75 :: (load unknown-size from %ir.uglygep112, align 64, !tbaa !6)
-    %85:zpr = FMLA_ZPZZZ_UNDEF_D %21, %83, %80, %84
+    %85:zpr = FMLA_ZPZZZ_D_UNDEF %21, %83, %80, %84
     %86:ppr_3b = BIC_PPzPP %78, %78, killed %82
     ST1D %85, %86, %34, %75 :: (store unknown-size into %ir.uglygep114, align 8, !tbaa !6)
     %87:zpr = LD1D %21, %34, %75 :: (load unknown-size from %ir.uglygep114, align 64, !tbaa !6)
-    %88:zpr = FNMLS_ZPZZZ_UNDEF_D %21, killed %87, %84, %84
+    %88:zpr = FNMLS_ZPZZZ_D_UNDEF %21, killed %87, %84, %84
     ST1D %88, %77, %34, %75 :: (store unknown-size into %ir.uglygep114, align 8, !tbaa !6)
     %89:zpr = LD1D %21, %26, %75 :: (load unknown-size from %ir.uglygep118, align 64, !tbaa !6)
     %90:zpr = LD1D %21, %29, %75 :: (load unknown-size from %ir.uglygep116, align 64, !tbaa !6)
@@ -636,23 +636,23 @@ body:             |
     %94:zpr = SEL_ZPZZ_D %86, %85, killed %93
     %95:zpr = SEL_ZPZZ_D %77, killed %89, %81
     %96:zpr = SEL_ZPZZ_D %86, %81, killed %95
-    %97:zpr = FMLA_ZPZZZ_UNDEF_D %21, killed %96, killed %94, killed %92
+    %97:zpr = FMLA_ZPZZZ_D_UNDEF %21, killed %96, killed %94, killed %92
     ST1D killed %97, %21, %18, %75 :: (store unknown-size into %ir.uglygep120, align 64, !tbaa !6)
     %99:zpr = LD1D %21, %18, %98 :: (load unknown-size from %ir.uglygep110, align 64, !tbaa !6)
     %100:ppr_3b = FCMGT_PPzZ0_D %21, %99
     %101:ppr_3b = EOR_PPzPP %21, %100, %21
     %102:zpr = LD1D %21, %26, %98 :: (load unknown-size from %ir.uglygep108, align 64, !tbaa !6)
     %103:zpr = LD1D %21, %29, %98 :: (load unknown-size from %ir.uglygep106, align 64, !tbaa !6)
-    %104:zpr = FNMLS_ZPZZZ_UNDEF_D %21, killed %102, %103, %103
+    %104:zpr = FNMLS_ZPZZZ_D_UNDEF %21, killed %102, %103, %103
     ST1D %104, %101, %26, %98 :: (store unknown-size into %ir.uglygep108, align 8, !tbaa !6)
     %105:ppr = FCMGE_PPzZZ_D %21, %99, %104
     %106:zpr = LD1D %21, %34, %98 :: (load unknown-size from %ir.uglygep104, align 64, !tbaa !6)
     %107:zpr = LD1D %21, %37, %98 :: (load unknown-size from %ir.uglygep102, align 64, !tbaa !6)
-    %108:zpr = FMLA_ZPZZZ_UNDEF_D %21, %106, %103, %107
+    %108:zpr = FMLA_ZPZZZ_D_UNDEF %21, %106, %103, %107
     %109:ppr_3b = BIC_PPzPP %101, %101, killed %105
     ST1D %108, %109, %34, %98 :: (store unknown-size into %ir.uglygep104, align 8, !tbaa !6)
     %110:zpr = LD1D %21, %34, %98 :: (load unknown-size from %ir.uglygep104, align 64, !tbaa !6)
-    %111:zpr = FNMLS_ZPZZZ_UNDEF_D %21, killed %110, %107, %107
+    %111:zpr = FNMLS_ZPZZZ_D_UNDEF %21, killed %110, %107, %107
     ST1D %111, %100, %34, %98 :: (store unknown-size into %ir.uglygep104, align 8, !tbaa !6)
     %112:zpr = LD1D %21, %26, %98 :: (load unknown-size from %ir.uglygep108, align 64, !tbaa !6)
     %113:zpr = LD1D %21, %29, %98 :: (load unknown-size from %ir.uglygep106, align 64, !tbaa !6)
@@ -662,23 +662,23 @@ body:             |
     %117:zpr = SEL_ZPZZ_D %109, %108, killed %116
     %118:zpr = SEL_ZPZZ_D %100, killed %112, %104
     %119:zpr = SEL_ZPZZ_D %109, %104, killed %118
-    %120:zpr = FMLA_ZPZZZ_UNDEF_D %21, killed %119, killed %117, killed %115
+    %120:zpr = FMLA_ZPZZZ_D_UNDEF %21, killed %119, killed %117, killed %115
     ST1D killed %120, %21, %18, %98 :: (store unknown-size into %ir.uglygep110, align 64, !tbaa !6)
     %122:zpr = LD1D %21, %18, %121 :: (load unknown-size from %ir.uglygep100, align 64, !tbaa !6)
     %123:ppr_3b = FCMGT_PPzZ0_D %21, %122
     %124:ppr_3b = EOR_PPzPP %21, %123, %21
     %125:zpr = LD1D %21, %26, %121 :: (load unknown-size from %ir.uglygep98, align 64, !tbaa !6)
     %126:zpr = LD1D %21, %29, %121 :: (load unknown-size from %ir.uglygep96, align 64, !tbaa !6)
-    %127:zpr = FNMLS_ZPZZZ_UNDEF_D %21, killed %125, %126, %126
+    %127:zpr = FNMLS_ZPZZZ_D_UNDEF %21, killed %125, %126, %126
     ST1D %127, %124, %26, %121 :: (store unknown-size into %ir.uglygep98, align 8, !tbaa !6)
     %128:ppr = FCMGE_PPzZZ_D %21, %122, %127
     %129:zpr = LD1D %21, %34, %121 :: (load unknown-size from %ir.uglygep94, align 64, !tbaa !6)
     %130:zpr = LD1D %21, %37, %121 :: (load unknown-size from %ir.uglygep92, align 64, !tbaa !6)
-    %131:zpr = FMLA_ZPZZZ_UNDEF_D %21, %129, %126, %130
+    %131:zpr = FMLA_ZPZZZ_D_UNDEF %21, %129, %126, %130
     %132:ppr_3b = BIC_PPzPP %124, %124, killed %128
     ST1D %131, %132, %34, %121 :: (store unknown-size into %ir.uglygep94, align 8, !tbaa !6)
     %133:zpr = LD1D %21, %34, %121 :: (load unknown-size from %ir.uglygep94, align 64, !tbaa !6)
-    %134:zpr = FNMLS_ZPZZZ_UNDEF_D %21, killed %133, %130, %130
+    %134:zpr = FNMLS_ZPZZZ_D_UNDEF %21, killed %133, %130, %130
     ST1D %134, %123, %34, %121 :: (store unknown-size into %ir.uglygep94, align 8, !tbaa !6)
     %135:zpr = LD1D %21, %26, %121 :: (load unknown-size from %ir.uglygep98, align 64, !tbaa !6)
     %136:zpr = LD1D %21, %29, %121 :: (load unknown-size from %ir.uglygep96, align 64, !tbaa !6)
@@ -688,7 +688,7 @@ body:             |
     %140:zpr = SEL_ZPZZ_D %132, %131, killed %139
     %141:zpr = SEL_ZPZZ_D %123, killed %135, %127
     %142:zpr = SEL_ZPZZ_D %132, %127, killed %141
-    %143:zpr = FMLA_ZPZZZ_UNDEF_D %21, killed %142, killed %140, killed %138
+    %143:zpr = FMLA_ZPZZZ_D_UNDEF %21, killed %142, killed %140, killed %138
     ST1D killed %143, %21, %18, %121 :: (store unknown-size into %ir.uglygep100, align 64, !tbaa !6)
     %144:gpr64sp = nuw nsw ADDXri %2, 320, 0
     %4:gpr64all = COPY %144
