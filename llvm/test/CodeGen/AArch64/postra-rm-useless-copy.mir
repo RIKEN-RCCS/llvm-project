@@ -16,6 +16,7 @@
 # CHECK-NEXT: renamable $x11 = COPY $x0
 # CHECK: renamable $x0 = nuw nsw ADDXri killed renamable $x12, 88, 0
 # CHECK-NOT: renamable $x1 = COPY renamable $x0
+# CHECK-NEXT: renamable $x4 = COPY $x0
 
 --- |
   ; ModuleID = 'postra-rm-useless-copy.mir'
