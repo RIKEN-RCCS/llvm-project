@@ -948,10 +948,15 @@ void SwplLoop::removeCopy(MachineBasicBlock *body) {
     }
     target_mo.clear();
     bool hasSubreg = mi.getOperand(1).getSubReg() != 0;
+    bool foundSubreg = false;
     bool foundTied = false;
     for (auto &u:SWPipeliner::MRI->use_operands(r0)) {
       if (hasSubreg && u.isTied()) {
         foundTied = true;
+        break;
+      }
+      if (hasSubreg && u.getSubReg() != 0) {
+        foundSubreg = true;
         break;
       }
       target_mo.push_back(&u);
@@ -959,6 +964,12 @@ void SwplLoop::removeCopy(MachineBasicBlock *body) {
     if (foundTied) {
       if (DebugPrepare) {
         dbgs() << " op1 has subreg && use operand is tied!\n";
+      }
+      continue;
+    }
+    if (foundSubreg) {
+      if (DebugPrepare) {
+        dbgs() << " op1 has subreg!\n";
       }
       continue;
     }
@@ -1001,7 +1012,9 @@ void SwplLoop::removeCopy(MachineBasicBlock *body) {
         // r0を参照しているオペランドを書き換える
         auto &op1 = mi.getOperand(1);
         op->setReg(op1.getReg());
-        op->setSubReg(op1.getSubReg());
+        if (hasSubreg) {
+          op->setSubReg(op1.getSubReg());
+        }
         op->setIsKill(false);
         if (DebugPrepare) {
           dbgs() << " after: " << *umi;
