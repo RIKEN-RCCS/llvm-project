@@ -504,53 +504,34 @@ void SwplTransformMIR::insertMIs(MachineBasicBlock& ins,
       ins.push_back(mi);
     }
   }
-  /// (3) 計算した開始slotから終了slotまでの命令を挿入位置に移動する
-  //if (!SWPipeliner::STM->isDisableRegAlloc() && block==KERNEL) {
-  if (SWPipeliner::STM->isEnableRegAlloc() && block==KERNEL) {
-    /// レジスタ割り付けで作成したMIの挿入
-    int num_mis = 0;
-    for (size_t i = start_index; i < end_index; ++i) {
-      auto *mi = TMI.mis[i];
-      if (mi != nullptr)
-        ++num_mis;
+
+  /// (3) 始端の命令を挿入する
+  if (SWPipeliner::STM->isEnableRegAlloc()) {
+    // Livein
+    if (block == KERNEL) {
+      ins.push_back(TMI.kernel_livein_mi); //SWPLIVEIN命令を追加
     }
-    bool inserted = false;
-    int loc_end = num_mis;
-    num_mis = 0;
-    for (size_t i = start_index; i < end_index; ++i) {
-      auto *mi = TMI.mis[i];
-      if (mi != nullptr) {
-        ++num_mis;
-        if (!inserted) {
-          /// KERNEL始端なら
-          /// 仮想レジスタから物理レジスタへのCOPY命令を挿入する
-          std::vector<llvm::MachineInstr*> *kpremi = &TMI.kernel_pre_mis;
-          if (kpremi != nullptr) {
-            for (std::vector<llvm::MachineInstr*>::iterator Itr = kpremi->begin();
-                Itr != kpremi->end(); ++Itr) {
-              ins.push_back(*Itr);
-            }
-          }
-          inserted = true;
-        }
+  }
+
+  /// (4) 計算した開始slotから終了slotまでの命令を挿入位置に移動する
+  for (size_t i = start_index; i < end_index; ++i) {
+    auto *mi = TMI.mis[i];
+    if (mi != nullptr) {
+      ins.push_back(mi);
+    }
+  }
+
+  /// (5) 終端の命令を挿入する
+  if (SWPipeliner::STM->isEnableRegAlloc()) {
+    // Livein
+    if (block == PROLOGUE) {
+      for (auto *mi : TMI.prolog_post_mis) { // COPY命令を追加
         ins.push_back(mi);
-        if (num_mis==loc_end) {
-          /// KERNEL終端なら
-          /// 物理レジスタから仮想レジスタへのCOPY命令を挿入する
-          std::vector<llvm::MachineInstr*> *kpostmi = &TMI.kernel_post_mis;
-          if (kpostmi != nullptr) {
-            for (std::vector<llvm::MachineInstr*>::iterator Itr = kpostmi->begin();
-                Itr != kpostmi->end(); ++Itr) {
-              ins.push_back(*Itr);
-            }
-          }
-        }
       }
-    }
-  } else {
-    for (size_t i = start_index; i < end_index; ++i) {
-      auto *mi = TMI.mis[i];
-      if (mi != nullptr) {
+      ins.push_back(TMI.prolog_liveout_mi); // SWPLIVEOUTを追加
+    // Liveout
+    } else if (block == KERNEL) {
+      for (auto *mi : TMI.kernel_post_mis) {
         ins.push_back(mi);
       }
     }
