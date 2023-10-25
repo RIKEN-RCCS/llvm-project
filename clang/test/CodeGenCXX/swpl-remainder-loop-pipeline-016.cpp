@@ -7,9 +7,17 @@ int remainder_loop(int count, char **val) {
 	int sum=0;
 	int tmp=100;
     for (int i=0; i<count; i++) {
+        // CHECK: br i1 %{{.+}}, label {{.*}}, !llvm.loop ![[LOOP1:.*]]
+        // CHECK: br i1 %{{.+}}, label {{.*}}, !llvm.loop ![[LOOP2:.*]]
         sum*=val[0][0];
         sum+=i;
     }
 	printf("%d\n", sum);
 	return 0;
 }
+
+// CHECK: ![[LOOP1]] = distinct !{![[LOOP1]], [[UD:![0-9]+]]}
+// CHECK-NEXT: [[UD]] = !{!"llvm.loop.unroll.disable"}
+
+// CHECK: ![[LOOP2]] = distinct !{![[LOOP2]], [[MP:![0-9]+]]}
+// CHECK-NEXT: [[MP]] = !{!"llvm.loop.mustprogress"}

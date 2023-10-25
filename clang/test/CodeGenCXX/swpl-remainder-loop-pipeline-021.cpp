@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-unknown-hurd-gnu -emit-llvm -target-cpu a64fx -Ofast -vectorize-loops -mllvm -fswp -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-unknown-hurd-gnu -emit-llvm -target-cpu a64fx -Ofast -vectorize-loops -mllvm -fswp -mllvm -swpl-enable-pipeline-remainder-vec -o - %s | FileCheck %s
 
 #define iterations 100000
 #define LEN_1D 32000
@@ -41,4 +41,4 @@ void test()
 
 // CHECK: ![[LOOP4]] = distinct !{![[LOOP4]], [[MP]]}
 
-// CHECK: ![[LOOP5]] = distinct !{![[LOOP5]], [[MP]], [[REMAINDER]], [[VEC]]}
+// CHECK: ![[LOOP5]] = distinct !{![[LOOP5]], [[MP]], [[VEC]]}
