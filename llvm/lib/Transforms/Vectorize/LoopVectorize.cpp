@@ -7733,7 +7733,13 @@ static void AddSWPLDisableMetaData(Loop *L) {
   SmallVector<Metadata *, 4> MDs;
   // Reserve first location for self reference to the LoopID metadata node.
   MDs.push_back(nullptr);
-  // Add runtime pipline disable metadata.
+  MDNode *LoopID = L->getLoopID();
+  if (LoopID) {
+    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
+      MDs.push_back(LoopID->getOperand(i));
+    }
+  }
+  // Add pipline disable metadata.
   LLVMContext &Context = L->getHeader()->getContext();
   SmallVector<Metadata *, 4> DisableOperands;
   DisableOperands.push_back(
