@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64-unknown-hurd-gnu -emit-llvm -target-cpu a64fx -Ofast -vectorize-loops -mllvm -fswp -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-unknown-hurd-gnu -emit-llvm -target-cpu a64fx -Ofast -vectorize-loops -mllvm -fswp -mllvm -swpl-enable-pipeline-remainder-vec -mllvm -swpl-enable-pipeline-remainder-unroll -o - %s | FileCheck %s
+// CHECK-NOT: [[A:![0-9]+]] = !{!"llvm.remainder.pipeline.disable"}
 
 #define iterations 100000
 #define LEN_1D 32000
@@ -33,12 +34,11 @@ void test()
 // CHECK-NEXT: [[VEC]] = !{!"llvm.loop.isvectorized", i32 1}
 // CHECK-NEXT: [[UNROLL]] = !{!"llvm.loop.unroll.runtime.disable"}
 
-// CHECK: ![[LOOP2]] = distinct !{![[LOOP2]], [[UD:![0-9]+]], [[REMAINDER:![0-9]+]]}
+// CHECK: ![[LOOP2]] = distinct !{![[LOOP2]], [[UD:![0-9]+]]}
 // CHECK-NEXT: [[UD]] = !{!"llvm.loop.unroll.disable"}
-// CHECK-NEXT: [[REMAINDER]] = !{!"llvm.remainder.pipeline.disable"}
 
 // CHECK: ![[LOOP3]] = distinct !{![[LOOP3]], [[MP]]}
 
 // CHECK: ![[LOOP4]] = distinct !{![[LOOP4]], [[MP]]}
 
-// CHECK: ![[LOOP5]] = distinct !{![[LOOP5]], [[MP]], [[REMAINDER]], [[VEC]]}
+// CHECK: ![[LOOP5]] = distinct !{![[LOOP5]], [[MP]], [[VEC]]}
