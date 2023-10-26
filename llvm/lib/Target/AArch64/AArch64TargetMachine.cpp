@@ -246,6 +246,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
 
   initializeSWPipelinerPrePass(*PR);
   initializeSWPipelinerPass(*PR);
+  initializeAArch64SwplExpandPseudoPass(*PR);
 
   initializeAArch64LowerHomogeneousPrologEpilogPass(*PR);
   initializeAArch64DAGToDAGISelPass(*PR);
@@ -780,6 +781,9 @@ void AArch64PassConfig::addPreRegAlloc() {
 }
 
 void AArch64PassConfig::addPostRegAlloc() {
+  if (TM->getTargetCPU().equals_insensitive("a64fx") && TM->getOptLevel() != CodeGenOpt::None) {
+    addPass(createAArch64SwplExpandPseudoPass());
+  }
   // Remove redundant copy instructions.
   if (TM->getOptLevel() != CodeGenOpt::None && EnableRedundantCopyElimination)
     addPass(createAArch64RedundantCopyEliminationPass());
