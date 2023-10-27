@@ -475,10 +475,8 @@ Improvements to Clang's diagnostics
 - ``-Wformat`` cast fix-its will now suggest ``static_cast`` instead of C-style casts
   for C++ code.
 - ``-Wformat`` will no longer suggest a no-op fix-it for fixing scoped enum format
-  warnings. Instead, it will suggest casting the enum object to the type specified
-  in the format string.
-- Clang contexpr evaluator now displays notes as well as an error when a constructor
-  of a base class is not called in the constructor of its derived class.
+  warnings. Instead, it will suggest casting the enum object based on its
+  underlying type.
 
 Bug Fixes in This Version
 -------------------------
@@ -719,6 +717,8 @@ Bug Fixes in This Version
   virtual member functions even if the target required a greater function
   alignment and/or did not have function pointers which point to function entry
   points (i.e., uses function descriptor objects instead).
+- Fixes a ``clang-17`` regression where ``LLVM_UNREACHABLE_OPTIMIZE=OFF``
+  cannot be used with ``Release`` mode builds. (`#68237 <https://github.com/llvm/llvm-project/issues/68237>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
