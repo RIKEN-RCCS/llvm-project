@@ -83,14 +83,16 @@
 # CHECK-NEXT:  %29:fpr64 = COPY %19:fpr64
 # CHECK-NEXT:  %31:gpr64sp = COPY %20:gpr64sp
 # CHECK-NEXT:  %22:fpr64 = LDURDi %27:gpr64sp, 0
+# CHECK-NEXT:  $d1 = COPY %22:fpr64
+# CHECK-NEXT:  $d2 = COPY %29:fpr64
+# CHECK-NEXT:  $x1 = COPY %27:gpr64sp
+# CHECK-NEXT:  $x3 = COPY %31:gpr64sp
+# CHECK-NEXT:  SWPLIVEOUT implicit $d1, implicit $d2, implicit $x1, implicit $x3
 # CHECK-NEXT:bb.4 (%ir-block.7):
 # CHECK-NEXT:; predecessors: %bb.4, %bb.8
 # CHECK-NEXT:  successors: %bb.4(0x7c000000), %bb.9(0x04000000); %bb.4(96.88%), %bb.9(3.12%)
 
-# CHECK:  $d1 = COPY %22:fpr64
-# CHECK-NEXT:  $d2 = COPY %29:fpr64
-# CHECK-NEXT:  $x1 = COPY %27:gpr64sp
-# CHECK-NEXT:  $x3 = COPY %31:gpr64sp
+# CHECK:  SWPLIVEIN implicit-def $d1, implicit-def $d2, implicit-def $x1, implicit-def $x3
 # CHECK-NEXT:  renamable $d0 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed renamable $d1, renamable $d2, implicit $fpcr
 # CHECK-NEXT:  renamable $x0 = ADDXri renamable $x1, 8, 0
 # CHECK-NEXT:  renamable $d1 = LDURDi renamable $x0, 0
@@ -200,18 +202,16 @@
 # CHECK-NEXT:  %29:fpr64 = COPY %19:fpr64
 # CHECK-NEXT:  %31:gpr64sp = COPY %20:gpr64sp
 # CHECK-NEXT:  %22:fpr64 = LDURDi %27:gpr64sp, 0
+# CHECK-NEXT:  $d1 = COPY %22:fpr64
+# CHECK-NEXT:  $d2 = COPY %29:fpr64
+# CHECK-NEXT:  $x1 = COPY %27:gpr64sp
+# CHECK-NEXT:  $x3 = COPY %31:gpr64sp
+# CHECK-NEXT:  SWPLIVEOUT implicit $d1, implicit $d2, implicit $x1, implicit $x3
 # CHECK-NEXT:bb.4 (%ir-block.7):
 # CHECK-NEXT:; predecessors: %bb.4, %bb.8
 # CHECK-NEXT:  successors: %bb.4(0x7c000000), %bb.9(0x04000000); %bb.4(96.88%), %bb.9(3.12%)
 
-# CHECK:  %43:fpr64 = PHI %22:fpr64, %bb.8, %42:fpr64, %bb.4
-# CHECK-NEXT:  %45:fpr64 = PHI %29:fpr64, %bb.8, %44:fpr64, %bb.4
-# CHECK-NEXT:  %48:gpr64sp = PHI %27:gpr64sp, %bb.8, %47:gpr64sp, %bb.4
-# CHECK-NEXT:  %51:gpr64sp = PHI %31:gpr64sp, %bb.8, %50:gpr64sp, %bb.4
-# CHECK-NEXT:  $d1 = COPY %43:fpr64
-# CHECK-NEXT:  $d2 = COPY %45:fpr64
-# CHECK-NEXT:  $x1 = COPY %48:gpr64sp
-# CHECK-NEXT:  $x3 = COPY %51:gpr64sp
+# CHECK:  SWPLIVEIN implicit-def $d1, implicit-def $d2, implicit-def $x1, implicit-def $x3
 # CHECK-NEXT:  renamable $d0 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed renamable $d1, renamable $d2, implicit $fpcr
 # CHECK-NEXT:  renamable $x0 = ADDXri renamable $x1, 8, 0
 # CHECK-NEXT:  renamable $d1 = LDURDi renamable $x0, 0
@@ -224,21 +224,21 @@
 # CHECK-NEXT:  renamable $d2 = COPY renamable $d0
 # CHECK-NEXT:  %41:fpr64 = COPY $d0
 # CHECK-NEXT:  %42:fpr64 = COPY $d1
-# CHECK-NEXT:  %44:fpr64 = COPY $d2
-# CHECK-NEXT:  %46:gpr64sp = COPY $x0
-# CHECK-NEXT:  %47:gpr64sp = COPY $x1
-# CHECK-NEXT:  %49:gpr64sp = COPY $x2
-# CHECK-NEXT:  %50:gpr64sp = COPY $x3
-# CHECK-NEXT:  %52:fpr64 = COPY $d2
+# CHECK-NEXT:  %43:fpr64 = COPY $d2
+# CHECK-NEXT:  %44:gpr64sp = COPY $x0
+# CHECK-NEXT:  %45:gpr64sp = COPY $x1
+# CHECK-NEXT:  %46:gpr64sp = COPY $x2
+# CHECK-NEXT:  %47:gpr64sp = COPY $x3
+# CHECK-NEXT:  %48:fpr64 = COPY $d2
 # CHECK-NEXT:  $xzr = SUBSXri $x3, 3, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 10, %bb.4, implicit $nzcv
 # CHECK-NEXT:bb.9 (%ir-block.7):
 # CHECK-NEXT:; predecessors: %bb.4
 # CHECK-NEXT:  successors: %bb.10(0x80000000); %bb.10(100.00%)
 
-# CHECK:  %37:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %42:fpr64, %44:fpr64, implicit $fpcr
-# CHECK-NEXT:  %38:gpr64sp = ADDXri %47:gpr64sp, 8, 0
-# CHECK-NEXT:  %39:gpr64sp = SUBSXri %50:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK:  %37:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed %42:fpr64, %43:fpr64, implicit $fpcr
+# CHECK-NEXT:  %38:gpr64sp = ADDXri %45:gpr64sp, 8, 0
+# CHECK-NEXT:  %39:gpr64sp = SUBSXri %47:gpr64sp, 1, 0, implicit-def $nzcv
 # CHECK-NEXT:  %40:fpr64 = COPY %37:fpr64
 # CHECK-NEXT:bb.10 (%ir-block.7):
 # CHECK-NEXT:; predecessors: %bb.9
