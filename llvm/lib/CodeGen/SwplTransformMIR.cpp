@@ -717,21 +717,25 @@ void SwplTransformMIR::outputLoopoptMessage(int n_body_inst) {
 }
 
 void SwplTransformMIR::transformKernel() {
+  /// (1) Create instructions for SWPL
+  if (SWPipeliner::STM->isEnableRegAlloc()){
+    SWPipeliner::TII->createSwplPseudoMIs(&TMI, MF);
+  }
 
-  /// (3) body,prolog,epilogの命令を挿入
+  /// (2) Insert body,prolog,epilog instructions
 
-  /// (3-1) MOVE in PROLOGUE 部の作成
+  /// (2-1) MOVE in PROLOGUE section
   insertMIs(*(TMI.Prolog), PRO_MOVE);
-  /// (3-2) PROLOGUE部の作成
+  /// (2-2) PROLOGUE section
   insertMIs(*(TMI.Prolog), PROLOGUE);
 
-  /// (3-3) KERNEL部の作成
+  /// (2-3) KERNEL section
   insertMIs(*(TMI.OrgBody), KERNEL);
 
-  /// (3-4) EPILOGUE部の作成
+  /// (2-4) EPILOGUE section
   insertMIs(*(TMI.Epilog), EPILOGUE);
 
-  /// (4) SWPL KERNELの繰返し分岐を生成
+  /// (3) Generate a repeating branch of SWPL KERNEL
   makeKernelIterationBranch(*(TMI.OrgBody));
 }
 

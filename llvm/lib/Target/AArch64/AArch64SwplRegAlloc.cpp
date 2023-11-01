@@ -155,18 +155,18 @@ static void addCopyMIpost(MachineFunction &MF,
 }
 
 /**
- * @brief SWPLIVEIN命令を作成する
+ * @brief Create SWPLIVEIN instruction
  * @param [in]     MF MachineFunction
- * @param [in]     dl デバッグ情報の位置
- * @param [in,out]    livein_mi livein用のMI
- * @param [in]     copy_mis livein/liveout用のCOPY命令
+ * @param [in]     dl DebugLoc
+ * @param [in,out]    livein_mi MI for livein
+ * @param [in]     copy_mis COPY instruction for livein/liveout
  */
 static void createSwpliveinMI(MachineFunction &MF,
                           DebugLoc dl,
                           MachineInstr **livein_mi,
                           std::vector<MachineInstr*> copy_mis) {
 
-  // SWPLIVEIN命令作成
+  // Create SWPLIVEIN instruction
   MachineInstrBuilder mib = BuildMI(MF, dl, SWPipeliner::TII->get(AArch64::SWPLIVEIN));
   for(auto copy:copy_mis){
     mib.addReg(copy->getOperand(0).getReg(), RegState::ImplicitDefine);
@@ -176,24 +176,56 @@ static void createSwpliveinMI(MachineFunction &MF,
 }
 
 /**
- * @brief SWPLIVEOUT命令を作成する
+ * @brief Create SWPLIVEOUT instruction
  * @param [in]     MF MachineFunction
- * @param [in]     dl デバッグ情報の位置
- * @param [in,out]    liveout_mi liveout用のMI
- * @param [in]     copy_mis livein/liveout用のCOPY命令
+ * @param [in]     dl DebugLoc
+ * @param [in,out]    liveout_mi MI for liveout
+ * @param [in]     copy_mis COPY instruction for livein/liveout
  */
 static void createSwpliveoutMI(MachineFunction &MF,
                           DebugLoc dl,
                           MachineInstr **liveout_mi,
                           std::vector<MachineInstr*> copy_mis) {
 
-  // SWPLIVEOUT命令作成
+  // Create SWPLIVEOUT instruction
   MachineInstrBuilder mib = BuildMI(MF, dl, SWPipeliner::TII->get(AArch64::SWPLIVEOUT));
   for(auto copy:copy_mis){
     mib.addReg(copy->getOperand(0).getReg(), RegState::Implicit);
   }
   *liveout_mi = mib.getInstr();
   return;
+}
+
+/**
+ * @brief  Create software pipelining pseudo instructions.
+ * @param  [in,out] tmi Information for the SwplTransformMIR
+ * @param  [in]     MF  MachineFunction
+ */
+void AArch64InstrInfo::createSwplPseudoMIs(SwplTransformedMIRInfo *tmi,MachineFunction &MF) const {
+  // Get DebugLoc from kernel start MI
+  DebugLoc firstDL;
+  for (size_t i = tmi->prologEndIndx; i < tmi->kernelEndIndx; ++i) {
+    MachineInstr *mi = tmi->mis[i];
+    if (mi == nullptr)
+      continue;
+    firstDL = mi->getDebugLoc();
+    break;
+  }
+  
+  // Generate SWPLIVEIN, SWPLIVEOUT instructions
+  createSwpliveoutMI(MF, firstDL, &tmi->prolog_liveout_mi, tmi->prolog_post_mis);
+  createSwpliveinMI(MF, firstDL, &tmi->kernel_livein_mi, tmi->prolog_post_mis);
+}
+
+/**
+ * @brief  Whether it is a software pipelining pseudo instruction
+ * @param  [in]  MI MachineInstr
+ * @retval true Software pipelining pseudo instruction
+ * @retval false Not software pipelining pseudo instruction
+ */
+bool AArch64InstrInfo::isSwplPseudoMI(MachineInstr &MI) const {
+  unsigned op = MI.getOpcode();
+  return (op == AArch64::SWPLIVEIN || op == AArch64::SWPLIVEOUT);
 }
 
 /**
@@ -767,10 +799,6 @@ bool AArch64InstrInfo::SwplRegAlloc(SwplTransformedMIRInfo *tmi,
     (*tmi->swplEKRITbl).dump();
     dumpKernelInstrs(MF, tmi->prologEndIndx, tmi->kernelEndIndx, tmi->mis);
   }
-
-  // SWPLIVEIN, SWPLIVEOUT命令を生成する
-  createSwpliveoutMI(MF, firstDL, &tmi->prolog_liveout_mi, tmi->prolog_post_mis);
-  createSwpliveinMI(MF, firstDL, &tmi->kernel_livein_mi, tmi->prolog_post_mis);
 
   return true;
 }
