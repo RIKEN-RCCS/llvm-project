@@ -1,6 +1,6 @@
 ; RUN: llc %s -O1 -march=aarch64 -mcpu=a64fx -fswp -swpl-disable-reg-alloc -pass-remarks-analysis=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 ;CHECK:remark: <unknown>:0:0: This loop tries to schedule with the InitiationInterval=5 specified in the pragma.
-;CHECK-NEXT:remark: <unknown>:0:0: software pipelining (IPC: 1.80, ITR: 5, MVE: 2, II: 5
+;CHECK:remark: <unknown>:0:0: software pipelining (IPC: 1.80, ITR: 5, MVE: 2, II: 5
 ; ModuleID = '2912.c'
 source_filename = "2912.c"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

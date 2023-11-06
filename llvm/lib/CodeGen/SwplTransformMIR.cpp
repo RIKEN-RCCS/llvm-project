@@ -30,6 +30,7 @@ namespace llvm {
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 
 using namespace llvm;
 #define DEBUG_TYPE "aarch64-swpipeliner"
@@ -97,7 +98,10 @@ bool SwplTransformMIR::transformMIR() {
       if (DumpMIR & (int)LAST) dumpMIR(LAST);
     }
 
-    /// (2-7) outputLoopoptMessage() SWPL成功の最適化messageを出力する
+    /// (2-7) Count the number of COPY in the kernel loop
+    countKernelCOPY();
+
+    /// (2-8) outputLoopoptMessage() SWPL成功の最適化messageを出力する
     outputLoopoptMessage(n_body_real_inst);
   }
 
@@ -1066,4 +1070,22 @@ void SwplTransformMIR::printTransformingMI(const MachineInstr *mi) {
             /* AddNewLine= */ true,
             MF.getSubtarget().getInstrInfo() );
   return;
+}
+
+void SwplTransformMIR::countKernelCOPY() {
+    unsigned count = 0;
+    for (auto &mi : *(TMI.OrgBody)) {
+        if (mi.isCopy()) count++;
+    }
+
+    std::string msg =
+        "The number of COPY instructions in the kernel loop for software "
+        "pipelining is ";
+
+    SWPipeliner::ORE->emit([&]() {
+        return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "countKernelCOPY",
+                                                 LoopLoc,
+                                                 Loop.getML()->getHeader())
+               << msg << ore::NV("KernelCOPY", count) << ".";
+    });
 }

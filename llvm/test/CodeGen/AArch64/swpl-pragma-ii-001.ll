@@ -1,7 +1,7 @@
 ; RUN: llc %s -O1 --march=aarch64 -mcpu=a64fx -fswp -swpl-minii=8 -pass-remarks=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner -swpl-maxii=10 -o /dev/null 2>&1 | FileCheck %s
 
 ;CHECK: remark: <unknown>:0:0: This loop tries to schedule with the InitiationInterval=5 specified in the pragma.
-;CHECK-NEXT: remark: <unknown>:0:0: software pipelining (IPC: 1.60, ITR: 5, MVE: 2, II: 5
+;CHECK: remark: <unknown>:0:0: software pipelining (IPC: 1.60, ITR: 5, MVE: 2, II: 5
 ; ModuleID = '2912.c'
 
 source_filename = "2912.c"
