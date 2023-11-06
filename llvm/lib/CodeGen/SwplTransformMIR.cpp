@@ -98,7 +98,7 @@ bool SwplTransformMIR::transformMIR() {
       if (DumpMIR & (int)LAST) dumpMIR(LAST);
     }
 
-    /// (2-7) カーネルループのCOPY命令の数をカウントする
+    /// (2-7) Count the number of COPY in the kernel loop
     countKernelCOPY();
 
     /// (2-8) outputLoopoptMessage() SWPL成功の最適化messageを出力する

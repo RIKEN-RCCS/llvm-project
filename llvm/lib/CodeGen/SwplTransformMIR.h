@@ -164,7 +164,7 @@ private:
   /// \param [in] mi 対象のMachineInstr
   void printTransformingMI(const MachineInstr *mi);
 
-  /// カーネルループのCOPY命令をカウントする
+  /// Count the number of COPY in the kernel loop
   void countKernelCOPY();
 public:
   /// コストラクタ
