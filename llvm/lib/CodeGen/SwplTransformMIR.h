@@ -163,6 +163,9 @@ private:
   /// 結果反映前のMachineInstrのprint
   /// \param [in] mi 対象のMachineInstr
   void printTransformingMI(const MachineInstr *mi);
+
+  /// Count the number of COPY in the kernel loop
+  void countKernelCOPY();
 public:
   /// コストラクタ
   /// \param [in] mf 対象MachineFunction
