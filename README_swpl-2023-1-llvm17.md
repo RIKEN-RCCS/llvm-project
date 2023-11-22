@@ -57,15 +57,15 @@ tag:swpl-2023-1-llvm17_tag_20231122
        「software pipelining (IPC: 2.03, ITR: 4, MVE: 2, II: 65, Stage: 4, 」
 
 ## MaxIIおよびbudgetの調整について
-以下の翻訳オプションにてMaxII、budgetを調整することで、SWPLの翻訳時間を削減できる場合があります。
+以下の翻訳オプションにてMaxII、budgetを調整することで、SWPLの翻訳時間を削減できる場合があります。<br>
+budgetはSWPLにて命令の配置を試みる回数の上限であり、大きくなるほど翻訳時間が長くなる傾向となります。
 
 ### 翻訳オプション
 | オプション名 | 機能 | 指定例 | 備考 |
 | --- | --- | --- | --- |
-| -swpl-maxii | 命令配置を試みる最大のIIを指定する | -mllvm -swpl-maxii=100 | 指定無し、または０が指定された場合は 1000 |
-| -swpl-budget-ratio-threshold | budget数計算方法を切り分けるための、SWPL対象命令数の閾値を指定する | -mllvm -swpl-budget-ratio-threshold=10 | 指定無し、または０が指定された場合は 100 |
-| -swpl-budget-ratio-less | SWPL対象命令数が閾値より小さい場合の係数を指定する | -mllvm -swpl-budget-ratio-less=10.0 | budget数は、SWPL対象命令数×係数となる<br> 指定無し、または０が指定された場合は 50.0 |
-| -swpl-budget-ratio-more | SWPL対象命令数が閾値より大きい場合の係数を指定する | -mllvm -swpl-budget-ratio-more=5.0 | budget数は、SWPL対象命令数×係数となる<br> 指定無し、または０が指定された場合は 25.0 |
+| -swpl-maxii | 命令配置を試みる最大のIIを指定する。 | -mllvm -swpl-maxii=100 | 指定無し、または０が指定された場合は 1000。 |
+| -swpl-budget-ratio-less | SWPL対象命令数が100より小さい場合の、budget算出の係数を指定する。<br>budget数は、SWPL対象命令数×係数となる。 | -mllvm -swpl-budget-ratio-less=10.0 | 指定無し、または０が指定された場合は 50.0。 |
+| -swpl-budget-ratio-more | SWPL対象命令数が100以上である場合の、budget算出の係数を指定する。<br>budget数は、SWPL対象命令数×係数となる。 | -mllvm -swpl-budget-ratio-more=5.0 | 指定無し、または０が指定された場合は 25.0。 |
 
 ### 注意点
 SWPLが適用されていたループが、MaxII、budgetの調整によりSWPLが適用されなくなる場合があります。
