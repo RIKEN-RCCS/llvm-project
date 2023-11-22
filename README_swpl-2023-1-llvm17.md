@@ -1,14 +1,14 @@
 ## ソースコード
 git@github.com:RIKEN-RCCS/llvm-project.git  
-branch:swpl-2023-1-llvm16  
-tag:swpl-2023-1-llvm16_tag_202308
+branch:swpl-2023-1-llvm17  
+tag:swpl-2023-1-llvm17_tag_202311
 
 ## ビルド方法
 
 1. リポジトリからソースコードをcloneする
 
       ```
-      $ git clone -b swpl-2023-1-llvm16 https://github.com/RIKEN-RCCS/llvm-project.git
+      $ git clone -b swpl-2023-1-llvm17 https://github.com/RIKEN-RCCS/llvm-project.git
       ```
 
 2. llvm-projectディレクトリ直下でBUILD用ディレクトリを作成する
@@ -39,7 +39,7 @@ tag:swpl-2023-1-llvm16_tag_202308
 4. makeする
 
       ```
-      $ make -j8 & make install
+      $ make -j8 && make install
       ```
 
 5. ビルド結果の確認
@@ -55,4 +55,17 @@ tag:swpl-2023-1-llvm16_tag_202308
       動作しています（メッセージ内の数字は異なる場合があります）。
 
        「software pipelining (IPC: 2.03, ITR: 4, MVE: 2, II: 65, Stage: 4, 」
-;;
+
+## MaxIIおよびbudgetの調整について
+翻訳時間がかかりすぎる場合は、翻訳オプションを使用してMaxII、budgetを調整できます。
+
+### 翻訳オプション
+| オプション名 | 機能 | 指定例 | 備考 |
+| --- | --- | --- | --- |
+| -swpl-maxii | 命令配置を試みる最大のIIを指定する | -mllvm -swpl-maxii=100 | 指定無し、または０が指定された場合は 1000 |
+| -swpl-budget-ratio-threshold | budget数計算方法を切り分けるための、SWPL対象命令数の閾値を指定する | -mllvm -swpl-budget-ratio-threshold=10 | 指定無し、または０が指定された場合は 100 |
+| -swpl-budget-ratio-less | SWPL対象命令数が閾値より小さい場合の係数を指定する | -mllvm -swpl-budget-ratio-less=10.0 | budget数は、SWPL対象命令数×係数となる<br> 指定無し、または０が指定された場合は 50.0 |
+| -swpl-budget-ratio-more | SWPL対象命令数が閾値より大きい場合の係数を指定する | -mllvm -swpl-budget-ratio-more=5.0 | budget数は、SWPL対象命令数×係数となる<br> 指定無し、または０が指定された場合は 25.0 |
+
+### 注意点
+オプション調整したMaxII、budgetが適切な値でないと、SWPLが適用されなくなる場合があります。
