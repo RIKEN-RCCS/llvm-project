@@ -1,7 +1,7 @@
 ## ソースコード
 git@github.com:RIKEN-RCCS/llvm-project.git  
 branch:swpl-2023-1-llvm17  
-tag:swpl-2023-1-llvm17_tag_202311
+tag:swpl-2023-1-llvm17_tag_20231122
 
 ## ビルド方法
 
@@ -57,7 +57,7 @@ tag:swpl-2023-1-llvm17_tag_202311
        「software pipelining (IPC: 2.03, ITR: 4, MVE: 2, II: 65, Stage: 4, 」
 
 ## MaxIIおよびbudgetの調整について
-翻訳時間がかかりすぎる場合は、翻訳オプションを使用してMaxII、budgetを調整できます。
+以下の翻訳オプションにてMaxII、budgetを調整することで、SWPLの翻訳時間を削減できる場合があります。
 
 ### 翻訳オプション
 | オプション名 | 機能 | 指定例 | 備考 |
@@ -68,4 +68,5 @@ tag:swpl-2023-1-llvm17_tag_202311
 | -swpl-budget-ratio-more | SWPL対象命令数が閾値より大きい場合の係数を指定する | -mllvm -swpl-budget-ratio-more=5.0 | budget数は、SWPL対象命令数×係数となる<br> 指定無し、または０が指定された場合は 25.0 |
 
 ### 注意点
-オプション調整したMaxII、budgetが適切な値でないと、SWPLが適用されなくなる場合があります。
+SWPLが適用されていたループが、MaxII、budgetの調整によりSWPLが適用されなくなる場合があります。
+
