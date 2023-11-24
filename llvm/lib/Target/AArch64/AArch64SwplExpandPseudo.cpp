@@ -48,7 +48,7 @@ private:
 char AArch64SwplExpandPseudo::ID = 0;
 }
 
-INITIALIZE_PASS(AArch64SwplExpandPseudo, "aarch64-swpl-expand-pseudo",
+INITIALIZE_PASS(AArch64SwplExpandPseudo, DEBUG_TYPE,
                 "AArch64 swpl pseudo instruction expansion pass", false, false)
 
 /**

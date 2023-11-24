@@ -101,12 +101,12 @@ static void createVRegListEpi(MachineInstr *mi, unsigned num_mi,
 }
 
 /**
- * @brief 仮想レジスタから物理レジスタへのCOPY命令を作成する
+ * @brief Create a COPY from a virtual register to a physical register
  * @param [in]     MF MachineFunction
- * @param [in]     dl デバッグ情報の位置
- * @param [in,out] p_post_mis prolog post処理用のMI
- * @param [in]     vreg 仮想レジスタ番号
- * @param [in]     preg 物理レジスタ番号
+ * @param [in]     dl DebugLoc
+ * @param [in,out] p_post_mis COPY instruction for prolog post
+ * @param [in]     vreg virtual register number
+ * @param [in]     preg physical register number
  */
 static void addCopyMIpre(MachineFunction &MF,
                          DebugLoc dl,
@@ -118,7 +118,7 @@ static void addCopyMIpre(MachineFunction &MF,
            << " to " << printReg(preg, SWPipeliner::TRI) << "\n";
   }
 
-  // 仮想レジスタから物理レジスタへのCOPY命令作成
+  // Create COPY from virtual register to physical register
   llvm::MachineInstr *copy =
       BuildMI(MF, dl, SWPipeliner::TII->get(TargetOpcode::COPY))
       .addReg(preg, RegState::Define).addReg(vreg);
@@ -128,12 +128,12 @@ static void addCopyMIpre(MachineFunction &MF,
 }
 
 /**
- * @brief 物理レジスタから仮想レジスタへのCOPY命令を作成する
+ * @brief Create a COPY from a physical register to a virtual register
  * @param [in]     MF MachineFunction
- * @param [in]     dl デバッグ情報の位置
- * @param [in,out] e_pre_mis epilog pre処理用のMI
- * @param [in]     vreg 仮想レジスタ番号
- * @param [in]     preg 物理レジスタ番号
+ * @param [in]     dl DebugLoc
+ * @param [in,out] e_pre_mis COPY instruction for epilog pre
+ * @param [in]     vreg virtual register number
+ * @param [in]     preg physical register number
  */
 static void addCopyMIpost(MachineFunction &MF,
                           DebugLoc dl,
@@ -145,7 +145,7 @@ static void addCopyMIpost(MachineFunction &MF,
            << " to " << printReg(vreg, SWPipeliner::TRI) << "\n";
   }
 
-  // 物理レジスタから仮想レジスタへのCOPY命令作成
+  // Create COPY from physical register to virtual register
   llvm::MachineInstr *copy =
       BuildMI(MF, dl, SWPipeliner::TII->get(TargetOpcode::COPY))
       .addReg(vreg, RegState::Define).addReg(preg);
@@ -632,13 +632,15 @@ static void callSetReg(MachineFunction &MF,
       continue;
 
     /*
-     * MBBをまたがるレジスタへの対処
+     * Dealing with registers that span the MBB
      *   bb.10.for.body1:
      *     %11 = COPY %10
-     *     $x1 = COPY %11             <- $x1を定義するCOPYを追加する(livein)
+     *     $x1 = COPY %11             <- Add COPY defining $x1 (livein)
+     *     SWPLIVEOUT implicit $x1
      *   bb.5.for.body1: (kernel loop)
+     *     SWPLIVEIN implicit-def $x1
      *     $x2(%12) = ADD $x1(%11), 1
-     *     %12 = COPY $x2(%12)        <- %12を定義するCOPYを追加する(liveout)
+     *     %12 = COPY $x2(%12)        <- Add COPY defining %12 (liveout)
      *   bb.11.for.body1:
      *     %13 = ADD %12, 1
      */
