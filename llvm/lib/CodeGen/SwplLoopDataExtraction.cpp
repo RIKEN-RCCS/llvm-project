@@ -152,6 +152,7 @@ void SwplLoop::makePreviousInsts(Register2SwplRegMap &rmap) {
   BasicBlocks BBs;
 
   follow_single_predecessor_MBBs(getML(), &BBs);
+
   for (auto *BB:BBs) {
     for (auto &MI:BB->instrs()) {
       if (MI.isDebugInstr()) { continue; }

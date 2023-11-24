@@ -1,0 +1,219 @@
+#RUN: llc %s -mcpu=a64fx -fswp  -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8  -o /dev/null 2>&1 | FileCheck %s
+
+# CHECK:bb.8 (%ir-block.7):
+# CHECK-NEXT:; predecessors: %bb.7
+# CHECK-NEXT:  successors: %bb.4(0x80000000); %bb.4(100.00%)
+# CHECK-EMPTY:
+# CHECK-NEXT:  %18:gpr64sp = COPY %10:gpr64all
+# CHECK-NEXT:  %19:fpr64 = COPY %11:fpr64
+# CHECK-NEXT:  %20:gpr64sp = COPY %0:gpr64all
+# CHECK-NEXT:  %28:fpr32 = LDURSi %18:gpr64sp, 0
+# CHECK-NEXT:  %30:fpr64 = FCVTDSr killed %28:fpr32, implicit $fpcr
+# CHECK-NEXT:  %29:gpr64sp = ADDXri %18:gpr64sp, 4, 0
+# CHECK-NEXT:  %22:fpr32 = LDURSi %29:gpr64sp, 0
+# CHECK-NEXT:  $d1 = COPY %19:fpr64
+# CHECK-NEXT:  $d2 = COPY %30:fpr64
+# CHECK-NEXT:  $s3 = COPY %22:fpr32
+# CHECK-NEXT:  $x1 = COPY %29:gpr64sp
+# CHECK-NEXT:  $x3 = COPY %20:gpr64sp
+# CHECK-NEXT:  SWPLIVEOUT implicit $d1, implicit $d2, implicit $s3, implicit $x1, implicit $x3
+# CHECK-NEXT:bb.4 (%ir-block.7):
+# CHECK-NEXT:; predecessors: %bb.4, %bb.8
+# CHECK-NEXT:  successors: %bb.4(0x7c000000), %bb.9(0x04000000); %bb.4(96.88%), %bb.9(3.12%)
+# CHECK-EMPTY:
+# CHECK-NEXT:  SWPLIVEIN implicit-def $d1, implicit-def $d2, implicit-def $s3, implicit-def $x1, implicit-def $x3
+# CHECK-NEXT:  renamable $d0 = nnan ninf nsz arcp contract afn reassoc FADDDrr renamable $d1, killed renamable $d2, implicit $fpcr
+# CHECK-NEXT:  renamable $d1 = FCVTDSr killed renamable $s3, implicit $fpcr
+# CHECK-NEXT:  renamable $x0 = ADDXri renamable $x1, 4, 0
+# CHECK-NEXT:  renamable $s3 = LDURSi renamable $x0, 0
+# CHECK-NEXT:  renamable $x2 = SUBSXri renamable $x3, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  renamable $d2 = COPY renamable $d0
+# CHECK-NEXT:  renamable $d0 = nnan ninf nsz arcp contract afn reassoc FADDDrr renamable $d2, killed renamable $d1, implicit $fpcr
+# CHECK-NEXT:  renamable $d2 = FCVTDSr killed renamable $s3, implicit $fpcr
+# CHECK-NEXT:  renamable $x1 = ADDXri renamable $x0, 4, 0
+# CHECK-NEXT:  renamable $s3 = LDURSi renamable $x1, 0
+# CHECK-NEXT:  renamable $x3 = SUBSXri renamable $x2, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  renamable $d1 = COPY renamable $d0
+# CHECK-NEXT:  %47:fpr64 = COPY $d1
+# CHECK-NEXT:  %48:fpr64 = COPY $d2
+# CHECK-NEXT:  %49:fpr32 = COPY $s3
+# CHECK-NEXT:  %50:gpr64sp = COPY $x0
+# CHECK-NEXT:  %51:gpr64sp = COPY $x1
+# CHECK-NEXT:  %52:gpr64sp = COPY $x3
+# CHECK-NEXT:  %53:fpr64 = COPY $d0
+# CHECK-NEXT:  $xzr = SUBSXri $x3, 4, 0, implicit-def $nzcv
+# CHECK-NEXT:  Bcc 10, %bb.4, implicit $nzcv
+# CHECK-NEXT:bb.9 (%ir-block.7):
+# CHECK-NEXT:; predecessors: %bb.4
+# CHECK-NEXT:  successors: %bb.10(0x80000000); %bb.10(100.00%)
+# CHECK-EMPTY:
+# CHECK-NEXT:  %39:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %47:fpr64, killed %48:fpr64, implicit $fpcr
+# CHECK-NEXT:  %40:fpr64 = FCVTDSr killed %49:fpr32, implicit $fpcr
+# CHECK-NEXT:  %41:gpr64sp = ADDXri %51:gpr64sp, 4, 0
+# CHECK-NEXT:  %42:gpr64sp = SUBSXri %52:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  %43:fpr64 = COPY %39:fpr64
+# CHECK-NEXT:  %44:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %43:fpr64, killed %40:fpr64, implicit $fpcr
+# CHECK-NEXT:  %45:gpr64sp = SUBSXri %42:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  %46:fpr64 = COPY %44:fpr
+
+--- |
+  ; ModuleID = 'test3044-02.c'
+  source_filename = "test3044-02.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+  
+  @A = external dso_local local_unnamed_addr global [100 x float], align 4
+  
+  ; Function Attrs: norecurse nounwind readonly
+  define dso_local double @test3044(i64 %0) local_unnamed_addr #0 {
+    %2 = icmp slt i64 %0, 0
+    br i1 %2, label %5, label %3
+  
+  3:                                                ; preds = %1
+    %4 = add i64 %0, 1
+    call void @llvm.set.loop.iterations.i64(i64 %4)
+    br label %7
+  
+  5:                                                ; preds = %7, %1
+    %6 = phi double [ 0.000000e+00, %1 ], [ %14, %7 ]
+    ret double %6
+  
+  7:                                                ; preds = %7, %3
+    %8 = phi [100 x float]* [ @A, %3 ], [ %16, %7 ]
+    %9 = phi double [ %14, %7 ], [ 0.000000e+00, %3 ]
+    %10 = phi i64 [ %4, %3 ], [ %17, %7 ]
+    %11 = bitcast [100 x float]* %8 to float*
+    %12 = load float, float* %11, align 4, !tbaa !2
+    %13 = fpext float %12 to double
+    %14 = fadd fast double %9, %13
+    %15 = getelementptr [100 x float], [100 x float]* %8, i64 0, i64 1
+    %16 = bitcast float* %15 to [100 x float]*
+    %17 = call i64 @llvm.loop.decrement.reg.i64(i64 %10, i64 1)
+    %18 = icmp ne i64 %17, 0
+    br i1 %18, label %7, label %5, !llvm.loop !6
+  }
+  
+  ; Function Attrs: noduplicate nounwind
+  declare void @llvm.set.loop.iterations.i64(i64) #1
+  
+  ; Function Attrs: noduplicate nounwind
+  declare i64 @llvm.loop.decrement.reg.i64(i64, i64) #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+  
+  attributes #0 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="a64fx" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rdm,+sha2,+sve,+v8.2a" "unsafe-fp-math"="true" "use-soft-float"="false" }
+  attributes #1 = { noduplicate nounwind }
+  attributes #2 = { nounwind }
+  
+  !llvm.module.flags = !{!0}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !2 = !{!3, !3, i64 0}
+  !3 = !{!"float", !4, i64 0}
+  !4 = !{!"omnipotent char", !5, i64 0}
+  !5 = !{!"Simple C/C++ TBAA"}
+  !6 = distinct !{!6, !7}
+  !7 = !{!"llvm.loop.unroll.disable"}
+
+...
+---
+name:            test3044
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gpr64all, preferred-register: '' }
+  - { id: 1, class: fpr64, preferred-register: '' }
+  - { id: 2, class: gpr64sp, preferred-register: '' }
+  - { id: 3, class: fpr64, preferred-register: '' }
+  - { id: 4, class: gpr64sp, preferred-register: '' }
+  - { id: 5, class: fpr64, preferred-register: '' }
+  - { id: 6, class: gpr64all, preferred-register: '' }
+  - { id: 7, class: gpr64all, preferred-register: '' }
+  - { id: 8, class: gpr64common, preferred-register: '' }
+  - { id: 9, class: fpr64, preferred-register: '' }
+  - { id: 10, class: gpr64all, preferred-register: '' }
+  - { id: 11, class: fpr64, preferred-register: '' }
+  - { id: 12, class: gpr64sp, preferred-register: '' }
+  - { id: 13, class: gpr64common, preferred-register: '' }
+  - { id: 14, class: gpr64sp, preferred-register: '' }
+  - { id: 15, class: fpr32, preferred-register: '' }
+  - { id: 16, class: fpr64, preferred-register: '' }
+  - { id: 17, class: gpr64, preferred-register: '' }
+liveins:
+  - { reg: '$x0', virtual-reg: '%8' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.1):
+    successors: %bb.4(0x30000000), %bb.1(0x50000000)
+    liveins: $x0
+  
+    %8:gpr64common = COPY $x0
+    TBZX %8, 63, %bb.1
+  
+  bb.4:
+    successors: %bb.2(0x80000000)
+  
+    %9:fpr64 = FMOVD0
+    B %bb.2
+  
+  bb.1 (%ir-block.3):
+    successors: %bb.3(0x80000000)
+  
+    %12:gpr64sp = ADDXri %8, 1, 0
+    %0:gpr64all = COPY %12
+    %11:fpr64 = FMOVD0
+    %13:gpr64common = MOVaddr target-flags(aarch64-page) @A, target-flags(aarch64-pageoff, aarch64-nc) @A
+    %10:gpr64all = COPY %13
+    B %bb.3
+  
+  bb.2 (%ir-block.5):
+    %1:fpr64 = PHI %9, %bb.4, %5, %bb.3
+    $d0 = COPY %1
+    RET_ReallyLR implicit $d0
+  
+  bb.3 (%ir-block.7):
+    successors: %bb.3(0x7c000000), %bb.2(0x04000000)
+  
+    %2:gpr64sp = PHI %10, %bb.1, %6, %bb.3
+    %3:fpr64 = PHI %11, %bb.1, %5, %bb.3
+    %4:gpr64sp = PHI %0, %bb.1, %7, %bb.3
+    early-clobber %14:gpr64sp, %15:fpr32 = LDRSpost %2, 4
+    %16:fpr64 = FCVTDSr killed %15, implicit $fpcr
+    %5:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %3, killed %16, implicit $fpcr
+    %6:gpr64all = COPY %14
+    %17:gpr64 = SUBSXri %4, 1, 0, implicit-def $nzcv
+    %7:gpr64all = COPY %17
+    Bcc 1, %bb.3, implicit $nzcv
+    B %bb.2
+
+...
