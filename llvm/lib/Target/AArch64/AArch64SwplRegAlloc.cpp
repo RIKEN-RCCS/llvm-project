@@ -160,16 +160,18 @@ static void addCopyMIpost(MachineFunction &MF,
  * @param [in]     dl DebugLoc
  * @param [in,out]    livein_mi MI for livein
  * @param [in]     copy_mis COPY instruction for livein/liveout
+ * @param [in]     vreg_loc Location of physical register for COPY instruction
  */
 static void createSwpliveinMI(MachineFunction &MF,
                           DebugLoc dl,
                           MachineInstr **livein_mi,
-                          std::vector<MachineInstr*> copy_mis) {
+                          std::vector<MachineInstr*> copy_mis,
+                          unsigned vreg_loc) {
 
   // Create SWPLIVEIN instruction
   MachineInstrBuilder mib = BuildMI(MF, dl, SWPipeliner::TII->get(AArch64::SWPLIVEIN));
   for(auto copy:copy_mis){
-    mib.addReg(copy->getOperand(0).getReg(), RegState::ImplicitDefine);
+    mib.addReg(copy->getOperand(vreg_loc).getReg(), RegState::ImplicitDefine);
   }
   *livein_mi = mib.getInstr();
   return;
@@ -181,16 +183,34 @@ static void createSwpliveinMI(MachineFunction &MF,
  * @param [in]     dl DebugLoc
  * @param [in,out]    liveout_mi MI for liveout
  * @param [in]     copy_mis COPY instruction for livein/liveout
+ * @param [in]     vreg_loc Location of physical register for COPY instruction
  */
 static void createSwpliveoutMI(MachineFunction &MF,
                           DebugLoc dl,
                           MachineInstr **liveout_mi,
-                          std::vector<MachineInstr*> copy_mis) {
+                          std::vector<MachineInstr*> copy_mis,
+                          unsigned vreg_loc) {
 
   // Create SWPLIVEOUT instruction
   MachineInstrBuilder mib = BuildMI(MF, dl, SWPipeliner::TII->get(AArch64::SWPLIVEOUT));
-  for(auto copy:copy_mis){
-    mib.addReg(copy->getOperand(0).getReg(), RegState::Implicit);
+  std::vector<Register> added_regs;
+
+  for (auto copy:copy_mis) {
+    Register reg = copy->getOperand(vreg_loc).getReg();
+    bool added = false;
+
+    // Already added registers?
+    for (auto added_reg:added_regs) {
+      if (reg == added_reg){
+        added = true;
+        break;
+      }    
+    }
+
+    if(!added){
+      mib.addReg(reg, RegState::Implicit);
+      added_regs.push_back(reg);
+    }  
   }
   *liveout_mi = mib.getInstr();
   return;
@@ -213,8 +233,10 @@ void AArch64InstrInfo::createSwplPseudoMIs(SwplTransformedMIRInfo *tmi,MachineFu
   }
   
   // Generate SWPLIVEIN, SWPLIVEOUT instructions
-  createSwpliveoutMI(MF, firstDL, &tmi->prolog_liveout_mi, tmi->prolog_post_mis);
-  createSwpliveinMI(MF, firstDL, &tmi->kernel_livein_mi, tmi->prolog_post_mis);
+  createSwpliveoutMI(MF, firstDL, &tmi->prolog_liveout_mi, tmi->prolog_post_mis, 0);
+  createSwpliveinMI(MF, firstDL, &tmi->kernel_livein_mi, tmi->prolog_post_mis, 0);
+  createSwpliveoutMI(MF, firstDL, &tmi->kernel_liveout_mi, tmi->epilog_pre_mis, 1);
+  createSwpliveinMI(MF, firstDL, &tmi->epilog_livein_mi, tmi->epilog_pre_mis, 1);
 }
 
 /**
@@ -640,15 +662,17 @@ static void callSetReg(MachineFunction &MF,
      *   bb.5.for.body1: (kernel loop)
      *     SWPLIVEIN implicit-def $x1
      *     $x2(%12) = ADD $x1(%11), 1
-     *     %12 = COPY $x2(%12)        <- Add COPY defining %12 (liveout)
+     *     SWPLIVEOUT implicit $x2
      *   bb.11.for.body1:
+     *     SWPLIVEIN implicit-def $x2
+     *     %12 = COPY $x2(%12)        <- Add COPY defining %12 (liveout)
      *     %13 = ADD %12, 1
      */
     if ((rinfo->num_def == -1) || (rinfo->num_def > rinfo->num_use))
       addCopyMIpre(MF, pre_dl, tmi->prolog_post_mis, rinfo->vreg, rinfo->preg);    // livein
     if (((rinfo->num_def > -1) && (tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg)))
         || SWPipeliner::currentLoop->containsLiveOutReg(rinfo->vreg))
-      addCopyMIpost(MF, post_dl, tmi->kernel_post_mis, rinfo->vreg, rinfo->preg); // liveout
+      addCopyMIpost(MF, post_dl, tmi->epilog_pre_mis, rinfo->vreg, rinfo->preg); // liveout
     // 当該物理レジスタを使用するMachineOperandすべてにsetReg()する
     for (auto *mo : rinfo->vreg_mo) {
       auto preg = rinfo->preg;

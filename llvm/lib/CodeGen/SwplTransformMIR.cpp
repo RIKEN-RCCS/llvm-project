@@ -515,6 +515,12 @@ void SwplTransformMIR::insertMIs(MachineBasicBlock& ins,
     // Livein
     if (block == KERNEL) {
       ins.push_back(TMI.kernel_livein_mi); // Add SWPLIVEIN
+    // Liveout
+    } else if (block == EPILOGUE) {
+      ins.push_back(TMI.epilog_livein_mi); // Add SWPLIVEIN
+      for (auto *mi : TMI.epilog_pre_mis) { // Add COPY
+        ins.push_back(mi);
+      }
     }
   }
 
@@ -536,9 +542,7 @@ void SwplTransformMIR::insertMIs(MachineBasicBlock& ins,
       ins.push_back(TMI.prolog_liveout_mi); // Add SWPLIVEOUT
     // Liveout
     } else if (block == KERNEL) {
-      for (auto *mi : TMI.kernel_post_mis) {
-        ins.push_back(mi);
-      }
+      ins.push_back(TMI.kernel_liveout_mi); // Add SWPLIVEOUT
     }
   }
 }
