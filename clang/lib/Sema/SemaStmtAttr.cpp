@@ -133,6 +133,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                  .Case("pipeline_initiation_interval",
                        LoopHintAttr::PipelineInitiationInterval)
                  .Case("distribute", LoopHintAttr::Distribute)
+                 .Case("pipeline_nodep", LoopHintAttr::PipelineNodep)
                  .Default(LoopHintAttr::Vectorize);
     if (Option == LoopHintAttr::VectorizeWidth) {
       assert((ValueExpr || (StateLoc && StateLoc->Ident)) &&
@@ -170,6 +171,8 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
         State = LoopHintAttr::Enable;
       } else
         llvm_unreachable("bad loop hint argument");
+    } else if (Option == LoopHintAttr::PipelineNodep) {
+      State = LoopHintAttr::Enable;
     } else
       llvm_unreachable("bad loop hint");
   }
@@ -402,6 +405,7 @@ CheckForIncompatibleAttributes(Sema &S,
     case LoopHintAttr::PipelineDisabled:
     case LoopHintAttr::PipelineEnabled:
     case LoopHintAttr::PipelineInitiationInterval:
+    case LoopHintAttr::PipelineNodep:
       Category = Pipeline;
       break;
     case LoopHintAttr::VectorizePredicate:
@@ -418,6 +422,7 @@ CheckForIncompatibleAttributes(Sema &S,
         Option == LoopHintAttr::VectorizePredicate ||
         Option == LoopHintAttr::PipelineDisabled ||
         Option == LoopHintAttr::PipelineEnabled ||
+        Option == LoopHintAttr::PipelineNodep ||
         Option == LoopHintAttr::Distribute) {
       // Enable|Disable|AssumeSafety hint.  For example, vectorize(enable).
       PrevAttr = CategoryState.StateAttr;

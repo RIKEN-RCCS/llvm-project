@@ -1367,23 +1367,25 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
   bool OptionUnrollAndJam = false;
   bool OptionDistribute = false;
   bool OptionPipelineDisabled = false;
+  bool OptionPipelineNodep = false;
   bool StateOption = false;
   if (OptionInfo) { // Pragma Unroll does not specify an option.
     OptionUnroll = OptionInfo->isStr("unroll");
     OptionUnrollAndJam = OptionInfo->isStr("unroll_and_jam");
     OptionDistribute = OptionInfo->isStr("distribute");
     OptionPipelineDisabled = OptionInfo->isStr("pipeline");
+    OptionPipelineNodep = OptionInfo->isStr("pipeline_nodep");
     StateOption = llvm::StringSwitch<bool>(OptionInfo->getName())
                       .Case("vectorize", true)
                       .Case("interleave", true)
                       .Case("vectorize_predicate", true)
                       .Default(false) ||
                   OptionUnroll || OptionUnrollAndJam || OptionDistribute ||
-                  OptionPipelineDisabled;
+                  OptionPipelineDisabled || OptionPipelineNodep;
   }
 
   bool AssumeSafetyArg = !OptionUnroll && !OptionUnrollAndJam &&
-                         !OptionDistribute && !OptionPipelineDisabled;
+                         !OptionDistribute && !OptionPipelineDisabled && !OptionPipelineNodep;
   // Verify loop hint has an argument.
   if (Toks[0].is(tok::eof)) {
     ConsumeAnnotationToken();
@@ -1402,7 +1404,7 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
 
     bool Valid = StateInfo &&
                  llvm::StringSwitch<bool>(StateInfo->getName())
-                     .Case("disable", true)
+                     .Case("disable", !OptionPipelineNodep)
                      .Case("enable", true)
                      .Case("full", OptionUnroll || OptionUnrollAndJam)
                      .Case("assume_safety", AssumeSafetyArg)
@@ -3465,6 +3467,7 @@ static bool ParseLoopHintValue(Preprocessor &PP, Token &Tok, Token PragmaName,
 ///    'unroll_count' '(' loop-hint-value ')'
 ///    'pipeline' '(' disable ')'
 ///    'pipeline_initiation_interval' '(' loop-hint-value ')'
+///    'pipeline_nodep' '(' loop-hint-value ')'
 ///
 ///  loop-hint-keyword:
 ///    'enable'
@@ -3527,6 +3530,7 @@ void PragmaLoopHintHandler::HandlePragma(Preprocessor &PP,
                            .Case("unroll_count", true)
                            .Case("pipeline", true)
                            .Case("pipeline_initiation_interval", true)
+                           .Case("pipeline_nodep", true)
                            .Default(false);
     if (!OptionValid) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_loop_invalid_option)
