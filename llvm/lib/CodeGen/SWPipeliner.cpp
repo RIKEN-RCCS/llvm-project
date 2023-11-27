@@ -40,6 +40,9 @@ static cl::opt<bool> DebugDdgOutput("swpl-debug-ddg",cl::init(false), cl::Really
 static cl::opt<unsigned> OptionMinIIBase("swpl-minii",cl::init(0), cl::ReallyHidden);
 static cl::opt<unsigned> OptionMaxIIBase("swpl-maxii",cl::init(0), cl::ReallyHidden);
 
+static cl::opt<std::string> OptionExportDDG("export-swpl-dep-mi",cl::init(""), cl::ReallyHidden);
+static cl::opt<std::string> OptionImportDDG("import-swpl-dep-mi",cl::init(""), cl::ReallyHidden);
+
 
 namespace llvm {
 
@@ -52,6 +55,7 @@ bool SWPipeliner::isDebugDdgOutput() {
 }
 
 unsigned SWPipeliner::min_ii_for_retry=0;
+unsigned SWPipeliner::loop_number=0;
 
 unsigned SWPipeliner::nOptionMinIIBase() {
   return min_ii_for_retry ? min_ii_for_retry : ::OptionMinIIBase;
@@ -62,6 +66,30 @@ unsigned SWPipeliner::nOptionMaxIIBase() {
 
   return ::OptionMaxIIBase ? ::OptionMaxIIBase : DEFAULT_MAXII_BASE;
 }
+
+bool SWPipeliner::doInitialization(Module &m) {
+  if (isExportDDG()) {
+    // Clear the contents of the file when initializing as additional dependency information will be written.）
+    std::error_code EC;
+    raw_fd_ostream OutStrm(SWPipeliner::getDDGFileName(), EC);
+  }
+  return false;
+}
+
+bool SWPipeliner::isExportDDG() {
+  return !OptionExportDDG.empty();
+}
+bool SWPipeliner::isImportDDG() {
+  return !OptionImportDDG.empty();
+
+}
+StringRef SWPipeliner::getDDGFileName() {
+  if (isImportDDG()) return OptionImportDDG;
+  if (isExportDDG()) return OptionExportDDG;
+  return "";
+}
+
+
 
 MachineOptimizationRemarkEmitter *SWPipeliner::ORE = nullptr;
 const TargetInstrInfo *SWPipeliner::TII = nullptr;
@@ -147,6 +175,7 @@ FunctionPass *createSWPipelinerPass() {
  * \retval false MF を変更していないことを示す
  */
 bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
+  loop_number=0;
   bool Modified = false;
   if (!mf.getSubtarget().getSchedModel().hasInstrSchedModel()) {
     // schedmodelを持たないプロセッサ用のコードなので、本最適化は適用しない。
@@ -260,7 +289,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     return Changed;
   }
 
-
+  loop_number++;
   SwplScr swplScr(L);
   SwplScr::UseMap liveOutReg;
   // SwplLoop::Initialize()でLoop複製されるため、その前に出口Busyレジスタ情報を収集する

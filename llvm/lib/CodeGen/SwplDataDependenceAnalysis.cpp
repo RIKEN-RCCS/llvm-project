@@ -14,6 +14,8 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/YAMLTraits.h"
 
 using namespace llvm;
 
@@ -365,11 +367,90 @@ void SwplDdg::analysisRegsOutputDependence() {
     }
   }
 }
+template <>
+struct yaml::MappingTraits<SwplDdg::IOmi> {
+  static void mapping(IO &io, SwplDdg::IOmi &info) {
+    io.mapRequired("id", info.id);
+    io.mapRequired("mi", info.mi);
+  }
+  static const bool flow = true;
+};
+
+template <>
+struct yaml::MappingTraits<SwplDdg::IOddgnode> {
+  static void mapping(IO &io, SwplDdg::IOddgnode &info) {
+    io.mapRequired("from", info.from);
+    io.mapRequired("to", info.to);
+    io.mapRequired("distance", info.distance);
+  }
+};
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(SwplDdg::IOddgnode)
+
+template <>
+struct yaml::MappingTraits<SwplDdg::IOddg> {
+  static void mapping(IO &io, SwplDdg::IOddg &info) {
+    io.mapRequired("fname", info.fname);
+    io.mapRequired("loopid", info.loopid);
+    io.mapRequired("deps", info.ddgnodes);
+  }
+};
+typedef std::vector<SwplDdg::IOddg> IOddgDocumentList;
+LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(SwplDdg::IOddg)
+IOddgDocumentList yamlddgList;
 
 /// SwplMem同士の依存関係を解析し、
 /// 命令間のエッジに対してDistance/DelayそれぞれのMapを登録する。\n
 /// 真依存、逆依存、出力依存のそれぞれの依存を以下のルーチンを利用してDelayを算出する。\n
 void SwplDdg::analysisMemDependence() {
+  std::error_code EC;
+  std::unique_ptr<raw_fd_ostream> OutStrm;
+  std::string s;
+  raw_string_ostream strstream(s);
+  std::map<const MachineInstr*, unsigned> mimap;
+  IOddg yamlddg;
+
+  int mi_no=0;
+  StringRef fname;
+
+  if (SWPipeliner::isExportDDG() || SWPipeliner::isImportDDG()) {
+    for (auto *former_mem:getLoopMems()) {
+      auto *mi = former_mem->getInst()->getMI();
+      mimap[mi]=mi_no++;
+    }
+    auto *ml = getLoop()->getML();
+    fname = ml->getTopBlock()->getParent()->getName();
+  }
+  if (SWPipeliner::isExportDDG()) {
+    OutStrm = std::make_unique<raw_fd_ostream>(SWPipeliner::getDDGFileName(), EC, sys::fs::OF_Append);
+    assert (!EC && "export yaml file");
+
+    *OutStrm << "# No., MI\n";
+    mi_no=0;
+    for (auto *former_mem:getLoopMems()) {
+      auto *mi = former_mem->getInst()->getMI();
+      *OutStrm << "# " << mi_no++ << ":" << *mi;
+    }
+    yamlddg.fname = fname;
+    yamlddg.loopid = SWPipeliner::loop_number;
+  }
+  IOddg *target_yamlddg=nullptr;
+  if (SWPipeliner::isImportDDG()) {
+    if (yamlddgList.size()==0) {
+      ErrorOr<std::unique_ptr<MemoryBuffer>>  Buffer = MemoryBuffer::getFile(SWPipeliner::getDDGFileName());
+      EC = Buffer.getError();
+      assert (!EC && "import yaml file");
+      yaml::Input yin(Buffer.get()->getMemBufferRef());
+      yin >> yamlddgList;
+    }
+    for (auto &y: yamlddgList) {
+      if (y.fname != fname) continue;
+      if (y.loopid != SWPipeliner::loop_number) continue;
+      target_yamlddg = &y;
+      break;
+    }
+  }
+
   for (auto *former_mem:getLoopMems()) {
     for (auto *latter_mem:getLoopMems()) {
       if (former_mem == latter_mem) {
@@ -402,6 +483,30 @@ void SwplDdg::analysisMemDependence() {
         }
       }
       distance = getLoop()->getMemsMinOverlapDistance(former_mem, latter_mem);
+      if (SWPipeliner::isExportDDG()) {
+        s.clear();
+        former_mem->getInst()->getMI()->print(strstream, true, false, false, false);
+        IOmi from{mimap[former_mem->getInst()->getMI()], strstream.str()};
+        s.clear();
+        latter_mem->getInst()->getMI()->print(strstream, true, false, false, false);
+        IOmi to{mimap[latter_mem->getInst()->getMI()], strstream.str()};
+        IOddgnode n{from,to, distance};
+        yamlddg.ddgnodes.push_back(n);
+      }
+      if (target_yamlddg) {
+        unsigned from=mimap[former_mem->getInst()->getMI()];
+        unsigned to=mimap[latter_mem->getInst()->getMI()];
+        auto found=false;
+        for (auto &ddgnode:target_yamlddg->ddgnodes) {
+          assert(ddgnode.distance <= 20);
+          if (ddgnode.from.id == from && ddgnode.to.id == to) {
+            distance = ddgnode.distance;
+            found=true;
+            break;
+          }
+        }
+        assert(found && "not found:from-mi or to-mi");
+      }
       if (SWPipeliner::isDebugDdgOutput()) {
         auto *p="";
         switch (depKind) {
@@ -421,6 +526,11 @@ void SwplDdg::analysisMemDependence() {
       update_distance_and_delay(*this, *(former_mem->getInst()), *(latter_mem->getInst()), distance, delay);
     }
   }
+  if (SWPipeliner::isExportDDG()) {
+    yaml::Output yout(*OutStrm);
+    yout << yamlddg;
+  }
+
 }
 /// Swpl_Inst 間のDistanceとDelayを更新する
 /// \param [in,out] ddg     SwplDdg  処理対象のSwplDdg
