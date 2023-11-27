@@ -101,16 +101,16 @@ static void createVRegListEpi(MachineInstr *mi, unsigned num_mi,
 }
 
 /**
- * @brief 仮想レジスタから物理レジスタへのCOPY命令を作成する
+ * @brief Create a COPY from a virtual register to a physical register
  * @param [in]     MF MachineFunction
- * @param [in]     dl デバッグ情報の位置
- * @param [in,out] k_pre_mis kernel pre処理用のMI
- * @param [in]     vreg 仮想レジスタ番号
- * @param [in]     preg 物理レジスタ番号
+ * @param [in]     dl DebugLoc
+ * @param [in,out] p_post_mis COPY instruction for prolog post
+ * @param [in]     vreg virtual register number
+ * @param [in]     preg physical register number
  */
 static void addCopyMIpre(MachineFunction &MF,
                          DebugLoc dl,
-                         std::vector<MachineInstr*> &k_pre_mis,
+                         std::vector<MachineInstr*> &p_post_mis,
                          unsigned vreg, unsigned preg) {
   assert(vreg && preg);
   if( DebugSwplRegAlloc ) {
@@ -118,26 +118,26 @@ static void addCopyMIpre(MachineFunction &MF,
            << " to " << printReg(preg, SWPipeliner::TRI) << "\n";
   }
 
-  // 仮想レジスタから物理レジスタへのCOPY命令作成
+  // Create COPY from virtual register to physical register
   llvm::MachineInstr *copy =
       BuildMI(MF, dl, SWPipeliner::TII->get(TargetOpcode::COPY))
       .addReg(preg, RegState::Define).addReg(vreg);
-  k_pre_mis.push_back(copy);
+  p_post_mis.push_back(copy);
 
   return;
 }
 
 /**
- * @brief 物理レジスタから仮想レジスタへのCOPY命令を作成する
+ * @brief Create a COPY from a physical register to a virtual register
  * @param [in]     MF MachineFunction
- * @param [in]     dl デバッグ情報の位置
- * @param [in,out] k_post_mis kernel post処理用のMI
- * @param [in]     vreg 仮想レジスタ番号
- * @param [in]     preg 物理レジスタ番号
+ * @param [in]     dl DebugLoc
+ * @param [in,out] e_pre_mis COPY instruction for epilog pre
+ * @param [in]     vreg virtual register number
+ * @param [in]     preg physical register number
  */
 static void addCopyMIpost(MachineFunction &MF,
                           DebugLoc dl,
-                          std::vector<MachineInstr*> &k_post_mis,
+                          std::vector<MachineInstr*> &e_pre_mis,
                           unsigned vreg, unsigned preg) {
   assert(vreg && preg);
   if( DebugSwplRegAlloc ) {
@@ -145,13 +145,87 @@ static void addCopyMIpost(MachineFunction &MF,
            << " to " << printReg(vreg, SWPipeliner::TRI) << "\n";
   }
 
-  // 物理レジスタから仮想レジスタへのCOPY命令作成
+  // Create COPY from physical register to virtual register
   llvm::MachineInstr *copy =
       BuildMI(MF, dl, SWPipeliner::TII->get(TargetOpcode::COPY))
       .addReg(vreg, RegState::Define).addReg(preg);
-  k_post_mis.push_back(copy);
+  e_pre_mis.push_back(copy);
 
   return;
+}
+
+/**
+ * @brief Create SWPLIVEIN instruction
+ * @param [in]     MF MachineFunction
+ * @param [in]     dl DebugLoc
+ * @param [in,out]    livein_mi MI for livein
+ * @param [in]     copy_mis COPY instruction for livein/liveout
+ */
+static void createSwpliveinMI(MachineFunction &MF,
+                          DebugLoc dl,
+                          MachineInstr **livein_mi,
+                          std::vector<MachineInstr*> copy_mis) {
+
+  // Create SWPLIVEIN instruction
+  MachineInstrBuilder mib = BuildMI(MF, dl, SWPipeliner::TII->get(AArch64::SWPLIVEIN));
+  for(auto copy:copy_mis){
+    mib.addReg(copy->getOperand(0).getReg(), RegState::ImplicitDefine);
+  }
+  *livein_mi = mib.getInstr();
+  return;
+}
+
+/**
+ * @brief Create SWPLIVEOUT instruction
+ * @param [in]     MF MachineFunction
+ * @param [in]     dl DebugLoc
+ * @param [in,out]    liveout_mi MI for liveout
+ * @param [in]     copy_mis COPY instruction for livein/liveout
+ */
+static void createSwpliveoutMI(MachineFunction &MF,
+                          DebugLoc dl,
+                          MachineInstr **liveout_mi,
+                          std::vector<MachineInstr*> copy_mis) {
+
+  // Create SWPLIVEOUT instruction
+  MachineInstrBuilder mib = BuildMI(MF, dl, SWPipeliner::TII->get(AArch64::SWPLIVEOUT));
+  for(auto copy:copy_mis){
+    mib.addReg(copy->getOperand(0).getReg(), RegState::Implicit);
+  }
+  *liveout_mi = mib.getInstr();
+  return;
+}
+
+/**
+ * @brief  Create software pipelining pseudo instructions.
+ * @param  [in,out] tmi Information for the SwplTransformMIR
+ * @param  [in]     MF  MachineFunction
+ */
+void AArch64InstrInfo::createSwplPseudoMIs(SwplTransformedMIRInfo *tmi,MachineFunction &MF) const {
+  // Get DebugLoc from kernel start MI
+  DebugLoc firstDL;
+  for (size_t i = tmi->prologEndIndx; i < tmi->kernelEndIndx; ++i) {
+    MachineInstr *mi = tmi->mis[i];
+    if (mi == nullptr)
+      continue;
+    firstDL = mi->getDebugLoc();
+    break;
+  }
+  
+  // Generate SWPLIVEIN, SWPLIVEOUT instructions
+  createSwpliveoutMI(MF, firstDL, &tmi->prolog_liveout_mi, tmi->prolog_post_mis);
+  createSwpliveinMI(MF, firstDL, &tmi->kernel_livein_mi, tmi->prolog_post_mis);
+}
+
+/**
+ * @brief  Whether it is a software pipelining pseudo instruction
+ * @param  [in]  MI MachineInstr
+ * @retval true Software pipelining pseudo instruction
+ * @retval false Not software pipelining pseudo instruction
+ */
+bool AArch64InstrInfo::isSwplPseudoMI(MachineInstr &MI) const {
+  unsigned op = MI.getOpcode();
+  return (op == AArch64::SWPLIVEIN || op == AArch64::SWPLIVEOUT);
 }
 
 /**
@@ -558,18 +632,20 @@ static void callSetReg(MachineFunction &MF,
       continue;
 
     /*
-     * MBBをまたがるレジスタへの対処
+     * Dealing with registers that span the MBB
      *   bb.10.for.body1:
      *     %11 = COPY %10
+     *     $x1 = COPY %11             <- Add COPY defining $x1 (livein)
+     *     SWPLIVEOUT implicit $x1
      *   bb.5.for.body1: (kernel loop)
-     *     $x1 = COPY %11             <- $x1を定義するCOPYを追加する(livein)
+     *     SWPLIVEIN implicit-def $x1
      *     $x2(%12) = ADD $x1(%11), 1
-     *     %12 = COPY $x2(%12)        <- %12を定義するCOPYを追加する(liveout)
+     *     %12 = COPY $x2(%12)        <- Add COPY defining %12 (liveout)
      *   bb.11.for.body1:
      *     %13 = ADD %12, 1
      */
     if ((rinfo->num_def == -1) || (rinfo->num_def > rinfo->num_use))
-      addCopyMIpre(MF, pre_dl, tmi->kernel_pre_mis, rinfo->vreg, rinfo->preg);    // livein
+      addCopyMIpre(MF, pre_dl, tmi->prolog_post_mis, rinfo->vreg, rinfo->preg);    // livein
     if (((rinfo->num_def > -1) && (tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg)))
         || SWPipeliner::currentLoop->containsLiveOutReg(rinfo->vreg))
       addCopyMIpost(MF, post_dl, tmi->kernel_post_mis, rinfo->vreg, rinfo->preg); // liveout

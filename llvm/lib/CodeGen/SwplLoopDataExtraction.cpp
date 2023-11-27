@@ -156,6 +156,7 @@ void SwplLoop::makePreviousInsts(Register2SwplRegMap &rmap) {
   for (auto *BB:BBs) {
     for (auto &MI:BB->instrs()) {
       if (MI.isDebugInstr()) { continue; }
+      if (SWPipeliner::TII->isSwplPseudoMI(MI)) { continue; }
       SwplInst *inst = new SwplInst(&MI, (SwplLoop *)nullptr);
       inst->InitializeWithDefUse(&MI, (SwplLoop *)nullptr, rmap, getPreviousInsts(), (SwplMems *)nullptr, &(getMemsOtherBody()));
       addPreviousInsts(inst);

@@ -278,8 +278,10 @@ struct SwplTransformedMIRInfo {
   size_t nCopies=0; ///< kernel,prolog,epilogに必要なオリジナルループの回転数
   size_t requiredKernelIteration=0; ///< tune前の展開に必要な回転数
   std::vector<MachineInstr*> mis; ///< prepareMIs() で使用するmi_tableの情報
-  std::vector<MachineInstr*> kernel_pre_mis; ///< kernel pre処理用のMI
-  std::vector<MachineInstr*> kernel_post_mis; ///< kernel post処理用のMI
+  std::vector<MachineInstr*> prolog_post_mis; ///< COPY instruction for prolog post
+  std::vector<MachineInstr*> kernel_post_mis; ///< COPY instruction for kernel post
+  MachineInstr *prolog_liveout_mi=nullptr; ///< Instruction for prolog liveout
+  MachineInstr *kernel_livein_mi=nullptr; ///< Instruction for kernel livein
   size_t prologEndIndx=0; ///< prepareMIs() で使用するmi_tableの情報
   size_t kernelEndIndx=0; ///< prepareMIs() で使用するmi_tableの情報
   size_t epilogEndIndx=0; ///< prepareMIs() で使用するmi_tableの情報

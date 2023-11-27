@@ -73,6 +73,7 @@ ModulePass *createAArch64GlobalsTaggingPass();
 
 FunctionPass *createSWPipelinerPass();
 FunctionPass *createSWPipelinerPrePass();
+FunctionPass *createAArch64SwplExpandPseudoPass();
 
 
 void initializeAArch64A53Fix835769Pass(PassRegistry&);
@@ -105,6 +106,7 @@ void initializeAArch64SpeculationHardeningPass(PassRegistry &);
 void initializeAArch64StackTaggingPass(PassRegistry &);
 void initializeAArch64StackTaggingPreRAPass(PassRegistry &);
 void initializeAArch64StorePairSuppressPass(PassRegistry&);
+void initializeAArch64SwplExpandPseudoPass(PassRegistry &);
 void initializeFalkorHWPFFixPass(PassRegistry&);
 void initializeFalkorMarkStridedAccessesLegacyPass(PassRegistry&);
 void initializeLDTLSCleanupPass(PassRegistry&);

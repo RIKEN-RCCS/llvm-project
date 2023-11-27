@@ -1,11 +1,11 @@
 #RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-debug-dump-resource-filter="FSQRT_ZPmZ_D_UNDEF|FDIV_ZPZZ_D_UNDEF" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %240:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_D_UNDEF
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %234:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_D_UNDEF
 #CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+19
 #CHECK-NEXT:  latency: 80
 #CHECK-NEXT:  seqDecode: false
 #CHECK-NEXT:  stage/resource(): 0/FLA, 0/FLA_E, 1/FLA_E, 2/FLA_E, 3/FLA_E, 4/FLA_E, 5/FLA_E, 6/FLA_E, 7/FLA_E, 8/FLA_E, 9/FLA_E, 10/FLA_E, 11/FLA_E, 12/FLA_E, 13/FLA_E, 14/FLA_E, 15/FLA_E, 16/FLA_E, 17/FLA_E, 18/FLA_E, 19/FLA_E, 20/FLA_E, 21/FLA_E, 22/FLA_E, 23/FLA_E, 24/FLA_E, 25/FLA_E, 26/FLA_E, 27/FLA_E, 28/FLA_E, 29/FLA_E, 30/FLA_E, 31/FLA_E, 32/FLA_E, 33/FLA_E, 34/FLA_E, 35/FLA_E, 36/FLA_E, 37/FLA_E, 38/FLA_E, 39/FLA_E, 40/FLA_E, 41/FLA_E, 42/FLA_E, 43/FLA_E, 44/FLA_E, 45/FLA_E, 46/FLA_E, 47/FLA_E, 48/FLA_E, 49/FLA_E, 50/FLA_E, 51/FLA_E, 52/FLA_E, 53/FLA_E, 54/FLA_E, 55/FLA_E, 56/FLA_E, 57/FLA_E, 58/FLA_E, 59/FLA_E, 60/FLA_E, 61/FLA_E, 62/FLA_E, 63/FLA_E, 64/FLA_E, 65/FLA_E, 66/FLA_E, 67/FLA_E, 68/FLA_E, 69/FLA_E, 70/FLA_E, 71/FLA_E, 72/FLA_E, 73/FLA_E, 74/FLA_E, 75/FLA_E, 76/FLA_E, 77/FLA_E, 78/FLA_E, 79/FLA_E
-#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %242:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_D_UNDEF
+#CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %236:zpr = nnan ninf nsz arcp contract afn reassoc FDIV_ZPZZ_D_UNDEF
 #CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+19
 #CHECK-NEXT:  latency: 80
 #CHECK-NEXT:  seqDecode: false
