@@ -19,7 +19,7 @@ void test_1(void) {
 	int i;
     int x[N], y[N], z[N];
 	int sum=0;
-// P(E_1)
+P(E_1)
 P(A_1)
 P(B_2)
 P(D_1)

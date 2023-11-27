@@ -21,7 +21,7 @@ void ipeline_disable (int Length, char **Value) {
 P(B_1)
 P(C_2)
 P(D_2)
-// P(E_1)
+P(E_1)
     for (int i=0; i<Length; i++) {
         // CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[LOOP1_1:.*]]
         sum*=Value[0][0];

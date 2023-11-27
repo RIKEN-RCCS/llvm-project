@@ -24,7 +24,7 @@ void test_1(void) {
 P(A_1)
 P(B_2)
 P(D_2)
-// P(E_1)
+P(E_1)
     for (i = 0; i < N; i++) {
         // CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[LOOP1_1:.*]]
         // CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[LOOP1_2:.*]]

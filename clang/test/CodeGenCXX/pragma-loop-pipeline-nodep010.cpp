@@ -22,7 +22,7 @@ void test_1(void) {
     int x[N], y[N], z[N];
 	int sum=0;
 P(D_1)
-// P(E_1)
+P(E_1)
     for (i = 0; i < N; i++) {
         // CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[LOOP1_1:.*]]
         z[i] = x[i] + y[i];

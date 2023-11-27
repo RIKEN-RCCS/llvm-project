@@ -23,7 +23,7 @@ void test_1(void) {
 	int sum=0;
 P(A_1)
 P(B_2)
-//P(E_1)
+P(E_1)
     for (i = 0; i < N; i++) {
         // CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[LOOP1_1:.*]]
         // CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[LOOP1_2:.*]]

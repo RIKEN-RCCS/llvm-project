@@ -22,7 +22,7 @@ void foo (float *A, float *B, float *C, float *D, float *E) {
 P(A_2)
 P(C_1)
 P(D_2)
-// P(E_1)
+P(E_1)
     for (i = 0; i < n; i++) {
         // CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[LOOP1_1:.*]]
         A[i + 1] = A[i] * B[i];  // line 8
