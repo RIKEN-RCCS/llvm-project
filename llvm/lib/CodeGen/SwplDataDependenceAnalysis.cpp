@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -423,9 +424,8 @@ void SwplDdg::analysisMemDependence() {
   }
   if (SWPipeliner::isExportDDG()) {
     OutStrm = std::make_unique<raw_fd_ostream>(SWPipeliner::getDDGFileName(), EC, sys::fs::OF_Append);
-    if (!EC) {
-      errs() << "error: open yaml file\n";
-      exit(1);
+    if (EC) {
+      report_fatal_error("can not open yaml file", false);
     }
 
     *OutStrm << "# No., MI\n";
@@ -442,9 +442,8 @@ void SwplDdg::analysisMemDependence() {
     if (yamlddgList.size()==0) {
       ErrorOr<std::unique_ptr<MemoryBuffer>>  Buffer = MemoryBuffer::getFile(SWPipeliner::getDDGFileName());
       EC = Buffer.getError();
-      if (!EC) {
-        errs() << "error: open yaml file\n";
-        exit(1);
+      if (EC) {
+        report_fatal_error("can not open yaml file", false);
       }
       yaml::Input yin(Buffer.get()->getMemBufferRef());
       yin >> yamlddgList;
@@ -505,8 +504,7 @@ void SwplDdg::analysisMemDependence() {
         auto found=false;
         for (auto &ddgnode:target_yamlddg->ddgnodes) {
           if (ddgnode.distance > 20 || ddgnode.distance < 0) {
-            errs() << "error: distance < 0 || distance > 20\n";
-            exit(1);
+            report_fatal_error("distance < 0 || distance > 20", false);
           }
           if (ddgnode.from.id == from && ddgnode.to.id == to) {
             distance = ddgnode.distance;
@@ -515,8 +513,7 @@ void SwplDdg::analysisMemDependence() {
           }
         }
         if (!found) {
-          errs() << "error: not found from-mi or to-mi\n";
-          exit(1);
+          report_fatal_error("from-mi or to-mi not found", false);
         }
       }
       if (SWPipeliner::isDebugDdgOutput()) {
