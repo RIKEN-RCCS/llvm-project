@@ -423,7 +423,10 @@ void SwplDdg::analysisMemDependence() {
   }
   if (SWPipeliner::isExportDDG()) {
     OutStrm = std::make_unique<raw_fd_ostream>(SWPipeliner::getDDGFileName(), EC, sys::fs::OF_Append);
-    assert (!EC && "export yaml file");
+    if (!EC) {
+      errs() << "error: open yaml file\n";
+      exit(1);
+    }
 
     *OutStrm << "# No., MI\n";
     mi_no=0;
@@ -439,7 +442,10 @@ void SwplDdg::analysisMemDependence() {
     if (yamlddgList.size()==0) {
       ErrorOr<std::unique_ptr<MemoryBuffer>>  Buffer = MemoryBuffer::getFile(SWPipeliner::getDDGFileName());
       EC = Buffer.getError();
-      assert (!EC && "import yaml file");
+      if (!EC) {
+        errs() << "error: open yaml file\n";
+        exit(1);
+      }
       yaml::Input yin(Buffer.get()->getMemBufferRef());
       yin >> yamlddgList;
     }
@@ -498,14 +504,20 @@ void SwplDdg::analysisMemDependence() {
         unsigned to=mimap[latter_mem->getInst()->getMI()];
         auto found=false;
         for (auto &ddgnode:target_yamlddg->ddgnodes) {
-          assert(ddgnode.distance <= 20);
+          if (ddgnode.distance > 20 || ddgnode.distance < 0) {
+            errs() << "error: distance < 0 || distance > 20\n";
+            exit(1);
+          }
           if (ddgnode.from.id == from && ddgnode.to.id == to) {
             distance = ddgnode.distance;
             found=true;
             break;
           }
         }
-        assert(found && "not found:from-mi or to-mi");
+        if (!found) {
+          errs() << "error: not found from-mi or to-mi\n";
+          exit(1);
+        }
       }
       if (SWPipeliner::isDebugDdgOutput()) {
         auto *p="";
@@ -579,7 +591,7 @@ SwplInstEdge2ModuloDelay *SwplDdg::getModuloDelayMap(int ii) const {
       int modulo_delay = delay_val - ii * (int)(*distance);
 
       max_modulo_delay = (max_modulo_delay > modulo_delay) ? max_modulo_delay : modulo_delay;
-    }  
+    }
     map->insert(std::make_pair(const_cast<SwplInstEdge*>(edge), max_modulo_delay));
   }
   return map;
