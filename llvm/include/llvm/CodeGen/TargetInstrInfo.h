@@ -2268,6 +2268,20 @@ public:
     return true;
   }
 
+  /// Create software pipelining pseudo instructions.
+  /// \param [in,out] tmi Information for the SwplTransformMIR
+  /// \param [in] MF MachineFunction
+  virtual void createSwplPseudoMIs(SwplTransformedMIRInfo *tmi,
+                            MachineFunction &MF) const {}
+
+  /// Whether it is a software pipelining pseudo instruction
+  /// \param  [in]  MI MachineInstr
+  /// \retval true Software pipelining pseudo instruction
+  /// \retval false Not software pipelining pseudo instruction
+  virtual bool isSwplPseudoMI(MachineInstr &MI) const {
+    return false; 
+  }
+
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;
