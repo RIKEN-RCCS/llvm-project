@@ -32,8 +32,9 @@ P(E_1)
 
 
 
-// CHECK: ![[LOOP1_1]] = distinct !{![[LOOP1_1]], [[UR:![0-9]+]], [[RPIPE:![0-9]+]], [[NDP]:![0-9]+]}
+// CHECK: ![[LOOP1_1]] = distinct !{![[LOOP1_1]], [[UR:![0-9]+]], [[NDP]:![0-9]+], [[RPIPE:![0-9]+]]}
 // CHECK-NEXT: [[UR]] = !{!"llvm.loop.unroll.disable"}
+// CHECK-NEXT: [[NDP]] = !{!"llvm.loop.pipeline.nodep"}
 // CHECK-NEXT: [[RPIPE]] = !{!"llvm.remainder.pipeline.disable"} 
 
 // CHECK: ![[LOOP1_2]] = distinct !{![[LOOP1_2]], [[MP:![0-9]+]], [[DB:![0-9]+]], [[UR]], [[NDP]]}
