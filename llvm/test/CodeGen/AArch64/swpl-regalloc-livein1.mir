@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -fswp  -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8  -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc %s -mcpu=a64fx -O1 -fswp -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8 -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK:bb.8 (%ir-block.7):
 # CHECK-NEXT:; predecessors: %bb.7
@@ -34,27 +34,29 @@
 # CHECK-NEXT:  renamable $s3 = LDURSi renamable $x1, 0
 # CHECK-NEXT:  renamable $x3 = SUBSXri renamable $x2, 1, 0, implicit-def $nzcv
 # CHECK-NEXT:  renamable $d1 = COPY renamable $d0
-# CHECK-NEXT:  %47:fpr64 = COPY $d1
-# CHECK-NEXT:  %48:fpr64 = COPY $d2
-# CHECK-NEXT:  %49:fpr32 = COPY $s3
-# CHECK-NEXT:  %50:gpr64sp = COPY $x0
-# CHECK-NEXT:  %51:gpr64sp = COPY $x1
-# CHECK-NEXT:  %52:gpr64sp = COPY $x3
-# CHECK-NEXT:  %53:fpr64 = COPY $d0
+# CHECK-NEXT:  SWPLIVEOUT implicit $d1, implicit $d2, implicit $s3, implicit $x0, implicit $x1, implicit $x3, implicit $d0
 # CHECK-NEXT:  $xzr = SUBSXri $x3, 4, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 10, %bb.4, implicit $nzcv
 # CHECK-NEXT:bb.9 (%ir-block.7):
 # CHECK-NEXT:; predecessors: %bb.4
 # CHECK-NEXT:  successors: %bb.10(0x80000000); %bb.10(100.00%)
 # CHECK-EMPTY:
-# CHECK-NEXT:  %39:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %47:fpr64, killed %48:fpr64, implicit $fpcr
-# CHECK-NEXT:  %40:fpr64 = FCVTDSr killed %49:fpr32, implicit $fpcr
-# CHECK-NEXT:  %41:gpr64sp = ADDXri %51:gpr64sp, 4, 0
-# CHECK-NEXT:  %42:gpr64sp = SUBSXri %52:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  %43:fpr64 = COPY %39:fpr64
-# CHECK-NEXT:  %44:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %43:fpr64, killed %40:fpr64, implicit $fpcr
-# CHECK-NEXT:  %45:gpr64sp = SUBSXri %42:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  %46:fpr64 = COPY %44:fpr
+# CHECK-NEXT:  SWPLIVEIN implicit-def $d1, implicit-def $d2, implicit-def $s3, implicit-def $x0, implicit-def $x1, implicit-def $x3, implicit-def $d0
+# CHECK-NEXT:  %39:fpr64 = COPY $d1
+# CHECK-NEXT:  %40:fpr64 = COPY $d2
+# CHECK-NEXT:  %41:fpr32 = COPY $s3
+# CHECK-NEXT:  %42:gpr64sp = COPY $x0
+# CHECK-NEXT:  %43:gpr64sp = COPY $x1
+# CHECK-NEXT:  %44:gpr64sp = COPY $x3
+# CHECK-NEXT:  %45:fpr64 = COPY $d0
+# CHECK-NEXT:  %46:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %39:fpr64, killed %40:fpr64, implicit $fpcr
+# CHECK-NEXT:  %47:fpr64 = FCVTDSr killed %41:fpr32, implicit $fpcr
+# CHECK-NEXT:  %48:gpr64sp = ADDXri %43:gpr64sp, 4, 0
+# CHECK-NEXT:  %49:gpr64sp = SUBSXri %44:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  %50:fpr64 = COPY %46:fpr64
+# CHECK-NEXT:  %51:fpr64 = nnan ninf nsz arcp contract afn reassoc FADDDrr %50:fpr64, killed %47:fpr64, implicit $fpcr
+# CHECK-NEXT:  %52:gpr64sp = SUBSXri %49:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  %53:fpr64 = COPY %51:fpr64
 
 --- |
   ; ModuleID = 'test3044-02.c'
