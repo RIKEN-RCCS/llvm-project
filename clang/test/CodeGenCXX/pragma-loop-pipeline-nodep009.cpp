@@ -33,7 +33,7 @@ P(E_1)
 
 
 // CHECK: ![[LOOP1_1]] = distinct !{![[LOOP1_1]], [[DIS:![0-9]+]], ![[RPIPE:.*]]}
-// CHECK-NEXT: [[DIS]] = distinct !{![[LOOP1_1]], [[MP:![0-9]+]], [[DB:![0-9]+]], [[UR:![0-9]+]], [[NDP]:![0-9]+]}
+// CHECK-NEXT: [[DIS]] = distinct !{[[DIS]], [[MP:![0-9]+]], [[DB:![0-9]+]], [[UR:![0-9]+]], [[NDP:![0-9]+]]}
 // CHECK-NEXT: [[MP]] = !{!"llvm.loop.mustprogress"}
 // CHECK-NEXT: [[DB]] = !{!"llvm.loop.distribute.enable", i1 false}
 // CHECK-NEXT: [[UR]] = !{!"llvm.loop.unroll.disable"}
