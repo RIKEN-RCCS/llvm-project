@@ -37,6 +37,9 @@ P(E_1)
 // CHECK-NEXT: [[MP]] = !{!"llvm.loop.mustprogress"}
 // CHECK-NEXT: [[DIS]] = distinct !{[[DIS]], [[MP]], [[VW:![0-9]+]], [[NDP:![0-9]+]]}
 // CHECK-NEXT: [[VW]] = !{!"llvm.loop.vectorize.width", i32 1}
+// CHECK-NEXT: [[VF]] = !{!"llvm.loop.vectorize.followup_all", [[DIS_1:![0-9]+]]}
+// CHECK-NEXT: [[DIS_1]] = distinct !{[[DIS_1]], [[MP]], [[VCT:[0-9]+]], [[NDP:![0-9]+]]}
+// CHECK-NEXT: [[VCT]] = !{!"llvm.loop.isvectorized"}
 // CHECK-NEXT: [[NDP]] = !{!"llvm.loop.pipeline.nodep"}
 
 // CHECK: ![[LOOP1_3]] = distinct !{![[LOOP1_3]], [[DIS]]}

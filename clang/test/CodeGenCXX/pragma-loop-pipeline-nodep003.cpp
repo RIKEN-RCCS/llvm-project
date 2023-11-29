@@ -38,7 +38,7 @@ P(E_1)
 // CHECK: ![[LOOP1_1]] = distinct !{![[LOOP1_1]], [[MP:![0-9]+]], [[UR:![0-9]+]], [[VCT:![0-9]+]], [[NDP:![0-9]+]], [[URR:![0-9]+]]}
 // CHECK-NEXT: [[MP]] = !{!"llvm.loop.mustprogress"}
 // CHECK-NEXT: [[UR]] = !{!"llvm.loop.unroll.disable"}
-// CHECK-NEXT: [[VCT]] = !{!"llvm.loop.isvectorized", i32 1}
+// CHECK-NEXT: [[VCT]] = !{!"llvm.loop.isvectorized"}
 // CHECK-NEXT: [[NDP]] = !{!"llvm.loop.pipeline.nodep"}
 // CHECK-NEXT: [[URR]] = !{!"llvm.loop.unroll.runtime.disable"}
 
