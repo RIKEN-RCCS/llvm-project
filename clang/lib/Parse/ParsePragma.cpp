@@ -1404,6 +1404,7 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
 
     bool Valid = StateInfo &&
                  llvm::StringSwitch<bool>(StateInfo->getName())
+                    //Disable cannot be specified in Nodep, so it will be an error.
                      .Case("disable", !OptionPipelineNodep)
                      .Case("enable", true)
                      .Case("full", OptionUnroll || OptionUnrollAndJam)
@@ -3467,7 +3468,7 @@ static bool ParseLoopHintValue(Preprocessor &PP, Token &Tok, Token PragmaName,
 ///    'unroll_count' '(' loop-hint-value ')'
 ///    'pipeline' '(' disable ')'
 ///    'pipeline_initiation_interval' '(' loop-hint-value ')'
-///    'pipeline_nodep' '(' loop-hint-value ')'
+///    'pipeline_nodep' '(' enable ')'
 ///
 ///  loop-hint-keyword:
 ///    'enable'

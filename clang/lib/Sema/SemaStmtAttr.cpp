@@ -171,6 +171,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
         State = LoopHintAttr::Enable;
       } else
         llvm_unreachable("bad loop hint argument");
+    // If nodep is specified, define Enable as a variable
     } else if (Option == LoopHintAttr::PipelineNodep) {
       State = LoopHintAttr::Enable;
     } else
