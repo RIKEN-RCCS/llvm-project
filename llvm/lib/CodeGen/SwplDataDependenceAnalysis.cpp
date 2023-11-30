@@ -504,7 +504,7 @@ void SwplDdg::analysisMemDependence() {
         auto found=false;
         for (auto &ddgnode:target_yamlddg->ddgnodes) {
           if (ddgnode.distance > 20) {
-            report_fatal_error("distance < 0 || distance > 20", false);
+            report_fatal_error("distance > 20", false);
           }
           if (ddgnode.from.id == from && ddgnode.to.id == to) {
             distance = ddgnode.distance;
