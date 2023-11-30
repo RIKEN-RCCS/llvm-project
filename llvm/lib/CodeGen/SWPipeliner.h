@@ -780,7 +780,7 @@ public:
   struct IOddgnode {
     IOmi from;
     IOmi to;
-    int distance;
+    unsigned distance;
   };
   struct IOddg {
     std::string fname;

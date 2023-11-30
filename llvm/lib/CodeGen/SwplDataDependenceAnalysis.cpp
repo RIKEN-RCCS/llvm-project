@@ -372,7 +372,7 @@ template <>
 struct yaml::MappingTraits<SwplDdg::IOmi> {
   static void mapping(IO &io, SwplDdg::IOmi &info) {
     io.mapRequired("id", info.id);
-    io.mapRequired("mi", info.mi);
+    io.mapOptional("mi", info.mi, "");
   }
   static const bool flow = true;
 };
@@ -466,7 +466,7 @@ void SwplDdg::analysisMemDependence() {
         continue;
       }
 
-      int distance, delay;
+      unsigned distance, delay;
       enum class DepKind {init, flow, anti, output};
       DepKind depKind = DepKind::init;
 
@@ -503,7 +503,7 @@ void SwplDdg::analysisMemDependence() {
         unsigned to=mimap[latter_mem->getInst()->getMI()];
         auto found=false;
         for (auto &ddgnode:target_yamlddg->ddgnodes) {
-          if (ddgnode.distance > 20 || ddgnode.distance < 0) {
+          if (ddgnode.distance > 20) {
             report_fatal_error("distance < 0 || distance > 20", false);
           }
           if (ddgnode.from.id == from && ddgnode.to.id == to) {
