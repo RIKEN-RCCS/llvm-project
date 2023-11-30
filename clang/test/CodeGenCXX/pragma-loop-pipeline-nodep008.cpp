@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-unknown-hurd-gnu -Ofast -emit-llvm -mllvm -fswp -target-cpu a64fx -o - %s | FileCheck %s
+// RUN: %clang_cc1 -verify -triple aarch64-unknown-hurd-gnu -Ofast -emit-llvm -target-cpu a64fx -o - %s 
 
 #define P(a) _Pragma(a)
 #define A_1 "clang loop vectorize(enable)"
@@ -21,24 +21,10 @@ void ipeline_disable (int Length, char **Value) {
 P(B_1)
 P(C_2)
 P(D_2)
-P(E_1)
+/* expected-error {{incompatible directives 'pipeline(disable)' and 'pipeline_nodep(enable)'}} */ P(E_1)
     for (int i=0; i<Length; i++) {
-        // CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[LOOP1_1:.*]]
         sum*=Value[0][0];
-        // CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[LOOP1_2:.*]]
         sum+=i;
     }
 	printf("%d\n", sum);
 }
-
-
-
-// CHECK: ![[LOOP1_1]] = distinct !{![[LOOP1_1]], [[DIS:![0-9]+]]}
-// CHECK-NEXT: [[DIS]] = distinct !{[[DIS]], [[MP:![0-9]+]], [[DB:![0-9]+]], [[UR:![0-9]+]], [[PIPE:![0-9]+]], [[NDP:![0-9]+]]}
-// CHECK-NEXT: [[MP]] = !{!"llvm.loop.mustprogress"}
-// CHECK-NEXT: [[DB]] = !{!"llvm.loop.distribute.enable", i1 false}
-// CHECK-NEXT: [[UR]] = !{!"llvm.loop.unroll.disable"}   
-// CHECK-NEXT: [[PIPE]] = !{!"llvm.loop.pipeline.disable", i1 true} 
-// CHECK-NEXT: [[NDP]] = !{!"llvm.loop.pipeline.nodep"}
-
-// CHECK: ![[LOOP1_2]] = distinct !{![[LOOP1_2]], [[DIS]]}

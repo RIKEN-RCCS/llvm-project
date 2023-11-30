@@ -20,7 +20,7 @@ void test_1(void) {
 	int i;
     int x[N], y[N], z[N];
 	int sum=0;
-/* expected-error {{missing argument; expected 'enable'}} */ P(E_3)
+/* expected-error {{invalid argument; expected 'enable'}} */ P(E_3)
 
     for (i = 0; i < N; i++) {
         z[i] = x[i] + y[i];
