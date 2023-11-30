@@ -444,19 +444,25 @@ CheckForIncompatibleAttributes(Sema &S,
           << /*Duplicate=*/true << PrevAttr->getDiagnosticName(Policy)
           << LH->getDiagnosticName(Policy);
 
-    if (CategoryState.StateAttr && CategoryState.NumericAttr && CategoryState.NodepAttr &&
+    if (CategoryState.StateAttr && (CategoryState.NumericAttr || CategoryState.NodepAttr) &&
         (Category == Unroll || Category == UnrollAndJam ||
          CategoryState.StateAttr->getState() == LoopHintAttr::Disable)) {
       // Disable hints are not compatible with numeric hints of the same
       // category.  As a special case, numeric unroll hints are also not
       // compatible with enable or full form of the unroll pragma because these
       // directives indicate full unrolling.
-      S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
+      if (!CategoryState.NodepAttr) {
+        S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
           << /*Duplicate=*/false
           << CategoryState.StateAttr->getDiagnosticName(Policy)
-          << CategoryState.NumericAttr->getDiagnosticName(Policy)
+          << CategoryState.NumericAttr->getDiagnosticName(Policy); 
+      } else {
+        S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
+          << /*Duplicate=*/false
+          << CategoryState.StateAttr->getDiagnosticName(Policy)
           << CategoryState.NodepAttr->getDiagnosticName(Policy);
-    }
+      }
+    } 
   }
 }
 
