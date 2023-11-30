@@ -156,7 +156,8 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                Option == LoopHintAttr::VectorizePredicate ||
                Option == LoopHintAttr::Unroll ||
                Option == LoopHintAttr::Distribute ||
-               Option == LoopHintAttr::PipelineDisabled) {
+               Option == LoopHintAttr::PipelineDisabled ||
+               Option == LoopHintAttr::PipelineNodep) {
       assert(StateLoc && StateLoc->Ident && "Loop hint must have an argument");
       if (StateLoc->Ident->isStr("disable"))
         State = LoopHintAttr::Disable;
@@ -171,9 +172,6 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
         State = LoopHintAttr::Enable;
       } else
         llvm_unreachable("bad loop hint argument");
-    // If nodep is specified, define Enable as a variable
-    } else if (Option == LoopHintAttr::PipelineNodep) {
-      State = LoopHintAttr::Enable;
     } else
       llvm_unreachable("bad loop hint");
   }
@@ -371,6 +369,7 @@ CheckForIncompatibleAttributes(Sema &S,
   struct {
     const LoopHintAttr *StateAttr;
     const LoopHintAttr *NumericAttr;
+    const LoopHintAttr *NodepAttr;
   } HintAttrs[CategoryType::NumberOfCategories] = {};
 
   for (const auto *I : Attrs) {
@@ -423,11 +422,14 @@ CheckForIncompatibleAttributes(Sema &S,
         Option == LoopHintAttr::VectorizePredicate ||
         Option == LoopHintAttr::PipelineDisabled ||
         Option == LoopHintAttr::PipelineEnabled ||
-        Option == LoopHintAttr::PipelineNodep ||
         Option == LoopHintAttr::Distribute) {
       // Enable|Disable|AssumeSafety hint.  For example, vectorize(enable).
       PrevAttr = CategoryState.StateAttr;
       CategoryState.StateAttr = LH;
+    } else if (Option == LoopHintAttr::PipelineNodep) {
+      // nodep is judged individually so that it can be specified at the same time as pipeline
+      PrevAttr = CategoryState.NodepAttr;
+      CategoryState.NodepAttr = LH;
     } else {
       // Numeric hint.  For example, vectorize_width(8).
       PrevAttr = CategoryState.NumericAttr;
@@ -442,7 +444,7 @@ CheckForIncompatibleAttributes(Sema &S,
           << /*Duplicate=*/true << PrevAttr->getDiagnosticName(Policy)
           << LH->getDiagnosticName(Policy);
 
-    if (CategoryState.StateAttr && CategoryState.NumericAttr &&
+    if (CategoryState.StateAttr && CategoryState.NumericAttr && CategoryState.NodepAttr &&
         (Category == Unroll || Category == UnrollAndJam ||
          CategoryState.StateAttr->getState() == LoopHintAttr::Disable)) {
       // Disable hints are not compatible with numeric hints of the same
@@ -452,7 +454,8 @@ CheckForIncompatibleAttributes(Sema &S,
       S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
           << /*Duplicate=*/false
           << CategoryState.StateAttr->getDiagnosticName(Policy)
-          << CategoryState.NumericAttr->getDiagnosticName(Policy);
+          << CategoryState.NumericAttr->getDiagnosticName(Policy)
+          << CategoryState.NodepAttr->getDiagnosticName(Policy);
     }
   }
 }

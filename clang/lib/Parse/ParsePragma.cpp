@@ -1389,10 +1389,15 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
   // Verify loop hint has an argument.
   if (Toks[0].is(tok::eof)) {
     ConsumeAnnotationToken();
-    Diag(Toks[0].getLocation(), diag::err_pragma_loop_missing_argument)
+    // Enable can only be specified for nodep, which processes it individually.
+    if (OptionPipelineNodep) {
+      Diag(Toks[0].getLocation(), diag::err_pragma_pipeline_nodep_keyword);
+    } else {
+      Diag(Toks[0].getLocation(), diag::err_pragma_loop_missing_argument)
         << /*StateArgument=*/StateOption
         << /*FullKeyword=*/(OptionUnroll || OptionUnrollAndJam)
         << /*AssumeSafetyKeyword=*/AssumeSafetyArg;
+    }
     return false;
   }
 
@@ -1411,9 +1416,14 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
                      .Case("assume_safety", AssumeSafetyArg)
                      .Default(false);
     if (!Valid) {
-        Diag(Toks[0].getLocation(), diag::err_pragma_invalid_keyword)
+        // Enable can only be specified for nodep, which processes it individually.
+        if (OptionPipelineNodep) {
+          Diag(Toks[0].getLocation(), diag::err_pragma_pipeline_nodep_keyword);
+        } else {
+          Diag(Toks[0].getLocation(), diag::err_pragma_invalid_keyword)
             << /*FullKeyword=*/(OptionUnroll || OptionUnrollAndJam)
             << /*AssumeSafetyKeyword=*/AssumeSafetyArg;
+        }
       return false;
     }
     if (Toks.size() > 2)

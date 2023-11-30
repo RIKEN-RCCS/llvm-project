@@ -3735,7 +3735,7 @@ def PipelineHintDocs : Documentation {
     ...
   }
 
-  Using ``#pragma Clang LOOP Pipeline_nodep`` treats memory accesses 
+  Using ``#pragma clang loop pipeline_nodep`` treats memory accesses 
   within the loop as having no dependencies, which may facilitate SWPL enforcement.
 
   .. code-block:: c++
