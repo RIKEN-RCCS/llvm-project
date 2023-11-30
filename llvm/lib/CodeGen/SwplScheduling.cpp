@@ -20,6 +20,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
+#include <cmath>
 
 using namespace llvm;
 using namespace ore; // for NV
@@ -42,6 +43,11 @@ static cl::opt<unsigned> OptionMaxFreg("swpl-max-freg",cl::init(0), cl::ReallyHi
 static cl::opt<unsigned> OptionMaxPreg("swpl-max-preg",cl::init(0), cl::ReallyHidden);
 
 static cl::opt<bool> OptionDumpEveryInst("swpl-debug-dump-scheduling-every-inst",cl::init(false), cl::ReallyHidden);
+
+
+static cl::opt<bool> OptionDisableStageScheduling("swpl-disable-stagescheduling",cl::init(true), cl::ReallyHidden);
+static cl::opt<bool> OptionDumpSSEdges("swpl-debug-dump-ssedges",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> OptionDumpCyclicRoots("swpl-debug-dump-cyclicroots",cl::init(false), cl::ReallyHidden);
 
 namespace llvm{
 
@@ -1017,7 +1023,21 @@ bool SwplPlanSpec::init(unsigned arg_res_mii, bool &existsPragma) {
   }
 
   unable_max_ii = min_ii - 1;
-  assert(min_ii < max_ii);
+
+  // Remedies when calculated min_ii is greater than max_ii
+  if (min_ii >= max_ii) {
+    //analysis
+    const auto *ml = loop.getML();
+    SWPipeliner::ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "MaxII", ml->getStartLoc(), ml->getHeader())
+        << "Since the calculated min_ii("
+        << ore::NV("min_ii", min_ii)
+        << ") is greater than or equal to max_ii("
+        << ore::NV("max_ii", max_ii)
+        << "), processing continues with max_ii=min_ii+1.";
+    });
+    max_ii=min_ii+1;
+  }
 
   if (SWPipeliner::isDebugOutput()) {
     dbgs() << "Minimum II = " << min_ii << ".)\n";
@@ -2250,6 +2270,7 @@ SwplMsResult::calculateMsResultAtSpecifiedII(SwplPlanSpec spec, unsigned ii, Pro
 
   ms_result = SwplMsResult::constructInit(ii, procstate);
   ms_result->constructInstSlotMapAtSpecifiedII(spec);
+  SwplSSProc::execute(spec.ddg, spec.loop, ii, ms_result->inst_slot_map, dbgs());
   ms_result->checkInstSlotMap(spec);
   ms_result->outputDebugMessageForSchedulingResult(spec);
 
@@ -2314,6 +2335,7 @@ bool SwplMsResult::collectCandidate(
   for (ii = spec.min_ii; /* 下で */; ii += inc_ii) {
     ms_result = SwplMsResult::constructInit(ii, procstate);
     ms_result->constructInstSlotMapAtSpecifiedII(spec);
+    SwplSSProc::execute(spec.ddg, spec.loop, ii, ms_result->inst_slot_map, dbgs());
     ms_result->checkInstSlotMap(spec);
     ms_result->outputDebugMessageForSchedulingResult(spec);
 
@@ -2387,6 +2409,7 @@ bool SwplMsResult::collectModerateCandidate(
   for (ii = spec.min_ii; ii < spec.max_ii; ii += inc_ii) {
     ms_result = SwplMsResult::constructInit(ii, state);
     ms_result->constructInstSlotMapAtSpecifiedII(spec);
+    SwplSSProc::execute(spec.ddg, spec.loop, ii, ms_result->inst_slot_map, dbgs());
     ms_result->checkInstSlotMap(spec);
     ms_result->outputDebugMessageForSchedulingResult(spec);
 
@@ -2598,6 +2621,282 @@ bool SwplMsResult::isRegReducible(
           (second_maxii_short_ireg - maxii_short_ireg >= threshold_reduced_reg) ||
           (second_maxii_short_preg - maxii_short_preg >= threshold_reduced_reg)
           );
+}
+
+/// \brief Execute StageScheduling
+/// \retval true change scheduling-result by StageScheduling
+/// \retval false scheduling-result is no change
+bool SwplSSProc::execute(const SwplDdg &ddg,
+                         const SwplLoop &loop,
+                         unsigned ii,
+                         SwplInstSlotHashmap *inst_slot_map,
+                         raw_ostream &stream) {
+  auto fname = (loop.getBodyInsts())[0]->getMI()->getMF()->getName();
+
+  if (OptionDisableStageScheduling)
+    return false;
+
+  if (inst_slot_map==nullptr) {
+    if (SWPipeliner::isDebugOutput())
+      stream << "StageScheduling: [" << fname << "] no result of SWPL at II=" << ii << ".\n";
+    return false;
+  }
+  if (inst_slot_map->calcPrologBlocks(loop, ii)==0) {
+    if (SWPipeliner::isDebugOutput())
+      stream << "StageScheduling: [" << fname << "] loop is Scheduled. But prologue-cycle is 0." << ii << ".\n";
+    return false;
+  }
+
+  SwplSSCyclicInfo ssCyclicInfo(ddg, loop);
+  if (OptionDumpCyclicRoots) {
+    ssCyclicInfo.dump(stream);
+  }
+
+  SwplSSEdges ssEdges(ddg, loop, ii, *inst_slot_map);
+  ssEdges.updateInCyclic(ssCyclicInfo);
+  if (OptionDumpSSEdges) {
+    ssEdges.dump(stream, fname);
+  }
+
+  return false;
+}
+
+/// \brief SwplSSEdge constructor
+SwplSSEdge::SwplSSEdge(const SwplInst *ini, unsigned inicycle,
+                       const SwplInst *term, unsigned termcycle,
+                       int delay_in, unsigned distance_in,
+                       unsigned ii) : InitialVertex(ini), 
+                                      TerminalVertex(term),
+                                      InitialCycle(inicycle),
+                                      TerminalCycle(termcycle),
+                                      delay(delay_in),
+                                      distance(distance_in),
+                                      numSkipFactor(0),
+                                      inCyclic(false),
+                                      II(ii) {
+  long sf_val=0;
+  if ((InitialCycle==TerminalCycle) && (InitialVertex->getMI()==TerminalVertex->getMI())) {
+    // Edge to self is not subject to StageScheduling
+    sf_val = 0;
+  }
+  else {
+    sf_val = (int)(std::floor( ((double)TerminalCycle - InitialCycle - delay) / II )+distance);
+  }
+  assert(sf_val>=0);
+  numSkipFactor = sf_val;
+}
+
+/// \brief dump SwplSSEdge
+void SwplSSEdge::dump(raw_ostream &stream, StringRef fname) const {
+  stream << "[" << fname << "] ";
+  stream << "Edge:(";
+  stream << format("%p", InitialVertex->getMI()) << ":" << InitialVertex->getName();
+  stream << ") to (";
+  stream << format("%p", TerminalVertex->getMI()) << ":" << TerminalVertex->getName();
+  stream << ")";
+  stream << ", inCyclic:" << inCyclic;
+  stream << ", SkipFactor<" << numSkipFactor << ">";
+  stream << ", p_cycle:" << InitialCycle << ", s_cycle:" << TerminalCycle;
+  stream << ", delay:" << delay  << ", distance:" << distance;
+  stream << ", II:" << II << "\n";
+}
+
+/// \brief SwplSSEdges constructor
+SwplSSEdges::SwplSSEdges(const SwplDdg &ddg,
+                         const SwplLoop &loop,
+                         unsigned ii,
+                         SwplInstSlotHashmap& inst_slot_map) : II(ii) {
+  const SwplInstGraph &graph = ddg.getGraph();
+  for (auto *inst : loop.getBodyInsts()) {
+    SwplSlot p_slot;
+    unsigned p_cycle;
+
+    auto begin_slot = inst_slot_map.findBeginSlot(loop, ii);
+    p_slot = inst_slot_map.getRelativeInstSlot(*inst, begin_slot);
+    p_cycle = p_slot.calcCycle();
+
+    for (auto *sucinst: graph.getSuccessors(*inst) ) {
+
+      auto edge = graph.findEdge( *inst, *sucinst );
+      assert(edge != nullptr);
+
+      std::vector<unsigned> distances = ddg.getDistancesFor(*edge);
+      std::vector<int> delays = ddg.getDelaysFor(*edge);
+      auto distance = distances.begin();
+      auto delay = delays.begin();
+      auto distance_end = distances.end();
+
+      int max_modulo_delay=INT_MIN;
+      int out_delay=INT_MIN;
+      unsigned out_distance=INT_MIN;
+
+      for (; distance!=distance_end ; ++distance, ++delay) {
+        int delay_val = *delay;
+        unsigned distance_val = *distance;
+
+        if (delay_val==0) {
+          // delayが0となるのは、edgeのfromの命令がPseudo命令である場合のみを想定
+          assert(SWPipeliner::STM->isPseudo(*(edge->getInitial()->getMI())));
+          delay_val=1;
+        }
+
+        int modulo_delay = delay_val - ii * (int)(distance_val);
+
+        if (max_modulo_delay < modulo_delay) {
+          // modulo_delayとして扱われる場合のdelayとdistanceを記録する
+          max_modulo_delay = modulo_delay;
+          out_delay = delay_val;
+          out_distance = distance_val;
+        }
+      }
+
+      SwplSlot s_slot = inst_slot_map.getRelativeInstSlot(*sucinst, begin_slot);
+      unsigned s_cycle = s_slot.calcCycle();
+
+      if (out_distance==20) {
+        continue;
+      }
+
+      SwplSSEdge* newedge = new SwplSSEdge(inst, p_cycle, sucinst, s_cycle, out_delay, out_distance, ii);
+      Edges.push_back(newedge);
+    }
+  }
+}
+
+/// \brief update SwplSSedge.inCyclic with SwplSSCycleInfo
+void SwplSSEdges::updateInCyclic(const SwplSSCyclicInfo & ci) {
+  for (auto *edge: Edges) {
+    edge->setInCyclic(ci.isInCyclic(edge->getInitialVertex(),
+                                    edge->getTerminalVertex()));
+  }
+}
+
+/// \brief dump SwplSSedges
+void SwplSSEdges::dump(raw_ostream &stream, StringRef fname) const {
+  stream << "**** dump SwplSSEdges ***\n";
+  for (auto *edge: Edges) {
+    edge->dump(stream, fname);
+  }
+}
+
+/// \brief Node search for circular/acyclic determination.
+/// \return Nothing
+static void node_search( const SwplDdg& ddg,
+                         std::set<const SwplInst*> &explored_list,
+                         std::vector<std::vector<const SwplInst*> *> &rootlists,
+                         const SwplInst* out, const SwplInst* in, std::vector<const SwplInst*> *rootlist ) {
+  if (explored_list.count(in) > 0) {
+    return; // already checked.
+  }
+  explored_list.insert(in);
+
+  std::set<const SwplInst*> dest;
+  for (auto *edge: ddg.getGraph().getEdges()) {
+    std::vector<unsigned> distances = ddg.getDistancesFor(*edge);
+    if (distances.size()==1 && distances[0]==20)
+      continue;
+
+    if (edge->getInitial()==edge->getTerminal())
+      continue;
+
+    if (edge->getInitial()==in && edge->getTerminal()!=out)
+      dest.insert(edge->getTerminal());
+    else if (edge->getTerminal()==in && edge->getInitial()!=out)
+      dest.insert(edge->getInitial());
+    else
+      continue;
+  }
+
+  if (dest.empty()) {
+    rootlists.push_back(rootlist);
+    return;
+  }
+
+  for (auto d: dest) {
+    std::vector<const SwplInst*> *reprootlist = new std::vector<const SwplInst*>;
+    for (auto *node: *rootlist) {
+      reprootlist->push_back(node);
+    }
+    reprootlist->push_back(d);
+
+    if (explored_list.count(d) > 0) {
+      rootlists.push_back(reprootlist);
+    }
+    else {
+      node_search(ddg, explored_list, rootlists,
+                  in, d, reprootlist );
+    }
+  }
+  delete rootlist;
+  return;
+}
+
+/// \brief SwplSSCycleInfo constructor
+/// \detail Extract circulating nodes.
+/// \return Nothing
+SwplSSCyclicInfo::SwplSSCyclicInfo(const SwplDdg& ddg,
+                                   const SwplLoop& loop) {
+  std::set<const SwplInst*> explored_list;
+  std::vector<std::vector<const SwplInst*> *> rootlists;
+  for (auto *inst: loop.getBodyInsts()) {
+    if (!(explored_list.count(inst) > 0)) {
+      std::vector<const SwplInst*> *rootlist = new std::vector<const SwplInst*>;
+      rootlist->push_back(inst);
+      node_search(ddg,
+                  explored_list, rootlists,
+                  nullptr, inst,
+                  rootlist);
+    }
+  }
+
+  for (auto *root: rootlists) {
+    unsigned size = root->size();
+    for (unsigned i=0; i<(size-1); i++) {
+      for (unsigned j=(i+1); j<size; j++) {
+        if (root->at(i)==root->at(j)) {
+          std::vector<const SwplInst*> *cnodes = new std::vector<const SwplInst*>;
+          for (unsigned k=i; k<=j; k++) {
+            cnodes->push_back(root->at(k));
+          }
+          cyclic_node_list.push_back(cnodes);
+        }
+      }
+    }
+    delete root;
+  }
+}
+
+/// \brief Check if Edge is in cyclic-part.
+/// \retval true edge of ini to term, is in cyclic-part.
+/// \retval false edge of ini to term, is not in cyclic-part.
+bool SwplSSCyclicInfo::isInCyclic(const SwplInst *ini, const SwplInst *term) const {
+  for (auto *nodes: cyclic_node_list) {
+    unsigned size=nodes->size();
+    if (size < 2) continue;
+    for (unsigned i=0; i<(size-1); i++) {
+      if ((nodes->at(i)==ini  && nodes->at(i+1)==term) ||
+          (nodes->at(i)==term && nodes->at(i+1)==ini ))
+        return true;
+    }
+  }
+  return false;
+}
+
+/// \brief dump SwplSSCycleInfo
+void SwplSSCyclicInfo::dump(raw_ostream &stream) const {
+  stream << "*** dump SwplSSSyclicInfo ***\n";
+  if (cyclic_node_list.size()==0) {
+    stream << "There is no circulation part.\n";
+  }
+  else {
+    for (auto *root: cyclic_node_list){
+      stream << "root : { ";
+      for (auto *node: *root){
+        stream << "(" << format("%p", node->getMI()) << ":" << node->getName() << ") ";
+      }
+      stream << "}\n";
+    }
+  }
 }
 
 }
