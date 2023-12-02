@@ -252,7 +252,6 @@ public:
   static SwplMsResult * constructInit(unsigned ii, ProcState procstate);
   static SwplMsResult * calculateMsResult(SwplPlanSpec spec);
 
-
 private:
   void checkHardResource(const SwplPlanSpec & spec, bool limit_reg);
   SwplMsResourceResult isHardRegsSufficient(const SwplPlanSpec & spec);
@@ -289,5 +288,74 @@ private:
   static bool isAnyScheduleItrSufficient(std::unordered_set<SwplMsResult *>& ms_result_candidate);
   static SwplMsResult * getModerateSchedule(std::unordered_set<SwplMsResult *>& ms_result_candidate);
 };
+
+/// \brief StageScheduling proccessing
+class SwplSSProc {
+public:
+  static bool execute(const SwplDdg &ddg,
+                      const SwplLoop &loop,
+                      unsigned ii,
+                      SwplInstSlotHashmap *inst_slot_map,
+                      raw_ostream &stream );
+};
+
+/// \brief Information on the nodes(SwplInst*) group that will be the circulating part
+class SwplSSCyclicInfo {
+  std::vector<std::vector<const SwplInst*> *> cyclic_node_list;
+public:
+  SwplSSCyclicInfo(const SwplDdg& ddg, const SwplLoop& loop);
+  virtual ~SwplSSCyclicInfo() {
+    for (auto root: cyclic_node_list){
+      delete root;
+    }
+  }
+  bool isInCyclic(const SwplInst *ini, const SwplInst *term) const;
+  void dump(raw_ostream &stream) const;
+
+};
+
+/// \brief Edge info
+class SwplSSEdge {
+  const SwplInst *InitialVertex;  ///< エッジを構成する始点のノード
+  const SwplInst *TerminalVertex; ///< エッジを構成する終点のノード
+  unsigned InitialCycle;
+  unsigned TerminalCycle;
+  int delay;
+  unsigned distance;
+  long numSkipFactor;
+  bool inCyclic=false;
+  unsigned II;
+public:
+  SwplSSEdge(const SwplInst *ini, unsigned inicycle,
+             const SwplInst *term, unsigned termcycle,
+             int delay_in, unsigned distance_in,
+             unsigned ii);
+  void setInCyclic(bool val) {
+    inCyclic = val;
+    return;
+  }
+  const SwplInst *getInitialVertex() const { return InitialVertex; };
+  const SwplInst *getTerminalVertex() const { return TerminalVertex; };
+  void dump(raw_ostream &stream, StringRef fname) const;
+};
+
+/// \brief manege Edge of SWPLed
+class SwplSSEdges {
+  std::vector<SwplSSEdge *> Edges;
+  unsigned II;
+public:
+  SwplSSEdges(const SwplDdg &ddg,
+              const SwplLoop &loop,
+              unsigned ii,
+              SwplInstSlotHashmap& inst_slot_map);
+  virtual ~SwplSSEdges() {
+    for (auto *v : Edges) {
+      delete v;
+    }
+  }
+  void dump(raw_ostream &stream, StringRef fname) const;
+  void updateInCyclic(const SwplSSCyclicInfo &);
+};
+
 }
 #endif
