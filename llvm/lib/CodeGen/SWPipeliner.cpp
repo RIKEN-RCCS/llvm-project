@@ -198,6 +198,14 @@ void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {
            << msg1;
   });
 }
+
+void SWPipeliner::remarkNodep(const char *msg, MachineLoop &L) {
+  ORE->emit([&]() {
+    return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NodepEnable",
+                                           L.getStartLoc(), L.getHeader())
+           << msg;
+  });
+}
 static cl::opt<SWPipeliner::SwplRestrictionsFlag> DisableRestrictionsCheck("swpl-disable-restrictions-check",
                                                cl::init(SWPipeliner::SwplRestrictionsFlag::All),
                                                cl::ValueOptional, cl::ReallyHidden,
@@ -278,7 +286,17 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     currentLoop = nullptr;
     return Changed;
   }
-  SwplDdg *ddg = SwplDdg::Initialize(*currentLoop);
+  MachineBasicBlock *MBB = L.getTopBlock();
+  const BasicBlock *BB = MBB->getBasicBlock();
+  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  const Loop *BBLoop = LI->getLoopFor(BB);
+  bool Nodep = false;
+  if(enableNodep(BBLoop, false)){
+    remarkNodep("Since the pragma pipline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.",
+                     *currentLoop->getML());
+    Nodep = true;
+  }
+  SwplDdg *ddg = SwplDdg::Initialize(*currentLoop,Nodep);
 
   // スケジューリング
   bool redo;

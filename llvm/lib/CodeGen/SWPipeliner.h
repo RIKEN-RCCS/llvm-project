@@ -65,6 +65,14 @@ using SwplInstList_iterator = SwplInstList::iterator;
  */
 bool enableSWP(const Loop*, bool ignoreMetadataOfRemainder);
 
+/**
+ * Returns from Pragma whether the specified loop is memory-independent.
+ * @param L Specify target Loop information
+ * @param ignoreMetadataOfRemainder true Ignore remainder loop metadata
+ * @retval true Memory-independent specification
+ */
+bool enableNodep(const Loop *L, bool ignoreMetadataOfRemainder);
+
 /// \class SwplLoop
 /// \brief ループ内の命令情報を管理する
 class SwplLoop {
@@ -762,7 +770,7 @@ public:
   /// SwplDdg を生成し SwplLoop の命令の依存情報を設定し復帰する
   /// \param[in,out]  loop SwplLoop
   /// \return     ループ内の命令の依存情報
-  static SwplDdg *Initialize(SwplLoop &loop);
+  static SwplDdg *Initialize(SwplLoop &loop,bool Nodep);
 
   /// iiを考慮したDelayのMapを生成する
   /// \param[in] ii スケジューリング時のiteration intervalの値
@@ -862,6 +870,8 @@ public:
 
   /// remark-missedメッセージを出力する
   static void remarkMissed(const char *msg, MachineLoop &L);
+  /// Output of nodep remarks messages
+  static void remarkNodep(const char *msg, MachineLoop &L);
 
   /// 制限を含んだループを検出した際のSWPL非対象とするメッセージ
   /// param target 制限を含んだMI
