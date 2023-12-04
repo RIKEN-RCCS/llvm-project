@@ -501,19 +501,14 @@ void SwplDdg::analysisMemDependence() {
       if (target_yamlddg) {
         unsigned from=mimap[former_mem->getInst()->getMI()];
         unsigned to=mimap[latter_mem->getInst()->getMI()];
-        auto found=false;
         for (auto &ddgnode:target_yamlddg->ddgnodes) {
           if (ddgnode.distance > 20) {
             report_fatal_error("distance > 20", false);
           }
           if (ddgnode.from.id == from && ddgnode.to.id == to) {
             distance = ddgnode.distance;
-            found=true;
             break;
           }
-        }
-        if (!found) {
-          report_fatal_error("from-mi or to-mi not found", false);
         }
       }
       if (SWPipeliner::isDebugDdgOutput()) {
