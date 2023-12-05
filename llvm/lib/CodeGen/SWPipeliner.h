@@ -68,10 +68,9 @@ bool enableSWP(const Loop*, bool ignoreMetadataOfRemainder);
 /**
  * Returns from Pragma whether the specified loop is memory-independent.
  * @param L Specify target Loop information
- * @param ignoreMetadataOfRemainder true Ignore remainder loop metadata
  * @retval true Memory-independent specification
  */
-bool enableNodep(const Loop *L, bool ignoreMetadataOfRemainder);
+bool enableNodep(const Loop *L);
 
 /// \class SwplLoop
 /// \brief ループ内の命令情報を管理する
@@ -871,7 +870,7 @@ public:
   /// remark-missedメッセージを出力する
   static void remarkMissed(const char *msg, MachineLoop &L);
   /// Output of nodep remarks messages
-  static void remarkNodep(const char *msg, MachineLoop &L);
+  static void remarkAnalysis(const char *msg, MachineLoop &L, const char *Name);
 
   /// 制限を含んだループを検出した際のSWPL非対象とするメッセージ
   /// param target 制限を含んだMI
@@ -901,7 +900,7 @@ private:
    * \retval true  Swpl最適化対象指示がある
    * \retval false Swpl最適化対象指示がない。もしくは最適化抑止指示がある。
    */
-  bool shouldOptimize(MachineLoop &L);
+  bool shouldOptimize(const Loop *BBLoop);
 };
 
 

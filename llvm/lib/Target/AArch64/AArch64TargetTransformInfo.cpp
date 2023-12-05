@@ -4002,7 +4002,15 @@ bool llvm::enableSWP(const Loop *L, bool ignoreMetadataOfRemainder) {
   return enabled;
 }
 
-static bool isEnableNodep(const Loop* L, MDNode *MD, bool &exists, bool ignoreMetadataOfRemainder){
+/**
+ * Search metadata to obtain the status of llvm.loop.pipeline.nodep specification
+ * @details Recursively search nested metadata to obtain the specified status.
+ * @param [in] L Target Loop Information
+ * @param [in] MD Target metadata
+ * @param [out] exists True is specified in metadata
+ * @retval true llvm.loop.pipeline.nodep is specified
+ */
+static bool isEnableNodep(const Loop* L, MDNode *MD, bool &exists){
   if (MD->isDistinct()) {
     // example) !25 = distinct !{!25, !18, !23, !26, !27, !28}
     for (unsigned i = 1, e = MD->getNumOperands(); i < e; ++i) {
@@ -4011,7 +4019,7 @@ static bool isEnableNodep(const Loop* L, MDNode *MD, bool &exists, bool ignoreMe
       if (MD == nullptr)
         continue;
 
-      bool ret = isEnableNodep(L, childMD, exists, ignoreMetadataOfRemainder);
+      bool ret = isEnableNodep(L, childMD, exists);
       if (exists)
         return ret;
     }
@@ -4025,14 +4033,6 @@ static bool isEnableNodep(const Loop* L, MDNode *MD, bool &exists, bool ignoreMe
 
     // loop metadata display
     LLVM_DEBUG( if (L->getLocRange().getStart().get()) dbgs() << __func__ << ":loop=" << L->getLocRange().getStart().getLine() << "-" << L->getLocRange().getEnd().getLine() << " meta:" << S->getString() << "\n");
-
-    // remainder loop
-    if (!ignoreMetadataOfRemainder) {
-      if (S->getString()=="llvm.remainder.pipeline.disable") {
-        exists = true;
-        return false;
-      }
-    }
 
     if (S->getString()=="llvm.loop.pipeline.nodep") {
       exists = true;
@@ -4051,35 +4051,26 @@ static bool isEnableNodep(const Loop* L, MDNode *MD, bool &exists, bool ignoreMe
 
       // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized", !{"llvm.loop.pipeline.enable"}}
       if (secondS != nullptr) {
-        // remainder loop
-        if (!ignoreMetadataOfRemainder) {
-          if (secondS->getString()=="llvm.remainder.pipeline.disable") {
-            exists = true;
-            return false;
-          }
-        }
-
         if (secondS->getString()=="llvm.loop.pipeline.nodep") {
           exists = true;
           return true;
         }
       }
 
-      return isEnableNodep(L, childMD, exists, ignoreMetadataOfRemainder);
+      return isEnableNodep(L, childMD, exists);
     }
   }
   return false;
 }
 
-bool llvm::enableNodep(const Loop *L, bool ignoreMetadataOfRemainder) {
+bool llvm::enableNodep(const Loop *L) {
   bool exists=false;
   bool enabled=false;
   assert(L!=nullptr);
-  exists=false;
   MDNode *LoopID = L->getLoopID();
   if (LoopID == nullptr)
     return false;
-  bool r=isEnableNodep(L, LoopID, exists, ignoreMetadataOfRemainder);
+  bool r=isEnableNodep(L, LoopID, exists);
   if (exists)
     enabled = r;
   return enabled;

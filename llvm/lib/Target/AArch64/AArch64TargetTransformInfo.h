@@ -51,10 +51,9 @@ bool enableSWP(const Loop*, bool ignoreMetadataOfRemainder);
 /**
  * Returns from Pragma whether the specified loop is memory-independent.
  * @param L Specify target Loop information
- * @param ignoreMetadataOfRemainder true Ignore remainder loop metadata
  * @retval true Memory-independent specification
  */
-bool enableNodep(const Loop *L, bool ignoreMetadataOfRemainder);
+bool enableNodep(const Loop *L);
 
 class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   using BaseT = BasicTTIImplBase<AArch64TTIImpl>;

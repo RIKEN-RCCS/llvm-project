@@ -199,9 +199,9 @@ void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {
   });
 }
 
-void SWPipeliner::remarkNodep(const char *msg, MachineLoop &L) {
+void SWPipeliner::remarkAnalysis(const char *msg, MachineLoop &L, const char *Name) {
   ORE->emit([&]() {
-    return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "NodepEnable",
+    return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, Name,
                                            L.getStartLoc(), L.getHeader())
            << msg;
   });
@@ -232,6 +232,11 @@ void SWPipeliner::makeMissedMessage_RestrictionsDetected(const MachineInstr &tar
 bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   bool Changed = false;
   Reason = "";
+  MachineBasicBlock *MBB = L.getTopBlock();
+  const BasicBlock *BB = MBB->getBasicBlock();
+  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  const Loop *BBLoop = LI->getLoopFor(BB);
+
   for (auto &InnerLoop : L)
     Changed |= scheduleLoop(*InnerLoop);
 
@@ -246,7 +251,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   }
 
   // 最適化指示の判定
-  if (!shouldOptimize(L)) {
+  if (!shouldOptimize(BBLoop)) {
     printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
     return false;
   }
@@ -286,14 +291,10 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     currentLoop = nullptr;
     return Changed;
   }
-  MachineBasicBlock *MBB = L.getTopBlock();
-  const BasicBlock *BB = MBB->getBasicBlock();
-  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  const Loop *BBLoop = LI->getLoopFor(BB);
   bool Nodep = false;
-  if(enableNodep(BBLoop, false)){
-    remarkNodep("Since the pragma pipline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.",
-                     *currentLoop->getML());
+  if(enableNodep(BBLoop)){
+    remarkAnalysis("Since the pragma pipline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.",
+                   *currentLoop->getML(), "EnableNodep");
     Nodep = true;
   }
   SwplDdg *ddg = SwplDdg::Initialize(*currentLoop,Nodep);
@@ -355,12 +356,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
 }
 
 
-bool SWPipeliner::shouldOptimize(MachineLoop &L) {
-  MachineBasicBlock *MBB = L.getTopBlock();
-
-  const BasicBlock *BB = MBB->getBasicBlock();
-  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  const Loop *BBLoop = LI->getLoopFor(BB);
+bool SWPipeliner::shouldOptimize(const Loop *BBLoop) {
 
   if (!enableSWP(BBLoop, false)) {
     return false;
