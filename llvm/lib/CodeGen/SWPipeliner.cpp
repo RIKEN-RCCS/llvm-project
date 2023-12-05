@@ -175,6 +175,12 @@ FunctionPass *createSWPipelinerPass() {
  * \retval false MF を変更していないことを示す
  */
 bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
+  if (skipFunction(mf.getFunction())) {
+    if (isDebugOutput()) {
+      dbgs() << "SWPipeliner: Not processed because skipFunction() is true.\n";
+      return false;
+    }
+  }
   loop_number=0;
   bool Modified = false;
   if (!mf.getSubtarget().getSchedModel().hasInstrSchedModel()) {
@@ -408,6 +414,9 @@ FunctionPass *createSWPipelinerPrePass() {
  * \retval false MF を変更していないことを示す
  */
 bool SWPipelinerPre::runOnMachineFunction(MachineFunction &mf) {
+  if (skipFunction(mf.getFunction())) {
+      return false;
+  }
   bool Modified = false;
   if (!mf.getSubtarget().getSchedModel().hasInstrSchedModel()) {
     // schedmodelを持たないプロセッサ用のコードなので、本祭最適化は適用しない。
