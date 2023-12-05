@@ -772,7 +772,22 @@ public:
 
   /// デバッグ用情報出力
   void print(void) const;
-  
+
+  struct IOmi {
+    unsigned id;
+    std::string mi;
+  };
+  struct IOddgnode {
+    IOmi from;
+    IOmi to;
+    unsigned distance;
+  };
+  struct IOddg {
+    std::string fname;
+    unsigned loopid;
+    std::vector<IOddgnode> ddgnodes;
+  };
+
 private:
   /// 命令単位に SwplInstGraph を生成する
   void generateInstGraph() {
@@ -812,6 +827,7 @@ public:
   static std::string Reason;
   static SwplLoop *currentLoop;
   static unsigned min_ii_for_retry;
+  static unsigned loop_number;
 
   /// 制限抑止オプション指定の結果
   enum class SwplRestrictionsFlag {None, MultipleReg, MultipleDef, All};
@@ -831,6 +847,10 @@ public:
   /// Acquiring the specified value of the -swpl-maxii option
   static unsigned nOptionMaxIIBase();
 
+  static bool isExportDDG();
+  static bool isImportDDG();
+  static StringRef getDDGFileName();
+
   /**
    * \brief SWPipelinerのコンストラクタ
    */
@@ -848,6 +868,7 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
+  bool doInitialization (Module &) override;
   bool doFinalization (Module &) override;
 
   /**
