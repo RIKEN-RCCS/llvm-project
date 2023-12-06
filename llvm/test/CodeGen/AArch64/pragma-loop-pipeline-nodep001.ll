@@ -1,5 +1,5 @@
 ; RUN: llc < %s -fswp -O2 -mcpu=a64fx --pass-remarks=aarch64-swpipeliner --pass-remarks-analysis=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
-; CHECK: remark: ./pragma-loop-pipeline-nodep010-1.cpp:25:1: Since the pragma pipline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.
+; CHECK: remark: ./pragma-loop-pipeline-nodep010-1.cpp:26:5: Since the pragma pipline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.
 ; CHECK: remark: ./pragma-loop-pipeline-nodep010-1.cpp:26:5: software pipelining (IPC: 2.00, ITR: 5, MVE: 3, II: 3, Stage: 3, (VReg Fp: 1/32, Int: 17/29, Pred: 1/8)), SRA(PReg Fp: 0/32, Int: 14/29, Pred: 0/8) 
 
 ; ModuleID = './pragma-loop-pipeline-nodep010-1.cpp'
