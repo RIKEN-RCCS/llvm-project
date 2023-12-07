@@ -28,7 +28,7 @@ static cl::opt<bool> DisableRegDep4tied("swpl-disable-regdep-4-tied",cl::init(fa
 
 static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplInst &latter_inst, int distance, int delay);
 
-SwplDdg *SwplDdg::Initialize (SwplLoop &loop) {
+SwplDdg *SwplDdg::Initialize (SwplLoop &loop, bool Nodep) {
   SwplDdg *ddg = new SwplDdg(loop);
 
   /// 1. Call generateInstGraph() to initialize instruction dependency graph information SwplInstGraph.
@@ -36,7 +36,8 @@ SwplDdg *SwplDdg::Initialize (SwplLoop &loop) {
   /// 2. Call analysisRegDependence() to analyze dependency information between registers.
   ddg->analysisRegDependence();
   /// 3. Call analysisMemDependence() to analyze dependency information between memories.
-  ddg->analysisMemDependence();
+  if (!Nodep)
+    ddg->analysisMemDependence();
   /// 4. Call analysisInstDependence() to analyze instruction dependency information.
   if (EnableInstDep)
     ddg->analysisInstDependence();
