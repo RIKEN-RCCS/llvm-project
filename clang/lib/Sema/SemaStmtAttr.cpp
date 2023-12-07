@@ -427,7 +427,7 @@ CheckForIncompatibleAttributes(Sema &S,
       PrevAttr = CategoryState.StateAttr;
       CategoryState.StateAttr = LH;
     } else if (Option == LoopHintAttr::PipelineNodep) {
-      // nodep is judged individually so that it can be specified at the same time as pipeline
+      // Stores pragma that can only define Enable.
       PrevAttr = CategoryState.NodepAttr;
       CategoryState.NodepAttr = LH;
     } else {
@@ -444,25 +444,26 @@ CheckForIncompatibleAttributes(Sema &S,
           << /*Duplicate=*/true << PrevAttr->getDiagnosticName(Policy)
           << LH->getDiagnosticName(Policy);
 
-    if (CategoryState.StateAttr && (CategoryState.NumericAttr || CategoryState.NodepAttr) &&
+    if (CategoryState.StateAttr && CategoryState.NumericAttr &&
         (Category == Unroll || Category == UnrollAndJam ||
          CategoryState.StateAttr->getState() == LoopHintAttr::Disable)) {
       // Disable hints are not compatible with numeric hints of the same
       // category.  As a special case, numeric unroll hints are also not
       // compatible with enable or full form of the unroll pragma because these
       // directives indicate full unrolling.
-      if (!CategoryState.NodepAttr) {
-        S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
-          << /*Duplicate=*/false
-          << CategoryState.StateAttr->getDiagnosticName(Policy)
-          << CategoryState.NumericAttr->getDiagnosticName(Policy); 
-      } else {
-        S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
-          << /*Duplicate=*/false
-          << CategoryState.StateAttr->getDiagnosticName(Policy)
-          << CategoryState.NodepAttr->getDiagnosticName(Policy);
-      }
-    } 
+      S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
+        << /*Duplicate=*/false
+        << CategoryState.StateAttr->getDiagnosticName(Policy)
+        << CategoryState.NumericAttr->getDiagnosticName(Policy); 
+    }
+
+    if (CategoryState.StateAttr && CategoryState.NodepAttr &&
+         CategoryState.StateAttr->getState() == LoopHintAttr::Disable) {
+      S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
+        << /*Duplicate=*/false
+        << CategoryState.StateAttr->getDiagnosticName(Policy)
+        << CategoryState.NodepAttr->getDiagnosticName(Policy);
+    }
   }
 }
 
