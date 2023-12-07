@@ -4009,6 +4009,7 @@ bool llvm::enableSWP(const Loop *L, bool ignoreMetadataOfRemainder) {
  * @param [in] MD Target metadata
  * @param [out] exists True is specified in metadata
  * @retval true llvm.loop.pipeline.nodep is specified
+ * @retval false llvm.loop.pipeline.nodep is not specified
  */
 static bool isEnableNodep(const Loop* L, MDNode *MD, bool &exists){
   if (MD->isDistinct()) {

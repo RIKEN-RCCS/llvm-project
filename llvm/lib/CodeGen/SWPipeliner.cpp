@@ -292,9 +292,9 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     return Changed;
   }
   bool Nodep = false;
-  if(enableNodep(BBLoop)){
-    remarkAnalysis("Since the pragma pipline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.",
-                   *currentLoop->getML(), "EnableNodep");
+  if (enableNodep(BBLoop)){
+    remarkAnalysis("Since the pragma pipeline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.",
+                   *currentLoop->getML(), "scheduleLoop");
     Nodep = true;
   }
   SwplDdg *ddg = SwplDdg::Initialize(*currentLoop,Nodep);

@@ -33,7 +33,7 @@ SwplDdg *SwplDdg::Initialize (SwplLoop &loop, bool Nodep) {
   /// 2. Call analysisRegDependence() to analyze dependency information between registers.
   ddg->analysisRegDependence();
   /// 3. Call analysisMemDependence() to analyze dependency information between memories.
-  if(!Nodep)
+  if (!Nodep)
     ddg->analysisMemDependence();
   /// 4. Call analysisInstDependence() to analyze instruction dependency information.
   if (EnableInstDep)
