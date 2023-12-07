@@ -3692,7 +3692,7 @@ for further details including limitations of the unroll hints.
 
 def PipelineHintDocs : Documentation {
   let Category = DocCatStmt;
-  let Heading = "#pragma clang loop pipeline, #pragma clang loop pipeline_initiation_interval";
+  let Heading = "#pragma clang loop pipeline, #pragma clang loop pipeline_initiation_interval, #pragma clang loop pipeline_nodep";
   let Content = [{
     Software Pipelining optimization is a technique used to optimize loops by
   utilizing instruction-level parallelism. It reorders loop instructions to
@@ -3706,7 +3706,7 @@ def PipelineHintDocs : Documentation {
   of the loop executes in the same number of cycles as the initiation interval.
     For further details see <https://llvm.org/pubs/2005-06-17-LattnerMSThesis-book.pdf>.
 
-  ``#pragma clang loop pipeline and #pragma loop pipeline_initiation_interval``
+  ``#pragma clang loop pipeline and #pragma loop pipeline_initiation_interval and #pragma clang loop pipeline_nodep``
   could be used as hints for the software pipelining optimization. The pragma is
   placed immediately before a for, while, do-while, or a C++11 range-based for
   loop.
@@ -3734,6 +3734,16 @@ def PipelineHintDocs : Documentation {
   for (...) {
     ...
   }
+
+  Using ``#pragma clang loop pipeline_nodep`` treats memory accesses 
+  within the loop as having no dependencies, which may facilitate SWPL enforcement.
+
+  .. code-block:: c++
+
+  #pragma clang loop pipeline_nodep(enable)
+  for (...) {
+    ...
+  } 
 
   }];
 }
