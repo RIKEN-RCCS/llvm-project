@@ -870,11 +870,11 @@ int RegAllocInfo::calcLiveRange() {
 }
 
 /**
- * @brief  生存区間表の行のLiveRangeが重なるかを判定する
- * @param  [in]  reginfo1 比較対象のRegAllocInfo
- * @param  [in]  reginfo2 比較対象のRegAllocInfo
- * @retval true  LiveRangeが重なる
- * @retval false LiveRangeが重ならない
+ * @brief  Determine if the LiveRange of rows in the Survival Interval Table overlap.
+ * @param  [in]  reginfo1 RegAllocInfo for comparison
+ * @param  [in]  reginfo2 RegAllocInfo for comparison
+ * @retval true  LiveRange overlap
+ * @retval false LiveRange does not overlap
  */
 bool SwplRegAllocInfoTbl::isOverlapLiveRange( RegAllocInfo *reginfo1, RegAllocInfo *reginfo2) {
   int def1 = reginfo1->num_def;
@@ -883,7 +883,10 @@ bool SwplRegAllocInfoTbl::isOverlapLiveRange( RegAllocInfo *reginfo1, RegAllocIn
   int def2 = reginfo2->num_def;
   int use2 = reginfo2->num_use;
 
-  for(int i=1; i<=(int)total_mi; i++) {    // num_def/num_useは1からカウント開始する
+  // // livein case, make sure that the register is not destroyed.
+  if (def1<0 || def2<0) return true;
+
+  for(int i=1; i<=(int)total_mi; i++) {    // num_def/num_use starts counting from 1
     bool overlap1 = false;
     bool overlap2 = false;
     if(def1>use1) {
