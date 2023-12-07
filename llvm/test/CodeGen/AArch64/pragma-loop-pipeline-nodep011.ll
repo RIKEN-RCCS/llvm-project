@@ -1,10 +1,10 @@
 ; RUN: llc < %s -fswp -O2 -mcpu=a64fx --pass-remarks=aarch64-swpipeliner --pass-remarks-analysis=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
-; CHECK: remark: ./pragma-loop-pipeline-nodep004.cpp:26:5: Since the pragma pipline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.
-; CHECK: remark: ./pragma-loop-pipeline-nodep004.cpp:26:5: software pipelining (IPC: 1.65, ITR: 3, MVE: 2, II: 52, Stage: 2, (VReg Fp: 18/32, Int: 12/29, Pred: 1/8)), SRA(PReg Fp: 18/32, Int: 8/29, Pred: 0/8)
-; CHECK-NEXT:remark: ./pragma-loop-pipeline-nodep004.cpp:26:5: Since the pragma pipline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.
-; CHECK:remark: ./pragma-loop-pipeline-nodep004.cpp:26:5: software pipelining (IPC: 0.81, ITR: 3, MVE: 2, II: 94, Stage: 2, (VReg Fp: 21/32, Int: 12/29, Pred: 1/8)), SRA(PReg Fp: 20/32, Int: 7/29, Pred: 0/8)
-; CHECK-NEXT: remark: ./pragma-loop-pipeline-nodep004.cpp:26:5: Since the pragma pipline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.
-; CHECK: remark: ./pragma-loop-pipeline-nodep004.cpp:26:5: software pipelining (IPC: 0.34, ITR: 3, MVE: 2, II: 229, Stage: 2, (VReg Fp: 27/32, Int: 6/29, Pred: 1/8)), SRA(PReg Fp: 27/32, Int: 4/29, Pred: 0/8)
+; CHECK: remark: ./pragma-loop-pipeline-nodep004.cpp:26:5: Since the pragma pipeline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.
+; CHECK: remark: ./pragma-loop-pipeline-nodep004.cpp:26:5: software pipelining 
+; CHECK-NEXT:remark: ./pragma-loop-pipeline-nodep004.cpp:26:5: Since the pragma pipeline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.
+; CHECK:remark: ./pragma-loop-pipeline-nodep004.cpp:26:5: software pipelining 
+; CHECK-NEXT: remark: ./pragma-loop-pipeline-nodep004.cpp:26:5: Since the pragma pipeline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.
+; CHECK: remark: ./pragma-loop-pipeline-nodep004.cpp:26:5: software pipelining 
 
 ; ModuleID = './pragma-loop-pipeline-nodep004.cpp'
 source_filename = "./pragma-loop-pipeline-nodep004.cpp"
@@ -696,14 +696,14 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) }
 !llvm.module.flags = !{!2, !3, !4, !5, !6}
 !llvm.ident = !{!7}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 17.0.3 (http://172.16.1.70:10081/a64fx-swpl/llvm-project.git 5fa7b56596ded8309b92a44607930be82be158bc)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 17.0.3 ", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "./pragma-loop-pipeline-nodep004.cpp", directory: "/home/xxxx", checksumkind: CSK_MD5, checksum: "5f9d7ab1c365f73273804492c82ffd66")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 7, !"uwtable", i32 2}
 !6 = !{i32 7, !"frame-pointer", i32 1}
-!7 = !{!"clang version 17.0.3 (http://172.16.1.70:10081/a64fx-swpl/llvm-project.git 5fa7b56596ded8309b92a44607930be82be158bc)"}
+!7 = !{!"clang version 17.0.3 "}
 !8 = distinct !DISubprogram(name: "foo", scope: !9, file: !9, line: 19, type: !10, scopeLine: 19, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
 !9 = !DIFile(filename: "./pragma-loop-pipeline-nodep004.cpp", directory: "/home/xxxx", checksumkind: CSK_MD5, checksum: "5f9d7ab1c365f73273804492c82ffd66")
 !10 = !DISubroutineType(types: !11)

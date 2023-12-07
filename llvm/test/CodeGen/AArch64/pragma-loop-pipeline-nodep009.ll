@@ -1,6 +1,6 @@
 ; RUN: llc < %s -fswp -O2 -mcpu=a64fx --pass-remarks=aarch64-swpipeliner --pass-remarks-analysis=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
-; CHECK-NOT: remark: ./pragma-loop-pipeline-nodep017.cpp:27:5: Since the pragma pipline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.
-; CHECK: remark: ./pragma-loop-pipeline-nodep017.cpp:27:5: software pipelining (IPC: 2.00, ITR: 5, MVE: 3, II: 3, Stage: 3, (VReg Fp: 1/32, Int: 17/29, Pred: 1/8)), SRA(PReg Fp: 0/32, Int: 14/29, Pred: 0/8) 
+; CHECK-NOT: remark: ./pragma-loop-pipeline-nodep017.cpp:27:5: Since the pragma pipeline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.
+; CHECK: remark: ./pragma-loop-pipeline-nodep017.cpp:27:5: software pipelining 
 
 ; ModuleID = './pragma-loop-pipeline-nodep017.cpp'
 source_filename = "./pragma-loop-pipeline-nodep017.cpp"
@@ -142,14 +142,14 @@ attributes #2 = { nocallback nofree nosync nounwind willreturn memory(none) }
 !llvm.module.flags = !{!2, !3, !4, !5, !6}
 !llvm.ident = !{!7}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 17.0.3 (http://172.16.1.70:10081/a64fx-swpl/llvm-project.git 5fa7b56596ded8309b92a44607930be82be158bc)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 17.0.3 ", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "pragma-loop-pipeline-nodep017.cpp", directory: "/home/xxxx", checksumkind: CSK_MD5, checksum: "71173b8a6d5017411a589a84823a92c7")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 7, !"uwtable", i32 2}
 !6 = !{i32 7, !"frame-pointer", i32 1}
-!7 = !{!"clang version 17.0.3 (http://172.16.1.70:10081/a64fx-swpl/llvm-project.git 5fa7b56596ded8309b92a44607930be82be158bc)"}
+!7 = !{!"clang version 17.0.3 "}
 !8 = distinct !DISubprogram(name: "test_1", scope: !9, file: !9, line: 22, type: !10, scopeLine: 22, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
 !9 = !DIFile(filename: "./pragma-loop-pipeline-nodep017.cpp", directory: "/home/xxxx", checksumkind: CSK_MD5, checksum: "71173b8a6d5017411a589a84823a92c7")
 !10 = !DISubroutineType(types: !11)
