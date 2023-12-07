@@ -68,8 +68,8 @@ bool enableSWP(const Loop*, bool ignoreMetadataOfRemainder);
 /**
  * Returns from Pragma whether the specified loop is memory-independent.
  * @param L Specify target Loop information
- * @retval true Memory-independent specification
- * @retval false Memory-dependent specification
+ * @retval true pipeline_nodep is specified
+ * @retval false pipeline_nodep is not specified
  */
 bool enableNodep(const Loop *L);
 
