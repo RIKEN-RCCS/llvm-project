@@ -1,5 +1,5 @@
 # RUN: llc -o /dev/null -mcpu=a64fx -O1 %s -start-before=aarch64-swpipeliner -fswp -pass-remarks=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner 2>&1 | FileCheck %s
-# CHECK:remark: s.c:37:13: The number of COPY instructions in the kernel loop for software pipelining is 5.
+# CHECK:remark: s.c:37:13: The number of COPY instructions in the kernel loop for software pipelining is 0.
 --- |
   ; ModuleID = 's.c'
   source_filename = "s.c"

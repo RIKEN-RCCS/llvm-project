@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -fswp -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8  -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc %s -mcpu=a64fx -fswp -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8  -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK:** SwplTransformedMIRInfo begin **
 # CHECK-NEXT:originalDoVReg:%18
@@ -224,72 +224,74 @@
 # CHECK-NEXT:  renamable $s9 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr renamable $s1, renamable $s1, implicit $fpcr
 # CHECK-NEXT:  renamable $x2 = ADDXri renamable $x5, 4, 0
 # CHECK-NEXT:  renamable $x3 = SUBSXri renamable $x6, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  %134:gpr64sp = COPY $x0
-# CHECK-NEXT:  %135:gpr64sp = COPY $x1
-# CHECK-NEXT:  %136:fpr32 = COPY $s0
-# CHECK-NEXT:  %137:gpr64sp = COPY $x2
-# CHECK-NEXT:  %138:fpr32 = COPY $s2
-# CHECK-NEXT:  %139:gpr64sp = COPY $x3
-# CHECK-NEXT:  %140:fpr32 = COPY $s3
-# CHECK-NEXT:  %141:fpr32 = COPY $s4
-# CHECK-NEXT:  %142:fpr32 = COPY $s5
-# CHECK-NEXT:  %143:fpr32 = COPY $s6
-# CHECK-NEXT:  %144:fpr32 = COPY $s7
-# CHECK-NEXT:  %145:fpr32 = COPY $s8
-# CHECK-NEXT:  %146:gpr64sp = COPY $x5
-# CHECK-NEXT:  %147:gpr64sp = COPY $x6
-# CHECK-NEXT:  %148:fpr32 = COPY $s9
+# CHECK-NEXT:  SWPLIVEOUT implicit $x0, implicit $x1, implicit $s0, implicit $x2, implicit $s2, implicit $x3, implicit $s3, implicit $s4, implicit $s5, implicit $s6, implicit $s7, implicit $s8, implicit $x5, implicit $x6, implicit $s9
 # CHECK-NEXT:  $xzr = SUBSXri $x3, 14, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 10, %bb.8, implicit $nzcv
 # CHECK-NEXT:bb.13 (%ir-block.57):
 # CHECK-NEXT:; predecessors: %bb.8
 # CHECK-NEXT:  successors: %bb.14(0x80000000); %bb.14(100.00%)
 
-# CHECK:  %111:gpr64sp = ADDXri %135:gpr64sp, 4, 0
-# CHECK-NEXT:  STURSi %136:fpr32, %137:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
-# CHECK-NEXT:  %112:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %138:fpr32, %138:fpr32, implicit $fpcr
-# CHECK-NEXT:  %113:gpr64sp = ADDXri %137:gpr64sp, 4, 0
-# CHECK-NEXT:  %114:gpr64sp = SUBSXri %139:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  STURSi %140:fpr32, %113:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
-# CHECK-NEXT:  %115:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %141:fpr32, %141:fpr32, implicit $fpcr
-# CHECK-NEXT:  %116:gpr64sp = ADDXri %113:gpr64sp, 4, 0
-# CHECK-NEXT:  %117:gpr64sp = SUBSXri %114:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  STURSi %142:fpr32, %116:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
-# CHECK-NEXT:  %118:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %143:fpr32, %143:fpr32, implicit $fpcr
-# CHECK-NEXT:  %119:gpr64sp = ADDXri %116:gpr64sp, 4, 0
-# CHECK-NEXT:  %120:gpr64sp = SUBSXri %117:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  STURSi %144:fpr32, %119:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
-# CHECK-NEXT:  %121:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %145:fpr32, %145:fpr32, implicit $fpcr
-# CHECK-NEXT:  %122:gpr64sp = ADDXri %119:gpr64sp, 4, 0
-# CHECK-NEXT:  %123:gpr64sp = SUBSXri %120:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  STURSi %148:fpr32, %122:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
-# CHECK-NEXT:  %124:gpr64sp = ADDXri %122:gpr64sp, 4, 0
-# CHECK-NEXT:  %125:gpr64sp = SUBSXri %123:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  STURSi %112:fpr32, %124:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
-# CHECK-NEXT:  %126:gpr64sp = ADDXri %124:gpr64sp, 4, 0
-# CHECK-NEXT:  %127:gpr64sp = SUBSXri %125:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  STURSi %115:fpr32, %126:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
-# CHECK-NEXT:  %128:gpr64sp = ADDXri %126:gpr64sp, 4, 0
-# CHECK-NEXT:  %129:gpr64sp = SUBSXri %127:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  STURSi %118:fpr32, %128:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
-# CHECK-NEXT:  %130:gpr64sp = ADDXri %128:gpr64sp, 4, 0
-# CHECK-NEXT:  %131:gpr64sp = SUBSXri %129:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  STURSi %121:fpr32, %130:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
-# CHECK-NEXT:  %132:gpr64sp = ADDXri %130:gpr64sp, 4, 0
-# CHECK-NEXT:  %133:gpr64sp = SUBSXri %131:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK:  SWPLIVEIN implicit-def $x0, implicit-def $x1, implicit-def $s0, implicit-def $x2, implicit-def $s2, implicit-def $x3, implicit-def $s3, implicit-def $s4, implicit-def $s5, implicit-def $s6, implicit-def $s7, implicit-def $s8, implicit-def $x5, implicit-def $x6, implicit-def $s9
+# CHECK-NEXT:  %111:gpr64sp = COPY $x0
+# CHECK-NEXT:  %112:gpr64sp = COPY $x1
+# CHECK-NEXT:  %113:fpr32 = COPY $s0
+# CHECK-NEXT:  %114:gpr64sp = COPY $x2
+# CHECK-NEXT:  %115:fpr32 = COPY $s2
+# CHECK-NEXT:  %116:gpr64sp = COPY $x3
+# CHECK-NEXT:  %117:fpr32 = COPY $s3
+# CHECK-NEXT:  %118:fpr32 = COPY $s4
+# CHECK-NEXT:  %119:fpr32 = COPY $s5
+# CHECK-NEXT:  %120:fpr32 = COPY $s6
+# CHECK-NEXT:  %121:fpr32 = COPY $s7
+# CHECK-NEXT:  %122:fpr32 = COPY $s8
+# CHECK-NEXT:  %123:gpr64sp = COPY $x5
+# CHECK-NEXT:  %124:gpr64sp = COPY $x6
+# CHECK-NEXT:  %125:fpr32 = COPY $s9
+# CHECK-NEXT:  %126:gpr64sp = ADDXri %112:gpr64sp, 4, 0
+# CHECK-NEXT:  STURSi %113:fpr32, %114:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %127:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %115:fpr32, %115:fpr32, implicit $fpcr
+# CHECK-NEXT:  %128:gpr64sp = ADDXri %114:gpr64sp, 4, 0
+# CHECK-NEXT:  %129:gpr64sp = SUBSXri %116:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %117:fpr32, %128:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %130:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %118:fpr32, %118:fpr32, implicit $fpcr
+# CHECK-NEXT:  %131:gpr64sp = ADDXri %128:gpr64sp, 4, 0
+# CHECK-NEXT:  %132:gpr64sp = SUBSXri %129:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %119:fpr32, %131:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %133:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %120:fpr32, %120:fpr32, implicit $fpcr
+# CHECK-NEXT:  %134:gpr64sp = ADDXri %131:gpr64sp, 4, 0
+# CHECK-NEXT:  %135:gpr64sp = SUBSXri %132:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %121:fpr32, %134:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %136:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %122:fpr32, %122:fpr32, implicit $fpcr
+# CHECK-NEXT:  %137:gpr64sp = ADDXri %134:gpr64sp, 4, 0
+# CHECK-NEXT:  %138:gpr64sp = SUBSXri %135:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %125:fpr32, %137:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %139:gpr64sp = ADDXri %137:gpr64sp, 4, 0
+# CHECK-NEXT:  %140:gpr64sp = SUBSXri %138:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %127:fpr32, %139:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %141:gpr64sp = ADDXri %139:gpr64sp, 4, 0
+# CHECK-NEXT:  %142:gpr64sp = SUBSXri %140:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %130:fpr32, %141:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %143:gpr64sp = ADDXri %141:gpr64sp, 4, 0
+# CHECK-NEXT:  %144:gpr64sp = SUBSXri %142:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %133:fpr32, %143:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %145:gpr64sp = ADDXri %143:gpr64sp, 4, 0
+# CHECK-NEXT:  %146:gpr64sp = SUBSXri %144:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  STURSi %136:fpr32, %145:gpr64sp, 0 :: (volatile store (s32) into %ir.59, !tbaa !6)
+# CHECK-NEXT:  %147:gpr64sp = ADDXri %145:gpr64sp, 4, 0
+# CHECK-NEXT:  %148:gpr64sp = SUBSXri %146:gpr64sp, 1, 0, implicit-def $nzcv
 # CHECK-NEXT:bb.14 (%ir-block.57):
 # CHECK-NEXT:; predecessors: %bb.13
 # CHECK-NEXT:  successors: %bb.15(0x40000000), %bb.17(0x40000000); %bb.15(50.00%), %bb.17(50.00%)
 
-# CHECK:  $xzr = SUBSXri %133:gpr64sp, 0, 0, implicit-def $nzcv
+# CHECK:  $xzr = SUBSXri %148:gpr64sp, 0, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 0, %bb.17, implicit $nzcv
 # CHECK-NEXT:bb.15 (%ir-block.57):
 # CHECK-NEXT:; predecessors: %bb.14, %bb.11
 # CHECK-NEXT:  successors: %bb.16(0x80000000); %bb.16(100.00%)
 
-# CHECK:  %108:gpr64sp = PHI %14:gpr64all, %bb.11, %111:gpr64sp, %bb.14
-# CHECK-NEXT:  %109:gpr64sp = PHI %13:gpr64all, %bb.11, %132:gpr64sp, %bb.14
-# CHECK-NEXT:  %110:gpr64sp = PHI %15:gpr64all, %bb.11, %133:gpr64sp, %bb.14
+# CHECK:  %108:gpr64sp = PHI %14:gpr64all, %bb.11, %126:gpr64sp, %bb.14
+# CHECK-NEXT:  %109:gpr64sp = PHI %13:gpr64all, %bb.11, %147:gpr64sp, %bb.14
+# CHECK-NEXT:  %110:gpr64sp = PHI %15:gpr64all, %bb.11, %148:gpr64sp, %bb.14
 # CHECK-NEXT:bb.16 (%ir-block.57):
 # CHECK-NEXT:; predecessors: %bb.16, %bb.15
 # CHECK-NEXT:  successors: %bb.16(0x40000000), %bb.17(0x40000000); %bb.16(50.00%), %bb.17(50.00%)
