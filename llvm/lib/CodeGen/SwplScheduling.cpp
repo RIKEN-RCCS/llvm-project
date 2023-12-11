@@ -46,8 +46,8 @@ static cl::opt<bool> OptionDumpEveryInst("swpl-debug-dump-scheduling-every-inst"
 
 
 static cl::opt<bool> OptionDisableStageScheduling("swpl-disable-stagescheduling",cl::init(true), cl::ReallyHidden);
-static cl::opt<bool> OptionDumpSSEdges("swpl-debug-dump-ssedges",cl::init(false), cl::ReallyHidden);
-static cl::opt<bool> OptionDumpCyclicRoots("swpl-debug-dump-cyclicroots",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> OptionDumpSSProgress("swpl-debug-dump-ss-progress",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> OptionDumpCyclicRoots("swpl-debug-dump-ss-cyclicroots",cl::init(false), cl::ReallyHidden);
 
 namespace llvm{
 
@@ -2624,7 +2624,7 @@ bool SwplMsResult::isRegReducible(
 }
 
 /// \brief Execute StageScheduling
-/// \retval true change scheduling-result by StageScheduling
+/// \retval true change SwplInstSlotHashmap by StageScheduling
 /// \retval false scheduling-result is no change
 bool SwplSSProc::execute(const SwplDdg &ddg,
                          const SwplLoop &loop,
@@ -2654,26 +2654,194 @@ bool SwplSSProc::execute(const SwplDdg &ddg,
 
   SwplSSEdges ssEdges(ddg, loop, ii, *inst_slot_map);
   ssEdges.updateInCyclic(ssCyclicInfo);
-  if (OptionDumpSSEdges) {
+  if (OptionDumpSSProgress) {
+    stream << "*** before SS : dump SwplSSEdges ***\n";
     ssEdges.dump(stream, fname);
   }
 
-  return false;
+  SwplSSMoveinfo acresult;
+  SwplSSACProc::execute(ddg, ii, ssEdges, acresult, stream);
+  if (OptionDumpSSProgress) {
+    stream << "*** move instruction by AC ***\n";
+    SwplSSProc::dumpSSMoveinfo(stream, acresult);
+  }
+
+  // adjust SwplInstSlotHashmap by SwplSSMoveinfo
+  SwplSSProc::SwplSSAdjustSlot(*inst_slot_map, acresult);
+  if (OptionDumpSSProgress) {
+    stream << "*** after SS : dump SwplSSEdges ***\n";
+    SwplSSEdges TEMPssEdges(ddg, loop, ii, *inst_slot_map);
+    TEMPssEdges.updateInCyclic(ssCyclicInfo);
+    TEMPssEdges.dump(stream, fname);
+  }
+
+  return true;
+}
+
+/// \brief dump SwplSSMoveinfo
+void SwplSSProc::dumpSSMoveinfo(raw_ostream &stream, const SwplSSMoveinfo &v) {
+  for (auto [inst, movecycle]: v) {
+    stream << format("%p", inst->getMI()) << ":" << inst->getName() << " : move val=" << movecycle << "\n";
+  }
+  return;
+}
+
+/// \brief update SwplInstSlotHashmap by SwplSSMoveinfo
+/// \param [in/out] SwplInstSlotHashmap to be updated
+/// \param [in] Instruction placement cycle movement information
+/// \return true if SwplInstSlotHashmap changed
+bool SwplSSProc::SwplSSAdjustSlot(SwplInstSlotHashmap& ism, SwplSSMoveinfo &v) {
+  auto bandwidth = SWPipeliner::STM->getFetchBandwidth();
+  for (auto [cinst, movecycle]: v) {
+    SwplInst *inst = const_cast<SwplInst *>(cinst);
+    ism[inst].moveSlotIndex(movecycle*bandwidth);
+  }
+  return true;
+}
+
+/// \brief execute AC
+/// \param [in] d DDG
+/// \param [in] ii InitiationInterval
+/// \param [in] e Edge information
+/// \param [in/out] Instruction placement cycle movement information
+/// \param [in] stream stream of message output
+/// \retval true change SwplInstSlotHashmap by StageScheduling-AC
+bool SwplSSACProc::execute(const SwplDdg &d,
+                           unsigned ii,
+                           SwplSSEdges &e,
+                           SwplSSMoveinfo &moveinfo,
+                           raw_ostream &stream) {
+  SwplSSACProc acproc(d, ii, e);
+  llvm::SmallVector<SwplSSEdge*, 8> targetedges;
+  acproc.getTargetEdges(targetedges);
+  for (auto &t: targetedges) {
+#if 1
+    acproc.collectPostInsts(*t, moveinfo);
+#else
+    dbgs() << "****** test if collect Pre-Ins ******\n";
+    acproc.collectPreInsts(*t, moveinfo);
+#endif
+    t->numSkipFactor = 0;
+  }
+  e.updateCycles(moveinfo);
+  return true;
+}
+
+/// \brief Collect Edges eligible for AC
+/// \param [in/out] v Collection result vector
+/// \return num of Collection Edges
+unsigned SwplSSACProc::getTargetEdges(llvm::SmallVector<SwplSSEdge*, 8> &v){
+  //for (auto &e: ssedges) {
+  for (auto *e: ssedges.Edges) {
+    if ((e->numSkipFactor!=0) && (e->isCyclic()==false)) {
+      v.push_back(e);
+    }
+  }
+  return v.size();
+}
+
+/// \brief Node search for adjustment by AC
+/// \param [in] ddg DDG
+/// \param [in/out] explored_list set to store route search results
+/// \param [in] out Search information(to) 
+/// \param [in] in Search information(from) 
+/// \return Nothing
+static void node_search(const SwplDdg& ddg,
+                        std::set<const SwplInst*> &explored_list,
+                        const SwplInst* out, const SwplInst* in) {
+  if (explored_list.count(in) > 0) {
+    return; // already checked.
+  }
+  explored_list.insert(in);
+
+  std::set<const SwplInst*> dest;
+  for (auto *edge: ddg.getGraph().getEdges()) {
+    std::vector<unsigned> distances = ddg.getDistancesFor(*edge);
+    if (distances.size()==1 && distances[0]==20)
+      continue;
+
+    if (edge->getInitial()==edge->getTerminal())
+      continue;
+
+    if (edge->getInitial()==in && edge->getTerminal()!=out)
+      dest.insert(edge->getTerminal());
+    else if (edge->getTerminal()==in && edge->getInitial()!=out)
+      dest.insert(edge->getInitial());
+    else
+      continue;
+  }
+
+  if (dest.empty()) {
+    return;
+  }
+
+  for (auto d: dest) {
+    if (explored_list.count(d) == 0) {
+      node_search(ddg, explored_list, in, d);
+    }
+  }
+  return;
+}
+
+/// \brief Collect preceding instructions and movement amount
+/// \param [in] e Edge information
+/// \param [in/out] Cycle movement per instruction
+/// \return Nothing
+void SwplSSACProc::collectPreInsts(const SwplSSEdge &e, SwplSSMoveinfo &v) {
+  auto pre_i = e.InitialVertex;
+  auto post_i = e.TerminalVertex;
+  auto sf = e.numSkipFactor;
+  long movecycle = sf*II;
+
+  std::set<const SwplInst*> node_list;
+  node_search(ddg, node_list, post_i, pre_i);
+  for (auto *p: node_list) {
+    if (v.contains(p)) {
+      v[p]+=movecycle;
+    }
+    else {
+      v.insert(std::make_pair(p, movecycle));
+    }
+  }
+  return;
+}
+
+/// \brief Collect subsequent instructions and movement amount
+/// \param [in] e Edge information
+/// \param [in/out] Cycle movement per instruction
+/// \return Nothing
+void SwplSSACProc::collectPostInsts(const SwplSSEdge &e, SwplSSMoveinfo &v) {
+  auto pre_i = e.InitialVertex;
+  auto post_i = e.TerminalVertex;
+  auto sf = e.numSkipFactor;
+  long movecycle = (0-sf)*II;
+
+  std::set<const SwplInst*> node_list;
+  node_search(ddg, node_list, pre_i, post_i);
+  for (auto *p: node_list) {
+    if (v.contains(p)) {
+      v[p]+=movecycle;
+    }
+    else {
+      v.insert(std::make_pair(p, movecycle));
+    }
+  }
+  return;
 }
 
 /// \brief SwplSSEdge constructor
 SwplSSEdge::SwplSSEdge(const SwplInst *ini, unsigned inicycle,
                        const SwplInst *term, unsigned termcycle,
                        int delay_in, unsigned distance_in,
-                       unsigned ii) : InitialVertex(ini), 
-                                      TerminalVertex(term),
-                                      InitialCycle(inicycle),
-                                      TerminalCycle(termcycle),
-                                      delay(delay_in),
+                       unsigned ii) : delay(delay_in),
                                       distance(distance_in),
-                                      numSkipFactor(0),
+                                      II(ii),
                                       inCyclic(false),
-                                      II(ii) {
+                                      InitialVertex(ini),
+                                      InitialCycle(inicycle),
+                                      TerminalVertex(term),
+                                      TerminalCycle(termcycle),
+                                      numSkipFactor(0) {
   long sf_val=0;
   if ((InitialCycle==TerminalCycle) && (InitialVertex->getMI()==TerminalVertex->getMI())) {
     // Edge to self is not subject to StageScheduling
@@ -2702,6 +2870,8 @@ void SwplSSEdge::dump(raw_ostream &stream, StringRef fname) const {
 }
 
 /// \brief SwplSSEdges constructor
+/// \details Generate edge information used for adjustment in StageScheduling
+///          from DDG, loop, and instruction placement results
 SwplSSEdges::SwplSSEdges(const SwplDdg &ddg,
                          const SwplLoop &loop,
                          unsigned ii,
@@ -2735,7 +2905,7 @@ SwplSSEdges::SwplSSEdges(const SwplDdg &ddg,
         unsigned distance_val = *distance;
 
         if (delay_val==0) {
-          // delayが0となるのは、edgeのfromの命令がPseudo命令である場合のみを想定
+          // The delay is 0 only when the from instruction of edge is a pseudo instruction.
           assert(SWPipeliner::STM->isPseudo(*(edge->getInitial()->getMI())));
           delay_val=1;
         }
@@ -2743,7 +2913,7 @@ SwplSSEdges::SwplSSEdges(const SwplDdg &ddg,
         int modulo_delay = delay_val - ii * (int)(distance_val);
 
         if (max_modulo_delay < modulo_delay) {
-          // modulo_delayとして扱われる場合のdelayとdistanceを記録する
+          // Record delay and distance when treated as modulo_delay
           max_modulo_delay = modulo_delay;
           out_delay = delay_val;
           out_distance = distance_val;
@@ -2764,24 +2934,47 @@ SwplSSEdges::SwplSSEdges(const SwplDdg &ddg,
 }
 
 /// \brief update SwplSSedge.inCyclic with SwplSSCycleInfo
+/// \param [in] ci Circulation part information
+/// \return Nothing
 void SwplSSEdges::updateInCyclic(const SwplSSCyclicInfo & ci) {
   for (auto *edge: Edges) {
-    edge->setInCyclic(ci.isInCyclic(edge->getInitialVertex(),
-                                    edge->getTerminalVertex()));
+    edge->setInCyclic(ci.isInCyclic(edge->InitialVertex,
+                                    edge->TerminalVertex));
+  }
+}
+
+/// \brief update SwplSSedge.InitialCycle/TerminalCycle by SwplSSMoveinfo
+/// \param [in/out] Instruction placement cycle movement information
+/// \return Nothing
+void SwplSSEdges::updateCycles(const SwplSSMoveinfo &v) {
+  for (auto &moveinfo: v) {
+    auto moveinst=moveinfo.first;
+    auto moveval=moveinfo.second;
+    for (auto *edge: Edges) {
+      if (edge->InitialVertex==moveinst)
+        edge->InitialCycle+=moveval;
+      if (edge->TerminalVertex==moveinst)
+        edge->TerminalCycle+=moveval;
+    }
   }
 }
 
 /// \brief dump SwplSSedges
 void SwplSSEdges::dump(raw_ostream &stream, StringRef fname) const {
-  stream << "**** dump SwplSSEdges ***\n";
   for (auto *edge: Edges) {
     edge->dump(stream, fname);
   }
 }
 
 /// \brief Node search for circular/acyclic determination.
+/// \param [in] ddg DDG
+/// \param [in/out] explored_list set to store route search results
+/// \param [in/out] rootlists vector of circular partial information
+/// \param [in] out Search information(to)
+/// \param [in] in Search information(from)
+/// \param [in/out] rootlist circular partial information
 /// \return Nothing
-static void node_search( const SwplDdg& ddg,
+static void cyclic_search( const SwplDdg& ddg,
                          std::set<const SwplInst*> &explored_list,
                          std::vector<std::vector<const SwplInst*> *> &rootlists,
                          const SwplInst* out, const SwplInst* in, std::vector<const SwplInst*> *rootlist ) {
@@ -2823,7 +3016,7 @@ static void node_search( const SwplDdg& ddg,
       rootlists.push_back(reprootlist);
     }
     else {
-      node_search(ddg, explored_list, rootlists,
+      cyclic_search(ddg, explored_list, rootlists,
                   in, d, reprootlist );
     }
   }
@@ -2833,6 +3026,8 @@ static void node_search( const SwplDdg& ddg,
 
 /// \brief SwplSSCycleInfo constructor
 /// \detail Extract circulating nodes.
+/// \param [in] ddg DDG
+/// \param [in] loop loop information
 /// \return Nothing
 SwplSSCyclicInfo::SwplSSCyclicInfo(const SwplDdg& ddg,
                                    const SwplLoop& loop) {
@@ -2842,7 +3037,7 @@ SwplSSCyclicInfo::SwplSSCyclicInfo(const SwplDdg& ddg,
     if (!(explored_list.count(inst) > 0)) {
       std::vector<const SwplInst*> *rootlist = new std::vector<const SwplInst*>;
       rootlist->push_back(inst);
-      node_search(ddg,
+      cyclic_search(ddg,
                   explored_list, rootlists,
                   nullptr, inst,
                   rootlist);

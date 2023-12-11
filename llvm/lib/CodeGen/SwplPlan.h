@@ -58,6 +58,10 @@ public:
   unsigned calcBlock(unsigned iteration_interval);
   unsigned calcCycle();
   unsigned calcFetchSlot();
+  /// \brief change SlotIndex
+  /// \param [in] v amount of change
+  /// \return Nothing
+  void moveSlotIndex(long v) {slot_index=slot_index+v; return;}
 
   static SwplSlot baseSlot(unsigned iteration_interval);
   static SwplSlot construct(unsigned cycle, unsigned fetch_slot);

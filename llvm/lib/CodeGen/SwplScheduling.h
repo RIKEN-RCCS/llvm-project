@@ -289,6 +289,10 @@ private:
   static SwplMsResult * getModerateSchedule(std::unordered_set<SwplMsResult *>& ms_result_candidate);
 };
 
+class SwplSSEdge;
+class SwplSSEdges;
+using SwplSSMoveinfo = llvm::DenseMap<const SwplInst*, long>;
+
 /// \brief StageScheduling proccessing
 class SwplSSProc {
 public:
@@ -297,6 +301,27 @@ public:
                       unsigned ii,
                       SwplInstSlotHashmap *inst_slot_map,
                       raw_ostream &stream );
+  static void dumpSSMoveinfo(raw_ostream &stream, const SwplSSMoveinfo &v);
+  static bool SwplSSAdjustSlot(SwplInstSlotHashmap& ism, SwplSSMoveinfo &v);
+};
+
+class SwplSSACProc {
+  const SwplDdg &ddg;
+  unsigned II;
+  SwplSSEdges &ssedges;
+public:
+  SwplSSACProc(const SwplDdg &d,
+               unsigned ii,
+               SwplSSEdges &e) : ddg(d), II(ii), ssedges(e) {}
+  static bool execute(const SwplDdg &d,
+                      unsigned ii,
+                      SwplSSEdges &e,
+                      SwplSSMoveinfo &v,
+                      raw_ostream &stream );
+private:
+  unsigned getTargetEdges(llvm::SmallVector<SwplSSEdge*, 8> &v);
+  void collectPreInsts(const SwplSSEdge &e, SwplSSMoveinfo &v);
+  void collectPostInsts(const SwplSSEdge &e, SwplSSMoveinfo &v);
 };
 
 /// \brief Information on the nodes(SwplInst*) group that will be the circulating part
@@ -316,16 +341,16 @@ public:
 
 /// \brief Edge info
 class SwplSSEdge {
-  const SwplInst *InitialVertex;  ///< エッジを構成する始点のノード
-  const SwplInst *TerminalVertex; ///< エッジを構成する終点のノード
-  unsigned InitialCycle;
-  unsigned TerminalCycle;
   int delay;
   unsigned distance;
-  long numSkipFactor;
-  bool inCyclic=false;
   unsigned II;
+  bool inCyclic=false;
 public:
+  const SwplInst *InitialVertex;  ///< Edge Preceding Instruction
+  unsigned InitialCycle;
+  const SwplInst *TerminalVertex; ///< Edge successor instruction
+  unsigned TerminalCycle;
+  long numSkipFactor;
   SwplSSEdge(const SwplInst *ini, unsigned inicycle,
              const SwplInst *term, unsigned termcycle,
              int delay_in, unsigned distance_in,
@@ -334,16 +359,17 @@ public:
     inCyclic = val;
     return;
   }
-  const SwplInst *getInitialVertex() const { return InitialVertex; };
-  const SwplInst *getTerminalVertex() const { return TerminalVertex; };
+  bool isCyclic() {
+    return inCyclic;
+  }
   void dump(raw_ostream &stream, StringRef fname) const;
 };
 
 /// \brief manege Edge of SWPLed
 class SwplSSEdges {
-  std::vector<SwplSSEdge *> Edges;
   unsigned II;
 public:
+  std::vector<SwplSSEdge *> Edges;
   SwplSSEdges(const SwplDdg &ddg,
               const SwplLoop &loop,
               unsigned ii,
@@ -355,6 +381,8 @@ public:
   }
   void dump(raw_ostream &stream, StringRef fname) const;
   void updateInCyclic(const SwplSSCyclicInfo &);
+  void updateCycles(const SwplSSMoveinfo &v);
+
 };
 
 }
