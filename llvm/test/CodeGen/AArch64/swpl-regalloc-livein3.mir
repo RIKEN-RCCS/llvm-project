@@ -1,13 +1,16 @@
 # RUN: llc %s -o /dev/null -O1 -mcpu=a64fx -fswp -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8 2>&1 | FileCheck %s
-# CHECK:bb.1.vector.ph:
-# CHECK:  %37:qq = REG_SEQUENCE %31:fpr128, %subreg.qsub0, %36:fpr128, %subreg.qsub1
-# CHECK:bb.8.vector.body:
-# CHECK:  $q14_q15 = COPY %37:qq
-# CHECK:  SWPLIVEOUT implicit $q0, implicit $q1, implicit $q2, implicit $x0, implicit $q3, implicit $x1, implicit $x2, implicit $q4, implicit $q5, implicit $q7, implicit $q8, implicit $q9, implicit $q10, implicit $q11, implicit $q12, implicit $q13, implicit $x4, implicit $q14_q15, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x11
-# CHECK:bb.2.vector.body:
-# CHECK:  SWPLIVEIN implicit-def $q0, implicit-def $q1, implicit-def $q2, implicit-def $x0, implicit-def $q3, implicit-def $x1, implicit-def $x2, implicit-def $q4, implicit-def $q5, implicit-def $q7, implicit-def $q8, implicit-def $q9, implicit-def $q10, implicit-def $q11, implicit-def $q12, implicit-def $q13, implicit-def $x4, implicit-def $q14_q15, implicit-def $x6, implicit-def $x7, implicit-def $x8, implicit-def $x9, implicit-def $x10, implicit-def $x11
 
-# Testing when multiple registers(qq) are livein the kernel.
+# CHECK:bb.8.vector.body:
+# CHECK:  $q12_q13 = COPY %37:qq
+# CHECK:  SWPLIVEOUT implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $q12_q13, implicit $x7, implicit $x8, implicit $x9, implicit $x11
+# CHECK:bb.2.vector.body:
+# CHECK:  SWPLIVEIN implicit-def $x0, implicit-def $x1, implicit-def $x2, implicit-def $x3, implicit-def $x4, implicit-def $x5, implicit-def $q12_q13, implicit-def $x7, implicit-def $x8, implicit-def $x9, implicit-def $x11
+# CHECK:  SWPLIVEOUT implicit $x0, implicit $x1, implicit $x6, implicit $q0_q1, implicit $x7, implicit $x8, implicit $x11, implicit $x12
+# CHECK:bb.9.vector.body:
+# CHECK:  SWPLIVEIN implicit-def $x0, implicit-def $x1, implicit-def $x6, implicit-def $q0_q1, implicit-def $x7, implicit-def $x8, implicit-def $x11, implicit-def $x11, implicit-def $x12
+# CHECK:  %441:qq = COPY $q0_q1
+
+# Test when multiple registers (qq) are livein/liveout to the kernel.
 
 --- |
   ; ModuleID = 'a10.c'
@@ -433,6 +436,7 @@ registers:
   - { id: 136, class: gpr32all, preferred-register: '' }
   - { id: 137, class: gpr32sp, preferred-register: '' }
   - { id: 138, class: gpr32, preferred-register: '' }
+  - { id: 139, class: qq, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false
@@ -506,6 +510,7 @@ body:             |
     %2:gpr64sp = PHI %12, %bb.1, %6, %bb.2
     %3:gpr64common = PHI %13, %bb.1, %5, %bb.2
     %4:gpr64sp = PHI %1, %bb.1, %7, %bb.2
+    %139:qq = PHI %37, %bb.1, %42, %bb.2
     %20:fpr128 = LDRQui %18, 1 :: (load (s128) from %ir.uglygep151, !tbaa !6)
     %24:fpr128 = LDRQui %22, 1 :: (load (s128) from %ir.uglygep169, !tbaa !6)
     %28:fpr128 = LDRQui %26, 1 :: (load (s128) from %ir.uglygep189, !tbaa !6)
@@ -516,7 +521,8 @@ body:             |
     %43:gpr64common = SUBXri %2, 160, 0
     %44:gpr64common = SUBXri %2, 128, 0
     ST2Twov4s %37, killed %43 :: (store (s256) into %ir.uglygep139)
-    ST2Twov4s killed %42, killed %44 :: (store (s256) into %ir.uglygep143)
+    ST2Twov4s %42, %44 :: (store (s256) into %ir.uglygep143)
+    ST2Twov4s killed %139, killed %44
     %45:fpr128 = LDRQui %18, 2 :: (load (s128) from %ir.uglygep155, align 32, !tbaa !6)
     %46:fpr128 = LDRQui %18, 3 :: (load (s128) from %ir.uglygep153, !tbaa !6)
     %47:fpr128 = LDRQui %22, 2 :: (load (s128) from %ir.uglygep173, align 32, !tbaa !6)

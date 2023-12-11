@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -fswp -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8  -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc %s -mcpu=a64fx -fswp -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8  -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK:** SwplTransformedMIRInfo begin **
 # CHECK-NEXT:originalDoVReg:%5
@@ -113,43 +113,45 @@
 # CHECK-NEXT:  renamable $x4 = SUBSXri renamable $x3, 1, 0, implicit-def $nzcv
 # CHECK-NEXT:  renamable $x0 = ADDXri renamable $x5, 4, 0
 # CHECK-NEXT:  renamable $s2 = COPY renamable $s0
-# CHECK-NEXT:  %55:fpr32 = COPY $s1
-# CHECK-NEXT:  %56:gpr64sp = COPY $x0
-# CHECK-NEXT:  %57:fpr32 = COPY $s1
-# CHECK-NEXT:  %58:fpr32 = COPY $s2
-# CHECK-NEXT:  %59:gpr64sp = COPY $x1
-# CHECK-NEXT:  %60:gpr64sp = COPY $x2
-# CHECK-NEXT:  %61:gpr64sp = COPY $x3
-# CHECK-NEXT:  %62:gpr64sp = COPY $x4
-# CHECK-NEXT:  %63:gpr64sp = COPY $x5
-# CHECK-NEXT:  %64:fpr32 = COPY $s2
+# CHECK-NEXT:  SWPLIVEOUT implicit $s1, implicit $x0, implicit $s2, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5
 # CHECK-NEXT:  $xzr = SUBSXri $x4, 3, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 10, %bb.4, implicit $nzcv
 # CHECK-NEXT:bb.9 (%ir-block.7):
 # CHECK-NEXT:; predecessors: %bb.4
 # CHECK-NEXT:  successors: %bb.10(0x80000000); %bb.10(100.00%)
 
-# CHECK:  %49:fpr32 = nnan ninf nsz arcp contract afn reassoc FADDSrr %55:fpr32, %55:fpr32, implicit $fpcr
-# CHECK-NEXT:  STURSi %49:fpr32, %56:gpr64sp, 0 :: (volatile store (s32) into %ir.13, !tbaa !2)
-# CHECK-NEXT:  %50:fpr32 = nnan ninf nsz arcp contract afn reassoc FADDSrr %49:fpr32, %58:fpr32, implicit $fpcr
-# CHECK-NEXT:  %51:gpr64sp = ADDXri %60:gpr64sp, 4, 0
-# CHECK-NEXT:  %52:gpr64sp = SUBSXri %62:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  %53:gpr64sp = ADDXri %56:gpr64sp, 4, 0
-# CHECK-NEXT:  %54:fpr32 = COPY %50:fpr32
+# CHECK:  SWPLIVEIN implicit-def $s1, implicit-def $x0, implicit-def $s1, implicit-def $s2, implicit-def $x1, implicit-def $x2, implicit-def $x3, implicit-def $x4, implicit-def $x5, implicit-def $s2
+# CHECK-NEXT:  %49:fpr32 = COPY $s1
+# CHECK-NEXT:  %50:gpr64sp = COPY $x0
+# CHECK-NEXT:  %51:fpr32 = COPY $s1
+# CHECK-NEXT:  %52:fpr32 = COPY $s2
+# CHECK-NEXT:  %53:gpr64sp = COPY $x1
+# CHECK-NEXT:  %54:gpr64sp = COPY $x2
+# CHECK-NEXT:  %55:gpr64sp = COPY $x3
+# CHECK-NEXT:  %56:gpr64sp = COPY $x4
+# CHECK-NEXT:  %57:gpr64sp = COPY $x5
+# CHECK-NEXT:  %58:fpr32 = COPY $s2
+# CHECK-NEXT:  %59:fpr32 = nnan ninf nsz arcp contract afn reassoc FADDSrr %49:fpr32, %49:fpr32, implicit $fpcr
+# CHECK-NEXT:  STURSi %59:fpr32, %50:gpr64sp, 0 :: (volatile store (s32) into %ir.13, !tbaa !2)
+# CHECK-NEXT:  %60:fpr32 = nnan ninf nsz arcp contract afn reassoc FADDSrr %59:fpr32, %52:fpr32, implicit $fpcr
+# CHECK-NEXT:  %61:gpr64sp = ADDXri %54:gpr64sp, 4, 0
+# CHECK-NEXT:  %62:gpr64sp = SUBSXri %56:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  %63:gpr64sp = ADDXri %50:gpr64sp, 4, 0
+# CHECK-NEXT:  %64:fpr32 = COPY %60:fpr32
 # CHECK-NEXT:bb.10 (%ir-block.7):
 # CHECK-NEXT:; predecessors: %bb.9
 # CHECK-NEXT:  successors: %bb.11(0x40000000), %bb.13(0x40000000); %bb.11(50.00%), %bb.13(50.00%)
 
-# CHECK:  $xzr = SUBSXri %52:gpr64sp, 0, 0, implicit-def $nzcv
+# CHECK:  $xzr = SUBSXri %62:gpr64sp, 0, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 0, %bb.13, implicit $nzcv
 # CHECK-NEXT:bb.11 (%ir-block.7):
 # CHECK-NEXT:; predecessors: %bb.10, %bb.7
 # CHECK-NEXT:  successors: %bb.12(0x80000000); %bb.12(100.00%)
 
-# CHECK:  %44:gpr64sp = PHI %12:gpr64all, %bb.7, %51:gpr64sp, %bb.10
-# CHECK-NEXT:  %45:gpr64sp = PHI %13:gpr64all, %bb.7, %53:gpr64sp, %bb.10
-# CHECK-NEXT:  %46:fpr32 = PHI %14:fpr32, %bb.7, %54:fpr32, %bb.10
-# CHECK-NEXT:  %47:gpr64sp = PHI %0:gpr64all, %bb.7, %52:gpr64sp, %bb.10
+# CHECK:  %44:gpr64sp = PHI %12:gpr64all, %bb.7, %61:gpr64sp, %bb.10
+# CHECK-NEXT:  %45:gpr64sp = PHI %13:gpr64all, %bb.7, %63:gpr64sp, %bb.10
+# CHECK-NEXT:  %46:fpr32 = PHI %14:fpr32, %bb.7, %64:fpr32, %bb.10
+# CHECK-NEXT:  %47:gpr64sp = PHI %0:gpr64all, %bb.7, %62:gpr64sp, %bb.10
 # CHECK-NEXT:bb.12 (%ir-block.7):
 # CHECK-NEXT:; predecessors: %bb.12, %bb.11
 # CHECK-NEXT:  successors: %bb.12(0x40000000), %bb.13(0x40000000); %bb.12(50.00%), %bb.13(50.00%)
@@ -172,7 +174,7 @@
 # CHECK-NEXT:; predecessors: %bb.12, %bb.10
 # CHECK-NEXT:  successors: %bb.3(0x80000000); %bb.3(100.00%)
 
-# CHECK:  %48:fpr32 = PHI %6:fpr32, %bb.12, %50:fpr32, %bb.10
+# CHECK:  %48:fpr32 = PHI %6:fpr32, %bb.12, %60:fpr32, %bb.10
 # CHECK-NEXT:  B %bb.3
 
 
