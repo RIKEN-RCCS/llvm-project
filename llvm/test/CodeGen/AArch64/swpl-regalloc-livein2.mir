@@ -7,64 +7,68 @@
 # CHECK-NEXT:  %24:gpr32 = COPY %8:gpr32all
 # CHECK-NEXT:  %25:gpr64sp = COPY %2:gpr64all
 # CHECK-NEXT:  %26:ppr_3b = COPY %0:ppr_3b
-# CHECK-NEXT:  %35:gpr32 = COPY %24:gpr32
-# CHECK-NEXT:  %40:gpr64sp = COPY %25:gpr64sp
-# CHECK-NEXT:  %37:ppr_3b = COPY %26:ppr_3b
-# CHECK-NEXT:  %27:zpr = INDEX_RI_S %35:gpr32, 1
-# CHECK-NEXT:  %28:zpr = GLD1W_SXTW_SCALED %37:ppr_3b, %14:gpr64common, %27:zpr
+# CHECK-NEXT:  %35:zpr = INDEX_RI_S %24:gpr32, 1
+# CHECK-NEXT:  %37:zpr = GLD1W_SXTW_SCALED %26:ppr_3b, %14:gpr64common, %35:zpr
+# CHECK-NEXT:  SST1W_SXTW_SCALED killed %37:zpr, %0:ppr_3b, %16:gpr64common, %35:zpr
+# CHECK-NEXT:  %39:zpr = GLD1W_SXTW_SCALED %0:ppr_3b, %17:gpr64common, %35:zpr
+# CHECK-NEXT:  %36:gpr32 = ADDWrr %24:gpr32, %1:gpr32
+# CHECK-NEXT:  %27:zpr = INDEX_RI_S %36:gpr32, 1
+# CHECK-NEXT:  SST1W_SXTW_SCALED killed %39:zpr, %0:ppr_3b, %19:gpr64common, %35:zpr
+# CHECK-NEXT:  %38:ppr_3b = PTRUE_S 31
+# CHECK-NEXT:  %28:zpr = GLD1W_SXTW_SCALED %38:ppr_3b, %14:gpr64common, %27:zpr
 # CHECK-NEXT:  $z0 = COPY %28:zpr
 # CHECK-NEXT:  $p0 = COPY %0:ppr_3b
 # CHECK-NEXT:  $x0 = COPY %16:gpr64common
 # CHECK-NEXT:  $z1 = COPY %27:zpr
 # CHECK-NEXT:  $x1 = COPY %17:gpr64common
-# CHECK-NEXT:  $x2 = COPY %19:gpr64common
-# CHECK-NEXT:  $w4 = COPY %35:gpr32
-# CHECK-NEXT:  $w5 = COPY %1:gpr32
+# CHECK-NEXT:  $w3 = COPY %36:gpr32
+# CHECK-NEXT:  $w4 = COPY %1:gpr32
+# CHECK-NEXT:  $x5 = COPY %19:gpr64common
 # CHECK-NEXT:  $x6 = COPY %14:gpr64common
-# CHECK-NEXT:  $x8 = COPY %40:gpr64sp
-# CHECK-NEXT:  SWPLIVEOUT implicit $z0, implicit $p0, implicit $x0, implicit $z1, implicit $x1, implicit $x2, implicit $w4, implicit $w5, implicit $x6, implicit $x8
+# CHECK-NEXT:  $x8 = COPY %25:gpr64sp
+# CHECK-NEXT:  SWPLIVEOUT implicit $z0, implicit $p0, implicit $x0, implicit $z1, implicit $x1, implicit $w3, implicit $w4, implicit $x5, implicit $x6, implicit $x8
 # CHECK-NEXT:bb.1.do.body:
 # CHECK-NEXT:; predecessors: %bb.1, %bb.6
 # CHECK-NEXT:  successors: %bb.1(0x7c000000), %bb.7(0x04000000); %bb.1(96.88%), %bb.7(3.12%)
 # CHECK-EMPTY:
-# CHECK-NEXT:  SWPLIVEIN implicit-def $z0, implicit-def $p0, implicit-def $x0, implicit-def $z1, implicit-def $x1, implicit-def $x2, implicit-def $w4, implicit-def $w5, implicit-def $x6, implicit-def $x8
+# CHECK-NEXT:  SWPLIVEIN implicit-def $z0, implicit-def $p0, implicit-def $x0, implicit-def $z1, implicit-def $x1, implicit-def $w3, implicit-def $w4, implicit-def $x5, implicit-def $x6, implicit-def $x8
 # CHECK-NEXT:  SST1W_SXTW_SCALED killed renamable $z0, renamable $p0, renamable $x0, renamable $z1
 # CHECK-NEXT:  renamable $z0 = GLD1W_SXTW_SCALED renamable $p0, renamable $x1, renamable $z1
-# CHECK-NEXT:  SST1W_SXTW_SCALED killed renamable $z0, renamable $p0, renamable $x2, renamable $z1
+# CHECK-NEXT:  renamable $w2 = ADDWrr renamable $w3, renamable $w4
+# CHECK-NEXT:  renamable $z2 = INDEX_RI_S renamable $w2, 1
+# CHECK-NEXT:  SST1W_SXTW_SCALED killed renamable $z0, renamable $p0, renamable $x5, renamable $z1
 # CHECK-NEXT:  renamable $p1 = PTRUE_S 31
-# CHECK-NEXT:  renamable $w3 = ADDWrr renamable $w4, renamable $w5
-# CHECK-NEXT:  renamable $z0 = INDEX_RI_S renamable $w3, 1
-# CHECK-NEXT:  renamable $z1 = GLD1W_SXTW_SCALED renamable $p1, renamable $x6, renamable $z0
+# CHECK-NEXT:  renamable $z0 = GLD1W_SXTW_SCALED renamable $p1, renamable $x6, renamable $z2
 # CHECK-NEXT:  renamable $x7 = SUBSXri renamable $x8, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  SST1W_SXTW_SCALED killed renamable $z1, renamable $p0, renamable $x0, renamable $z0
-# CHECK-NEXT:  renamable $z1 = GLD1W_SXTW_SCALED renamable $p0, renamable $x1, renamable $z0
-# CHECK-NEXT:  SST1W_SXTW_SCALED killed renamable $z1, renamable $p0, renamable $x2, renamable $z0
-# CHECK-NEXT:  renamable $p0 = PTRUE_S 31
-# CHECK-NEXT:  renamable $w4 = ADDWrr renamable $w3, renamable $w5
-# CHECK-NEXT:  renamable $z1 = INDEX_RI_S renamable $w4, 1
-# CHECK-NEXT:  renamable $z0 = GLD1W_SXTW_SCALED renamable $p0, renamable $x6, renamable $z1
+# CHECK-NEXT:  SST1W_SXTW_SCALED killed renamable $z0, renamable $p0, renamable $x0, renamable $z2
+# CHECK-NEXT:  renamable $z0 = GLD1W_SXTW_SCALED renamable $p0, renamable $x1, renamable $z2
+# CHECK-NEXT:  renamable $w3 = ADDWrr renamable $w2, renamable $w4
+# CHECK-NEXT:  renamable $z1 = INDEX_RI_S renamable $w3, 1
+# CHECK-NEXT:  SST1W_SXTW_SCALED killed renamable $z0, renamable $p0, renamable $x5, renamable $z2
+# CHECK-NEXT:  renamable $p1 = PTRUE_S 31
+# CHECK-NEXT:  renamable $z0 = GLD1W_SXTW_SCALED renamable $p1, renamable $x6, renamable $z1
 # CHECK-NEXT:  renamable $x8 = SUBSXri renamable $x7, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  SWPLIVEOUT implicit $z0, implicit $z1, implicit $p1, implicit $w3, implicit $w4, implicit $x7, implicit $x8
-# CHECK-NEXT:  $xzr = SUBSXri $x8, 3, 0, implicit-def $nzcv
+# CHECK-NEXT:  SWPLIVEOUT implicit $z0, implicit $z1, implicit $w2, implicit $w3, implicit $p1, implicit $x8
+# CHECK-NEXT:  $xzr = SUBSXri $x8, 4, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 10, %bb.1, implicit $nzcv
 # CHECK-NEXT:bb.7.do.body:
 # CHECK-NEXT:; predecessors: %bb.1
 # CHECK-NEXT:  successors: %bb.8(0x80000000); %bb.8(100.00%)
 # CHECK-EMPTY:
-# CHECK-NEXT:  SWPLIVEIN implicit-def $z0, implicit-def $z1, implicit-def $p1, implicit-def $w3, implicit-def $w4, implicit-def $x7, implicit-def $x8
+# CHECK-NEXT:  SWPLIVEIN implicit-def $z0, implicit-def $z1, implicit-def $w2, implicit-def $w3, implicit-def $p1, implicit-def $x8
 # CHECK-NEXT:  %45:zpr = COPY $z0
 # CHECK-NEXT:  %46:zpr = COPY $z1
-# CHECK-NEXT:  %47:ppr_3b = COPY $p1
+# CHECK-NEXT:  %47:gpr32 = COPY $w2
 # CHECK-NEXT:  %48:gpr32 = COPY $w3
-# CHECK-NEXT:  %49:gpr32 = COPY $w4
-# CHECK-NEXT:  %50:gpr64sp = COPY $x7
-# CHECK-NEXT:  %51:gpr64sp = COPY $x8
+# CHECK-NEXT:  %49:ppr_3b = COPY $p1
+# CHECK-NEXT:  %50:gpr64sp = COPY $x8
 # CHECK-NEXT:  SST1W_SXTW_SCALED killed %45:zpr, %0:ppr_3b, %16:gpr64common, %46:zpr
-# CHECK-NEXT:  %52:zpr = GLD1W_SXTW_SCALED %0:ppr_3b, %17:gpr64common, %46:zpr
-# CHECK-NEXT:  SST1W_SXTW_SCALED killed %52:zpr, %0:ppr_3b, %19:gpr64common, %46:zpr
+# CHECK-NEXT:  %51:zpr = GLD1W_SXTW_SCALED %0:ppr_3b, %17:gpr64common, %46:zpr
+# CHECK-NEXT:  %52:gpr32 = ADDWrr %48:gpr32, %1:gpr32
+# CHECK-NEXT:  SST1W_SXTW_SCALED killed %51:zpr, %0:ppr_3b, %19:gpr64common, %46:zpr
 # CHECK-NEXT:  %53:ppr_3b = PTRUE_S 31
-# CHECK-NEXT:  %54:gpr32 = ADDWrr %49:gpr32, %1:gpr32
-# CHECK-NEXT:  %55:gpr64sp = SUBSXri %51:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  %54:gpr64sp = SUBSXri %50:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  %55:gpr64sp = SUBSXri %54:gpr64sp, 1, 0, implicit-def $nzcv
 
 --- |
   ; ModuleID = 'SVE-001.c'
