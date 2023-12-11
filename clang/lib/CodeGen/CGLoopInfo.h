@@ -84,6 +84,9 @@ struct LoopAttributes {
 
   /// Value for llvm.loop.pipeline.enable metadata.
   bool PipelineEnabled;
+
+  /// Value for llvm.loop.pipeline.nodep metadata
+  bool PipelineNodep;
 };
 
 /// Information used when generating a structured loop.
@@ -290,6 +293,9 @@ public:
 
   /// Set no progress for the next loop pushed.
   void setMustProgress(bool P) { StagedAttrs.MustProgress = P; }
+
+  /// Set the pipeline nodep
+  void setPipelineNodep(bool S) { StagedAttrs.PipelineNodep = S; }
 
 private:
   /// Returns true if there is LoopInfo on the stack.

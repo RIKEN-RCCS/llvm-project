@@ -43,6 +43,8 @@ MDNode *LoopInfo::createPipeliningMetadata(const LoopAttributes &Attrs,
     Enabled = false;
   else if (Attrs.PipelineInitiationInterval != 0)
     Enabled = true;
+  else if (Attrs.PipelineNodep)
+    Enabled = true;
 
   if (Attrs.PipelineEnabled)
     Enabled = true;
@@ -75,6 +77,11 @@ MDNode *LoopInfo::createPipeliningMetadata(const LoopAttributes &Attrs,
         MDString::get(Ctx, "llvm.loop.pipeline.initiationinterval"),
         ConstantAsMetadata::get(ConstantInt::get(
             llvm::Type::getInt32Ty(Ctx), Attrs.PipelineInitiationInterval))};
+    Args.push_back(MDNode::get(Ctx, Vals));
+  }
+
+  if (Attrs.PipelineNodep == LoopAttributes::Enable) {
+    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.pipeline.nodep")};
     Args.push_back(MDNode::get(Ctx, Vals));
   }
 
@@ -462,7 +469,8 @@ LoopAttributes::LoopAttributes(bool IsParallel)
       VectorizeScalable(LoopAttributes::Unspecified), InterleaveCount(0),
       UnrollCount(0), UnrollAndJamCount(0),
       DistributeEnable(LoopAttributes::Unspecified), PipelineDisabled(false),
-      PipelineInitiationInterval(0), MustProgress(false), PipelineEnabled(false) {}
+      PipelineInitiationInterval(0), MustProgress(false), 
+      PipelineEnabled(false), PipelineNodep(false){}
 
 void LoopAttributes::clear() {
   IsParallel = false;
@@ -480,6 +488,7 @@ void LoopAttributes::clear() {
   PipelineInitiationInterval = 0;
   MustProgress = false;
   PipelineEnabled = false;
+  PipelineNodep = false;
 }
 
 LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
@@ -504,8 +513,8 @@ LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
       Attrs.VectorizeEnable == LoopAttributes::Unspecified &&
       Attrs.UnrollEnable == LoopAttributes::Unspecified &&
       Attrs.UnrollAndJamEnable == LoopAttributes::Unspecified &&
-      Attrs.DistributeEnable == LoopAttributes::Unspecified && !StartLoc &&
-      !EndLoc && !Attrs.MustProgress)
+      Attrs.DistributeEnable == LoopAttributes::Unspecified &&
+      !Attrs.PipelineNodep && !StartLoc && !EndLoc && !Attrs.MustProgress)
     return;
 
   TempLoopID = MDNode::getTemporary(Header->getContext(), std::nullopt);
@@ -557,6 +566,7 @@ void LoopInfo::finish() {
     AfterJam.PipelineDisabled = Attrs.PipelineDisabled;
     AfterJam.PipelineEnabled = Attrs.PipelineEnabled;
     AfterJam.PipelineInitiationInterval = Attrs.PipelineInitiationInterval;
+    AfterJam.PipelineNodep = Attrs.PipelineNodep;
 
     // If this loop is subject of an unroll-and-jam by the parent loop, and has
     // an unroll-and-jam annotation itself, we have to decide whether to first
@@ -682,6 +692,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::VectorizeWidth:
       case LoopHintAttr::InterleaveCount:
       case LoopHintAttr::PipelineInitiationInterval:
+      case LoopHintAttr::PipelineNodep:
         llvm_unreachable("Options cannot be disabled.");
         break;
       }
@@ -708,6 +719,9 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::PipelineEnabled:
         setPipelineDisabled(false);
         setPipelineEnabled(true);
+        break;
+      case LoopHintAttr::PipelineNodep:
+        setPipelineNodep(true);
         break;
       case LoopHintAttr::UnrollCount:
       case LoopHintAttr::UnrollAndJamCount:
@@ -737,6 +751,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::PipelineDisabled:
       case LoopHintAttr::PipelineEnabled:
       case LoopHintAttr::PipelineInitiationInterval:
+      case LoopHintAttr::PipelineNodep:
         llvm_unreachable("Options cannot be used to assume mem safety.");
         break;
       }
@@ -760,6 +775,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::PipelineEnabled:
       case LoopHintAttr::PipelineInitiationInterval:
       case LoopHintAttr::VectorizePredicate:
+      case LoopHintAttr::PipelineNodep:
         llvm_unreachable("Options cannot be used with 'full' hint.");
         break;
       }
@@ -802,6 +818,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::Distribute:
       case LoopHintAttr::PipelineDisabled:
       case LoopHintAttr::PipelineEnabled:
+      case LoopHintAttr::PipelineNodep:
         llvm_unreachable("Options cannot be assigned a value.");
         break;
       }
