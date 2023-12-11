@@ -1,54 +1,110 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-disable-stagescheduling=false -swpl-debug-dump-ssedges  -o /dev/null 2>&1  | FileCheck %s
-#CHECK:**** dump SwplSSEdges ***
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:LDRDui) to ({{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<0>, p_cycle:19, s_cycle:27, delay:8, distance:0, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:LDRDui) to ({{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:19, s_cycle:21, delay:1, distance:0, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:LDURDi) to ({{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<1>, p_cycle:4, s_cycle:27, delay:8, distance:0, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:LDURDi) to ({{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:4, s_cycle:12, delay:8, distance:0, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:LDURDi), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:4, delay:1, distance:1, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:11, delay:1, distance:1, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:FADDDrr) to ({{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<1>, p_cycle:27, s_cycle:46, delay:9, distance:0, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:FADDDrr) to ({{[A-Za-z0-9]+}}:COPY), inCyclic:1, SkipFactor<0>, p_cycle:27, s_cycle:36, delay:9, distance:0, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:46, delay:1, distance:1, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:47, delay:1, distance:1, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:LDURDi) to ({{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:4, s_cycle:12, delay:8, distance:0, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:LDURDi) to ({{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<2>, p_cycle:4, s_cycle:32, delay:8, distance:0, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:LDURDi), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:4, delay:1, distance:1, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:11, delay:1, distance:1, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:FMULDrr) to ({{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:12, s_cycle:21, delay:9, distance:0, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:STURDi) to ({{[A-Za-z0-9]+}}:LDRDui), inCyclic:1, SkipFactor<0>, p_cycle:21, s_cycle:19, delay:6, distance:1, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:LDRDui), inCyclic:1, SkipFactor<0>, p_cycle:26, s_cycle:19, delay:1, distance:1, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:26, s_cycle:21, delay:1, distance:1, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:26, s_cycle:26, delay:1, distance:1, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:FMULDrr) to ({{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:32, s_cycle:41, delay:9, distance:0, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:41, delay:1, distance:1, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:47, delay:1, distance:1, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:SUBSXri) to ({{[A-Za-z0-9]+}}:SUBSXri), inCyclic:0, SkipFactor<0>, p_cycle:46, s_cycle:46, delay:1, distance:1, II:8
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:COPY) to ({{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:36, s_cycle:32, delay:4, distance:1, II:8
-#CHECK:**** dump SwplSSEdges ***
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:LDRDui) to ({{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<0>, p_cycle:20, s_cycle:28, delay:8, distance:0, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:LDRDui) to ({{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:20, s_cycle:21, delay:1, distance:0, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:LDURDi) to ({{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<2>, p_cycle:3, s_cycle:28, delay:8, distance:0, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:LDURDi) to ({{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:3, s_cycle:12, delay:8, distance:0, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:LDURDi), inCyclic:0, SkipFactor<0>, p_cycle:9, s_cycle:3, delay:1, distance:1, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:9, s_cycle:9, delay:1, distance:1, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:FADDDrr) to ({{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<1>, p_cycle:28, s_cycle:46, delay:9, distance:0, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:FADDDrr) to ({{[A-Za-z0-9]+}}:COPY), inCyclic:1, SkipFactor<0>, p_cycle:28, s_cycle:37, delay:9, distance:0, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:48, s_cycle:46, delay:1, distance:1, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:48, s_cycle:48, delay:1, distance:1, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:LDURDi) to ({{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:3, s_cycle:12, delay:8, distance:0, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:LDURDi) to ({{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<3>, p_cycle:3, s_cycle:34, delay:8, distance:0, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:LDURDi), inCyclic:0, SkipFactor<0>, p_cycle:9, s_cycle:3, delay:1, distance:1, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:9, s_cycle:9, delay:1, distance:1, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:FMULDrr) to ({{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:12, s_cycle:21, delay:9, distance:0, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:STURDi) to ({{[A-Za-z0-9]+}}:LDRDui), inCyclic:1, SkipFactor<0>, p_cycle:21, s_cycle:20, delay:6, distance:1, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:LDRDui), inCyclic:1, SkipFactor<0>, p_cycle:26, s_cycle:20, delay:1, distance:1, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:26, s_cycle:21, delay:1, distance:1, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:26, s_cycle:26, delay:1, distance:1, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:FMULDrr) to ({{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:34, s_cycle:43, delay:9, distance:0, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:48, s_cycle:43, delay:1, distance:1, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:ADDXri) to ({{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:48, s_cycle:48, delay:1, distance:1, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:SUBSXri) to ({{[A-Za-z0-9]+}}:SUBSXri), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:47, delay:1, distance:1, II:7
-#CHECK:[s3251] Edge:({{[A-Za-z0-9]+}}:COPY) to ({{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:37, s_cycle:34, delay:4, distance:1, II:7
+#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-disable-stagescheduling=false -swpl-debug-dump-ss-progress  -o /dev/null 2>&1  | FileCheck %s
+#CHECK:*** before SS : dump SwplSSEdges ***
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<0>, p_cycle:19, s_cycle:27, delay:8, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:19, s_cycle:21, delay:1, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<1>, p_cycle:4, s_cycle:27, delay:8, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:4, s_cycle:12, delay:8, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDURDi), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:4, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:11, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FADDDrr) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<1>, p_cycle:27, s_cycle:46, delay:9, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FADDDrr) to (0x{{[A-Za-z0-9]+}}:COPY), inCyclic:1, SkipFactor<0>, p_cycle:27, s_cycle:36, delay:9, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:46, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:47, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:4, s_cycle:12, delay:8, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<2>, p_cycle:4, s_cycle:32, delay:8, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDURDi), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:4, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:11, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FMULDrr) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:12, s_cycle:21, delay:9, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:STURDi) to (0x{{[A-Za-z0-9]+}}:LDRDui), inCyclic:1, SkipFactor<0>, p_cycle:21, s_cycle:19, delay:6, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDRDui), inCyclic:1, SkipFactor<0>, p_cycle:26, s_cycle:19, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:26, s_cycle:21, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:26, s_cycle:26, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FMULDrr) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:32, s_cycle:41, delay:9, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:41, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:47, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:SUBSXri) to (0x{{[A-Za-z0-9]+}}:SUBSXri), inCyclic:0, SkipFactor<0>, p_cycle:46, s_cycle:46, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:COPY) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:36, s_cycle:32, delay:4, distance:1, II:8
+#CHECK:*** move instruction by AC ***
+#CHECK-DAG:0x{{[A-Za-z0-9]+}}:ADDXri : move val=-8
+#CHECK-DAG:0x{{[A-Za-z0-9]+}}:STURDi : move val=-8
+#CHECK:*** after SS : dump SwplSSEdges ***
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<0>, p_cycle:19, s_cycle:27, delay:8, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:19, s_cycle:21, delay:1, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<1>, p_cycle:4, s_cycle:27, delay:8, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:4, s_cycle:12, delay:8, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDURDi), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:4, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:11, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FADDDrr) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:27, s_cycle:38, delay:9, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FADDDrr) to (0x{{[A-Za-z0-9]+}}:COPY), inCyclic:1, SkipFactor<0>, p_cycle:27, s_cycle:36, delay:9, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:39, s_cycle:38, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:39, s_cycle:39, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:4, s_cycle:12, delay:8, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<2>, p_cycle:4, s_cycle:32, delay:8, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDURDi), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:4, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:11, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FMULDrr) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:12, s_cycle:21, delay:9, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:STURDi) to (0x{{[A-Za-z0-9]+}}:LDRDui), inCyclic:1, SkipFactor<0>, p_cycle:21, s_cycle:19, delay:6, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDRDui), inCyclic:1, SkipFactor<0>, p_cycle:26, s_cycle:19, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:26, s_cycle:21, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:26, s_cycle:26, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FMULDrr) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:32, s_cycle:41, delay:9, distance:0, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:41, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:47, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:SUBSXri) to (0x{{[A-Za-z0-9]+}}:SUBSXri), inCyclic:0, SkipFactor<0>, p_cycle:46, s_cycle:46, delay:1, distance:1, II:8
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:COPY) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:36, s_cycle:32, delay:4, distance:1, II:8
+#CHECK:*** before SS : dump SwplSSEdges ***
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<0>, p_cycle:20, s_cycle:28, delay:8, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:20, s_cycle:21, delay:1, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<2>, p_cycle:3, s_cycle:28, delay:8, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:3, s_cycle:12, delay:8, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDURDi), inCyclic:0, SkipFactor<0>, p_cycle:9, s_cycle:3, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:9, s_cycle:9, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FADDDrr) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<1>, p_cycle:28, s_cycle:46, delay:9, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FADDDrr) to (0x{{[A-Za-z0-9]+}}:COPY), inCyclic:1, SkipFactor<0>, p_cycle:28, s_cycle:37, delay:9, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:48, s_cycle:46, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:48, s_cycle:48, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:3, s_cycle:12, delay:8, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<3>, p_cycle:3, s_cycle:34, delay:8, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDURDi), inCyclic:0, SkipFactor<0>, p_cycle:9, s_cycle:3, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:9, s_cycle:9, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FMULDrr) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:12, s_cycle:21, delay:9, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:STURDi) to (0x{{[A-Za-z0-9]+}}:LDRDui), inCyclic:1, SkipFactor<0>, p_cycle:21, s_cycle:20, delay:6, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDRDui), inCyclic:1, SkipFactor<0>, p_cycle:26, s_cycle:20, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:26, s_cycle:21, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:26, s_cycle:26, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FMULDrr) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:34, s_cycle:43, delay:9, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:48, s_cycle:43, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:48, s_cycle:48, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:SUBSXri) to (0x{{[A-Za-z0-9]+}}:SUBSXri), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:47, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:COPY) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:37, s_cycle:34, delay:4, distance:1, II:7
+#CHECK:*** move instruction by AC ***
+#CHECK-DAG:0x{{[A-Za-z0-9]+}}:ADDXri : move val=-7
+#CHECK-DAG:0x{{[A-Za-z0-9]+}}:STURDi : move val=-7
+#CHECK:*** after SS : dump SwplSSEdges ***
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<0>, p_cycle:20, s_cycle:28, delay:8, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:20, s_cycle:21, delay:1, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<2>, p_cycle:3, s_cycle:28, delay:8, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:3, s_cycle:12, delay:8, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDURDi), inCyclic:0, SkipFactor<0>, p_cycle:9, s_cycle:3, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:9, s_cycle:9, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FADDDrr) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:28, s_cycle:39, delay:9, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FADDDrr) to (0x{{[A-Za-z0-9]+}}:COPY), inCyclic:1, SkipFactor<0>, p_cycle:28, s_cycle:37, delay:9, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:41, s_cycle:39, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:41, s_cycle:41, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:3, s_cycle:12, delay:8, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDURDi) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<3>, p_cycle:3, s_cycle:34, delay:8, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDURDi), inCyclic:0, SkipFactor<0>, p_cycle:9, s_cycle:3, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:9, s_cycle:9, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FMULDrr) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:12, s_cycle:21, delay:9, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:STURDi) to (0x{{[A-Za-z0-9]+}}:LDRDui), inCyclic:1, SkipFactor<0>, p_cycle:21, s_cycle:20, delay:6, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDRDui), inCyclic:1, SkipFactor<0>, p_cycle:26, s_cycle:20, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:26, s_cycle:21, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:26, s_cycle:26, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:FMULDrr) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:34, s_cycle:43, delay:9, distance:0, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:0, SkipFactor<0>, p_cycle:48, s_cycle:43, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:48, s_cycle:48, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:SUBSXri) to (0x{{[A-Za-z0-9]+}}:SUBSXri), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:47, delay:1, distance:1, II:7
+#CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:COPY) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:37, s_cycle:34, delay:4, distance:1, II:7
 --- |
   ; ModuleID = '/home/XXXX/s3251.c'
   source_filename = "/home/XXXX/s3251.c"

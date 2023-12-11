@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-disable-stagescheduling=false -swpl-debug-dump-cyclicroots -o /dev/null 2>&1  | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-disable-stagescheduling=false -swpl-debug-dump-ss-cyclicroots -o /dev/null 2>&1  | FileCheck %s
 #CHECK:*** dump SwplSSSyclicInfo ***
 #CHECK:There is no circulation part.
 --- |
