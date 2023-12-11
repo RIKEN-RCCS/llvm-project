@@ -48,6 +48,14 @@ class VectorType;
  */
 bool enableSWP(const Loop*, bool ignoreMetadataOfRemainder);
 
+/**
+ * Returns from Pragma whether the specified loop is memory-independent.
+ * @param L Specify target Loop information
+ * @retval true pipeline_nodep is specified
+ * @retval false pipeline_nodep is not specified
+ */
+bool enableNodep(const Loop *L);
+
 class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   using BaseT = BasicTTIImplBase<AArch64TTIImpl>;
   using TTI = TargetTransformInfo;

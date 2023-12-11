@@ -14,6 +14,9 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -25,7 +28,7 @@ static cl::opt<bool> DisableRegDep4tied("swpl-disable-regdep-4-tied",cl::init(fa
 
 static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplInst &latter_inst, int distance, int delay);
 
-SwplDdg *SwplDdg::Initialize (SwplLoop &loop) {
+SwplDdg *SwplDdg::Initialize (SwplLoop &loop, bool Nodep) {
   SwplDdg *ddg = new SwplDdg(loop);
 
   /// 1. Call generateInstGraph() to initialize instruction dependency graph information SwplInstGraph.
@@ -33,7 +36,8 @@ SwplDdg *SwplDdg::Initialize (SwplLoop &loop) {
   /// 2. Call analysisRegDependence() to analyze dependency information between registers.
   ddg->analysisRegDependence();
   /// 3. Call analysisMemDependence() to analyze dependency information between memories.
-  ddg->analysisMemDependence();
+  if (!Nodep)
+    ddg->analysisMemDependence();
   /// 4. Call analysisInstDependence() to analyze instruction dependency information.
   if (EnableInstDep)
     ddg->analysisInstDependence();
@@ -365,11 +369,94 @@ void SwplDdg::analysisRegsOutputDependence() {
     }
   }
 }
+template <>
+struct yaml::MappingTraits<SwplDdg::IOmi> {
+  static void mapping(IO &io, SwplDdg::IOmi &info) {
+    io.mapRequired("id", info.id);
+    io.mapOptional("mi", info.mi, "");
+  }
+  static const bool flow = true;
+};
+
+template <>
+struct yaml::MappingTraits<SwplDdg::IOddgnode> {
+  static void mapping(IO &io, SwplDdg::IOddgnode &info) {
+    io.mapRequired("from", info.from);
+    io.mapRequired("to", info.to);
+    io.mapRequired("distance", info.distance);
+  }
+};
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(SwplDdg::IOddgnode)
+
+template <>
+struct yaml::MappingTraits<SwplDdg::IOddg> {
+  static void mapping(IO &io, SwplDdg::IOddg &info) {
+    io.mapRequired("fname", info.fname);
+    io.mapRequired("loopid", info.loopid);
+    io.mapRequired("deps", info.ddgnodes);
+  }
+};
+typedef std::vector<SwplDdg::IOddg> IOddgDocumentList;
+LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(SwplDdg::IOddg)
+IOddgDocumentList yamlddgList;
 
 /// SwplMem同士の依存関係を解析し、
 /// 命令間のエッジに対してDistance/DelayそれぞれのMapを登録する。\n
 /// 真依存、逆依存、出力依存のそれぞれの依存を以下のルーチンを利用してDelayを算出する。\n
 void SwplDdg::analysisMemDependence() {
+  std::error_code EC;
+  std::unique_ptr<raw_fd_ostream> OutStrm;
+  std::string s;
+  raw_string_ostream strstream(s);
+  std::map<const MachineInstr*, unsigned> mimap;
+  IOddg yamlddg;
+
+  int mi_no=0;
+  StringRef fname;
+
+  if (SWPipeliner::isExportDDG() || SWPipeliner::isImportDDG()) {
+    for (auto *former_mem:getLoopMems()) {
+      auto *mi = former_mem->getInst()->getMI();
+      mimap[mi]=mi_no++;
+    }
+    auto *ml = getLoop()->getML();
+    fname = ml->getTopBlock()->getParent()->getName();
+  }
+  if (SWPipeliner::isExportDDG()) {
+    OutStrm = std::make_unique<raw_fd_ostream>(SWPipeliner::getDDGFileName(), EC, sys::fs::OF_Append);
+    if (EC) {
+      report_fatal_error("can not open yaml file", false);
+    }
+
+    *OutStrm << "# No., MI\n";
+    mi_no=0;
+    for (auto *former_mem:getLoopMems()) {
+      auto *mi = former_mem->getInst()->getMI();
+      *OutStrm << "# " << mi_no++ << ":" << *mi;
+    }
+    yamlddg.fname = fname;
+    yamlddg.loopid = SWPipeliner::loop_number;
+  }
+  IOddg *target_yamlddg=nullptr;
+  if (SWPipeliner::isImportDDG()) {
+    if (yamlddgList.size()==0) {
+      ErrorOr<std::unique_ptr<MemoryBuffer>>  Buffer = MemoryBuffer::getFile(SWPipeliner::getDDGFileName());
+      EC = Buffer.getError();
+      if (EC) {
+        report_fatal_error("can not open yaml file", false);
+      }
+      yaml::Input yin(Buffer.get()->getMemBufferRef());
+      yin >> yamlddgList;
+    }
+    for (auto &y: yamlddgList) {
+      if (y.fname != fname) continue;
+      if (y.loopid != SWPipeliner::loop_number) continue;
+      target_yamlddg = &y;
+      break;
+    }
+  }
+
   for (auto *former_mem:getLoopMems()) {
     for (auto *latter_mem:getLoopMems()) {
       if (former_mem == latter_mem) {
@@ -380,7 +467,7 @@ void SwplDdg::analysisMemDependence() {
         continue;
       }
 
-      int distance, delay;
+      unsigned distance, delay;
       enum class DepKind {init, flow, anti, output};
       DepKind depKind = DepKind::init;
 
@@ -402,6 +489,29 @@ void SwplDdg::analysisMemDependence() {
         }
       }
       distance = getLoop()->getMemsMinOverlapDistance(former_mem, latter_mem);
+      if (SWPipeliner::isExportDDG()) {
+        s.clear();
+        former_mem->getInst()->getMI()->print(strstream, true, false, false, false);
+        IOmi from{mimap[former_mem->getInst()->getMI()], strstream.str()};
+        s.clear();
+        latter_mem->getInst()->getMI()->print(strstream, true, false, false, false);
+        IOmi to{mimap[latter_mem->getInst()->getMI()], strstream.str()};
+        IOddgnode n{from,to, distance};
+        yamlddg.ddgnodes.push_back(n);
+      }
+      if (target_yamlddg) {
+        unsigned from=mimap[former_mem->getInst()->getMI()];
+        unsigned to=mimap[latter_mem->getInst()->getMI()];
+        for (auto &ddgnode:target_yamlddg->ddgnodes) {
+          if (ddgnode.distance > 20) {
+            report_fatal_error("distance > 20", false);
+          }
+          if (ddgnode.from.id == from && ddgnode.to.id == to) {
+            distance = ddgnode.distance;
+            break;
+          }
+        }
+      }
       if (SWPipeliner::isDebugDdgOutput()) {
         auto *p="";
         switch (depKind) {
@@ -421,6 +531,11 @@ void SwplDdg::analysisMemDependence() {
       update_distance_and_delay(*this, *(former_mem->getInst()), *(latter_mem->getInst()), distance, delay);
     }
   }
+  if (SWPipeliner::isExportDDG()) {
+    yaml::Output yout(*OutStrm);
+    yout << yamlddg;
+  }
+
 }
 /// Swpl_Inst 間のDistanceとDelayを更新する
 /// \param [in,out] ddg     SwplDdg  処理対象のSwplDdg
@@ -469,7 +584,7 @@ SwplInstEdge2ModuloDelay *SwplDdg::getModuloDelayMap(int ii) const {
       int modulo_delay = delay_val - ii * (int)(*distance);
 
       max_modulo_delay = (max_modulo_delay > modulo_delay) ? max_modulo_delay : modulo_delay;
-    }  
+    }
     map->insert(std::make_pair(const_cast<SwplInstEdge*>(edge), max_modulo_delay));
   }
   return map;

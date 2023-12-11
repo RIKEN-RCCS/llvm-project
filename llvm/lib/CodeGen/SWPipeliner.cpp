@@ -40,6 +40,9 @@ static cl::opt<bool> DebugDdgOutput("swpl-debug-ddg",cl::init(false), cl::Really
 static cl::opt<unsigned> OptionMinIIBase("swpl-minii",cl::init(0), cl::ReallyHidden);
 static cl::opt<unsigned> OptionMaxIIBase("swpl-maxii",cl::init(0), cl::ReallyHidden);
 
+static cl::opt<std::string> OptionExportDDG("export-swpl-dep-mi",cl::init(""), cl::ReallyHidden);
+static cl::opt<std::string> OptionImportDDG("import-swpl-dep-mi",cl::init(""), cl::ReallyHidden);
+
 
 namespace llvm {
 
@@ -52,6 +55,7 @@ bool SWPipeliner::isDebugDdgOutput() {
 }
 
 unsigned SWPipeliner::min_ii_for_retry=0;
+unsigned SWPipeliner::loop_number=0;
 
 unsigned SWPipeliner::nOptionMinIIBase() {
   return min_ii_for_retry ? min_ii_for_retry : ::OptionMinIIBase;
@@ -62,6 +66,30 @@ unsigned SWPipeliner::nOptionMaxIIBase() {
 
   return ::OptionMaxIIBase ? ::OptionMaxIIBase : DEFAULT_MAXII_BASE;
 }
+
+bool SWPipeliner::doInitialization(Module &m) {
+  if (isExportDDG()) {
+    // Clear the contents of the file when initializing as additional dependency information will be written.）
+    std::error_code EC;
+    raw_fd_ostream OutStrm(SWPipeliner::getDDGFileName(), EC);
+  }
+  return false;
+}
+
+bool SWPipeliner::isExportDDG() {
+  return !OptionExportDDG.empty();
+}
+bool SWPipeliner::isImportDDG() {
+  return !OptionImportDDG.empty();
+
+}
+StringRef SWPipeliner::getDDGFileName() {
+  if (isImportDDG()) return OptionImportDDG;
+  if (isExportDDG()) return OptionExportDDG;
+  return "";
+}
+
+
 
 MachineOptimizationRemarkEmitter *SWPipeliner::ORE = nullptr;
 const TargetInstrInfo *SWPipeliner::TII = nullptr;
@@ -147,6 +175,13 @@ FunctionPass *createSWPipelinerPass() {
  * \retval false MF を変更していないことを示す
  */
 bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
+  if (skipFunction(mf.getFunction())) {
+    if (isDebugOutput()) {
+      dbgs() << "SWPipeliner: Not processed because skipFunction() is true.\n";
+      return false;
+    }
+  }
+  loop_number=0;
   bool Modified = false;
   if (!mf.getSubtarget().getSchedModel().hasInstrSchedModel()) {
     // schedmodelを持たないプロセッサ用のコードなので、本最適化は適用しない。
@@ -198,6 +233,14 @@ void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {
            << msg1;
   });
 }
+
+void SWPipeliner::remarkAnalysis(const char *msg, MachineLoop &L, const char *Name) {
+  ORE->emit([&]() {
+    return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, Name,
+                                           L.getStartLoc(), L.getHeader())
+           << msg;
+  });
+}
 static cl::opt<SWPipeliner::SwplRestrictionsFlag> DisableRestrictionsCheck("swpl-disable-restrictions-check",
                                                cl::init(SWPipeliner::SwplRestrictionsFlag::All),
                                                cl::ValueOptional, cl::ReallyHidden,
@@ -224,6 +267,11 @@ void SWPipeliner::makeMissedMessage_RestrictionsDetected(const MachineInstr &tar
 bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   bool Changed = false;
   Reason = "";
+  MachineBasicBlock *MBB = L.getTopBlock();
+  const BasicBlock *BB = MBB->getBasicBlock();
+  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  const Loop *BBLoop = LI->getLoopFor(BB);
+
   for (auto &InnerLoop : L)
     Changed |= scheduleLoop(*InnerLoop);
 
@@ -238,7 +286,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   }
 
   // 最適化指示の判定
-  if (!shouldOptimize(L)) {
+  if (!shouldOptimize(BBLoop)) {
     printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
     return false;
   }
@@ -260,7 +308,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     return Changed;
   }
 
-
+  loop_number++;
   SwplScr swplScr(L);
   SwplScr::UseMap liveOutReg;
   // SwplLoop::Initialize()でLoop複製されるため、その前に出口Busyレジスタ情報を収集する
@@ -278,7 +326,13 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     currentLoop = nullptr;
     return Changed;
   }
-  SwplDdg *ddg = SwplDdg::Initialize(*currentLoop);
+  bool Nodep = false;
+  if (enableNodep(BBLoop)){
+    remarkAnalysis("Since the pragma pipeline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.",
+                   *currentLoop->getML(), "scheduleLoop");
+    Nodep = true;
+  }
+  SwplDdg *ddg = SwplDdg::Initialize(*currentLoop,Nodep);
 
   // スケジューリング
   bool redo;
@@ -337,12 +391,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
 }
 
 
-bool SWPipeliner::shouldOptimize(MachineLoop &L) {
-  MachineBasicBlock *MBB = L.getTopBlock();
-
-  const BasicBlock *BB = MBB->getBasicBlock();
-  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  const Loop *BBLoop = LI->getLoopFor(BB);
+bool SWPipeliner::shouldOptimize(const Loop *BBLoop) {
 
   if (!enableSWP(BBLoop, false)) {
     return false;
@@ -379,6 +428,9 @@ FunctionPass *createSWPipelinerPrePass() {
  * \retval false MF を変更していないことを示す
  */
 bool SWPipelinerPre::runOnMachineFunction(MachineFunction &mf) {
+  if (skipFunction(mf.getFunction())) {
+      return false;
+  }
   bool Modified = false;
   if (!mf.getSubtarget().getSchedModel().hasInstrSchedModel()) {
     // schedmodelを持たないプロセッサ用のコードなので、本祭最適化は適用しない。

@@ -65,6 +65,14 @@ using SwplInstList_iterator = SwplInstList::iterator;
  */
 bool enableSWP(const Loop*, bool ignoreMetadataOfRemainder);
 
+/**
+ * Returns from Pragma whether the specified loop is memory-independent.
+ * @param L Specify target Loop information
+ * @retval true pipeline_nodep is specified
+ * @retval false pipeline_nodep is not specified
+ */
+bool enableNodep(const Loop *L);
+
 /// \class SwplLoop
 /// \brief ループ内の命令情報を管理する
 class SwplLoop {
@@ -762,7 +770,7 @@ public:
   /// SwplDdg を生成し SwplLoop の命令の依存情報を設定し復帰する
   /// \param[in,out]  loop SwplLoop
   /// \return     ループ内の命令の依存情報
-  static SwplDdg *Initialize(SwplLoop &loop);
+  static SwplDdg *Initialize(SwplLoop &loop,bool Nodep);
 
   /// iiを考慮したDelayのMapを生成する
   /// \param[in] ii スケジューリング時のiteration intervalの値
@@ -772,7 +780,22 @@ public:
 
   /// デバッグ用情報出力
   void print(void) const;
-  
+
+  struct IOmi {
+    unsigned id;
+    std::string mi;
+  };
+  struct IOddgnode {
+    IOmi from;
+    IOmi to;
+    unsigned distance;
+  };
+  struct IOddg {
+    std::string fname;
+    unsigned loopid;
+    std::vector<IOddgnode> ddgnodes;
+  };
+
 private:
   /// 命令単位に SwplInstGraph を生成する
   void generateInstGraph() {
@@ -812,6 +835,7 @@ public:
   static std::string Reason;
   static SwplLoop *currentLoop;
   static unsigned min_ii_for_retry;
+  static unsigned loop_number;
 
   /// 制限抑止オプション指定の結果
   enum class SwplRestrictionsFlag {None, MultipleReg, MultipleDef, All};
@@ -831,6 +855,10 @@ public:
   /// Acquiring the specified value of the -swpl-maxii option
   static unsigned nOptionMaxIIBase();
 
+  static bool isExportDDG();
+  static bool isImportDDG();
+  static StringRef getDDGFileName();
+
   /**
    * \brief SWPipelinerのコンストラクタ
    */
@@ -848,6 +876,7 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
+  bool doInitialization (Module &) override;
   bool doFinalization (Module &) override;
 
   /**
@@ -862,6 +891,8 @@ public:
 
   /// remark-missedメッセージを出力する
   static void remarkMissed(const char *msg, MachineLoop &L);
+  /// Output of nodep remarks messages
+  static void remarkAnalysis(const char *msg, MachineLoop &L, const char *Name);
 
   /// 制限を含んだループを検出した際のSWPL非対象とするメッセージ
   /// param target 制限を含んだMI
@@ -891,7 +922,7 @@ private:
    * \retval true  Swpl最適化対象指示がある
    * \retval false Swpl最適化対象指示がない。もしくは最適化抑止指示がある。
    */
-  bool shouldOptimize(MachineLoop &L);
+  bool shouldOptimize(const Loop *BBLoop);
 };
 
 
