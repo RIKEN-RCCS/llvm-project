@@ -302,7 +302,7 @@ public:
                       SwplInstSlotHashmap *inst_slot_map,
                       raw_ostream &stream );
   static void dumpSSMoveinfo(raw_ostream &stream, const SwplSSMoveinfo &v);
-  static bool SwplSSAdjustSlot(SwplInstSlotHashmap& ism, SwplSSMoveinfo &v);
+  static bool adjustSlot(SwplInstSlotHashmap& ism, SwplSSMoveinfo &v);
 };
 
 class SwplSSACProc {

@@ -2667,7 +2667,7 @@ bool SwplSSProc::execute(const SwplDdg &ddg,
   }
 
   // adjust SwplInstSlotHashmap by SwplSSMoveinfo
-  SwplSSProc::SwplSSAdjustSlot(*inst_slot_map, acresult);
+  SwplSSProc::adjustSlot(*inst_slot_map, acresult);
   if (OptionDumpSSProgress) {
     stream << "*** after SS : dump SwplSSEdges ***\n";
     SwplSSEdges TEMPssEdges(ddg, loop, ii, *inst_slot_map);
@@ -2690,7 +2690,7 @@ void SwplSSProc::dumpSSMoveinfo(raw_ostream &stream, const SwplSSMoveinfo &v) {
 /// \param [in/out] SwplInstSlotHashmap to be updated
 /// \param [in] Instruction placement cycle movement information
 /// \return true if SwplInstSlotHashmap changed
-bool SwplSSProc::SwplSSAdjustSlot(SwplInstSlotHashmap& ism, SwplSSMoveinfo &v) {
+bool SwplSSProc::adjustSlot(SwplInstSlotHashmap& ism, SwplSSMoveinfo &v) {
   auto bandwidth = SWPipeliner::STM->getFetchBandwidth();
   for (auto [cinst, movecycle]: v) {
     SwplInst *inst = const_cast<SwplInst *>(cinst);
