@@ -36,6 +36,7 @@ static cl::opt<unsigned> MaxInstNum("swpl-max-inst-num",cl::init(500), cl::Reall
 static cl::opt<unsigned> MaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyHidden);
 static cl::opt<bool> DisableRegAlloc("swpl-disable-reg-alloc",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableRegAlloc("swpl-enable-reg-alloc",cl::init(true), cl::ReallyHidden);
+static cl::opt<bool> EnableProEpiCopy("swpl-enable-proepi-copy",cl::init(false), cl::ReallyHidden);
 
 // TargetLoopのMI出力オプション（swpl処理は迂回）
 static cl::opt<bool> OptionDumpTargetLoopOnly("swpl-debug-dump-targetloop-only",cl::init(false), cl::ReallyHidden);
@@ -795,4 +796,8 @@ unsigned AArch64SwplTargetMachine::calcPenaltyByInsttypeAndDependreg(const Machi
 bool AArch64SwplTargetMachine::isEnableRegAlloc(void) const {
   if (DisableRegAlloc) return false;
   return EnableRegAlloc;
+}
+
+bool AArch64SwplTargetMachine::isEnableProEpiCopy(void) const {
+  return EnableProEpiCopy;
 }
