@@ -2680,8 +2680,8 @@ bool SwplSSProc::execute(const SwplDdg &ddg,
 
 /// \brief dump SwplSSMoveinfo
 void SwplSSProc::dumpSSMoveinfo(raw_ostream &stream, const SwplSSMoveinfo &v) {
-  for (auto [inst, movecycle]: v) {
-    stream << format("%p", inst->getMI()) << ":" << inst->getName() << " : move val=" << movecycle << "\n";
+  for (auto [cinst, movecycle]: v) {
+    stream << format("%p", cinst->getMI()) << ":" << cinst->getName() << " : move val=" << movecycle << "\n";
   }
   return;
 }
@@ -2750,7 +2750,7 @@ static void node_search(const SwplDdg& ddg,
 
   std::set<const SwplInst*> dest;
   for (auto *edge: ddg.getGraph().getEdges()) {
-    std::vector<unsigned> distances = ddg.getDistancesFor(*edge);
+    const std::vector<unsigned> &distances = ddg.getDistancesFor(*edge);
     if (distances.size()==1 && distances[0]==20)
       continue;
 
@@ -2861,8 +2861,8 @@ SwplSSEdges::SwplSSEdges(const SwplDdg &ddg,
       auto edge = graph.findEdge( *inst, *sucinst );
       assert(edge != nullptr);
 
-      std::vector<unsigned> distances = ddg.getDistancesFor(*edge);
-      std::vector<int> delays = ddg.getDelaysFor(*edge);
+      const std::vector<unsigned> &distances = ddg.getDistancesFor(*edge);
+      const std::vector<int> &delays = ddg.getDelaysFor(*edge);
       auto distance = distances.begin();
       auto delay = delays.begin();
       auto distance_end = distances.end();
@@ -2918,14 +2918,12 @@ void SwplSSEdges::updateInCyclic(const SwplSSCyclicInfo & ci) {
 /// \param [in/out] Instruction placement cycle movement information
 /// \return Nothing
 void SwplSSEdges::updateCycles(const SwplSSMoveinfo &v) {
-  for (auto &moveinfo: v) {
-    auto moveinst=moveinfo.first;
-    auto moveval=moveinfo.second;
+  for (auto [cinst, movecycle]: v) {
     for (auto *edge: Edges) {
-      if (edge->InitialVertex==moveinst)
-        edge->InitialCycle+=moveval;
-      if (edge->TerminalVertex==moveinst)
-        edge->TerminalCycle+=moveval;
+      if (edge->InitialVertex==cinst)
+        edge->InitialCycle+=movecycle;
+      if (edge->TerminalVertex==cinst)
+        edge->TerminalCycle+=movecycle;
     }
   }
 }
@@ -2956,7 +2954,7 @@ static void cyclic_search( const SwplDdg& ddg,
 
   std::set<const SwplInst*> dest;
   for (auto *edge: ddg.getGraph().getEdges()) {
-    std::vector<unsigned> distances = ddg.getDistancesFor(*edge);
+    const std::vector<unsigned> &distances = ddg.getDistancesFor(*edge);
     if (distances.size()==1 && distances[0]==20)
       continue;
 
