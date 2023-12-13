@@ -320,7 +320,6 @@ public:
                       raw_ostream &stream );
 private:
   unsigned getTargetEdges(llvm::SmallVector<SwplSSEdge*, 8> &v);
-  void collectPreInsts(const SwplSSEdge &e, SwplSSMoveinfo &v);
   void collectPostInsts(const SwplSSEdge &e, SwplSSMoveinfo &v);
 };
 

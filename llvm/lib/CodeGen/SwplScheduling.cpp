@@ -2715,12 +2715,7 @@ bool SwplSSACProc::execute(const SwplDdg &d,
   llvm::SmallVector<SwplSSEdge*, 8> targetedges;
   acproc.getTargetEdges(targetedges);
   for (auto &t: targetedges) {
-#if 1
     acproc.collectPostInsts(*t, moveinfo);
-#else
-    dbgs() << "****** test if collect Pre-Ins ******\n";
-    acproc.collectPreInsts(*t, moveinfo);
-#endif
     t->numSkipFactor = 0;
   }
   e.updateCycles(moveinfo);
@@ -2731,7 +2726,6 @@ bool SwplSSACProc::execute(const SwplDdg &d,
 /// \param [in/out] v Collection result vector
 /// \return num of Collection Edges
 unsigned SwplSSACProc::getTargetEdges(llvm::SmallVector<SwplSSEdge*, 8> &v){
-  //for (auto &e: ssedges) {
   for (auto *e: ssedges.Edges) {
     if ((e->numSkipFactor!=0) && (e->isCyclic()==false)) {
       v.push_back(e);
@@ -2775,32 +2769,9 @@ static void node_search(const SwplDdg& ddg,
     return;
   }
 
-  for (auto d: dest) {
+  for (auto *d: dest) {
     if (explored_list.count(d) == 0) {
       node_search(ddg, explored_list, in, d);
-    }
-  }
-  return;
-}
-
-/// \brief Collect preceding instructions and movement amount
-/// \param [in] e Edge information
-/// \param [in/out] Cycle movement per instruction
-/// \return Nothing
-void SwplSSACProc::collectPreInsts(const SwplSSEdge &e, SwplSSMoveinfo &v) {
-  auto pre_i = e.InitialVertex;
-  auto post_i = e.TerminalVertex;
-  auto sf = e.numSkipFactor;
-  long movecycle = sf*II;
-
-  std::set<const SwplInst*> node_list;
-  node_search(ddg, node_list, post_i, pre_i);
-  for (auto *p: node_list) {
-    if (v.contains(p)) {
-      v[p]+=movecycle;
-    }
-    else {
-      v.insert(std::make_pair(p, movecycle));
     }
   }
   return;
@@ -3005,7 +2976,7 @@ static void cyclic_search( const SwplDdg& ddg,
     return;
   }
 
-  for (auto d: dest) {
+  for (auto *d: dest) {
     std::vector<const SwplInst*> *reprootlist = new std::vector<const SwplInst*>;
     for (auto *node: *rootlist) {
       reprootlist->push_back(node);
