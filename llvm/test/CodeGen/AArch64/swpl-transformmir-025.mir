@@ -1,4 +1,4 @@
-# RUN: llc %s -mcpu=a64fx -O3 -fswp -swpl-debug-dump-mir=15 -swpl-disable-rm-br -swpl-plan-import=%S/Inputs/3044-25.yaml -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc %s -mcpu=a64fx -O3 -fswp -swpl-enable-proepi-copy -swpl-debug-dump-mir=15 -swpl-disable-rm-br -swpl-plan-import=%S/Inputs/3044-25.yaml -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK:** SwplTransformedMIRInfo begin **
 # CHECK-NEXT:originalDoVReg:%4

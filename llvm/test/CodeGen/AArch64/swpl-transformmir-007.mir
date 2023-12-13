@@ -1,4 +1,4 @@
-# RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8  -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-enable-proepi-copy -swpl-debug-dump-mir=8  -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK:** SwplTransformedMIRInfo begin **
 # CHECK-NEXT:originalDoVReg:%4
