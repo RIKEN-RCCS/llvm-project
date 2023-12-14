@@ -2637,12 +2637,12 @@ bool SwplSSProc::execute(const SwplDdg &ddg,
     return false;
 
   if (inst_slot_map==nullptr) {
-    if (SWPipeliner::isDebugOutput())
+    if (OptionDumpSSProgress)
       stream << "StageScheduling: [" << fname << "] no result of SWPL at II=" << ii << ".\n";
     return false;
   }
   if (inst_slot_map->calcPrologBlocks(loop, ii)==0) {
-    if (SWPipeliner::isDebugOutput())
+    if (OptionDumpSSProgress)
       stream << "StageScheduling: [" << fname << "] loop is Scheduled. But prologue-cycle is 0." << ii << ".\n";
     return false;
   }
@@ -2666,9 +2666,11 @@ bool SwplSSProc::execute(const SwplDdg &ddg,
   }
 
   SwplSSMoveinfo acresult;
+
+  // heuristic AC
   SwplSSACProc::execute(ddg, ii, ssEdges, acresult, stream);
   if (OptionDumpSSProgress) {
-    stream << "*** move instruction by AC ***\n";
+    stream << "*** dump SwplSSMoveinfo after AC ***\n";
     SwplSSProc::dumpSSMoveinfo(stream, acresult);
   }
 
@@ -2690,6 +2692,14 @@ bool SwplSSProc::execute(const SwplDdg &ddg,
     if (OptionDumpSSProgress) {
       stream << "*** Adopt StageScheduling results!!! ***\n";
     }
+    if (SWPipeliner::isDebugOutput()) {
+        dbgs() << "                                                                "
+               << "Estimated num of vregs was changed by StageScheduling : ";
+        estimateRegBefore.print(dbgs());
+        dbgs() << " -> ";
+        estimateRegAfter.print(dbgs());
+        dbgs() << "\n";
+    }
   }
   else {
     if (OptionDumpSSProgress) {
@@ -2702,6 +2712,11 @@ bool SwplSSProc::execute(const SwplDdg &ddg,
 
 /// \brief dump SwplSSMoveinfo
 void SwplSSProc::dumpSSMoveinfo(raw_ostream &stream, const SwplSSMoveinfo &v) {
+  if (v.size()==0) {
+    stream << "none...\n";
+    return;
+  }
+
   for (auto [cinst, movecycle]: v) {
     stream << format("%p", cinst->getMI()) << ":" << cinst->getName() << " : move val=" << movecycle << "\n";
   }
