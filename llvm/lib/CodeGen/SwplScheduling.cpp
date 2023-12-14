@@ -2638,12 +2638,12 @@ bool SwplSSProc::execute(const SwplDdg &ddg,
 
   if (inst_slot_map==nullptr) {
     if (OptionDumpSSProgress)
-      stream << "StageScheduling: [" << fname << "] no result of SWPL at II=" << ii << ".\n";
+      stream << "*** No StageScheduling: [" << fname << "] no result of SWPL at II=" << ii << ".\n";
     return false;
   }
   if (inst_slot_map->calcPrologBlocks(loop, ii)==0) {
     if (OptionDumpSSProgress)
-      stream << "StageScheduling: [" << fname << "] loop is Scheduled. But prologue-cycle is 0." << ii << ".\n";
+      stream << "*** No StageScheduling: [" << fname << "] loop is Scheduled. But prologue-cycle is 0." << ii << ".\n";
     return false;
   }
 
