@@ -384,5 +384,22 @@ public:
 
 };
 
+/// \brief Estimate and maintain number of registers
+class SwplSSNumRegisters {
+  unsigned ireg; ///< Estimated number of integer registers
+  unsigned freg; ///< Estimated number of floating point registers
+  unsigned preg; ///< Estimated number of predicate registers
+public:
+  SwplSSNumRegisters(const SwplLoop &loop,
+                     unsigned ii,
+                     const SwplInstSlotHashmap *inst_slot_map);
+  bool operator<(const SwplSSNumRegisters& nr) const {
+    return (!(ireg == nr.ireg && freg == nr.freg  && preg == nr.preg) &&
+            (ireg <= nr.ireg && freg <= nr.freg  && preg <= nr.preg));
+  }
+  void dump(raw_ostream &stream) const;
+  void print(raw_ostream &stream) const;
+};
+
 }
 #endif

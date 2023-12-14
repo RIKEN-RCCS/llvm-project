@@ -77,7 +77,7 @@ public:
   size_t calcFlatScheduleBlocks(const SwplLoop& c_loop, unsigned iteration_interval);
   size_t calcPrologBlocks(const SwplLoop& loop, unsigned iteration_interval);
   size_t calcKernelBlocks(const SwplLoop& c_loop, unsigned iteration_interval);
-  size_t calcNRenamingVersions(const SwplLoop& c_loop, unsigned iteration_interval);
+  size_t calcNRenamingVersions(const SwplLoop& c_loop, unsigned iteration_interval) const;
   SwplSlot findBeginSlot(const SwplLoop& c_loop, unsigned iteration_interval);
   SwplSlot findFirstSlot(const SwplLoop& c_loop);
   SwplSlot findLastSlot(const SwplLoop& c_loop);

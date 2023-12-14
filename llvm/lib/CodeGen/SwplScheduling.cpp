@@ -2637,14 +2637,20 @@ bool SwplSSProc::execute(const SwplDdg &ddg,
     return false;
 
   if (inst_slot_map==nullptr) {
-    if (SWPipeliner::isDebugOutput())
-      stream << "StageScheduling: [" << fname << "] no result of SWPL at II=" << ii << ".\n";
+    if (OptionDumpSSProgress)
+      stream << "*** No StageScheduling: [" << fname << "] no result of SWPL at II=" << ii << ".\n";
     return false;
   }
   if (inst_slot_map->calcPrologBlocks(loop, ii)==0) {
-    if (SWPipeliner::isDebugOutput())
-      stream << "StageScheduling: [" << fname << "] loop is Scheduled. But prologue-cycle is 0." << ii << ".\n";
+    if (OptionDumpSSProgress)
+      stream << "*** No StageScheduling: [" << fname << "] loop is Scheduled. But prologue-cycle is 0." << ii << ".\n";
     return false;
+  }
+
+  SwplSSNumRegisters estimateRegBefore(loop, ii, inst_slot_map);
+  if (OptionDumpSSProgress) {
+    stream << "*** before SS : dump SwplSSNumRegisters ***\n";
+    estimateRegBefore.dump(stream);
   }
 
   SwplSSCyclicInfo ssCyclicInfo(ddg, loop);
@@ -2660,19 +2666,45 @@ bool SwplSSProc::execute(const SwplDdg &ddg,
   }
 
   SwplSSMoveinfo acresult;
+
+  // heuristic AC
   SwplSSACProc::execute(ddg, ii, ssEdges, acresult, stream);
   if (OptionDumpSSProgress) {
-    stream << "*** move instruction by AC ***\n";
+    stream << "*** dump SwplSSMoveinfo after AC ***\n";
     SwplSSProc::dumpSSMoveinfo(stream, acresult);
   }
 
   // adjust SwplInstSlotHashmap by SwplSSMoveinfo
   SwplSSProc::adjustSlot(*inst_slot_map, acresult);
+  SwplSSNumRegisters estimateRegAfter(loop, ii, inst_slot_map);
   if (OptionDumpSSProgress) {
+    stream << "*** after SS : dump SwplSSNumRegisters ***\n";
+    estimateRegAfter.dump(stream);
     stream << "*** after SS : dump SwplSSEdges ***\n";
     SwplSSEdges TEMPssEdges(ddg, loop, ii, *inst_slot_map);
     TEMPssEdges.updateInCyclic(ssCyclicInfo);
     TEMPssEdges.dump(stream, fname);
+  }
+
+  // Determine whether to adopt or reject StageScheduling results
+  // by comparing SwplSSNumRegisters.
+  if (estimateRegAfter<estimateRegBefore) {
+    if (OptionDumpSSProgress) {
+      stream << "*** Adopt StageScheduling results!!! ***\n";
+    }
+    if (SWPipeliner::isDebugOutput()) {
+        dbgs() << "                                                                "
+               << "Estimated num of vregs was changed by StageScheduling : ";
+        estimateRegBefore.print(dbgs());
+        dbgs() << " -> ";
+        estimateRegAfter.print(dbgs());
+        dbgs() << "\n";
+    }
+  }
+  else {
+    if (OptionDumpSSProgress) {
+      stream << "*** StageScheduling results rejected... ***\n";
+    }
   }
 
   return true;
@@ -2680,6 +2712,11 @@ bool SwplSSProc::execute(const SwplDdg &ddg,
 
 /// \brief dump SwplSSMoveinfo
 void SwplSSProc::dumpSSMoveinfo(raw_ostream &stream, const SwplSSMoveinfo &v) {
+  if (v.size()==0) {
+    stream << "none...\n";
+    return;
+  }
+
   for (auto [cinst, movecycle]: v) {
     stream << format("%p", cinst->getMI()) << ":" << cinst->getName() << " : move val=" << movecycle << "\n";
   }
@@ -3061,6 +3098,33 @@ void SwplSSCyclicInfo::dump(raw_ostream &stream) const {
       stream << "}\n";
     }
   }
+}
+
+/// \brief SwplSSNumRegisters constructor
+SwplSSNumRegisters::SwplSSNumRegisters(const SwplLoop &loop,
+                                       unsigned ii,
+                                       const SwplInstSlotHashmap *inst_slot_map) {
+  auto n_renaming_versions = inst_slot_map->calcNRenamingVersions(loop, ii);
+
+  ireg = SwplRegEstimate::calcNumRegs(loop, inst_slot_map, ii,
+                                      llvm::StmRegKind::getIntRegID(),
+                                      n_renaming_versions);
+  freg = SwplRegEstimate::calcNumRegs(loop, inst_slot_map, ii,
+                                      llvm::StmRegKind::getFloatRegID(),
+                                      n_renaming_versions);
+  preg = SwplRegEstimate::calcNumRegs(loop, inst_slot_map, ii,
+                                      llvm::StmRegKind::getPredicateRegID(),
+                                      n_renaming_versions);
+}
+
+/// \brief dump SwplSSNumRegisters
+void SwplSSNumRegisters::dump(raw_ostream &stream) const {
+  stream << "estimate VReg  Fp: " << freg << ", Int: " << ireg << ", Pre: " << preg <<"\n";
+}
+
+/// \brief print num of registers in SwplSSNumRegisters
+void SwplSSNumRegisters::print(raw_ostream &stream) const {
+  stream << "(VReg  Fp: " << freg << ", Int: " << ireg << ", Pre: " << preg <<")";
 }
 
 }
