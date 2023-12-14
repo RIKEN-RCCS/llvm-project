@@ -1,4 +1,4 @@
-# RUN: llc %s -mcpu=a64fx -O1 -fswp -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8 -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc %s -mcpu=a64fx -O1 -fswp -swpl-enable-reg-alloc -swpl-enable-proepi-copy -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8 -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK:bb.8 (%ir-block.7):
 # CHECK-NEXT:; predecessors: %bb.7

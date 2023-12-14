@@ -237,6 +237,11 @@ public:
   /// \retval true  レジスタ割り付けを有効にする
   /// \retval false レジスタ割り付けを有効にしない
   bool isEnableRegAlloc(void) const override;
+
+  /// Determine the output location of the COPY instruction for registers that span the MBB
+  /// \retval true  Output COPY instruction to prologue and epilogue
+  /// \retval false Output COPY instruction to the kernel
+  bool isEnableProEpiCopy(void) const override;
 };
 
 

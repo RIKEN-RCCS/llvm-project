@@ -321,6 +321,11 @@ public:
   /// \retval true Valid the register allocation in the swpl pass.
   /// \retval false Invalid the register allocation in the swpl pass.
   virtual bool isEnableRegAlloc(void) const = 0;
+
+  /// Determine the output location of the COPY instruction for registers that span the MBB
+  /// \retval true  Output COPY instruction to prologue and epilogue
+  /// \retval false Output COPY instruction to the kernel
+  virtual bool isEnableProEpiCopy(void) const = 0;
 };
 
 

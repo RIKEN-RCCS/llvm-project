@@ -233,10 +233,10 @@ void AArch64InstrInfo::createSwplPseudoMIs(SwplTransformedMIRInfo *tmi,MachineFu
   }
   
   // Generate SWPLIVEIN, SWPLIVEOUT instructions
-  createSwpliveoutMI(MF, firstDL, &tmi->prolog_liveout_mi, tmi->prolog_post_mis, 0);
-  createSwpliveinMI(MF, firstDL, &tmi->kernel_livein_mi, tmi->prolog_post_mis, 0);
-  createSwpliveoutMI(MF, firstDL, &tmi->kernel_liveout_mi, tmi->epilog_pre_mis, 1);
-  createSwpliveinMI(MF, firstDL, &tmi->epilog_livein_mi, tmi->epilog_pre_mis, 1);
+  createSwpliveoutMI(MF, firstDL, &tmi->prolog_liveout_mi, tmi->livein_copy_mis, 0);
+  createSwpliveinMI(MF, firstDL, &tmi->kernel_livein_mi, tmi->livein_copy_mis, 0);
+  createSwpliveoutMI(MF, firstDL, &tmi->kernel_liveout_mi, tmi->liveout_copy_mis, 1);
+  createSwpliveinMI(MF, firstDL, &tmi->epilog_livein_mi, tmi->liveout_copy_mis, 1);
 }
 
 /**
@@ -669,10 +669,10 @@ static void callSetReg(MachineFunction &MF,
      *     %13 = ADD %12, 1
      */
     if ((rinfo->num_def == -1) || (rinfo->num_def > rinfo->num_use))
-      addCopyMIpre(MF, pre_dl, tmi->prolog_post_mis, rinfo->vreg, rinfo->preg);    // livein
+      addCopyMIpre(MF, pre_dl, tmi->livein_copy_mis, rinfo->vreg, rinfo->preg);    // livein
     if (((rinfo->num_def > -1) && (tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg)))
         || SWPipeliner::currentLoop->containsLiveOutReg(rinfo->vreg))
-      addCopyMIpost(MF, post_dl, tmi->epilog_pre_mis, rinfo->vreg, rinfo->preg); // liveout
+      addCopyMIpost(MF, post_dl, tmi->liveout_copy_mis, rinfo->vreg, rinfo->preg); // liveout
     // 当該物理レジスタを使用するMachineOperandすべてにsetReg()する
     for (auto *mo : rinfo->vreg_mo) {
       auto preg = rinfo->preg;
@@ -883,8 +883,10 @@ bool SwplRegAllocInfoTbl::isOverlapLiveRange( RegAllocInfo *reginfo1, RegAllocIn
   int def2 = reginfo2->num_def;
   int use2 = reginfo2->num_use;
 
-  // // livein case, make sure that the register is not destroyed.
-  if (def1<0 || def2<0) return true;
+  if(SWPipeliner::STM->isEnableProEpiCopy()) {
+    // // livein case, make sure that the register is not destroyed.
+    if (def1<0 || def2<0) return true;
+  }
 
   for(int i=1; i<=(int)total_mi; i++) {    // num_def/num_use starts counting from 1
     bool overlap1 = false;
