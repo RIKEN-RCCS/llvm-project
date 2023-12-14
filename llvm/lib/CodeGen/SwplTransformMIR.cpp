@@ -512,14 +512,23 @@ void SwplTransformMIR::insertMIs(MachineBasicBlock& ins,
 
   /// (3) Insert a starting instruction
   if (SWPipeliner::STM->isEnableRegAlloc()) {
-    // Livein
-    if (block == KERNEL) {
-      ins.push_back(TMI.kernel_livein_mi); // Add SWPLIVEIN
-    // Liveout
-    } else if (block == EPILOGUE) {
-      ins.push_back(TMI.epilog_livein_mi); // Add SWPLIVEIN
-      for (auto *mi : TMI.epilog_pre_mis) { // Add COPY
-        ins.push_back(mi);
+    if (SWPipeliner::STM->isEnableProEpiCopy()) {
+      // Livein
+      if (block == KERNEL) {
+        ins.push_back(TMI.kernel_livein_mi); // Add SWPLIVEIN
+      // Liveout
+      } else if (block == EPILOGUE) {
+        ins.push_back(TMI.epilog_livein_mi); // Add SWPLIVEIN
+        for (auto *mi : TMI.liveout_copy_mis) { // Add COPY
+          ins.push_back(mi);
+        }
+      }
+    } else {
+      // Livein
+      if (block == KERNEL) {
+        for (auto *mi : TMI.livein_copy_mis) { // Add COPY
+          ins.push_back(mi);
+        }
       }
     }
   }
@@ -534,15 +543,24 @@ void SwplTransformMIR::insertMIs(MachineBasicBlock& ins,
 
   /// (5) Insert a terminating instruction
   if (SWPipeliner::STM->isEnableRegAlloc()) {
-    // Livein
-    if (block == PROLOGUE) {
-      for (auto *mi : TMI.prolog_post_mis) { // Add COPY
-        ins.push_back(mi);
+    if (SWPipeliner::STM->isEnableProEpiCopy()) {
+      // Livein
+      if (block == PROLOGUE) {
+        for (auto *mi : TMI.livein_copy_mis) { // Add COPY
+          ins.push_back(mi);
+        }
+        ins.push_back(TMI.prolog_liveout_mi); // Add SWPLIVEOUT
+      // Liveout
+      } else if (block == KERNEL) {
+        ins.push_back(TMI.kernel_liveout_mi); // Add SWPLIVEOUT
       }
-      ins.push_back(TMI.prolog_liveout_mi); // Add SWPLIVEOUT
-    // Liveout
-    } else if (block == KERNEL) {
-      ins.push_back(TMI.kernel_liveout_mi); // Add SWPLIVEOUT
+    } else {
+      // Liveout
+      if (block == KERNEL) {
+        for (auto *mi : TMI.liveout_copy_mis) { // Add COPY
+          ins.push_back(mi);
+        }
+      }
     }
   }
 }
@@ -727,7 +745,7 @@ void SwplTransformMIR::outputLoopoptMessage(int n_body_inst) {
 
 void SwplTransformMIR::transformKernel() {
   /// (1) Create instructions for SWPL
-  if (SWPipeliner::STM->isEnableRegAlloc()){
+  if (SWPipeliner::STM->isEnableRegAlloc() && SWPipeliner::STM->isEnableProEpiCopy()){
     SWPipeliner::TII->createSwplPseudoMIs(&TMI, MF);
   }
 

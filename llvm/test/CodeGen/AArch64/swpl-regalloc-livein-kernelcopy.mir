@@ -1,5 +1,65 @@
-# RUN: llc -o /dev/null -mcpu=a64fx -O1 %s -start-before=aarch64-swpipeliner -fswp -swpl-enable-proepi-copy -pass-remarks=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner 2>&1 | FileCheck %s
-# CHECK:remark: s.c:37:13: The number of COPY instructions in the kernel loop for software pipelining is 0.
+# RUN: llc -o /dev/null -mcpu=a64fx -O1 %s -start-before=aarch64-swpipeliner -fswp -swpl-debug-dump-mir=8 2>&1 | FileCheck %s
+
+# CHECK-NOT: SWPLIVEIN
+# CHECK-NOT: SWPLIVEOUT
+
+# CHECK:bb.14.for.body9:
+# CHECK-NEXT:; predecessors: %bb.5
+# CHECK-NEXT:  successors: %bb.8(0x80000000); %bb.8(100.00%)
+# CHECK-EMPTY:
+# CHECK-NEXT:  %86:gpr64common = COPY %1:gpr64common
+# CHECK-NEXT:  %87:gpr64sp = COPY %10:gpr64all
+# CHECK-NEXT:  %97:gpr64common = COPY %86:gpr64common, debug-location !22; s.c:38:28
+# CHECK-NEXT:  %103:gpr64sp = COPY %87:gpr64sp, debug-location !22; s.c:38:28
+# CHECK-NEXT:  %88:gpr64common = ADDXrr %30:gpr64common, %97:gpr64common, debug-location !22; s.c:38:28
+# CHECK-NEXT:  %90:gpr64common = ADDXrr %32:gpr64common, %97:gpr64common, debug-location !27; s.c:38:43
+# CHECK-NEXT:  %89:fpr64 = LDRDui %88:gpr64common, 252, debug-location !22 :: (volatile load (s64) from %ir.uglygep63, !tbaa !23); s.c:38:28
+# CHECK-NEXT:  %91:fpr64 = LDRDui killed %90:gpr64common, 509, debug-location !27 :: (volatile load (s64) from %ir.uglygep64, !tbaa !23); s.c:38:43
+# CHECK-NEXT:  %92:fpr64 = nofpexcept FADDDrr killed %89:fpr64, killed %91:fpr64, implicit $fpcr, debug-location !28; s.c:38:41
+# CHECK-NEXT:  %117:gpr64common = nuw nsw ADDXri %97:gpr64common, 8, 0, debug-location !44; s.c:37:31
+# CHECK-NEXT:bb.8.for.body9:
+# CHECK-NEXT:; predecessors: %bb.14
+# CHECK-NEXT:  successors: %bb.15(0x04000000); %bb.15(3.12%)
+# CHECK-EMPTY:
+# CHECK-NEXT:  %109:gpr64common = PHI %117:gpr64common, %bb.14, debug-location !22; s.c:38:28
+# CHECK-NEXT:  %111:fpr64 = PHI %92:fpr64, %bb.14, debug-location !22; s.c:38:28
+# CHECK-NEXT:  %113:gpr64common = PHI %88:gpr64common, %bb.14, debug-location !22; s.c:38:28
+# CHECK-NEXT:  %116:gpr64sp = PHI %103:gpr64sp, %bb.14, debug-location !22; s.c:38:28
+# CHECK-NEXT:  $x1 = COPY %30:gpr64common, debug-location !22; s.c:38:28
+# CHECK-NEXT:  $x2 = COPY %109:gpr64common, debug-location !22; s.c:38:28
+# CHECK-NEXT:  $x4 = COPY %32:gpr64common, debug-location !22; s.c:38:28
+# CHECK-NEXT:  $d2 = COPY %111:fpr64, debug-location !22; s.c:38:28
+# CHECK-NEXT:  $x5 = COPY %113:gpr64common, debug-location !22; s.c:38:28
+# CHECK-NEXT:  $x7 = COPY %116:gpr64sp, debug-location !22; s.c:38:28
+# CHECK-NEXT:  renamable $x0 = ADDXrr renamable $x1, renamable $x2, debug-location !22; s.c:38:28
+# CHECK-NEXT:  renamable $x3 = ADDXrr renamable $x4, renamable $x2, debug-location !27; s.c:38:43
+# CHECK-NEXT:  renamable $d0 = LDRDui renamable $x0, 252, debug-location !22 :: (volatile load (s64) from %ir.uglygep63, !tbaa !23); s.c:38:28
+# CHECK-NEXT:  renamable $d1 = LDRDui killed renamable $x3, 509, debug-location !27 :: (volatile load (s64) from %ir.uglygep64, !tbaa !23); s.c:38:43
+# CHECK-NEXT:  STRDui killed renamable $d2, renamable $x5, 509, debug-location !29 :: (volatile store (s64) into %ir.uglygep66, !tbaa !23); s.c:38:26
+# CHECK-NEXT:  renamable $d2 = nofpexcept FADDDrr killed renamable $d0, killed renamable $d1, implicit $fpcr, debug-location !28; s.c:38:41
+# CHECK-NEXT:  renamable $x3 = nuw nsw ADDXri renamable $x2, 8, 0, debug-location !44; s.c:37:31
+# CHECK-NEXT:  renamable $x6 = SUBSXri renamable $x7, 1, 0, implicit-def $nzcv, debug-location !21; s.c:37:13
+# CHECK-NEXT:  renamable $x5 = ADDXrr renamable $x1, renamable $x3, debug-location !22; s.c:38:28
+# CHECK-NEXT:  renamable $x1 = ADDXrr renamable $x4, renamable $x3, debug-location !27; s.c:38:43
+# CHECK-NEXT:  renamable $d0 = LDRDui renamable $x5, 252, debug-location !22 :: (volatile load (s64) from %ir.uglygep63, !tbaa !23); s.c:38:28
+# CHECK-NEXT:  renamable $d1 = LDRDui killed renamable $x1, 509, debug-location !27 :: (volatile load (s64) from %ir.uglygep64, !tbaa !23); s.c:38:43
+# CHECK-NEXT:  STRDui killed renamable $d2, renamable $x0, 509, debug-location !29 :: (volatile store (s64) into %ir.uglygep66, !tbaa !23); s.c:38:26
+# CHECK-NEXT:  renamable $d2 = nofpexcept FADDDrr killed renamable $d0, killed renamable $d1, implicit $fpcr, debug-location !28; s.c:38:41
+# CHECK-NEXT:  renamable $x2 = nuw nsw ADDXri renamable $x3, 8, 0, debug-location !44; s.c:37:31
+# CHECK-NEXT:  renamable $x7 = SUBSXri renamable $x6, 1, 0, implicit-def $nzcv, debug-location !21; s.c:37:13
+# CHECK-NEXT:  %108:gpr64common = COPY $x2, debug-location !21; s.c:37:13
+# CHECK-NEXT:  %110:fpr64 = COPY $d2, debug-location !21; s.c:37:13
+# CHECK-NEXT:  %112:gpr64common = COPY $x5, debug-location !21; s.c:37:13
+# CHECK-NEXT:  %114:gpr64sp = COPY $x6, debug-location !21; s.c:37:13
+# CHECK-NEXT:  %115:gpr64sp = COPY $x7, debug-location !21; s.c:37:13
+# CHECK-NEXT:  $xzr = SUBSXri $x7, 3, 0, implicit-def $nzcv, debug-location !21; s.c:37:13
+# CHECK-NEXT:bb.15.for.body9:
+# CHECK-NEXT:; predecessors: %bb.8
+# CHECK-NEXT:  successors: %bb.17(0x80000000); %bb.17(100.00%)
+# CHECK-EMPTY:
+# CHECK-NEXT:  STRDui killed %110:fpr64, %112:gpr64common, 509, debug-location !29 :: (volatile store (s64) into %ir.uglygep66, !tbaa !23); s.c:38:26
+# CHECK-NEXT:  %107:gpr64sp = SUBSXri %115:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !21; s.c:37:13
+
 --- |
   ; ModuleID = 's.c'
   source_filename = "s.c"
