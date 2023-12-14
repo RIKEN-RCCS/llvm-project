@@ -397,16 +397,6 @@ public:
     return (!(ireg == nr.ireg && freg == nr.freg  && preg == nr.preg) &&
             (ireg <= nr.ireg && freg <= nr.freg  && preg <= nr.preg));
   }
-  bool operator>(const SwplSSNumRegisters& nr) const {
-    return (!(ireg == nr.ireg && freg == nr.freg  && preg == nr.preg) &&
-            (ireg >= nr.ireg && freg >= nr.freg  && preg >= nr.preg));
-  }
-  bool operator>=(const SwplSSNumRegisters& nr) const {
-    return !(*this < nr);
-  }
-  bool operator<=(const SwplSSNumRegisters& nr) const {
-    return !(*this > nr);
-  }
   void dump(raw_ostream &stream) const;
   void print(raw_ostream &stream) const;
 };
