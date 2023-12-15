@@ -532,8 +532,6 @@ size_t SwplInstSlotHashmap::calcNRenamingVersions(const SwplLoop& c_loop,
       live_cycles = last_use_cycle - def_cycle + 1UL;
       assert (live_cycles >= 1);
 
-      /* need_more_work_here (); */
-      assert (live_cycles < 10000);
       max_live_cycles = std::max(max_live_cycles, live_cycles);
     }
   }
