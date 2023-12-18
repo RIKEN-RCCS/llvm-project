@@ -46,6 +46,14 @@ SwplDdg *SwplDdg::Initialize (SwplLoop &loop, bool Nodep) {
   /// into PhiInsts after generating SwplDdg.
   loop.recollectPhiInsts();
 
+  // Import yaml of DDG
+  if (SWPipeliner::isImportDDG())
+    ddg->importYaml();
+
+  // Export yaml of DDG
+  if (SWPipeliner::isExportDDG())
+    ddg->exportYaml();
+
   if (DebugDumpDdg) {
     ddg->print();
   }  
@@ -378,15 +386,24 @@ struct yaml::MappingTraits<SwplDdg::IOmi> {
   static const bool flow = true;
 };
 
+template<>
+struct yaml::MappingTraits<SwplDdg::IOddgnodeinfo> {
+  static void mapping(IO& io, SwplDdg::IOddgnodeinfo& info) {
+    io.mapRequired("distance", info.distance);
+    io.mapRequired("delay", info.delay);
+  }
+  static const bool flow=true;
+};
+LLVM_YAML_IS_SEQUENCE_VECTOR(SwplDdg::IOddgnodeinfo)
+
 template <>
 struct yaml::MappingTraits<SwplDdg::IOddgnode> {
   static void mapping(IO &io, SwplDdg::IOddgnode &info) {
     io.mapRequired("from", info.from);
     io.mapRequired("to", info.to);
-    io.mapRequired("distance", info.distance);
+    io.mapRequired("infos", info.infos);
   }
 };
-
 LLVM_YAML_IS_SEQUENCE_VECTOR(SwplDdg::IOddgnode)
 
 template <>
@@ -411,51 +428,6 @@ void SwplDdg::analysisMemDependence() {
   raw_string_ostream strstream(s);
   std::map<const MachineInstr*, unsigned> mimap;
   IOddg yamlddg;
-
-  int mi_no=0;
-  StringRef fname;
-
-  if (SWPipeliner::isExportDDG() || SWPipeliner::isImportDDG()) {
-    for (auto *former_mem:getLoopMems()) {
-      auto *mi = former_mem->getInst()->getMI();
-      mimap[mi]=mi_no++;
-    }
-    auto *ml = getLoop()->getML();
-    fname = ml->getTopBlock()->getParent()->getName();
-  }
-  if (SWPipeliner::isExportDDG()) {
-    OutStrm = std::make_unique<raw_fd_ostream>(SWPipeliner::getDDGFileName(), EC, sys::fs::OF_Append);
-    if (EC) {
-      report_fatal_error("can not open yaml file", false);
-    }
-
-    *OutStrm << "# No., MI\n";
-    mi_no=0;
-    for (auto *former_mem:getLoopMems()) {
-      auto *mi = former_mem->getInst()->getMI();
-      *OutStrm << "# " << mi_no++ << ":" << *mi;
-    }
-    yamlddg.fname = fname;
-    yamlddg.loopid = SWPipeliner::loop_number;
-  }
-  IOddg *target_yamlddg=nullptr;
-  if (SWPipeliner::isImportDDG()) {
-    if (yamlddgList.size()==0) {
-      ErrorOr<std::unique_ptr<MemoryBuffer>>  Buffer = MemoryBuffer::getFile(SWPipeliner::getDDGFileName());
-      EC = Buffer.getError();
-      if (EC) {
-        report_fatal_error("can not open yaml file", false);
-      }
-      yaml::Input yin(Buffer.get()->getMemBufferRef());
-      yin >> yamlddgList;
-    }
-    for (auto &y: yamlddgList) {
-      if (y.fname != fname) continue;
-      if (y.loopid != SWPipeliner::loop_number) continue;
-      target_yamlddg = &y;
-      break;
-    }
-  }
 
   for (auto *former_mem:getLoopMems()) {
     for (auto *latter_mem:getLoopMems()) {
@@ -489,29 +461,6 @@ void SwplDdg::analysisMemDependence() {
         }
       }
       distance = getLoop()->getMemsMinOverlapDistance(former_mem, latter_mem);
-      if (SWPipeliner::isExportDDG()) {
-        s.clear();
-        former_mem->getInst()->getMI()->print(strstream, true, false, false, false);
-        IOmi from{mimap[former_mem->getInst()->getMI()], strstream.str()};
-        s.clear();
-        latter_mem->getInst()->getMI()->print(strstream, true, false, false, false);
-        IOmi to{mimap[latter_mem->getInst()->getMI()], strstream.str()};
-        IOddgnode n{from,to, distance};
-        yamlddg.ddgnodes.push_back(n);
-      }
-      if (target_yamlddg) {
-        unsigned from=mimap[former_mem->getInst()->getMI()];
-        unsigned to=mimap[latter_mem->getInst()->getMI()];
-        for (auto &ddgnode:target_yamlddg->ddgnodes) {
-          if (ddgnode.distance > 20) {
-            report_fatal_error("distance > 20", false);
-          }
-          if (ddgnode.from.id == from && ddgnode.to.id == to) {
-            distance = ddgnode.distance;
-            break;
-          }
-        }
-      }
       if (SWPipeliner::isDebugDdgOutput()) {
         auto *p="";
         switch (depKind) {
@@ -530,10 +479,6 @@ void SwplDdg::analysisMemDependence() {
 
       update_distance_and_delay(*this, *(former_mem->getInst()), *(latter_mem->getInst()), distance, delay);
     }
-  }
-  if (SWPipeliner::isExportDDG()) {
-    yaml::Output yout(*OutStrm);
-    yout << yamlddg;
   }
 
 }
@@ -615,4 +560,129 @@ void SwplDdg::print() const {
     }  
     dbgs() << "\n";
   }
+}
+
+void SwplDdg::importYaml() {
+  StringRef fname;
+  fname = getLoop()->getML()->getTopBlock()->getParent()->getName();
+
+  if (yamlddgList.size()==0) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>>  Buffer = MemoryBuffer::getFile(SWPipeliner::getDDGFileName());
+    std::error_code EC = Buffer.getError();
+    if (EC)
+      report_fatal_error("can not open yaml file", false);
+    yaml::Input yin(Buffer.get()->getMemBufferRef());
+    yin >> yamlddgList;
+  }
+
+  IOddg *target_yamlddg = nullptr;
+  for (auto &y: yamlddgList) {
+    if (y.fname != fname) continue;
+    if (y.loopid != SWPipeliner::loop_number) continue;
+    target_yamlddg = &y;
+    break;
+  }
+
+  if (target_yamlddg) {
+    std::map<const MachineInstr*, unsigned> mimap;
+    int mi_no=0;
+    for (auto *inst : getLoopBodyInsts()) {
+      auto *mi = inst->getMI();
+      mimap[mi] = mi_no++;
+    }
+
+    SwplInstGraph *graph = getGraph();
+    SwplInstEdges &edges = graph->getEdges();
+    for (auto &ddgnode : target_yamlddg->ddgnodes) {
+      auto found = false;
+
+      for (auto &d : ddgnode.infos)
+        if (d.distance > 20)
+          report_fatal_error("value too large, distance > 20", false);
+
+      for (auto *edge : edges) {
+        const SwplInst *leading_inst = edge->getInitial();
+        const SwplInst *trailing_inst = edge->getTerminal();
+        unsigned from = mimap[leading_inst->getMI()];
+        unsigned to = mimap[trailing_inst->getMI()];
+
+        if (ddgnode.from.id == from && ddgnode.to.id == to) {
+          auto &distances = getDistancesFor(*edge);
+          auto &delays = getDelaysFor(*edge);
+          // check number of elements
+          if (ddgnode.infos.size() != distances.size())
+            report_fatal_error("number of pairs of distance and delay is incorrect", false);
+
+          found = true;
+          auto distance = distances.begin();
+          auto distance_end = distances.end();
+          auto delay = delays.begin();
+          auto ddginfo = ddgnode.infos.begin();
+          for(  ; distance != distance_end ; ++distance, ++delay, ++ddginfo) {
+            *distance = ddginfo->distance;
+            *delay = ddginfo->delay;
+          }
+          break;
+        }
+      }
+
+      if (!found)
+        report_fatal_error("from-mi or to-mi not found", false);
+    }
+  }
+
+}
+
+void SwplDdg::exportYaml() {
+  std::error_code EC;
+  std::unique_ptr<raw_fd_ostream> OutStrm;
+  OutStrm = std::make_unique<raw_fd_ostream>(SWPipeliner::getDDGFileName(), EC, sys::fs::OF_Append);
+  if (EC)
+    report_fatal_error("can not open yaml file", false);
+
+  int mi_no = 0;
+  std::map<const MachineInstr*, unsigned> mimap;
+  *OutStrm << "# No., MI\n";
+  for (auto *inst : getLoopBodyInsts()) {
+    auto *mi = inst->getMI();
+    mimap[mi] = mi_no;
+    *OutStrm << "# " << mi_no << ":" << *mi;
+    ++mi_no;
+  }
+
+  IOddg yamlddg;
+  StringRef fname;
+  fname = getLoop()->getML()->getTopBlock()->getParent()->getName();
+  yamlddg.fname = fname;
+  yamlddg.loopid = SWPipeliner::loop_number;
+  std::string s;
+  raw_string_ostream strstream(s);
+  SwplInstGraph *graph = getGraph();
+  SwplInstEdges &edges = graph->getEdges();
+  for (auto *edge : edges) {
+    const auto *from_mi = edge->getInitial()->getMI();
+    const auto *to_mi = edge->getTerminal()->getMI();
+    s.clear();
+    from_mi->print(strstream, true, false, false, false);
+    IOmi from{mimap[from_mi], strstream.str()};
+    s.clear();
+    to_mi->print(strstream, true, false, false, false);
+    IOmi to{mimap[to_mi], strstream.str()};
+    IOddgnode n{from, to};
+
+    auto &distances = getDistancesFor(*edge);
+    auto &delays = getDelaysFor(*edge);
+    auto distance = distances.begin();
+    auto distance_end = distances.end();
+    auto delay = delays.begin();
+    for(  ; distance != distance_end ; ++distance, ++delay) {
+      IOddgnodeinfo d{*distance, static_cast<unsigned>(*delay)};
+      n.infos.push_back(d);
+    }
+
+    yamlddg.ddgnodes.push_back(n);
+  }
+
+  yaml::Output yout(*OutStrm);
+  yout << yamlddg;
 }
