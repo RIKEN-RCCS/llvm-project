@@ -2665,7 +2665,7 @@ SwplInstSlotHashmap* SwplSSProc::execute(const SwplDdg &ddg,
   }
 
   // replicate scheduling results
-  SwplInstSlotHashmap* inst_slot_map_temp = new SwplInstSlotHashmap;
+  auto* inst_slot_map_temp = new SwplInstSlotHashmap;
   *inst_slot_map_temp = *inst_slot_map;
 
   SwplSSMoveinfo acresult;
@@ -2691,29 +2691,29 @@ SwplInstSlotHashmap* SwplSSProc::execute(const SwplDdg &ddg,
 
   // Determine whether to adopt or reject StageScheduling results
   // by comparing SwplSSNumRegisters.
-  if (estimateRegAfter<estimateRegBefore) {
-    if (OptionDumpSSProgress) {
-      stream << "*** Adopt StageScheduling results!!! ***\n";
-    }
-    if (SWPipeliner::isDebugOutput()) {
-        dbgs() << "                                                                "
-               << "Estimated num of vregs was changed by StageScheduling : ";
-        estimateRegBefore.print(dbgs());
-        dbgs() << " -> ";
-        estimateRegAfter.print(dbgs());
-        dbgs() << "\n";
-    }
-    delete inst_slot_map;
-    return inst_slot_map_temp;
-  }
-  else {
+  if (!(estimateRegAfter<estimateRegBefore)) {
+    // Discard StageScheduling results
     if (OptionDumpSSProgress) {
       stream << "*** StageScheduling results rejected... ***\n";
     }
     delete inst_slot_map_temp;
+    return inst_slot_map;
   }
 
-  return inst_slot_map;
+  // Adopt StageScheduling results
+  if (OptionDumpSSProgress) {
+    stream << "*** Adopt StageScheduling results!!! ***\n";
+  }
+  if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "                                                                "
+             << "Estimated num of vregs was changed by StageScheduling : ";
+      estimateRegBefore.print(dbgs());
+      dbgs() << " -> ";
+      estimateRegAfter.print(dbgs());
+      dbgs() << "\n";
+  }
+  delete inst_slot_map;
+  return inst_slot_map_temp;
 }
 
 /// \brief dump SwplSSMoveinfo
