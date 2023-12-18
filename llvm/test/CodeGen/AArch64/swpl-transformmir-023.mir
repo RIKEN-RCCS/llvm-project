@@ -102,7 +102,7 @@
 # CHECK-NEXT:  renamable $s3 = LDRSroX renamable $x4, renamable $x3, 0, 0 :: (volatile load (s32) from %ir.uglygep23, !tbaa !2)
 # CHECK-NEXT:  renamable $x6 = SUBSXri renamable $x7, 1, 0, implicit-def $nzcv
 # CHECK-NEXT:  renamable $s2 = COPY renamable $s0
-# CHECK-NEXT:  SWPLIVEOUT implicit $s1, implicit $s2, implicit $s3, implicit $x1, implicit $x2, implicit $x3, implicit $x6, implicit $s0, implicit $x7
+# CHECK-NEXT:  WPLIVEOUT implicit $s1, implicit $s2, implicit $s3, implicit $x0, implicit $x1, implicit $x3, implicit $x4, implicit $x6, implicit $x2, implicit $s0, implicit $x7
 # CHECK-NEXT:  $xzr = SUBSXri $x6, 5, 0, implicit-def $nzcv
 # CHECK-NEXT:bb.7 (%ir-block.2):
 # CHECK-NEXT:; predecessors: %bb.2

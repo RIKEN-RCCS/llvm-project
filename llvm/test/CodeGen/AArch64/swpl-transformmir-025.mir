@@ -103,7 +103,7 @@
 # CHECK-NEXT:  renamable $d1 = LDURDi renamable $x1, 0
 # CHECK-NEXT:  renamable $x3 = SUBSXri renamable $x2, 1, 0, implicit-def $nzcv
 # CHECK-NEXT:  renamable $d2 = COPY renamable $d0
-# CHECK-NEXT:  SWPLIVEOUT implicit $d0, implicit $d1, implicit $d2, implicit $x0, implicit $x1, implicit $x2, implicit $x3
+# CHECK-NEXT:  SWPLIVEOUT implicit $d1, implicit $d2, implicit $x1, implicit $x3, implicit $d0, implicit $x0, implicit $x2
 # CHECK-NEXT:  $xzr = SUBSXri $x3, 3, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 10, %bb.4, implicit $nzcv
 # CHECK-NEXT:bb.9 (%ir-block.7):
@@ -224,7 +224,7 @@
 # CHECK-NEXT:  renamable $d1 = LDURDi renamable $x1, 0
 # CHECK-NEXT:  renamable $x3 = SUBSXri renamable $x2, 1, 0, implicit-def $nzcv
 # CHECK-NEXT:  renamable $d2 = COPY renamable $d0
-# CHECK-NEXT:  SWPLIVEOUT implicit $d0, implicit $d1, implicit $d2, implicit $x0, implicit $x1, implicit $x2, implicit $x3
+# CHECK-NEXT:  SWPLIVEOUT implicit $d1, implicit $d2, implicit $x1, implicit $x3, implicit $d0, implicit $x0, implicit $x2
 # CHECK-NEXT:  $xzr = SUBSXri $x3, 3, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 10, %bb.4, implicit $nzcv
 # CHECK-NEXT:bb.9 (%ir-block.7):

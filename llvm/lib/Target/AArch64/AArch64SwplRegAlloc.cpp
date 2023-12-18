@@ -165,7 +165,7 @@ static void addCopyMIpost(MachineFunction &MF,
 static void createSwpliveinMI(MachineFunction &MF,
                           DebugLoc dl,
                           MachineInstr **livein_mi,
-                          std::vector<MachineInstr*> copy_mis,
+                          std::vector<MachineInstr*> &copy_mis,
                           unsigned vreg_loc) {
 
   // Create SWPLIVEIN instruction
@@ -178,23 +178,16 @@ static void createSwpliveinMI(MachineFunction &MF,
 }
 
 /**
- * @brief Create SWPLIVEOUT instruction
- * @param [in]     MF MachineFunction
- * @param [in]     dl DebugLoc
- * @param [in,out]    liveout_mi MI for liveout
+ * @brief Add registers to the SWPLIVEOUT instruction
+ * @param [in,out] mib MachineInstrBuilder for SWPLIVEOUT
  * @param [in]     copy_mis COPY instruction for livein/liveout
  * @param [in]     vreg_loc Location of physical register for COPY instruction
+ * @param [in,out] added_regs Registers already added to the SWPLIVEOUT instruction
  */
-static void createSwpliveoutMI(MachineFunction &MF,
-                          DebugLoc dl,
-                          MachineInstr **liveout_mi,
-                          std::vector<MachineInstr*> copy_mis,
-                          unsigned vreg_loc) {
-
-  // Create SWPLIVEOUT instruction
-  MachineInstrBuilder mib = BuildMI(MF, dl, SWPipeliner::TII->get(AArch64::SWPLIVEOUT));
-  std::vector<Register> added_regs;
-
+static void addRegSwpliveoutMI(MachineInstrBuilder &mib,
+                              std::vector<MachineInstr*> &copy_mis,
+                              unsigned vreg_loc,
+                              std::vector<Register> &added_regs) {
   for (auto copy:copy_mis) {
     Register reg = copy->getOperand(vreg_loc).getReg();
     bool added = false;
@@ -212,6 +205,49 @@ static void createSwpliveoutMI(MachineFunction &MF,
       added_regs.push_back(reg);
     }  
   }
+  return;
+}
+
+/**
+ * @brief Create Prolog SWPLIVEOUT instruction
+ * @param [in]     MF MachineFunction
+ * @param [in]     dl DebugLoc
+ * @param [in,out]    liveout_mi MI for liveout
+ * @param [in]     livein_copy_mis COPY instruction for livein
+ */
+static void createPrologSwpliveoutMI(MachineFunction &MF,
+                          DebugLoc dl,
+                          MachineInstr **liveout_mi,
+                          std::vector<MachineInstr*> &livein_copy_mis) {
+
+  // Create SWPLIVEOUT instruction
+  MachineInstrBuilder mib = BuildMI(MF, dl, SWPipeliner::TII->get(AArch64::SWPLIVEOUT));
+  std::vector<Register> added_regs;
+  addRegSwpliveoutMI(mib, livein_copy_mis, 0, added_regs);
+  *liveout_mi = mib.getInstr();
+  return;
+}
+
+/**
+ * @brief Create Kernel SWPLIVEOUT instruction
+ * @param [in]     MF MachineFunction
+ * @param [in]     dl DebugLoc
+ * @param [in,out]    liveout_mi MI for liveout
+ * @param [in]     livein_copy_mis COPY instruction for livein
+ * @param [in]     liveout_copy_mis COPY instruction for liveout
+ */
+static void createKernelSwpliveoutMI(MachineFunction &MF,
+                          DebugLoc dl,
+                          MachineInstr **liveout_mi,
+                          std::vector<MachineInstr*> &livein_copy_mis,
+                          std::vector<MachineInstr*> &liveout_copy_mis) {
+
+  // Create SWPLIVEOUT instruction
+  MachineInstrBuilder mib = BuildMI(MF, dl, SWPipeliner::TII->get(AArch64::SWPLIVEOUT));
+  std::vector<Register> added_regs;
+  // The livein register is added to extend the live range.
+  addRegSwpliveoutMI(mib, livein_copy_mis, 0, added_regs);
+  addRegSwpliveoutMI(mib, liveout_copy_mis, 1, added_regs);
   *liveout_mi = mib.getInstr();
   return;
 }
@@ -233,9 +269,9 @@ void AArch64InstrInfo::createSwplPseudoMIs(SwplTransformedMIRInfo *tmi,MachineFu
   }
   
   // Generate SWPLIVEIN, SWPLIVEOUT instructions
-  createSwpliveoutMI(MF, firstDL, &tmi->prolog_liveout_mi, tmi->livein_copy_mis, 0);
+  createPrologSwpliveoutMI(MF, firstDL, &tmi->prolog_liveout_mi, tmi->livein_copy_mis);
   createSwpliveinMI(MF, firstDL, &tmi->kernel_livein_mi, tmi->livein_copy_mis, 0);
-  createSwpliveoutMI(MF, firstDL, &tmi->kernel_liveout_mi, tmi->liveout_copy_mis, 1);
+  createKernelSwpliveoutMI(MF, firstDL, &tmi->kernel_liveout_mi, tmi->livein_copy_mis, tmi->liveout_copy_mis);
   createSwpliveinMI(MF, firstDL, &tmi->epilog_livein_mi, tmi->liveout_copy_mis, 1);
 }
 

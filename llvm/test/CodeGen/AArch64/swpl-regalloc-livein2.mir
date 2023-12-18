@@ -48,7 +48,7 @@
 # CHECK-NEXT:  renamable $p1 = PTRUE_S 31
 # CHECK-NEXT:  renamable $z0 = GLD1W_SXTW_SCALED renamable $p1, renamable $x6, renamable $z1
 # CHECK-NEXT:  renamable $x8 = SUBSXri renamable $x7, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  SWPLIVEOUT implicit $z0, implicit $z1, implicit $w2, implicit $w3, implicit $p1, implicit $x8
+# CHECK-NEXT:  SWPLIVEOUT implicit $z0, implicit $p0, implicit $x0, implicit $z1, implicit $x1, implicit $w3, implicit $w4, implicit $x5, implicit $x6, implicit $x8, implicit $w2, implicit $p1
 # CHECK-NEXT:  $xzr = SUBSXri $x8, 4, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 10, %bb.1, implicit $nzcv
 # CHECK-NEXT:bb.7.do.body:
