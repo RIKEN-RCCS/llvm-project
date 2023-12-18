@@ -296,7 +296,7 @@ using SwplSSMoveinfo = llvm::DenseMap<const SwplInst*, long>;
 /// \brief StageScheduling proccessing
 class SwplSSProc {
 public:
-  static bool execute(const SwplDdg &ddg,
+  static SwplInstSlotHashmap* execute(const SwplDdg &ddg,
                       const SwplLoop &loop,
                       unsigned ii,
                       SwplInstSlotHashmap *inst_slot_map,
