@@ -413,29 +413,29 @@ public:
   /// Phi命令かどうかの判定
   bool isPhi() const { return (isInLoop() && getMI() == nullptr); }
 
-  /// Copy命令かどうかの判定
+  /// Determining whether it is a copy instruction
   bool isCopy() const { return (isInLoop() && getMI() != nullptr && getMI()->isCopy()); }
 
   /// 指定PHIの SwplInst::UseReg のうち、Loop内で更新しているレジスタを持つ SwplReg を返す
-  /// \return Loop内で更新しているレジスタ
+  /// \return Registers being updated within Loop
   const SwplReg &getPhiUseRegFromIn(void) const;
 
   /// \brief 自身の命令の定義レジスタをPhiをまたいで自身で参照するかどうかを判定する
-  /// \retval true  定義レジスタを参照する
-  /// \retval false 定義レジスタを参照しない
+  /// \retval true  refer to definition registers
+  /// \retval false Do not refer to definition registers
   bool isRecurrence() const;
 
-  /// 当該 SwplInst が使用するレジスタを SwplLoop::Regs にpushする
-  /// \param[in] 対象の SwplLoop
+  /// Push the registers used by the relevant SwplInst to SwplLoop::Regs
+  /// \param[in] target SwplLoop
   void pushAllRegs(SwplLoop *loop);
 
-  /// SwplInst の解放
+  /// Freeing SwplInst
   void destroy();
 
 public:
-  /// Predicateレジスタかどうかの判定
+  /// Determining whether it is a Predicate register
   bool isDefinePredicate() const;
-  /// Floatingレジスタかどうかの判定
+  /// Determining whether it is a floating register
   bool isFloatingPoint() const;
   bool isLoad() const { return getMI()->mayLoad(); }
   bool isStore() const { return getMI()->mayStore(); }
@@ -453,6 +453,8 @@ public:
     assert(ix >= 0);
     return ix;
   }
+  /// Remember index of SwplInst
+  int inst_ix = -1;
 };
 
 /// \class SwplReg
