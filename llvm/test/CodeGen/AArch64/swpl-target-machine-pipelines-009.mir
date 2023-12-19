@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-enable-proepi-copy -swpl-debug-dump-resource-filter="FSQRT_ZPmZ_S_UNDEF|FDIV_ZPZZ_S_UNDEF" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-debug-dump-resource-filter="FSQRT_ZPmZ_S_UNDEF|FDIV_ZPZZ_S_UNDEF" -start-before=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:DBG(AArch64SwplTargetMachine::getPipelines): MI: %225:zpr = nnan ninf nsz arcp contract afn reassoc FSQRT_ZPmZ_S_UNDEF
 #CHECK-NEXT:  ResourceID: SIMDFP_SVE_OP+24

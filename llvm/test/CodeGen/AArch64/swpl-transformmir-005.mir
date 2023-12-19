@@ -1,4 +1,4 @@
-# RUN: llc %s -mcpu=a64fx -fswp -swpl-enable-proepi-copy -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8  -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc %s -mcpu=a64fx -fswp -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8  -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK:** SwplTransformedMIRInfo begin **
 # CHECK-NEXT:originalDoVReg:%5
@@ -97,22 +97,22 @@
 # CHECK-NEXT:  successors: %bb.4(0x7c000000), %bb.9(0x04000000); %bb.4(96.88%), %bb.9(3.12%)
 
 # CHECK:  SWPLIVEIN implicit-def $s1, implicit-def $x0, implicit-def $s2, implicit-def $x2, implicit-def $x4
-# CHECK-NEXT:  renamable $s0 = nnan ninf nsz arcp contract afn reassoc FADDSrr renamable $s1, renamable $s1, implicit $fpcr
-# CHECK-NEXT:  STURSi renamable $s0, renamable $x0, 0 :: (volatile store (s32) into %ir.13, !tbaa !2)
-# CHECK-NEXT:  renamable $s1 = nnan ninf nsz arcp contract afn reassoc FADDSrr renamable $s0, renamable $s2, implicit $fpcr
-# CHECK-NEXT:  renamable $x1 = ADDXri renamable $x2, 4, 0
-# CHECK-NEXT:  renamable $s0 = LDURSi renamable $x1, 0
-# CHECK-NEXT:  renamable $x3 = SUBSXri renamable $x4, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  renamable $x5 = ADDXri renamable $x0, 4, 0
-# CHECK-NEXT:  renamable $s2 = COPY renamable $s1
-# CHECK-NEXT:  renamable $s1 = nnan ninf nsz arcp contract afn reassoc FADDSrr renamable $s0, renamable $s0, implicit $fpcr
-# CHECK-NEXT:  STURSi renamable $s1, renamable $x5, 0 :: (volatile store (s32) into %ir.13, !tbaa !2)
-# CHECK-NEXT:  renamable $s0 = nnan ninf nsz arcp contract afn reassoc FADDSrr renamable $s1, renamable $s2, implicit $fpcr
-# CHECK-NEXT:  renamable $x2 = ADDXri renamable $x1, 4, 0
-# CHECK-NEXT:  renamable $s1 = LDURSi renamable $x2, 0
-# CHECK-NEXT:  renamable $x4 = SUBSXri renamable $x3, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  renamable $x0 = ADDXri renamable $x5, 4, 0
-# CHECK-NEXT:  renamable $s2 = COPY renamable $s0
+# CHECK-NEXT:  $s0 = nnan ninf nsz arcp contract afn reassoc FADDSrr $s1, $s1, implicit $fpcr
+# CHECK-NEXT:  STURSi $s0, $x0, 0 :: (volatile store (s32) into %ir.13, !tbaa !2)
+# CHECK-NEXT:  $s1 = nnan ninf nsz arcp contract afn reassoc FADDSrr $s0, $s2, implicit $fpcr
+# CHECK-NEXT:  $x1 = ADDXri $x2, 4, 0
+# CHECK-NEXT:  $s0 = LDURSi $x1, 0
+# CHECK-NEXT:  $x3 = SUBSXri $x4, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  $x5 = ADDXri $x0, 4, 0
+# CHECK-NEXT:  $s2 = COPY $s1
+# CHECK-NEXT:  $s1 = nnan ninf nsz arcp contract afn reassoc FADDSrr $s0, $s0, implicit $fpcr
+# CHECK-NEXT:  STURSi $s1, $x5, 0 :: (volatile store (s32) into %ir.13, !tbaa !2)
+# CHECK-NEXT:  $s0 = nnan ninf nsz arcp contract afn reassoc FADDSrr $s1, $s2, implicit $fpcr
+# CHECK-NEXT:  $x2 = ADDXri $x1, 4, 0
+# CHECK-NEXT:  $s1 = LDURSi $x2, 0
+# CHECK-NEXT:  $x4 = SUBSXri $x3, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  $x0 = ADDXri $x5, 4, 0
+# CHECK-NEXT:  $s2 = COPY $s0
 # CHECK-NEXT:  SWPLIVEOUT implicit $s1, implicit $x0, implicit $s2, implicit $x2, implicit $x4, implicit $x1, implicit $x3, implicit $x5
 # CHECK-NEXT:  $xzr = SUBSXri $x4, 3, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 10, %bb.4, implicit $nzcv
