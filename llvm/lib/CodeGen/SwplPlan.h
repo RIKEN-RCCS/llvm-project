@@ -72,7 +72,6 @@ public:
 
 
 /// \brief スケジューリング結果となるSwplInstとSwplSlotのMap
-// class SwplInstSlotHashmap : public llvm::DenseMap<SwplInst*, SwplSlot> {
 class SwplSlots : public std::vector<SwplSlot> {
 public:
   size_t calcFlatScheduleBlocks(const SwplLoop& c_loop, unsigned iteration_interval);
@@ -123,8 +122,6 @@ public:
   // getters
   const SwplLoop& getLoop() const { return loop; } ///< getter
   SwplLoop& getLoop() { return const_cast<SwplLoop&>(loop); } ///< getter
-  // SwplInstSlotHashmap& getInstSlotMap() { return inst_slot_map ; } ///< getter
-  // const SwplInstSlotHashmap& getInstSlotMap() const { return inst_slot_map ; } ///< getter
   SwplSlots& getInstSlotMap() { return slots ; } ///< getter
   const SwplSlots& getInstSlotMap() const { return slots ; } ///< getter
   unsigned getMinimumIterationInterval() const { return minimum_iteration_interval; } ///< getter
@@ -167,12 +164,10 @@ public:
   void dumpInstTable(raw_ostream &stream);
 
   static bool isSufficientWithRenamingVersions(const SwplLoop& c_loop,
-                                              //  const SwplInstSlotHashmap& c_inst_slot_map,
                                                const SwplSlots& c_slots,
                                                unsigned iteration_interval,
                                                unsigned n_renaming_versions);
   static SwplPlan* construct(const SwplLoop& c_loop,
-                            //  SwplInstSlotHashmap& inst_slot_map,
                              SwplSlots& slots,
                              unsigned min_ii,
                              unsigned ii,
@@ -185,14 +180,12 @@ private:
   static unsigned calcResourceMinIterationInterval(const SwplLoop& c_loop);
   static TryScheduleResult trySchedule(const SwplDdg& c_ddg,
                                        unsigned res_mii,
-                                      //  SwplInstSlotHashmap** inst_slot_map,
                                        SwplSlots** slots,
                                        unsigned* selected_ii,
                                        unsigned* calculated_min_ii,
                                        unsigned* required_itr,
                                        SwplMsResourceResult* resource);
   static TryScheduleResult selectPlan(const SwplDdg& c_ddg,
-                                      // SwplInstSlotHashmap& rslt_inst_slot_map,
                                       SwplSlots& rslt_slots,
                                       unsigned* selected_ii,
                                       unsigned* calculated_min_ii,
