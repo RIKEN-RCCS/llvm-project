@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-disable-stagescheduling=false -swpl-debug-dump-ss-cyclicroots -o /dev/null 2>&1  | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-enable-stagescheduling=true -swpl-debug-dump-ss-cyclicroots -o /dev/null 2>&1  | FileCheck %s
 #CHECK:*** dump SwplSSSyclicInfo ***
 #CHECK:root : { ({{[A-Za-z0-9]+}}:FADDDrr) ({{[A-Za-z0-9]+}}:STURDi) ({{[A-Za-z0-9]+}}:LDRDui) ({{[A-Za-z0-9]+}}:FMULDrr) ({{[A-Za-z0-9]+}}:COPY) ({{[A-Za-z0-9]+}}:FADDDrr) }
 #CHECK:root : { ({{[A-Za-z0-9]+}}:STURDi) ({{[A-Za-z0-9]+}}:LDRDui) ({{[A-Za-z0-9]+}}:ADDXri) ({{[A-Za-z0-9]+}}:STURDi) }
