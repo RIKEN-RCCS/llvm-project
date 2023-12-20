@@ -23,7 +23,7 @@ namespace llvm{
 /// \note 必要なレジスタ数を正確に計算する事は、RAでなければできないため、
 ///       SWPL独自に必要となるレジスタを概算する
 unsigned SwplRegEstimate::calcNumRegs(const SwplLoop& loop,
-                                      const SwplInstSlotHashmap* inst_slot_map,
+                                      const SwplSlots* slots,
                                       unsigned iteration_interval,
                                       unsigned regclassid,
                                       unsigned n_renaming_versions) {
@@ -32,12 +32,12 @@ unsigned SwplRegEstimate::calcNumRegs(const SwplLoop& loop,
     n_extended_regs, n_patten_regs;
   unsigned max_regs = 0, margin = 0;
 
-  assert(inst_slot_map != nullptr);
+  assert(slots != nullptr);
   assert(n_renaming_versions > 0);
 
   /* 見積もり対象のレジスタを収集 */
   vector_renamed_regs = new RenamedRegVector();
-  collectRenamedRegs(loop, inst_slot_map, iteration_interval,
+  collectRenamedRegs(loop, slots, iteration_interval,
                      regclassid, n_renaming_versions, vector_renamed_regs);
 
   /* predecessor, successor, phi をたどってつながるものは全て
@@ -45,16 +45,16 @@ unsigned SwplRegEstimate::calcNumRegs(const SwplLoop& loop,
    * したがって、頭だけ数えなければならない。*/
 
   n_immortal_regs = getNumImmortalRegs (loop, regclassid);
-  n_interfered_regs = getNumInterferedRegs(loop, inst_slot_map,
+  n_interfered_regs = getNumInterferedRegs(loop, slots,
                                            iteration_interval, regclassid,
                                            n_renaming_versions);
-  n_mortal_regs = getNumMortalRegs (loop, inst_slot_map,
+  n_mortal_regs = getNumMortalRegs (loop, slots,
                                     iteration_interval, regclassid);
   n_patten_regs = getNumPatternRegs(vector_renamed_regs,
                                     iteration_interval,
                                     n_renaming_versions, regclassid);
   n_extended_regs = getNumExtendedRegs (vector_renamed_regs,
-                                        inst_slot_map,
+                                        slots,
                                         iteration_interval, regclassid,
                                         n_renaming_versions);					      
 
@@ -157,7 +157,7 @@ void SwplRegEstimate::setRenamedReg(SwplRegEstimate::Renamed_Reg* reg,
 /// ```
 ///
 unsigned SwplRegEstimate::getNumInterferedRegs(const SwplLoop& loop,
-                                               const SwplInstSlotHashmap* inst_slot_map,
+                                               const SwplSlots* slots,
                                                unsigned iteration_interval,
                                                unsigned regclassid,
                                                unsigned n_renaming_versions) {
@@ -167,7 +167,7 @@ unsigned SwplRegEstimate::getNumInterferedRegs(const SwplLoop& loop,
   int maximum_gap;
   bool is_recurrence;
 
-  assert(inst_slot_map != nullptr);
+  assert(slots != nullptr);
   assert(n_renaming_versions > 0);
 
   full_kernel_cycles = n_renaming_versions * iteration_interval;
@@ -177,11 +177,11 @@ unsigned SwplRegEstimate::getNumInterferedRegs(const SwplLoop& loop,
   /* 一次補正のため,ライブレンジがT/2を越えるvregの重なりを数える
    * 同時に、二次補正に必要な情報を収集する
    */
-  for( auto inst : loop.getBodyInsts() ) {
+  for( auto* inst : loop.getBodyInsts() ) {
     SwplSlot def_slot;
     unsigned def_cycle;
   
-    def_slot = inst_slot_map->find(inst)->second;
+    def_slot = slots->at(inst->inst_ix);
     def_cycle = def_slot.calcCycle();
     is_recurrence = inst->isRecurrence();
 
@@ -194,7 +194,7 @@ unsigned SwplRegEstimate::getNumInterferedRegs(const SwplLoop& loop,
     
       if ( !(reg->getUseInsts().empty()) ) {
         last_use_cycle
-          = inst_slot_map->calcLastUseCycleInBodyWithInheritance(*reg, iteration_interval);
+          = slots->calcLastUseCycleInBodyWithInheritance(*reg, iteration_interval);
       }  else {
         last_use_cycle = def_cycle;
       }
@@ -312,17 +312,17 @@ unsigned SwplRegEstimate::getNumImmortalRegs(const SwplLoop& loop, unsigned regc
 /// \note rename される reg （body で定義されていて、predecessor が無いもの）。
 ///       それぞれ live_range を計算し、重複分もそのまま予約する。
 unsigned SwplRegEstimate::getNumMortalRegs(const SwplLoop& loop, 
-                                           const SwplInstSlotHashmap* inst_slot_map,
+                                           const SwplSlots* slots,
                                            unsigned iteration_interval,
                                            unsigned regclassid) {
   unsigned max_counter;
   std::vector<int> reg_counters(iteration_interval, 0);
 
-  for( auto inst : loop.getBodyInsts() ) {
+  for( auto* inst : loop.getBodyInsts() ) {
     SwplSlot def_slot;
     unsigned def_cycle;
   
-    def_slot = inst_slot_map->find(inst)->second;
+    def_slot = slots->at(inst->inst_ix);
     def_cycle = def_slot.calcCycle();
 
     for( auto reg : inst->getDefRegs() ) {
@@ -333,7 +333,7 @@ unsigned SwplRegEstimate::getNumMortalRegs(const SwplLoop& loop,
       }
     
       if ( reg->isUsed() ) {
-        last_use_cycle = inst_slot_map->calcLastUseCycleInBodyWithInheritance(*reg, iteration_interval);
+        last_use_cycle = slots->calcLastUseCycleInBodyWithInheritance(*reg, iteration_interval);
       }  else {
         last_use_cycle = def_cycle;
       }
@@ -361,7 +361,7 @@ unsigned SwplRegEstimate::getNumMortalRegs(const SwplLoop& loop,
 ///       Slot単位でも見積もりが可能であり、より正確になるはずあるが、
 ///       暫定的にcycle単位で処理をおこなう.
 void SwplRegEstimate::collectRenamedRegs(const SwplLoop& loop, 
-                                         const SwplInstSlotHashmap* inst_slot_map,
+                                         const SwplSlots* slots,
                                          unsigned iteration_interval,
                                          unsigned regclassid,
                                          unsigned n_renaming_versions,
@@ -372,14 +372,14 @@ void SwplRegEstimate::collectRenamedRegs(const SwplLoop& loop,
   full_kernel_cycles = n_renaming_versions * iteration_interval;
 #endif
 
-  for( auto inst : loop.getBodyInsts() ) {
+  for( auto* inst : loop.getBodyInsts() ) {
     SwplSlot def_slot;
     unsigned def_cycle;
     bool is_recurrence;
   
     assert( inst->isPhi()==false);
   
-    def_slot = inst_slot_map->find(inst)->second;
+    def_slot = slots->at(inst->inst_ix);
     def_cycle = def_slot.calcCycle();
 
     is_recurrence = inst->isRecurrence();
@@ -394,7 +394,7 @@ void SwplRegEstimate::collectRenamedRegs(const SwplLoop& loop,
     
       if ( !(reg->getUseInsts().empty()) ) {
         last_use_cycle
-          = inst_slot_map->calcLastUseCycleInBodyWithInheritance(*reg, iteration_interval);
+          = slots->calcLastUseCycleInBodyWithInheritance(*reg, iteration_interval);
       }  else {
         last_use_cycle = def_cycle;
       }
@@ -893,7 +893,7 @@ unsigned SwplRegEstimate::getNumPatternRegs (RenamedRegVector* vector_renamed_re
 /// \brief 干渉と割付けを意識してlive rangeを伸ばしながら見積もりを実施する
 /// \note getNumMortalRegsよりかならず大きい結果を返却する
 unsigned SwplRegEstimate::getNumExtendedRegs (RenamedRegVector* vector_renamed_regs,
-                                              const SwplInstSlotHashmap* inst_slot_map,
+                                              const SwplSlots* slots,
                                               unsigned iteration_interval,
                                               unsigned regclassid,
                                               unsigned n_renaming_versions) {
