@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-disable-stagescheduling=false -swpl-debug-dump-ss-progress -swpl-debug-dump-plan -pass-remarks=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner -o /dev/null 2>&1  | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-enable-stagescheduling=true -swpl-debug-dump-ss-progress -swpl-debug-dump-plan -pass-remarks=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner -o /dev/null 2>&1  | FileCheck %s
 #CHECK:*** Adopt StageScheduling results!!! ***
 
 #CHECK:(plan {{[A-Za-z0-9]+}}:
