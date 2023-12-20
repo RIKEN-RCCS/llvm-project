@@ -1,34 +1,54 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-disable-stagescheduling=false -swpl-debug-dump-ss-progress -o /dev/null 2>&1  | FileCheck %s
-#CHECK:*** before SS : dump SwplSSNumRegisters ***
-#CHECK:estimate VReg  Fp: 17, Int: 7, Pre: 1
-#CHECK:*** before SS : dump SwplSSEdges ***
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:LDURSi) to (0x{{[A-Za-z0-9]+}}:FMULSrr), inCyclic:0, SkipFactor<0>, p_cycle:2, s_cycle:12, delay:8, distance:0, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:LDURSi) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<4>, p_cycle:2, s_cycle:22, delay:8, distance:0, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDURSi), inCyclic:0, SkipFactor<0>, p_cycle:4, s_cycle:2, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:4, s_cycle:4, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:FMULSrr) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<0>, p_cycle:12, s_cycle:21, delay:9, distance:0, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<0>, p_cycle:23, s_cycle:22, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:23, s_cycle:23, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<0>, p_cycle:23, s_cycle:21, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:23, s_cycle:23, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:SUBSXri) to (0x{{[A-Za-z0-9]+}}:SUBSXri), inCyclic:0, SkipFactor<0>, p_cycle:22, s_cycle:22, delay:1, distance:1, II:3
-#CHECK:*** dump SwplSSMoveinfo after AC ***
-#CHECK-DAG:0x{{[A-Za-z0-9]+}}:STURSi : move val=-12
-#CHECK-DAG:0x{{[A-Za-z0-9]+}}:ADDXri : move val=-12
-#CHECK:*** after SS : dump SwplSSNumRegisters ***
-#CHECK:estimate VReg  Fp: 10, Int: 7, Pre: 1
-#CHECK:*** after SS : dump SwplSSEdges ***
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:LDURSi) to (0x{{[A-Za-z0-9]+}}:FMULSrr), inCyclic:0, SkipFactor<0>, p_cycle:2, s_cycle:12, delay:8, distance:0, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:LDURSi) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<0>, p_cycle:2, s_cycle:10, delay:8, distance:0, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDURSi), inCyclic:0, SkipFactor<0>, p_cycle:4, s_cycle:2, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:4, s_cycle:4, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:FMULSrr) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<0>, p_cycle:12, s_cycle:21, delay:9, distance:0, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:10, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:11, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<0>, p_cycle:23, s_cycle:21, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:23, s_cycle:23, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:SUBSXri) to (0x{{[A-Za-z0-9]+}}:SUBSXri), inCyclic:0, SkipFactor<0>, p_cycle:22, s_cycle:22, delay:1, distance:1, II:3
+#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-disable-stagescheduling=false -swpl-debug-dump-ss-progress -swpl-debug-dump-plan -pass-remarks=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner -o /dev/null 2>&1  | FileCheck %s
 #CHECK:*** Adopt StageScheduling results!!! ***
+
+#CHECK:(plan {{[A-Za-z0-9]+}}:
+#CHECK-NEXT:  iteration_interval  = 3
+#CHECK-NEXT:  n_iteration_copies  = 11
+#CHECK-NEXT:  n_renaming_versions = 4
+#CHECK-NEXT:  begin_slot = 999792
+#CHECK-NEXT:  end_slot   = 999984
+#CHECK-NEXT:  total_cycles  = 54
+#CHECK-NEXT:  prolog_cycles = 21
+#CHECK-NEXT:  kernel_cycles = 12
+#CHECK-NEXT:  epilog_cycles = 21
+
+#CHECK:	( MachineInstr* : OpcodeName )
+
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		({{[A-Za-z0-9]+}}:LDURSi)		--6--		--7--	
+
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		({{[A-Za-z0-9]+}}:ADDXri)		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		({{[A-Za-z0-9]+}}:STURSi)		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		({{[A-Za-z0-9]+}}:ADDXri)		--5--		--6--		--7--	
+
+#CHECK:	--0--		--1--		--2--		--3--		--4--		({{[A-Za-z0-9]+}}:FMULSrr)		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+
+#CHECK:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		--6--		--7--	
+
+#CHECK:	--0--		--1--		--2--		--3--		({{[A-Za-z0-9]+}}:STURSi)		--5--		--6--		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:SUBSXri)		--7--	
+#CHECK-NEXT:	--0--		--1--		--2--		--3--		--4--		--5--		({{[A-Za-z0-9]+}}:ADDXri)		--7--	
+#CHECK-NEXT:)
+
+#CHECK:remark: <unknown>:0:0: software pipelining (IPC: 2.66, ITR: 11, MVE: 4, II: 3, Stage: 8, (VReg Fp: 10/32, Int: 7/29, Pred: 1/8)), SRA(PReg Fp: 8/32, Int: 5/29, Pred: 0/8)
+
 --- |
   ; ModuleID = '/home/XXXX/sftest.c'
   source_filename = "/home/XXXX/sftest.c"

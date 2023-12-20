@@ -1,34 +1,8 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-disable-stagescheduling=false -swpl-debug-dump-ss-progress -o /dev/null 2>&1  | FileCheck %s
-#CHECK:*** before SS : dump SwplSSNumRegisters ***
-#CHECK:estimate VReg  Fp: 17, Int: 7, Pre: 1
-#CHECK:*** before SS : dump SwplSSEdges ***
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:LDURSi) to (0x{{[A-Za-z0-9]+}}:FMULSrr), inCyclic:0, SkipFactor<0>, p_cycle:2, s_cycle:12, delay:8, distance:0, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:LDURSi) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<4>, p_cycle:2, s_cycle:22, delay:8, distance:0, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDURSi), inCyclic:0, SkipFactor<0>, p_cycle:4, s_cycle:2, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:4, s_cycle:4, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:FMULSrr) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<0>, p_cycle:12, s_cycle:21, delay:9, distance:0, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<0>, p_cycle:23, s_cycle:22, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:23, s_cycle:23, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<0>, p_cycle:23, s_cycle:21, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:23, s_cycle:23, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:SUBSXri) to (0x{{[A-Za-z0-9]+}}:SUBSXri), inCyclic:0, SkipFactor<0>, p_cycle:22, s_cycle:22, delay:1, distance:1, II:3
-#CHECK:*** dump SwplSSMoveinfo after AC ***
-#CHECK-DAG:0x{{[A-Za-z0-9]+}}:STURSi : move val=-12
-#CHECK-DAG:0x{{[A-Za-z0-9]+}}:ADDXri : move val=-12
-#CHECK:*** after SS : dump SwplSSNumRegisters ***
-#CHECK:estimate VReg  Fp: 10, Int: 7, Pre: 1
-#CHECK:*** after SS : dump SwplSSEdges ***
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:LDURSi) to (0x{{[A-Za-z0-9]+}}:FMULSrr), inCyclic:0, SkipFactor<0>, p_cycle:2, s_cycle:12, delay:8, distance:0, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:LDURSi) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<0>, p_cycle:2, s_cycle:10, delay:8, distance:0, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:LDURSi), inCyclic:0, SkipFactor<0>, p_cycle:4, s_cycle:2, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:4, s_cycle:4, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:FMULSrr) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<0>, p_cycle:12, s_cycle:21, delay:9, distance:0, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:10, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:11, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:STURSi), inCyclic:0, SkipFactor<0>, p_cycle:23, s_cycle:21, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:23, s_cycle:23, delay:1, distance:1, II:3
-#CHECK:[func] Edge:(0x{{[A-Za-z0-9]+}}:SUBSXri) to (0x{{[A-Za-z0-9]+}}:SUBSXri), inCyclic:0, SkipFactor<0>, p_cycle:22, s_cycle:22, delay:1, distance:1, II:3
-#CHECK:*** Adopt StageScheduling results!!! ***
+#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-disable-stagescheduling=false -swpl-debug -o /dev/null 2>&1  | FileCheck %s
+#CHECK:DBG(canPipelineLoop) [canPipelineLoop:OK] Passed all checks. :
+#CHECK:        : (Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 8. Budget 400. Minimum II = 3.)
+#CHECK:                                                                Estimated num of vregs was changed by StageScheduling : (VReg  Fp: 17, Int: 7, Pre: 1) -> (VReg  Fp: 10, Int: 7, Pre: 1)
+#CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 3 in [ 3,1000]) MVE: 4 Last inst: 0. (Itr Org: 0, Req: 11) (VReg Fp: 10/32, Int: 7/29, Pre: 1/8) Eval:0.000000e+00.
 --- |
   ; ModuleID = '/home/XXXX/sftest.c'
   source_filename = "/home/XXXX/sftest.c"

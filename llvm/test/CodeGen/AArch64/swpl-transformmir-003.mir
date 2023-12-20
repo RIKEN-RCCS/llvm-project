@@ -224,7 +224,7 @@
 # CHECK-NEXT:  renamable $s9 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr renamable $s1, renamable $s1, implicit $fpcr
 # CHECK-NEXT:  renamable $x2 = ADDXri renamable $x5, 4, 0
 # CHECK-NEXT:  renamable $x3 = SUBSXri renamable $x6, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  SWPLIVEOUT implicit $x0, implicit $x1, implicit $s0, implicit $x2, implicit $s2, implicit $x3, implicit $s3, implicit $s4, implicit $s5, implicit $s6, implicit $s7, implicit $s8, implicit $x5, implicit $x6, implicit $s9
+# CHECK-NEXT:  SWPLIVEOUT implicit $x1, implicit $s0, implicit $x2, implicit $s2, implicit $x3, implicit $s3, implicit $s4, implicit $s5, implicit $s6, implicit $s7, implicit $s8, implicit $s9, implicit $x0, implicit $x5, implicit $x6
 # CHECK-NEXT:  $xzr = SUBSXri $x3, 14, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 10, %bb.8, implicit $nzcv
 # CHECK-NEXT:bb.13 (%ir-block.57):

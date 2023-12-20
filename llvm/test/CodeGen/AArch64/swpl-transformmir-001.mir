@@ -197,7 +197,7 @@
 # CHECK-NEXT:  renamable $x4 = SUBSXri renamable $x12, 1, 0, implicit-def $nzcv
 # CHECK-NEXT:  renamable $x2 = COPY renamable $x1
 # CHECK-NEXT:  renamable $x0 = ADDXri renamable $x13, 4, 0
-# CHECK-NEXT:  SWPLIVEOUT implicit $x0, implicit $x2, implicit $x3, implicit $s1, implicit $x4, implicit $x5, implicit $s2, implicit $x1, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x11, implicit $x14
+# CHECK-NEXT:    SWPLIVEOUT implicit $x0, implicit $x2, implicit $x3, implicit $s1, implicit $x4, implicit $x5, implicit $s2, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x11, implicit $x14, implicit $x1
 # CHECK-NEXT:  $xzr = SUBSXri $x4, 20, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 10, %bb.4, implicit $nzcv
 # CHECK-NEXT:bb.9 (%ir-block.6):

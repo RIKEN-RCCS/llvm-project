@@ -501,7 +501,7 @@ unsigned SwplInstSlotHashmap::getRelativeInstSlot(const SwplInst& c_inst,
 /// \param [in] iteration_interval II
 /// \return renaming versions数
 size_t SwplInstSlotHashmap::calcNRenamingVersions(const SwplLoop& c_loop,
-                                                  unsigned iteration_interval) {
+                                                  unsigned iteration_interval) const {
   size_t max_live_cycles;
   size_t necessary_n_renaming_versions;
 
@@ -532,8 +532,6 @@ size_t SwplInstSlotHashmap::calcNRenamingVersions(const SwplLoop& c_loop,
       live_cycles = last_use_cycle - def_cycle + 1UL;
       assert (live_cycles >= 1);
 
-      /* need_more_work_here (); */
-      assert (live_cycles < 10000);
       max_live_cycles = std::max(max_live_cycles, live_cycles);
     }
   }

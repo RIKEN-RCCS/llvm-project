@@ -2270,7 +2270,7 @@ SwplMsResult::calculateMsResultAtSpecifiedII(SwplPlanSpec spec, unsigned ii, Pro
 
   ms_result = SwplMsResult::constructInit(ii, procstate);
   ms_result->constructInstSlotMapAtSpecifiedII(spec);
-  SwplSSProc::execute(spec.ddg, spec.loop, ii, ms_result->inst_slot_map, dbgs());
+  ms_result->inst_slot_map = SwplSSProc::execute(spec.ddg, spec.loop, ii, ms_result->inst_slot_map, dbgs());
   ms_result->checkInstSlotMap(spec);
   ms_result->outputDebugMessageForSchedulingResult(spec);
 
@@ -2335,7 +2335,7 @@ bool SwplMsResult::collectCandidate(
   for (ii = spec.min_ii; /* 下で */; ii += inc_ii) {
     ms_result = SwplMsResult::constructInit(ii, procstate);
     ms_result->constructInstSlotMapAtSpecifiedII(spec);
-    SwplSSProc::execute(spec.ddg, spec.loop, ii, ms_result->inst_slot_map, dbgs());
+    ms_result->inst_slot_map = SwplSSProc::execute(spec.ddg, spec.loop, ii, ms_result->inst_slot_map, dbgs());
     ms_result->checkInstSlotMap(spec);
     ms_result->outputDebugMessageForSchedulingResult(spec);
 
@@ -2409,7 +2409,7 @@ bool SwplMsResult::collectModerateCandidate(
   for (ii = spec.min_ii; ii < spec.max_ii; ii += inc_ii) {
     ms_result = SwplMsResult::constructInit(ii, state);
     ms_result->constructInstSlotMapAtSpecifiedII(spec);
-    SwplSSProc::execute(spec.ddg, spec.loop, ii, ms_result->inst_slot_map, dbgs());
+    ms_result->inst_slot_map = SwplSSProc::execute(spec.ddg, spec.loop, ii, ms_result->inst_slot_map, dbgs());
     ms_result->checkInstSlotMap(spec);
     ms_result->outputDebugMessageForSchedulingResult(spec);
 
@@ -2624,9 +2624,8 @@ bool SwplMsResult::isRegReducible(
 }
 
 /// \brief Execute StageScheduling
-/// \retval true change SwplInstSlotHashmap by StageScheduling
-/// \retval false scheduling-result is no change
-bool SwplSSProc::execute(const SwplDdg &ddg,
+/// \return SwplInstSlotHashmap adopt scheduling results
+SwplInstSlotHashmap* SwplSSProc::execute(const SwplDdg &ddg,
                          const SwplLoop &loop,
                          unsigned ii,
                          SwplInstSlotHashmap *inst_slot_map,
@@ -2634,17 +2633,23 @@ bool SwplSSProc::execute(const SwplDdg &ddg,
   auto fname = (loop.getBodyInsts())[0]->getMI()->getMF()->getName();
 
   if (OptionDisableStageScheduling)
-    return false;
+    return inst_slot_map;
 
   if (inst_slot_map==nullptr) {
-    if (SWPipeliner::isDebugOutput())
-      stream << "StageScheduling: [" << fname << "] no result of SWPL at II=" << ii << ".\n";
-    return false;
+    if (OptionDumpSSProgress)
+      stream << "*** No StageScheduling: [" << fname << "] no result of SWPL at II=" << ii << ".\n";
+    return inst_slot_map;
   }
   if (inst_slot_map->calcPrologBlocks(loop, ii)==0) {
-    if (SWPipeliner::isDebugOutput())
-      stream << "StageScheduling: [" << fname << "] loop is Scheduled. But prologue-cycle is 0." << ii << ".\n";
-    return false;
+    if (OptionDumpSSProgress)
+      stream << "*** No StageScheduling: [" << fname << "] loop is Scheduled. But prologue-cycle is 0." << ii << ".\n";
+    return inst_slot_map;
+  }
+
+  SwplSSNumRegisters estimateRegBefore(loop, ii, inst_slot_map);
+  if (OptionDumpSSProgress) {
+    stream << "*** before SS : dump SwplSSNumRegisters ***\n";
+    estimateRegBefore.dump(stream);
   }
 
   SwplSSCyclicInfo ssCyclicInfo(ddg, loop);
@@ -2659,27 +2664,65 @@ bool SwplSSProc::execute(const SwplDdg &ddg,
     ssEdges.dump(stream, fname);
   }
 
+  // replicate scheduling results
+  auto* inst_slot_map_temp = new SwplInstSlotHashmap;
+  *inst_slot_map_temp = *inst_slot_map;
+
   SwplSSMoveinfo acresult;
+
+  // heuristic AC
   SwplSSACProc::execute(ddg, ii, ssEdges, acresult, stream);
   if (OptionDumpSSProgress) {
-    stream << "*** move instruction by AC ***\n";
+    stream << "*** dump SwplSSMoveinfo after AC ***\n";
     SwplSSProc::dumpSSMoveinfo(stream, acresult);
   }
 
   // adjust SwplInstSlotHashmap by SwplSSMoveinfo
-  SwplSSProc::adjustSlot(*inst_slot_map, acresult);
+  SwplSSProc::adjustSlot(*inst_slot_map_temp, acresult);
+  SwplSSNumRegisters estimateRegAfter(loop, ii, inst_slot_map_temp);
   if (OptionDumpSSProgress) {
+    stream << "*** after SS : dump SwplSSNumRegisters ***\n";
+    estimateRegAfter.dump(stream);
     stream << "*** after SS : dump SwplSSEdges ***\n";
-    SwplSSEdges TEMPssEdges(ddg, loop, ii, *inst_slot_map);
+    SwplSSEdges TEMPssEdges(ddg, loop, ii, *inst_slot_map_temp);
     TEMPssEdges.updateInCyclic(ssCyclicInfo);
     TEMPssEdges.dump(stream, fname);
   }
 
-  return true;
+  // Determine whether to adopt or reject StageScheduling results
+  // by comparing SwplSSNumRegisters.
+  if (!(estimateRegAfter<estimateRegBefore)) {
+    // Discard StageScheduling results
+    if (OptionDumpSSProgress) {
+      stream << "*** StageScheduling results rejected... ***\n";
+    }
+    delete inst_slot_map_temp;
+    return inst_slot_map;
+  }
+
+  // Adopt StageScheduling results
+  if (OptionDumpSSProgress) {
+    stream << "*** Adopt StageScheduling results!!! ***\n";
+  }
+  if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "                                                                "
+             << "Estimated num of vregs was changed by StageScheduling : ";
+      estimateRegBefore.print(dbgs());
+      dbgs() << " -> ";
+      estimateRegAfter.print(dbgs());
+      dbgs() << "\n";
+  }
+  delete inst_slot_map;
+  return inst_slot_map_temp;
 }
 
 /// \brief dump SwplSSMoveinfo
 void SwplSSProc::dumpSSMoveinfo(raw_ostream &stream, const SwplSSMoveinfo &v) {
+  if (v.size()==0) {
+    stream << "none...\n";
+    return;
+  }
+
   for (auto [cinst, movecycle]: v) {
     stream << format("%p", cinst->getMI()) << ":" << cinst->getName() << " : move val=" << movecycle << "\n";
   }
@@ -3061,6 +3104,33 @@ void SwplSSCyclicInfo::dump(raw_ostream &stream) const {
       stream << "}\n";
     }
   }
+}
+
+/// \brief SwplSSNumRegisters constructor
+SwplSSNumRegisters::SwplSSNumRegisters(const SwplLoop &loop,
+                                       unsigned ii,
+                                       const SwplInstSlotHashmap *inst_slot_map) {
+  auto n_renaming_versions = inst_slot_map->calcNRenamingVersions(loop, ii);
+
+  ireg = SwplRegEstimate::calcNumRegs(loop, inst_slot_map, ii,
+                                      llvm::StmRegKind::getIntRegID(),
+                                      n_renaming_versions);
+  freg = SwplRegEstimate::calcNumRegs(loop, inst_slot_map, ii,
+                                      llvm::StmRegKind::getFloatRegID(),
+                                      n_renaming_versions);
+  preg = SwplRegEstimate::calcNumRegs(loop, inst_slot_map, ii,
+                                      llvm::StmRegKind::getPredicateRegID(),
+                                      n_renaming_versions);
+}
+
+/// \brief dump SwplSSNumRegisters
+void SwplSSNumRegisters::dump(raw_ostream &stream) const {
+  stream << "estimate VReg  Fp: " << freg << ", Int: " << ireg << ", Pre: " << preg <<"\n";
+}
+
+/// \brief print num of registers in SwplSSNumRegisters
+void SwplSSNumRegisters::print(raw_ostream &stream) const {
+  stream << "(VReg  Fp: " << freg << ", Int: " << ireg << ", Pre: " << preg <<")";
 }
 
 }

@@ -5,7 +5,7 @@
 # CHECK:  SWPLIVEOUT implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $q12_q13, implicit $x7, implicit $x8, implicit $x9, implicit $x11
 # CHECK:bb.2.vector.body:
 # CHECK:  SWPLIVEIN implicit-def $x0, implicit-def $x1, implicit-def $x2, implicit-def $x3, implicit-def $x4, implicit-def $x5, implicit-def $q12_q13, implicit-def $x7, implicit-def $x8, implicit-def $x9, implicit-def $x11
-# CHECK:  SWPLIVEOUT implicit $x0, implicit $x1, implicit $x6, implicit $q0_q1, implicit $x7, implicit $x8, implicit $x11, implicit $x12
+# CHECK:  SWPLIVEOUT implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $q12_q13, implicit $x7, implicit $x8, implicit $x9, implicit $x11, implicit $x6, implicit $q0_q1, implicit $x12
 # CHECK:bb.9.vector.body:
 # CHECK:  SWPLIVEIN implicit-def $x0, implicit-def $x1, implicit-def $x6, implicit-def $q0_q1, implicit-def $x7, implicit-def $x8, implicit-def $x11, implicit-def $x11, implicit-def $x12
 # CHECK:  %441:qq = COPY $q0_q1

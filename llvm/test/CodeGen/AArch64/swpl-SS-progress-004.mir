@@ -1,4 +1,6 @@
 #RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-disable-stagescheduling=false -swpl-debug-dump-ss-progress  -o /dev/null 2>&1  | FileCheck %s
+#CHECK:*** before SS : dump SwplSSNumRegisters ***
+#CHECK:estimate VReg  Fp: 16, Int: 9, Pre: 1
 #CHECK:*** before SS : dump SwplSSEdges ***
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<0>, p_cycle:19, s_cycle:27, delay:8, distance:0, II:8
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:19, s_cycle:21, delay:1, distance:0, II:8
@@ -24,9 +26,11 @@
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:47, delay:1, distance:1, II:8
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:SUBSXri) to (0x{{[A-Za-z0-9]+}}:SUBSXri), inCyclic:0, SkipFactor<0>, p_cycle:46, s_cycle:46, delay:1, distance:1, II:8
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:COPY) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:36, s_cycle:32, delay:4, distance:1, II:8
-#CHECK:*** move instruction by AC ***
+#CHECK:*** dump SwplSSMoveinfo after AC ***
 #CHECK-DAG:0x{{[A-Za-z0-9]+}}:ADDXri : move val=-8
 #CHECK-DAG:0x{{[A-Za-z0-9]+}}:STURDi : move val=-8
+#CHECK:*** after SS : dump SwplSSNumRegisters ***
+#CHECK:estimate VReg  Fp: 15, Int: 9, Pre: 1
 #CHECK:*** after SS : dump SwplSSEdges ***
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<0>, p_cycle:19, s_cycle:27, delay:8, distance:0, II:8
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:19, s_cycle:21, delay:1, distance:0, II:8
@@ -52,6 +56,10 @@
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:47, delay:1, distance:1, II:8
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:SUBSXri) to (0x{{[A-Za-z0-9]+}}:SUBSXri), inCyclic:0, SkipFactor<0>, p_cycle:46, s_cycle:46, delay:1, distance:1, II:8
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:COPY) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:36, s_cycle:32, delay:4, distance:1, II:8
+#CHECK:*** Adopt StageScheduling results!!! ***
+#CHECK:StageScheduling: [s3251] no result of SWPL at II=6.
+#CHECK:*** before SS : dump SwplSSNumRegisters ***
+#CHECK:estimate VReg  Fp: 20, Int: 9, Pre: 1
 #CHECK:*** before SS : dump SwplSSEdges ***
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<0>, p_cycle:20, s_cycle:28, delay:8, distance:0, II:7
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:20, s_cycle:21, delay:1, distance:0, II:7
@@ -77,9 +85,11 @@
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:48, s_cycle:48, delay:1, distance:1, II:7
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:SUBSXri) to (0x{{[A-Za-z0-9]+}}:SUBSXri), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:47, delay:1, distance:1, II:7
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:COPY) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:37, s_cycle:34, delay:4, distance:1, II:7
-#CHECK:*** move instruction by AC ***
+#CHECK:*** dump SwplSSMoveinfo after AC ***
 #CHECK-DAG:0x{{[A-Za-z0-9]+}}:ADDXri : move val=-7
 #CHECK-DAG:0x{{[A-Za-z0-9]+}}:STURDi : move val=-7
+#CHECK:*** after SS : dump SwplSSNumRegisters ***
+#CHECK:estimate VReg  Fp: 19, Int: 9, Pre: 1
 #CHECK:*** after SS : dump SwplSSEdges ***
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:FADDDrr), inCyclic:1, SkipFactor<0>, p_cycle:20, s_cycle:28, delay:8, distance:0, II:7
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:LDRDui) to (0x{{[A-Za-z0-9]+}}:STURDi), inCyclic:1, SkipFactor<0>, p_cycle:20, s_cycle:21, delay:1, distance:0, II:7
@@ -105,6 +115,7 @@
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:ADDXri) to (0x{{[A-Za-z0-9]+}}:ADDXri), inCyclic:0, SkipFactor<0>, p_cycle:48, s_cycle:48, delay:1, distance:1, II:7
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:SUBSXri) to (0x{{[A-Za-z0-9]+}}:SUBSXri), inCyclic:0, SkipFactor<0>, p_cycle:47, s_cycle:47, delay:1, distance:1, II:7
 #CHECK:[s3251] Edge:(0x{{[A-Za-z0-9]+}}:COPY) to (0x{{[A-Za-z0-9]+}}:FMULDrr), inCyclic:1, SkipFactor<0>, p_cycle:37, s_cycle:34, delay:4, distance:1, II:7
+#CHECK:*** Adopt StageScheduling results!!! ***
 --- |
   ; ModuleID = '/home/XXXX/s3251.c'
   source_filename = "/home/XXXX/s3251.c"
