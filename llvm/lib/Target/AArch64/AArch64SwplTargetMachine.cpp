@@ -28,8 +28,6 @@ using namespace llvm;
 static cl::opt<bool> DebugStm("swpl-debug-tm",cl::init(false), cl::ReallyHidden);
 static cl::opt<int> OptionStoreLatency("swpl-store-latency",cl::init(6), cl::ReallyHidden);
 static cl::opt<int> OptionFlowDep("swpl-flow-dep",cl::init(10), cl::ReallyHidden);
-static cl::opt<int> OptionRealFetchWidth("swpl-real-fetch-width",cl::init(4), cl::ReallyHidden);
-static cl::opt<int> OptionVirtualFetchWidth("swpl-virtual-fetch-width",cl::init(4), cl::ReallyHidden);
 static cl::opt<bool> OptionCopyIsVirtual("swpl-copy-is-virtual",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableSensitiveCheck("swpl-sensitive-check",cl::init(false), cl::ReallyHidden);
 static cl::opt<unsigned> MaxInstNum("swpl-max-inst-num",cl::init(500), cl::ReallyHidden);
@@ -633,15 +631,6 @@ void AArch64SwplTargetMachine::initialize(const MachineFunction &mf) {
   RDumpResource = Regex(OptionDumpResource);
   dumpedMIResource.clear();
 }
-
-unsigned int AArch64SwplTargetMachine::getFetchBandwidth(void) const {
-  return getRealFetchBandwidth()+OptionVirtualFetchWidth;
-}
-
-unsigned int AArch64SwplTargetMachine::getRealFetchBandwidth(void) const {
-  return OptionRealFetchWidth;
-}
-
 
 const char *AArch64SwplTargetMachine::getResourceName(StmResourceId resource) const {
   return ::getResourceName(resource);

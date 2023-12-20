@@ -148,17 +148,6 @@ public:
   /// \param mf 処理対象のMachineFunction
   void initialize(const MachineFunction &mf) override;
 
-
-  /// 命令フェッチステージの同時読み込み命令数を返す。
-  /// \details
-  /// getRealFetchBandwidth()の復帰値＋仮想Slot数(Pseudo用)を返す。
-  /// \return 命令数(Slot数)
-  unsigned int getFetchBandwidth(void) const override;
-
-  /// デコードステージの同時読み込み命令数を返す。
-  /// \return 命令数(Slot数)
-  unsigned int getRealFetchBandwidth(void) const override;
-
   /// レジスタdef/use間のレイテンシを計算する。
   /// \param [in] def 定義命令
   /// \param [in] use 利用命令

@@ -836,6 +836,8 @@ public:
   static SwplLoop *currentLoop;
   static unsigned min_ii_for_retry;
   static unsigned loop_number;
+  static unsigned fetchbandwidth;
+  static unsigned realfetchbandwidth;
 
   /// 制限抑止オプション指定の結果
   enum class SwplRestrictionsFlag {None, MultipleReg, MultipleDef, All};
