@@ -1,4 +1,4 @@
-# RUN: llc %s -o /dev/null -O1 -mcpu=a64fx -fswp -swpl-enable-reg-alloc -swpl-enable-proepi-copy -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8 2>&1 | FileCheck %s
+# RUN: llc %s -o /dev/null -O1 -mcpu=a64fx -fswp -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8 2>&1 | FileCheck %s
 
 # CHECK:bb.8.vector.body:
 # CHECK:  $q12_q13 = COPY %37:qq

@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-disable-reg-alloc-setrenamable -start-before=aarch64-swpipeliner -print-after=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1 -swpl-enable-reg-alloc-setrenamable=false -start-before=aarch64-swpipeliner -print-after=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 #CHECK-NOT: renamable
 
 --- |
