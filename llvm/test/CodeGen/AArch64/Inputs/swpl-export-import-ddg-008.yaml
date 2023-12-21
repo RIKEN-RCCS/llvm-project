@@ -1,18 +1,31 @@
 # No., MI
 # 0:%140:zpr = LD1D_IMM %98:ppr_3b, %138:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv, align 64, !tbaa !13)
 # 1:%141:zpr = LD1D_IMM %98:ppr_3b, %137:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv122, align 64, !tbaa !13)
-# 2:%144:zpr = LD1D_IMM %98:ppr_3b, %136:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv124, align 64, !tbaa !13)
-# 3:ST1D_IMM killed %145:zpr, %143:ppr_3b, %137:gpr64sp, 0 :: (store unknown-size into %ir.lsr.iv122, align 8, !tbaa !13)
-# 4:%146:zpr = LD1D_IMM %98:ppr_3b, %135:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv126, align 64, !tbaa !13)
-# 5:ST1D_IMM killed %147:zpr, %143:ppr_3b, %134:gpr64sp, 0 :: (store unknown-size into %ir.lsr.iv128, align 8, !tbaa !13)
-# 6:ST1D_IMM killed %148:zpr, %142:ppr_3b, %138:gpr64sp, 0 :: (store unknown-size into %ir.lsr.iv, align 8, !tbaa !13)
-# 7:%149:zpr = LD1D_IMM %98:ppr_3b, %134:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv128, align 64, !tbaa !13)
-# 8:ST1D_IMM killed %150:zpr, %142:ppr_3b, %134:gpr64sp, 0 :: (store unknown-size into %ir.lsr.iv128, align 8, !tbaa !13)
+# 2:%142:ppr_3b = nnan ninf nsz arcp contract afn reassoc nofpexcept FCMGT_PPzZZ_D %98:ppr_3b, %140:zpr, %141:zpr
+# 3:%143:ppr_3b = nofpexcept FCMGE_PPzZZ_D %98:ppr_3b, %141:zpr, %140:zpr
+# 4:%144:zpr = LD1D_IMM %98:ppr_3b, %136:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv124, align 64, !tbaa !13)
+# 5:%145:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %98:ppr_3b, %140:zpr, %144:zpr, %144:zpr
+# 6:ST1D_IMM killed %145:zpr, %143:ppr_3b, %137:gpr64sp, 0 :: (store unknown-size into %ir.lsr.iv122, align 8, !tbaa !13)
+# 7:%146:zpr = LD1D_IMM %98:ppr_3b, %135:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv126, align 64, !tbaa !13)
+# 8:%147:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %98:ppr_3b, %140:zpr, %146:zpr, %146:zpr
+# 9:ST1D_IMM killed %147:zpr, %143:ppr_3b, %134:gpr64sp, 0 :: (store unknown-size into %ir.lsr.iv128, align 8, !tbaa !13)
+# 10:%148:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %98:ppr_3b, %140:zpr, %146:zpr, %141:zpr
+# 11:ST1D_IMM killed %148:zpr, %142:ppr_3b, %138:gpr64sp, 0 :: (store unknown-size into %ir.lsr.iv, align 8, !tbaa !13)
+# 12:%149:zpr = LD1D_IMM %98:ppr_3b, %134:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv128, align 64, !tbaa !13)
+# 13:%150:zpr = nnan ninf nsz arcp contract afn reassoc FMLA_ZPZZZ_D_UNDEF %98:ppr_3b, killed %149:zpr, %146:zpr, %146:zpr
+# 14:ST1D_IMM killed %150:zpr, %142:ppr_3b, %134:gpr64sp, 0 :: (store unknown-size into %ir.lsr.iv128, align 8, !tbaa !13)
+# 15:%138:gpr64sp = ADDXri %138:gpr64sp, 64, 0
+# 16:%137:gpr64sp = ADDXri %137:gpr64sp, 64, 0
+# 17:%136:gpr64sp = ADDXri %136:gpr64sp, 64, 0
+# 18:%135:gpr64sp = ADDXri %135:gpr64sp, 64, 0
+# 19:%134:gpr64sp = ADDXri %134:gpr64sp, 64, 0
+# 20:%139:gpr64sp = SUBSXri %139:gpr64sp, 1, 0, implicit-def $nzcv
 ---
 fname:           s
 loopid:          1
 deps:
   - from:            { id: 0, mi: '%140:zpr = LD1D_IMM %98:ppr_3b, %138:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv, align 64, !tbaa !13)' }
-    to:              { id: 3, mi: 'ST1D_IMM killed %145:zpr, %143:ppr_3b, %137:gpr64sp, 0 :: (store unknown-size into %ir.lsr.iv122, align 8, !tbaa !13)' }
-    distance:        19
+    to:              { id: 6, mi: 'ST1D_IMM killed %145:zpr, %143:ppr_3b, %137:gpr64sp, 0 :: (store unknown-size into %ir.lsr.iv122, align 8, !tbaa !13)' }
+    infos:
+      - { distance: 19, delay: 2 }
 ...

@@ -1,4 +1,4 @@
-# RUN: llc %s -mcpu=a64fx -O3 -fswp -swpl-enable-proepi-copy -swpl-debug-dump-mir=15 -swpl-disable-rm-br -swpl-plan-import=%S/Inputs/3044-25.yaml -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc %s -mcpu=a64fx -O3 -fswp -swpl-debug-dump-mir=15 -swpl-disable-rm-br -swpl-plan-import=%S/Inputs/3044-25.yaml -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK:** SwplTransformedMIRInfo begin **
 # CHECK-NEXT:originalDoVReg:%4
@@ -93,16 +93,16 @@
 # CHECK-NEXT:  successors: %bb.4(0x7c000000), %bb.9(0x04000000); %bb.4(96.88%), %bb.9(3.12%)
 
 # CHECK:  SWPLIVEIN implicit-def $d1, implicit-def $d2, implicit-def $x1, implicit-def $x3
-# CHECK-NEXT:  renamable $d0 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed renamable $d1, renamable $d2, implicit $fpcr
-# CHECK-NEXT:  renamable $x0 = ADDXri renamable $x1, 8, 0
-# CHECK-NEXT:  renamable $d1 = LDURDi renamable $x0, 0
-# CHECK-NEXT:  renamable $x2 = SUBSXri renamable $x3, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  renamable $d2 = COPY renamable $d0
-# CHECK-NEXT:  renamable $d0 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed renamable $d1, renamable $d2, implicit $fpcr
-# CHECK-NEXT:  renamable $x1 = ADDXri renamable $x0, 8, 0
-# CHECK-NEXT:  renamable $d1 = LDURDi renamable $x1, 0
-# CHECK-NEXT:  renamable $x3 = SUBSXri renamable $x2, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  renamable $d2 = COPY renamable $d0
+# CHECK-NEXT:  $d0 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed $d1, $d2, implicit $fpcr
+# CHECK-NEXT:  $x0 = ADDXri $x1, 8, 0
+# CHECK-NEXT:  $d1 = LDURDi $x0, 0
+# CHECK-NEXT:  $x2 = SUBSXri $x3, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  $d2 = COPY $d0
+# CHECK-NEXT:  $d0 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed $d1, $d2, implicit $fpcr
+# CHECK-NEXT:  $x1 = ADDXri $x0, 8, 0
+# CHECK-NEXT:  $d1 = LDURDi $x1, 0
+# CHECK-NEXT:  $x3 = SUBSXri $x2, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  $d2 = COPY $d0
 # CHECK-NEXT:  SWPLIVEOUT implicit $d1, implicit $d2, implicit $x1, implicit $x3, implicit $d0, implicit $x0, implicit $x2
 # CHECK-NEXT:  $xzr = SUBSXri $x3, 3, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 10, %bb.4, implicit $nzcv
@@ -214,16 +214,16 @@
 # CHECK-NEXT:  successors: %bb.4(0x7c000000), %bb.9(0x04000000); %bb.4(96.88%), %bb.9(3.12%)
 
 # CHECK:  SWPLIVEIN implicit-def $d1, implicit-def $d2, implicit-def $x1, implicit-def $x3
-# CHECK-NEXT:  renamable $d0 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed renamable $d1, renamable $d2, implicit $fpcr
-# CHECK-NEXT:  renamable $x0 = ADDXri renamable $x1, 8, 0
-# CHECK-NEXT:  renamable $d1 = LDURDi renamable $x0, 0
-# CHECK-NEXT:  renamable $x2 = SUBSXri renamable $x3, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  renamable $d2 = COPY renamable $d0
-# CHECK-NEXT:  renamable $d0 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed renamable $d1, renamable $d2, implicit $fpcr
-# CHECK-NEXT:  renamable $x1 = ADDXri renamable $x0, 8, 0
-# CHECK-NEXT:  renamable $d1 = LDURDi renamable $x1, 0
-# CHECK-NEXT:  renamable $x3 = SUBSXri renamable $x2, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  renamable $d2 = COPY renamable $d0
+# CHECK-NEXT:  $d0 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed $d1, $d2, implicit $fpcr
+# CHECK-NEXT:  $x0 = ADDXri $x1, 8, 0
+# CHECK-NEXT:  $d1 = LDURDi $x0, 0
+# CHECK-NEXT:  $x2 = SUBSXri $x3, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  $d2 = COPY $d0
+# CHECK-NEXT:  $d0 = nnan ninf nsz arcp contract afn reassoc FADDDrr killed $d1, $d2, implicit $fpcr
+# CHECK-NEXT:  $x1 = ADDXri $x0, 8, 0
+# CHECK-NEXT:  $d1 = LDURDi $x1, 0
+# CHECK-NEXT:  $x3 = SUBSXri $x2, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  $d2 = COPY $d0
 # CHECK-NEXT:  SWPLIVEOUT implicit $d1, implicit $d2, implicit $x1, implicit $x3, implicit $d0, implicit $x0, implicit $x2
 # CHECK-NEXT:  $xzr = SUBSXri $x3, 3, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 10, %bb.4, implicit $nzcv

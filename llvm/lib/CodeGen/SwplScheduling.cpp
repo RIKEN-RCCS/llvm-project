@@ -45,7 +45,7 @@ static cl::opt<unsigned> OptionMaxPreg("swpl-max-preg",cl::init(0), cl::ReallyHi
 static cl::opt<bool> OptionDumpEveryInst("swpl-debug-dump-scheduling-every-inst",cl::init(false), cl::ReallyHidden);
 
 
-static cl::opt<bool> OptionDisableStageScheduling("swpl-disable-stagescheduling",cl::init(true), cl::ReallyHidden);
+static cl::opt<bool> OptionEnableStageScheduling("swpl-enable-stagescheduling",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpSSProgress("swpl-debug-dump-ss-progress",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpCyclicRoots("swpl-debug-dump-ss-cyclicroots",cl::init(false), cl::ReallyHidden);
 
@@ -2632,8 +2632,8 @@ SwplSlots* SwplSSProc::execute(const SwplDdg &ddg,
                          raw_ostream &stream) {
   auto fname = (loop.getBodyInsts())[0]->getMI()->getMF()->getName();
 
-  if (OptionDisableStageScheduling)
-    return slots;
+  if (!OptionEnableStageScheduling)
+    return inst_slot_map;
 
   if (slots==nullptr) {
     if (OptionDumpSSProgress)

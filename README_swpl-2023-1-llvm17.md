@@ -1,7 +1,7 @@
 ## ソースコード
 git@github.com:RIKEN-RCCS/llvm-project.git  
 branch:swpl-2023-1-llvm17  
-tag:swpl-2023-1-llvm17_tag_20231122
+tag:swpl-2023-1-llvm17_tag_20231222
 
 ## ビルド方法
 

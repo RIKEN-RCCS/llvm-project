@@ -1,4 +1,4 @@
-# RUN: llc %s -mcpu=a64fx -fswp -swpl-enable-proepi-copy -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8 -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc %s -mcpu=a64fx -fswp -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8 -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK:** SwplTransformedMIRInfo begin **
 # CHECK-NEXT:originalDoVReg:%2
@@ -81,27 +81,27 @@
 # CHECK-NEXT:  successors: %bb.7(0x04000000); %bb.7(3.12%)
 
 # CHECK:  SWPLIVEIN implicit-def $s1, implicit-def $s2, implicit-def $s3, implicit-def $x0, implicit-def $x1, implicit-def $x3, implicit-def $x4, implicit-def $x6
-# CHECK-NEXT:  renamable $s0 = nnan ninf nsz arcp contract afn reassoc FADDSrr renamable $s1, renamable $s2, implicit $fpcr
-# CHECK-NEXT:  renamable $s2 = nnan ninf nsz arcp contract afn reassoc FADDSrr renamable $s3, renamable $s3, implicit $fpcr
-# CHECK-NEXT:  STRSroX renamable $s1, renamable $x0, renamable $x1, 0, 0 :: (volatile store (s32) into %ir.uglygep1, !tbaa !2)
-# CHECK-NEXT:  renamable $x2 = nuw nsw ADDXri renamable $x3, 4, 0
-# CHECK-NEXT:  renamable $s1 = LDRSroX renamable $x4, renamable $x2, 0, 0 :: (volatile load (s32) from %ir.uglygep23, !tbaa !2)
-# CHECK-NEXT:  renamable $x5 = SUBSXri renamable $x6, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  renamable $s3 = COPY renamable $s0
-# CHECK-NEXT:  renamable $s0 = nnan ninf nsz arcp contract afn reassoc FADDSrr renamable $s2, renamable $s3, implicit $fpcr
-# CHECK-NEXT:  renamable $s3 = nnan ninf nsz arcp contract afn reassoc FADDSrr renamable $s1, renamable $s1, implicit $fpcr
-# CHECK-NEXT:  STRSroX renamable $s2, renamable $x0, renamable $x3, 0, 0 :: (volatile store (s32) into %ir.uglygep1, !tbaa !2)
-# CHECK-NEXT:  renamable $x1 = nuw nsw ADDXri renamable $x2, 4, 0
-# CHECK-NEXT:  renamable $s2 = LDRSroX renamable $x4, renamable $x1, 0, 0 :: (volatile load (s32) from %ir.uglygep23, !tbaa !2)
-# CHECK-NEXT:  renamable $x7 = SUBSXri renamable $x5, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  renamable $s1 = COPY renamable $s0
-# CHECK-NEXT:  renamable $s0 = nnan ninf nsz arcp contract afn reassoc FADDSrr renamable $s3, renamable $s1, implicit $fpcr
-# CHECK-NEXT:  renamable $s1 = nnan ninf nsz arcp contract afn reassoc FADDSrr renamable $s2, renamable $s2, implicit $fpcr
-# CHECK-NEXT:  STRSroX renamable $s3, renamable $x0, renamable $x2, 0, 0 :: (volatile store (s32) into %ir.uglygep1, !tbaa !2)
-# CHECK-NEXT:  renamable $x3 = nuw nsw ADDXri renamable $x1, 4, 0
-# CHECK-NEXT:  renamable $s3 = LDRSroX renamable $x4, renamable $x3, 0, 0 :: (volatile load (s32) from %ir.uglygep23, !tbaa !2)
-# CHECK-NEXT:  renamable $x6 = SUBSXri renamable $x7, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  renamable $s2 = COPY renamable $s0
+# CHECK-NEXT:  $s0 = nnan ninf nsz arcp contract afn reassoc FADDSrr $s1, $s2, implicit $fpcr
+# CHECK-NEXT:  $s2 = nnan ninf nsz arcp contract afn reassoc FADDSrr $s3, $s3, implicit $fpcr
+# CHECK-NEXT:  STRSroX $s1, $x0, $x1, 0, 0 :: (volatile store (s32) into %ir.uglygep1, !tbaa !2)
+# CHECK-NEXT:  $x2 = nuw nsw ADDXri $x3, 4, 0
+# CHECK-NEXT:  $s1 = LDRSroX $x4, $x2, 0, 0 :: (volatile load (s32) from %ir.uglygep23, !tbaa !2)
+# CHECK-NEXT:  $x5 = SUBSXri $x6, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  $s3 = COPY $s0
+# CHECK-NEXT:  $s0 = nnan ninf nsz arcp contract afn reassoc FADDSrr $s2, $s3, implicit $fpcr
+# CHECK-NEXT:  $s3 = nnan ninf nsz arcp contract afn reassoc FADDSrr $s1, $s1, implicit $fpcr
+# CHECK-NEXT:  STRSroX $s2, $x0, $x3, 0, 0 :: (volatile store (s32) into %ir.uglygep1, !tbaa !2)
+# CHECK-NEXT:  $x1 = nuw nsw ADDXri $x2, 4, 0
+# CHECK-NEXT:  $s2 = LDRSroX $x4, $x1, 0, 0 :: (volatile load (s32) from %ir.uglygep23, !tbaa !2)
+# CHECK-NEXT:  $x7 = SUBSXri $x5, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  $s1 = COPY $s0
+# CHECK-NEXT:  $s0 = nnan ninf nsz arcp contract afn reassoc FADDSrr $s3, $s1, implicit $fpcr
+# CHECK-NEXT:  $s1 = nnan ninf nsz arcp contract afn reassoc FADDSrr $s2, $s2, implicit $fpcr
+# CHECK-NEXT:  STRSroX $s3, $x0, $x2, 0, 0 :: (volatile store (s32) into %ir.uglygep1, !tbaa !2)
+# CHECK-NEXT:  $x3 = nuw nsw ADDXri $x1, 4, 0
+# CHECK-NEXT:  $s3 = LDRSroX $x4, $x3, 0, 0 :: (volatile load (s32) from %ir.uglygep23, !tbaa !2)
+# CHECK-NEXT:  $x6 = SUBSXri $x7, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  $s2 = COPY $s0
 # CHECK-NEXT:  WPLIVEOUT implicit $s1, implicit $s2, implicit $s3, implicit $x0, implicit $x1, implicit $x3, implicit $x4, implicit $x6, implicit $x2, implicit $s0, implicit $x7
 # CHECK-NEXT:  $xzr = SUBSXri $x6, 5, 0, implicit-def $nzcv
 # CHECK-NEXT:bb.7 (%ir-block.2):
