@@ -422,13 +422,6 @@ IOddgDocumentList yamlddgList;
 /// 命令間のエッジに対してDistance/DelayそれぞれのMapを登録する。\n
 /// 真依存、逆依存、出力依存のそれぞれの依存を以下のルーチンを利用してDelayを算出する。\n
 void SwplDdg::analysisMemDependence() {
-  std::error_code EC;
-  std::unique_ptr<raw_fd_ostream> OutStrm;
-  std::string s;
-  raw_string_ostream strstream(s);
-  std::map<const MachineInstr*, unsigned> mimap;
-  IOddg yamlddg;
-
   for (auto *former_mem:getLoopMems()) {
     for (auto *latter_mem:getLoopMems()) {
       if (former_mem == latter_mem) {
@@ -583,52 +576,53 @@ void SwplDdg::importYaml() {
     break;
   }
 
-  if (target_yamlddg) {
-    std::map<const MachineInstr*, unsigned> mimap;
-    int mi_no=0;
-    for (auto *inst : getLoopBodyInsts()) {
-      auto *mi = inst->getMI();
-      mimap[mi] = mi_no++;
-    }
+  if (!target_yamlddg)
+    return;
 
-    SwplInstGraph *graph = getGraph();
-    SwplInstEdges &edges = graph->getEdges();
-    for (auto &ddgnode : target_yamlddg->ddgnodes) {
-      auto found = false;
+  std::map<const MachineInstr*, unsigned> mimap;
+  int mi_no=0;
+  for (auto *inst : getLoopBodyInsts()) {
+    auto *mi = inst->getMI();
+    mimap[mi] = mi_no++;
+  }
 
-      for (auto &d : ddgnode.infos)
-        if (d.distance > 20)
-          report_fatal_error("value too large, distance > 20", false);
+  SwplInstGraph *graph = getGraph();
+  SwplInstEdges &edges = graph->getEdges();
+  for (auto &ddgnode : target_yamlddg->ddgnodes) {
+    auto found = false;
 
-      for (auto *edge : edges) {
-        const SwplInst *leading_inst = edge->getInitial();
-        const SwplInst *trailing_inst = edge->getTerminal();
-        unsigned from = mimap[leading_inst->getMI()];
-        unsigned to = mimap[trailing_inst->getMI()];
+    for (auto &d : ddgnode.infos)
+      if (d.distance > 20)
+        report_fatal_error("value too large, distance > 20", false);
 
-        if (ddgnode.from.id == from && ddgnode.to.id == to) {
-          auto &distances = getDistancesFor(*edge);
-          auto &delays = getDelaysFor(*edge);
-          // check number of elements
-          if (ddgnode.infos.size() != distances.size())
-            report_fatal_error("number of pairs of distance and delay is incorrect", false);
+    for (auto *edge : edges) {
+      const SwplInst *leading_inst = edge->getInitial();
+      const SwplInst *trailing_inst = edge->getTerminal();
+      unsigned from = mimap[leading_inst->getMI()];
+      unsigned to = mimap[trailing_inst->getMI()];
 
-          found = true;
-          auto distance = distances.begin();
-          auto distance_end = distances.end();
-          auto delay = delays.begin();
-          auto ddginfo = ddgnode.infos.begin();
-          for(  ; distance != distance_end ; ++distance, ++delay, ++ddginfo) {
-            *distance = ddginfo->distance;
-            *delay = ddginfo->delay;
-          }
-          break;
+      if (ddgnode.from.id == from && ddgnode.to.id == to) {
+        auto &distances = getDistancesFor(*edge);
+        auto &delays = getDelaysFor(*edge);
+        // check number of elements
+        if (ddgnode.infos.size() != distances.size())
+          report_fatal_error("number of pairs of distance and delay is incorrect", false);
+
+        found = true;
+        auto distance = distances.begin();
+        auto distance_end = distances.end();
+        auto delay = delays.begin();
+        auto ddginfo = ddgnode.infos.begin();
+        for(  ; distance != distance_end ; ++distance, ++delay, ++ddginfo) {
+          *distance = ddginfo->distance;
+          *delay = ddginfo->delay;
         }
+        break;
       }
-
-      if (!found)
-        report_fatal_error("from-mi or to-mi not found", false);
     }
+
+    if (!found)
+      report_fatal_error("from-mi or to-mi not found", false);
   }
 
 }
@@ -676,7 +670,7 @@ void SwplDdg::exportYaml() {
     auto distance_end = distances.end();
     auto delay = delays.begin();
     for(  ; distance != distance_end ; ++distance, ++delay) {
-      IOddgnodeinfo d{*distance, static_cast<unsigned>(*delay)};
+      IOddgnodeinfo d{*distance, *delay};
       n.infos.push_back(d);
     }
 

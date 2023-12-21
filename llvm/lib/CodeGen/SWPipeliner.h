@@ -787,7 +787,7 @@ public:
   };
   struct IOddgnodeinfo {
     unsigned distance;
-    unsigned delay;
+    int delay;
   };
   struct IOddgnode {
     IOmi from;
