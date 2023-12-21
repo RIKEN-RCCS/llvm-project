@@ -30,7 +30,7 @@ using namespace llvm;
 
 static cl::opt<bool> DebugSwplRegAlloc("swpl-debug-reg-alloc",cl::init(false), cl::ReallyHidden);
 static cl::opt<int> SwplRegAllocPrio("swpl-reg-alloc-prio",cl::init(PRIO_ASC_ORDER), cl::ReallyHidden);
-static cl::opt<bool> DisableSetrenamable("swpl-disable-reg-alloc-setrenamable",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> EnableSetrenamable("swpl-enable-reg-alloc-setrenamable",cl::init(false), cl::ReallyHidden);
 
 // 使ってはいけない物理レジスタのリスト
 static DenseSet<unsigned> nousePhysRegs {
@@ -718,7 +718,7 @@ static void callSetReg(MachineFunction &MF,
         mo->setSubReg(0);
       }
       mo->setReg(preg);
-      mo->setIsRenamable(!DisableSetrenamable);
+      mo->setIsRenamable(EnableSetrenamable);
     }
   }
   return;

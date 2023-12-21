@@ -1,4 +1,4 @@
-# RUN: llc -o /dev/null -mcpu=a64fx -O1 %s -start-before=aarch64-swpipeliner -fswp -swpl-debug-dump-mir=8 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null -mcpu=a64fx -O1 %s -start-before=aarch64-swpipeliner -fswp -swpl-disable-proepi-copy -swpl-debug-dump-mir=8 2>&1 | FileCheck %s
 
 # CHECK-NOT: SWPLIVEIN
 # CHECK-NOT: SWPLIVEOUT
@@ -31,22 +31,22 @@
 # CHECK-NEXT:  $d2 = COPY %111:fpr64, debug-location !22; s.c:38:28
 # CHECK-NEXT:  $x5 = COPY %113:gpr64common, debug-location !22; s.c:38:28
 # CHECK-NEXT:  $x7 = COPY %116:gpr64sp, debug-location !22; s.c:38:28
-# CHECK-NEXT:  renamable $x0 = ADDXrr renamable $x1, renamable $x2, debug-location !22; s.c:38:28
-# CHECK-NEXT:  renamable $x3 = ADDXrr renamable $x4, renamable $x2, debug-location !27; s.c:38:43
-# CHECK-NEXT:  renamable $d0 = LDRDui renamable $x0, 252, debug-location !22 :: (volatile load (s64) from %ir.uglygep63, !tbaa !23); s.c:38:28
-# CHECK-NEXT:  renamable $d1 = LDRDui killed renamable $x3, 509, debug-location !27 :: (volatile load (s64) from %ir.uglygep64, !tbaa !23); s.c:38:43
-# CHECK-NEXT:  STRDui killed renamable $d2, renamable $x5, 509, debug-location !29 :: (volatile store (s64) into %ir.uglygep66, !tbaa !23); s.c:38:26
-# CHECK-NEXT:  renamable $d2 = nofpexcept FADDDrr killed renamable $d0, killed renamable $d1, implicit $fpcr, debug-location !28; s.c:38:41
-# CHECK-NEXT:  renamable $x3 = nuw nsw ADDXri renamable $x2, 8, 0, debug-location !44; s.c:37:31
-# CHECK-NEXT:  renamable $x6 = SUBSXri renamable $x7, 1, 0, implicit-def $nzcv, debug-location !21; s.c:37:13
-# CHECK-NEXT:  renamable $x5 = ADDXrr renamable $x1, renamable $x3, debug-location !22; s.c:38:28
-# CHECK-NEXT:  renamable $x1 = ADDXrr renamable $x4, renamable $x3, debug-location !27; s.c:38:43
-# CHECK-NEXT:  renamable $d0 = LDRDui renamable $x5, 252, debug-location !22 :: (volatile load (s64) from %ir.uglygep63, !tbaa !23); s.c:38:28
-# CHECK-NEXT:  renamable $d1 = LDRDui killed renamable $x1, 509, debug-location !27 :: (volatile load (s64) from %ir.uglygep64, !tbaa !23); s.c:38:43
-# CHECK-NEXT:  STRDui killed renamable $d2, renamable $x0, 509, debug-location !29 :: (volatile store (s64) into %ir.uglygep66, !tbaa !23); s.c:38:26
-# CHECK-NEXT:  renamable $d2 = nofpexcept FADDDrr killed renamable $d0, killed renamable $d1, implicit $fpcr, debug-location !28; s.c:38:41
-# CHECK-NEXT:  renamable $x2 = nuw nsw ADDXri renamable $x3, 8, 0, debug-location !44; s.c:37:31
-# CHECK-NEXT:  renamable $x7 = SUBSXri renamable $x6, 1, 0, implicit-def $nzcv, debug-location !21; s.c:37:13
+# CHECK-NEXT:  $x0 = ADDXrr $x1, $x2, debug-location !22; s.c:38:28
+# CHECK-NEXT:  $x3 = ADDXrr $x4, $x2, debug-location !27; s.c:38:43
+# CHECK-NEXT:  $d0 = LDRDui $x0, 252, debug-location !22 :: (volatile load (s64) from %ir.uglygep63, !tbaa !23); s.c:38:28
+# CHECK-NEXT:  $d1 = LDRDui killed $x3, 509, debug-location !27 :: (volatile load (s64) from %ir.uglygep64, !tbaa !23); s.c:38:43
+# CHECK-NEXT:  STRDui killed $d2, $x5, 509, debug-location !29 :: (volatile store (s64) into %ir.uglygep66, !tbaa !23); s.c:38:26
+# CHECK-NEXT:  $d2 = nofpexcept FADDDrr killed $d0, killed $d1, implicit $fpcr, debug-location !28; s.c:38:41
+# CHECK-NEXT:  $x3 = nuw nsw ADDXri $x2, 8, 0, debug-location !44; s.c:37:31
+# CHECK-NEXT:  $x6 = SUBSXri $x7, 1, 0, implicit-def $nzcv, debug-location !21; s.c:37:13
+# CHECK-NEXT:  $x5 = ADDXrr $x1, $x3, debug-location !22; s.c:38:28
+# CHECK-NEXT:  $x1 = ADDXrr $x4, $x3, debug-location !27; s.c:38:43
+# CHECK-NEXT:  $d0 = LDRDui $x5, 252, debug-location !22 :: (volatile load (s64) from %ir.uglygep63, !tbaa !23); s.c:38:28
+# CHECK-NEXT:  $d1 = LDRDui killed $x1, 509, debug-location !27 :: (volatile load (s64) from %ir.uglygep64, !tbaa !23); s.c:38:43
+# CHECK-NEXT:  STRDui killed $d2, $x0, 509, debug-location !29 :: (volatile store (s64) into %ir.uglygep66, !tbaa !23); s.c:38:26
+# CHECK-NEXT:  $d2 = nofpexcept FADDDrr killed $d0, killed $d1, implicit $fpcr, debug-location !28; s.c:38:41
+# CHECK-NEXT:  $x2 = nuw nsw ADDXri $x3, 8, 0, debug-location !44; s.c:37:31
+# CHECK-NEXT:  $x7 = SUBSXri $x6, 1, 0, implicit-def $nzcv, debug-location !21; s.c:37:13
 # CHECK-NEXT:  %108:gpr64common = COPY $x2, debug-location !21; s.c:37:13
 # CHECK-NEXT:  %110:fpr64 = COPY $d2, debug-location !21; s.c:37:13
 # CHECK-NEXT:  %112:gpr64common = COPY $x5, debug-location !21; s.c:37:13

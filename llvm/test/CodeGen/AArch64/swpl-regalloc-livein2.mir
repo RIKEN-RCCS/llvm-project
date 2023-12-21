@@ -1,4 +1,4 @@
-# RUN: llc %s -mcpu=a64fx -O1 -fswp -swpl-enable-reg-alloc -swpl-enable-proepi-copy -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8 -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc %s -mcpu=a64fx -O1 -fswp -swpl-enable-reg-alloc -start-before=aarch64-swpipeliner -swpl-debug-dump-mir=8 -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK:bb.6.do.body:
 # CHECK-NEXT:; predecessors: %bb.5
@@ -32,22 +32,22 @@
 # CHECK-NEXT:  successors: %bb.1(0x7c000000), %bb.7(0x04000000); %bb.1(96.88%), %bb.7(3.12%)
 # CHECK-EMPTY:
 # CHECK-NEXT:  SWPLIVEIN implicit-def $z0, implicit-def $p0, implicit-def $x0, implicit-def $z1, implicit-def $x1, implicit-def $w3, implicit-def $w4, implicit-def $x5, implicit-def $x6, implicit-def $x8
-# CHECK-NEXT:  SST1W_SXTW_SCALED killed renamable $z0, renamable $p0, renamable $x0, renamable $z1
-# CHECK-NEXT:  renamable $z0 = GLD1W_SXTW_SCALED renamable $p0, renamable $x1, renamable $z1
-# CHECK-NEXT:  renamable $w2 = ADDWrr renamable $w3, renamable $w4
-# CHECK-NEXT:  renamable $z2 = INDEX_RI_S renamable $w2, 1
-# CHECK-NEXT:  SST1W_SXTW_SCALED killed renamable $z0, renamable $p0, renamable $x5, renamable $z1
-# CHECK-NEXT:  renamable $p1 = PTRUE_S 31
-# CHECK-NEXT:  renamable $z0 = GLD1W_SXTW_SCALED renamable $p1, renamable $x6, renamable $z2
-# CHECK-NEXT:  renamable $x7 = SUBSXri renamable $x8, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:  SST1W_SXTW_SCALED killed renamable $z0, renamable $p0, renamable $x0, renamable $z2
-# CHECK-NEXT:  renamable $z0 = GLD1W_SXTW_SCALED renamable $p0, renamable $x1, renamable $z2
-# CHECK-NEXT:  renamable $w3 = ADDWrr renamable $w2, renamable $w4
-# CHECK-NEXT:  renamable $z1 = INDEX_RI_S renamable $w3, 1
-# CHECK-NEXT:  SST1W_SXTW_SCALED killed renamable $z0, renamable $p0, renamable $x5, renamable $z2
-# CHECK-NEXT:  renamable $p1 = PTRUE_S 31
-# CHECK-NEXT:  renamable $z0 = GLD1W_SXTW_SCALED renamable $p1, renamable $x6, renamable $z1
-# CHECK-NEXT:  renamable $x8 = SUBSXri renamable $x7, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  SST1W_SXTW_SCALED killed $z0, $p0, $x0, $z1
+# CHECK-NEXT:  $z0 = GLD1W_SXTW_SCALED $p0, $x1, $z1
+# CHECK-NEXT:  $w2 = ADDWrr $w3, $w4
+# CHECK-NEXT:  $z2 = INDEX_RI_S $w2, 1
+# CHECK-NEXT:  SST1W_SXTW_SCALED killed $z0, $p0, $x5, $z1
+# CHECK-NEXT:  $p1 = PTRUE_S 31
+# CHECK-NEXT:  $z0 = GLD1W_SXTW_SCALED $p1, $x6, $z2
+# CHECK-NEXT:  $x7 = SUBSXri $x8, 1, 0, implicit-def $nzcv
+# CHECK-NEXT:  SST1W_SXTW_SCALED killed $z0, $p0, $x0, $z2
+# CHECK-NEXT:  $z0 = GLD1W_SXTW_SCALED $p0, $x1, $z2
+# CHECK-NEXT:  $w3 = ADDWrr $w2, $w4
+# CHECK-NEXT:  $z1 = INDEX_RI_S $w3, 1
+# CHECK-NEXT:  SST1W_SXTW_SCALED killed $z0, $p0, $x5, $z2
+# CHECK-NEXT:  $p1 = PTRUE_S 31
+# CHECK-NEXT:  $z0 = GLD1W_SXTW_SCALED $p1, $x6, $z1
+# CHECK-NEXT:  $x8 = SUBSXri $x7, 1, 0, implicit-def $nzcv
 # CHECK-NEXT:  SWPLIVEOUT implicit $z0, implicit $p0, implicit $x0, implicit $z1, implicit $x1, implicit $w3, implicit $w4, implicit $x5, implicit $x6, implicit $x8, implicit $w2, implicit $p1
 # CHECK-NEXT:  $xzr = SUBSXri $x8, 4, 0, implicit-def $nzcv
 # CHECK-NEXT:  Bcc 10, %bb.1, implicit $nzcv

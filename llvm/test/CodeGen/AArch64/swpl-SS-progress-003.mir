@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-disable-stagescheduling=false -swpl-debug-dump-ss-progress -o /dev/null 2>&1  | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-enable-stagescheduling=true -swpl-debug-dump-ss-progress -o /dev/null 2>&1  | FileCheck %s
 #CHECK:*** before SS : dump SwplSSNumRegisters ***
 #CHECK:estimate VReg  Fp: 13, Int: 8, Pre: 1
 #CHECK:*** before SS : dump SwplSSEdges ***
