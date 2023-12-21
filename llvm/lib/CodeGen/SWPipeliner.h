@@ -785,10 +785,14 @@ public:
     unsigned id;
     std::string mi;
   };
+  struct IOddgnodeinfo {
+    unsigned distance;
+    int delay;
+  };
   struct IOddgnode {
     IOmi from;
     IOmi to;
-    unsigned distance;
+    std::vector<IOddgnodeinfo> infos;
   };
   struct IOddg {
     std::string fname;
@@ -819,6 +823,10 @@ private:
   void analysisMemDependence();
   /// Analyze instruction dependencies
   void analysisInstDependence();
+  /// Import yaml of DDG
+  void importYaml();
+  /// Export yaml of DDG
+  void exportYaml ();
 
 };
 
