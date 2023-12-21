@@ -48,7 +48,7 @@ public:
   SwplInstSet* findBlockingInsts(unsigned cycle, const SwplInst& inst, const StmPipeline & pipeline );
   bool isOpenForInst(unsigned cycle, const SwplInst& inst, const StmPipeline & pipeline);
   void cancelResourcesForInst(const SwplInst& inst);
-  void dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream);
+  void dump(const SwplSlots& slots, raw_ostream &stream);
   void dump();
 
   static SwplMrt* construct(unsigned iteration_interval);
@@ -59,7 +59,7 @@ private:
   void printInstMI(raw_ostream &stream,
                     const SwplInst* inst, unsigned width);
   void printInstRotation(raw_ostream &stream,
-                         const SwplInstSlotHashmap& inst_slot_map,
+                         const SwplSlots& c_slots,
                          const SwplInst* inst, unsigned ii);
 };
 
@@ -104,14 +104,14 @@ class SwplTrialState {
   unsigned iteration_interval;             ///< Iteration Interval（Initiation Interval）
   SwplInstIntMap* priorities;              ///< SwplInstと優先度(priority)の組のMap
   SwplInstPrioque* inst_queue;             ///< 未配置命令のキュー
-  SwplInstSlotHashmap* inst_slot_map;      ///< 配置したSwplInstとSlot番号の組のHashmap
-  SwplInstSlotHashmap* inst_last_slot_map; ///< 前回配置の状態を記録するinst_slot_mao
+  SwplSlots* slots;                        ///< 配置したSwplInstとSlot番号の組のHashmap
+  SwplSlots* last_slots;                   ///< 前回配置の状態を記録するinst_slot_mao
   SwplMrt* mrt;                            ///< MRT。{resourceID, SwplInst}のmapのVector
 
 public:
   SwplTrialState(const SwplModuloDdg& c_modulo_ddg) : modulo_ddg(c_modulo_ddg) {} ///< constructor
 
-  SwplInstSlotHashmap* getInstSlotMap() { return inst_slot_map; } ///< getter
+  SwplSlots* getInstSlotMap() { return slots; } ///< getter
   SwplMrt* getMrt() { return mrt; } ///< getter
 
   bool tryNext();
@@ -229,7 +229,7 @@ public:
                         BINARY_SEARCH,      ///< binary search
                         SIMPLY_SEARCH,      ///< simply search
   };
-  SwplInstSlotHashmap* inst_slot_map; ///< スケジューリング結果を保持するHashmap
+  SwplSlots* slots;              ///< スケジューリング結果を保持するHashmap
   SwplMsResourceResult resource; ///< resourceの過不足情報
   unsigned ii;                   ///< initiation interval
   unsigned tried_n_insts;        ///< スケジューリングされた命令数
@@ -296,13 +296,14 @@ using SwplSSMoveinfo = llvm::DenseMap<const SwplInst*, long>;
 /// \brief StageScheduling proccessing
 class SwplSSProc {
 public:
-  static SwplInstSlotHashmap* execute(const SwplDdg &ddg,
+  static SwplSlots* execute(const SwplDdg &ddg,
                       const SwplLoop &loop,
                       unsigned ii,
-                      SwplInstSlotHashmap *inst_slot_map,
+                      SwplSlots *slots,
                       raw_ostream &stream );
   static void dumpSSMoveinfo(raw_ostream &stream, const SwplSSMoveinfo &v);
-  static bool adjustSlot(SwplInstSlotHashmap& ism, SwplSSMoveinfo &v);
+  // static bool adjustSlot(SwplInstSlotHashmap& ism, SwplSSMoveinfo &v);
+  static bool adjustSlot(SwplSlots& slots, SwplSSMoveinfo &v);
 };
 
 class SwplSSACProc {
@@ -372,7 +373,7 @@ public:
   SwplSSEdges(const SwplDdg &ddg,
               const SwplLoop &loop,
               unsigned ii,
-              SwplInstSlotHashmap& inst_slot_map);
+              SwplSlots& slots);
   virtual ~SwplSSEdges() {
     for (auto *v : Edges) {
       delete v;
@@ -392,7 +393,7 @@ class SwplSSNumRegisters {
 public:
   SwplSSNumRegisters(const SwplLoop &loop,
                      unsigned ii,
-                     const SwplInstSlotHashmap *inst_slot_map);
+                     const SwplSlots *slots);
   bool operator<(const SwplSSNumRegisters& nr) const {
     return (!(ireg == nr.ireg && freg == nr.freg  && preg == nr.preg) &&
             (ireg <= nr.ireg && freg <= nr.freg  && preg <= nr.preg));

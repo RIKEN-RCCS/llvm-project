@@ -351,8 +351,8 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
 
   SwplMsResult *ms_result = SwplMsResult::calculateMsResult(spec);
 
-  if (ms_result != nullptr && ms_result->inst_slot_map != nullptr) {
-    *slots = ms_result->inst_slot_map;
+  if (ms_result != nullptr && ms_result->slots != nullptr) {
+    *slots = ms_result->slots;
     *selected_ii = ms_result->ii;
     *resource = ms_result->resource;
     delete ms_result;
@@ -486,9 +486,8 @@ size_t SwplSlots::calcKernelBlocks(const SwplLoop& c_loop,
 /// \return instが配置されたslot番号（begin_slot起点）
 unsigned SwplSlots::getRelativeInstSlot(const SwplInst& c_inst,
                                                   const SwplSlot& begin_slot) const {
-  SwplInst* inst;
-  assert( inst->inst_ix >= 0 );
-  return this->at(inst->inst_ix) - begin_slot;
+  assert( c_inst.inst_ix >= 0 );
+  return this->at(c_inst.inst_ix) - begin_slot;
 }
 
 /// \brief registerのlive rangeとiiの関係からrenaming versionを求める
