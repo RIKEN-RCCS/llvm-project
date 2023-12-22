@@ -2633,7 +2633,7 @@ SwplSlots* SwplSSProc::execute(const SwplDdg &ddg,
   auto fname = (loop.getBodyInsts())[0]->getMI()->getMF()->getName();
 
   if (!OptionEnableStageScheduling)
-    return inst_slot_map;
+    return slots;
 
   if (slots==nullptr) {
     if (OptionDumpSSProgress)

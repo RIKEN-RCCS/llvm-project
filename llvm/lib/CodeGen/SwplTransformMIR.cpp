@@ -1021,11 +1021,11 @@ void SwplTransformMIR::importPlan() {
   Plan.setNIterationCopies(ioplan.n_iteration_copies);
   Plan.setBeginSlot(ioplan.begin_slot);
   // 念の為MAPをリセット
-  InstSlotMap.clear();
+  Slots.clear();
   for (auto &slot:ioplan.Slots) {
     /// \note スケジューリングが必要な命令に対し、指示が不足しているかは確認していない。
     /// また、指示で指定した命令IDが、存在範囲外かも確認していない
-    InstSlotMap[&(Loop.getBodyInst(slot.id))]=slot.slot+ioplan.begin_slot;
+    Slots[Loop.getBodyInst(slot.id).inst_ix]=slot.slot+ioplan.begin_slot;
   }
 }
 
@@ -1062,7 +1062,7 @@ void SwplTransformMIR::dumpMIR(DumpMIRID id) const {
 }
 
 unsigned SwplTransformMIR::relativeInstSlot(const SwplInst *inst) const {
-  return InstSlotMap[const_cast<SwplInst*>(inst)]-Plan.getBeginSlot();
+  return Slots[inst->inst_ix]-Plan.getBeginSlot();
 }
 
 void SwplTransformMIR::printTransformingMI(const MachineInstr *mi) {
