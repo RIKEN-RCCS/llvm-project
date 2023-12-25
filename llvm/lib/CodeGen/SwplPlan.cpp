@@ -710,8 +710,8 @@ SwplSlot SwplInstSlotHashmap::getEmptySlotInCycle( unsigned cycle,
   // cycle 2  slot  slot  slot  slot  slot  slot  slot  slot
   //       :  slot  slot  slot  slot  slot  slot  slot  slot
   // cycle n  slot  slot  slot  slot  slot  slot  slot  slot
-  //         |<-------------------------------------------->| STM->getFetchBandwidth()
-  //                                 |<-------------------->| STM->getRealFetchBandwidth()
+  //         |<-------------------------------------------->| fetchbandwidth
+  //                                 |<-------------------->| realfetchbandwidth
 
   unsigned bandwidth = SWPipeliner::fetchbandwidth;
   unsigned realbandwidth = SWPipeliner::realfetchbandwidth;
