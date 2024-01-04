@@ -177,7 +177,6 @@ public:
   void append_bodyinsts(SwplInst *inst) { BodyInsts.push_back(inst); }
 
   /// SwplLoop::BodyInsts の要素数取得
-  size_t getSizeBodyInsts() { return BodyInsts.size(); }
   size_t getSizeBodyInsts() const { return BodyInsts.size(); }
   /// SwplLoop::BodyInsts のうち、実命令の命令数を取得
   size_t getSizeBodyRealInsts() const;

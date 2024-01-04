@@ -82,6 +82,8 @@ public:
   llvm::DebugLoc getLoopStartLoc() const;
   const SwplInsts& getSuccessors(const SwplInst& c_inst) const;
   const SwplInsts& getPredecessors(const SwplInst& c_inst) const;
+  size_t getLoopBody_ninsts() const { return loop.getSizeBodyInsts(); }
+
   void dump();
 
   static SwplModuloDdg* construct(const SwplDdg& c_ddg, unsigned iterator_interval);
@@ -104,8 +106,8 @@ class SwplTrialState {
   unsigned iteration_interval;             ///< Iteration Interval（Initiation Interval）
   SwplInstIntMap* priorities;              ///< SwplInstと優先度(priority)の組のMap
   SwplInstPrioque* inst_queue;             ///< 未配置命令のキュー
-  SwplSlots* slots;                        ///< 配置したSwplInstとSlot番号の組のHashmap
-  SwplSlots* last_slots;                   ///< 前回配置の状態を記録するinst_slot_mao
+  SwplSlots* slots;                        ///< Slot番号の組の動的配列
+  SwplSlots* last_slots;                   ///< 前回配置の状態を記録するlast_slot
   SwplMrt* mrt;                            ///< MRT。{resourceID, SwplInst}のmapのVector
 
 public:
@@ -229,7 +231,7 @@ public:
                         BINARY_SEARCH,      ///< binary search
                         SIMPLY_SEARCH,      ///< simply search
   };
-  SwplSlots* slots;              ///< スケジューリング結果を保持するHashmap
+  SwplSlots* slots;              ///< スケジューリング結果を保持する動的配列
   SwplMsResourceResult resource; ///< resourceの過不足情報
   unsigned ii;                   ///< initiation interval
   unsigned tried_n_insts;        ///< スケジューリングされた命令数

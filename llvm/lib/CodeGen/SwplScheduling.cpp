@@ -376,14 +376,13 @@ void SwplMrt::printInstRotation(raw_ostream &stream,
 
   /* inst_slot_mapからrotationの値を取得する */
 
-  if( inst->inst_ix < 0 )  {
+  if ((slots.at(inst->inst_ix) == 0) || !(slot = slots.at(inst->inst_ix))) {
     report_fatal_error("instruction not found in InstSlotHashmap.");
   }
-  slot = slots.at(inst->inst_ix);
 
   unsigned max_slot = SwplSlot::baseSlot(ii);
-  for(auto pair : slots ) {
-    if( max_slot < pair ) max_slot = pair;
+  for(auto& pair : slots) {
+    if(max_slot < pair) max_slot = pair;
   }
 
   unsigned max_cycle = max_slot / SWPipeliner::STM->getFetchBandwidth();
@@ -645,14 +644,13 @@ unsigned SwplTrialState::calculateLatestCycle(const SwplInst& inst) {
 
     // successor_instが、inst_slot_mapに存在しているか
     // 存在する場合はSlot番号をsuccessor_slotに取得
-    if( successor_inst->inst_ix < 0 ) {
+    if ((slots->at(successor_inst->inst_ix) == 0) || !(successor_slot = slots->at(successor_inst->inst_ix))) {
       // successor_instが、inst_slot_mapに存在していなければ、次のsuccessorを探す
       if( OptionDumpEveryInst ) {
         dbgs() << "successor_inst : " << successor_inst->getName() << " (not placed)\n";
       }
       continue;
     }
-    successor_slot = slots->at(successor_inst->inst_ix);
 
     // inst→successor_instのdelayを取得
     delay = modulo_ddg.getDelay(inst, *successor_inst);
@@ -738,7 +736,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
 unsigned SwplTrialState::getNewScheduleCycle(const SwplInst& inst) {
   SwplSlot slot;
 
-  if( inst.inst_ix >= 0 ){
+  if(last_slots->at(inst.inst_ix) == 0){
     slot = last_slots->at(inst.inst_ix);
     slot = slot -
            SWPipeliner::STM->getFetchBandwidth(); // FetchBandwidthを引けば、1cycle前のいずれかのslotとなる
@@ -840,10 +838,9 @@ void SwplTrialState::unsetDependenceConstrainedInsts(SlotInstPipeline& SIP) {
     unsigned predecessor_cycle;
     int delay;
 
-    if( predecessor_inst->inst_ix < 0 ) {
+    if((slots->at(predecessor_inst->inst_ix) == 0) || !(predecessor_slot = slots->at(predecessor_inst->inst_ix))) {
       continue;
     }
-    predecessor_slot = slots->at(predecessor_inst->inst_ix);
     predecessor_cycle = predecessor_slot.calcCycle();
     delay = modulo_ddg.getDelay(*predecessor_inst, *(SIP.inst));
     assert ((int) (predecessor_cycle + delay) >= 0);
@@ -865,7 +862,6 @@ void SwplTrialState::unsetDependenceConstrainedInsts(SlotInstPipeline& SIP) {
 /// \param [in] SIP SlotInstPipelineブジェクト。instが配置できるslot, inst, 配置可能となったpipeline
 /// \return なし
 void SwplTrialState::setInst(SlotInstPipeline& SIP) {
-  assert ( slots->size() < SIP.inst->inst_ix && SIP.inst->inst_ix >= 0 );
 
   slots->at(SIP.inst->inst_ix) = SIP.slot;
   last_slots->at(SIP.inst->inst_ix) = SIP.slot;
@@ -899,7 +895,7 @@ void SwplTrialState::unsetInst(const SwplInst& inst) {
   inst_queue->insert( std::make_pair( priority, &inst ) );
 
   // 配置済みSlotマップから、Instが配置されたSlotを除外
-  slots->erase( slots->begin() + inst.inst_ix );
+  slots->at(inst.inst_ix) = 0;
 
   // MRTからInstを除外
   mrt->cancelResourcesForInst( inst );
@@ -937,7 +933,9 @@ SwplTrialState* SwplTrialState::construct(const SwplModuloDdg& c_modulo_ddg) {
   }
 
   state->slots = new SwplSlots();
+  state->slots->resize(c_modulo_ddg.getLoopBody_ninsts());
   state->last_slots = new SwplSlots();
+  state->last_slots->resize(c_modulo_ddg.getLoopBody_ninsts());
   state->mrt = SwplMrt::construct(state->iteration_interval);
 
   return state;
@@ -2737,7 +2735,7 @@ bool SwplSSProc::adjustSlot(SwplSlots& slots, SwplSSMoveinfo &v) {
   auto bandwidth = SWPipeliner::STM->getFetchBandwidth();
   for (auto [cinst, movecycle]: v) {
     SwplInst *inst = const_cast<SwplInst *>(cinst);
-    slots[inst->inst_ix].moveSlotIndex(movecycle*bandwidth);
+    slots.at(inst->inst_ix).moveSlotIndex(movecycle*bandwidth);
   }
   return true;
 }

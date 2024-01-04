@@ -71,7 +71,7 @@ public:
 };
 
 
-/// \brief スケジューリング結果となるSwplInstとSwplSlotのMap
+/// \brief Dynamic array of SwplSlots that result in scheduling
 class SwplSlots : public std::vector<SwplSlot> {
 public:
   size_t calcFlatScheduleBlocks(const SwplLoop& c_loop, unsigned iteration_interval);
@@ -96,7 +96,6 @@ class SwplMsResourceResult;
 /// \details transform mirへ渡す情報となる
 class SwplPlan {
   const SwplLoop& loop;              ///< スケジューリング対象のループ情報
-  // SwplInstSlotHashmap inst_slot_map; ///< スケジューリング結果
   SwplSlots slots; ///< スケジューリング結果
   unsigned minimum_iteration_interval;   ///< min II。スケジューリング試行を開始したII
   unsigned iteration_interval; ///< スケジューリング結果のII
