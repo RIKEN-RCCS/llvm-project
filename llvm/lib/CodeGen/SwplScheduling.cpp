@@ -386,7 +386,7 @@ void SwplMrt::printInstRotation(raw_ostream &stream,
     if( max_slot < pair.second ) max_slot = pair.second;
   }
 
-  unsigned max_cycle = max_slot / SWPipeliner::STM->getFetchBandwidth();
+  unsigned max_cycle = max_slot / SWPipeliner::fetchbandwidth;
   rotation = (max_cycle - slot.calcCycle())/ii + 1;
 
   // 対応する回転数を表示
@@ -554,7 +554,7 @@ bool SwplTrialState::tryNext() {
 
   // 20回転以上またいだ命令が候補になった場合、
   // まともな結果にならないためやめる.
-  if ((SwplSlot::baseSlot(ii) - SIP.slot)/(SWPipeliner::STM->getFetchBandwidth() * ii) > 20) {
+  if ((SwplSlot::baseSlot(ii) - SIP.slot)/(SWPipeliner::fetchbandwidth * ii) > 20) {
     if (SWPipeliner::isDebugOutput()) {
       dbgs() << "DBG(SwplTrialState::tryNext) "
              << "gave up scheduling because it was arranged across more than 20 stages.(II="
@@ -688,8 +688,8 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
   //SwplSlot new_schedule_slot; // cycle基準とする前
   unsigned new_schedule_cycle;
 
-  begin_slot = SwplSlot::construct(begin_cycle, SWPipeliner::STM->getFetchBandwidth () - 1);
-  end_slot = SwplSlot::construct(end_cycle, SWPipeliner::STM->getFetchBandwidth () - 1);
+  begin_slot = SwplSlot::construct(begin_cycle, SWPipeliner::fetchbandwidth - 1);
+  end_slot = SwplSlot::construct(end_cycle, SWPipeliner::fetchbandwidth - 1);
   if (begin_slot == SWPL_ILLEGAL_SLOT || end_slot == SWPL_ILLEGAL_SLOT ){
     return SlotInstPipeline(SWPL_ILLEGAL_SLOT, &(const_cast<SwplInst&>(inst)), nullptr);
   }
@@ -741,7 +741,7 @@ unsigned SwplTrialState::getNewScheduleCycle(const SwplInst& inst) {
   if( inst_last_slot_map->find(&inst) != inst_last_slot_map->end() ){
     slot = inst_last_slot_map->find(&inst)->second;
     slot = slot -
-           SWPipeliner::STM->getFetchBandwidth(); // FetchBandwidthを引けば、1cycle前のいずれかのslotとなる
+           SWPipeliner::fetchbandwidth; // FetchBandwidthを引けば、1cycle前のいずれかのslotとなる
   }
   else {
     slot = SwplSlot::baseSlot(iteration_interval);
@@ -811,7 +811,7 @@ void SwplTrialState::unsetResourceConstrainedInsts(SlotInstPipeline& SIP) {
   if( SIP.pipeline == nullptr ) {
     assert(SWPipeliner::STM->isPseudo(*(SIP.inst->getMI())) ); // 資源情報無し＝仮想命令である
     assert( SIP.slot.calcFetchSlot() <
-           SWPipeliner::STM->getRealFetchBandwidth() ); // 資源情報無し＝slotは仮想命令用である
+           SWPipeliner::realfetchbandwidth ); // 資源情報無し＝slotは仮想命令用である
     // 仮想命令の場合は、競合する資源は無いため、
     // 資源競合によりunsetする命令は無い。
     return;
@@ -873,7 +873,7 @@ void SwplTrialState::setInst(SlotInstPipeline& SIP) {
   if( SIP.pipeline == nullptr ) {
     assert(SWPipeliner::STM->isPseudo(*(SIP.inst->getMI())) ); // 資源情報無し＝仮想命令である
     assert( SIP.slot.calcFetchSlot() <
-           SWPipeliner::STM->getRealFetchBandwidth() ); // 資源情報無し＝slotは仮想命令用である
+           SWPipeliner::realfetchbandwidth ); // 資源情報無し＝slotは仮想命令用である
     return;
   }
 
