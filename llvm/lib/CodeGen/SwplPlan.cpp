@@ -506,7 +506,7 @@ size_t SwplSlots::calcNRenamingVersions(const SwplLoop& c_loop,
   size_t necessary_n_renaming_versions;
 
   max_live_cycles = 1;
-  for(auto def_inst : c_loop.getBodyInsts()) {
+  for(auto* def_inst : c_loop.getBodyInsts()) {
     SwplSlot def_slot;
     size_t def_cycle;
 
@@ -566,7 +566,7 @@ bool SwplSlots::isIccFreeAtBoundary(const SwplLoop& loop,
     SwplSlot def_slot;
     unsigned def_block;
 
-    if ((this->at(inst->inst_ix) == 0) || !(def_slot = this->at(inst->inst_ix))) {
+    if (!(def_slot = this->at(inst->inst_ix))) {
       report_fatal_error("inst not found in inst_slot_map.");
     }
     def_block = def_slot.calcBlock(iteration_interval);
@@ -629,7 +629,7 @@ unsigned SwplSlots::calcLastUseCycleInBody(const SwplReg& reg,
   if (def_inst->isBodyInst()) {
     SwplSlot def_slot;
 
-    if ((this->at(def_inst->inst_ix) == 0) || !(def_slot = this->at(def_inst->inst_ix))) {
+    if (!(def_slot = this->at(def_inst->inst_ix))) {
       report_fatal_error("instruction not found in InstSlotHashmap.");
     }
     last_use_cycle = def_slot.calcCycle();
@@ -652,7 +652,7 @@ unsigned SwplSlots::calcLastUseCycleInBody(const SwplReg& reg,
     } else if( use_inst->isBodyInst() ) {
       SwplSlot use_slot;
 
-      if ((this->at(use_inst->inst_ix) == 0) || !(use_slot = this->at(use_inst->inst_ix))) {
+      if (!(use_slot = this->at(use_inst->inst_ix))) {
         report_fatal_error("instruction not found in Slots.");
       }
       use_slot = this->at(use_inst->inst_ix);

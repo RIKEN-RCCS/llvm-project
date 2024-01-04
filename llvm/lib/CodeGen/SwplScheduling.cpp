@@ -376,13 +376,13 @@ void SwplMrt::printInstRotation(raw_ostream &stream,
 
   /* inst_slot_mapからrotationの値を取得する */
 
-  if ((slots.at(inst->inst_ix) == 0) || !(slot = slots.at(inst->inst_ix))) {
+  if (!(slot = slots.at(inst->inst_ix))) {
     report_fatal_error("instruction not found in InstSlotHashmap.");
   }
 
   unsigned max_slot = SwplSlot::baseSlot(ii);
-  for(auto& pair : slots) {
-    if(max_slot < pair) max_slot = pair;
+  for(auto& slot : slots) {
+    if(max_slot < slot) max_slot = slot;
   }
 
   unsigned max_cycle = max_slot / SWPipeliner::STM->getFetchBandwidth();
@@ -644,7 +644,7 @@ unsigned SwplTrialState::calculateLatestCycle(const SwplInst& inst) {
 
     // successor_instが、inst_slot_mapに存在しているか
     // 存在する場合はSlot番号をsuccessor_slotに取得
-    if ((slots->at(successor_inst->inst_ix) == 0) || !(successor_slot = slots->at(successor_inst->inst_ix))) {
+    if (!(successor_slot = slots->at(successor_inst->inst_ix))) {
       // successor_instが、inst_slot_mapに存在していなければ、次のsuccessorを探す
       if( OptionDumpEveryInst ) {
         dbgs() << "successor_inst : " << successor_inst->getName() << " (not placed)\n";
@@ -838,7 +838,7 @@ void SwplTrialState::unsetDependenceConstrainedInsts(SlotInstPipeline& SIP) {
     unsigned predecessor_cycle;
     int delay;
 
-    if((slots->at(predecessor_inst->inst_ix) == 0) || !(predecessor_slot = slots->at(predecessor_inst->inst_ix))) {
+    if(!(predecessor_slot = slots->at(predecessor_inst->inst_ix))) {
       continue;
     }
     predecessor_cycle = predecessor_slot.calcCycle();
