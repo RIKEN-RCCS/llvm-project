@@ -2734,7 +2734,7 @@ void SwplSSProc::dumpSSMoveinfo(raw_ostream &stream, const SwplSSMoveinfo &v) {
 /// \param [in] Instruction placement cycle movement information
 /// \return true if SwplInstSlotHashmap changed
 bool SwplSSProc::adjustSlot(SwplInstSlotHashmap& ism, SwplSSMoveinfo &v) {
-  auto bandwidth = SWPipeliner::STM->getFetchBandwidth();
+  auto bandwidth = SWPipeliner::fetchbandwidth;
   for (auto [cinst, movecycle]: v) {
     SwplInst *inst = const_cast<SwplInst *>(cinst);
     ism[inst].moveSlotIndex(movecycle*bandwidth);
