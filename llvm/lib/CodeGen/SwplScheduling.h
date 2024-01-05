@@ -83,6 +83,7 @@ public:
   const SwplInsts& getSuccessors(const SwplInst& c_inst) const;
   const SwplInsts& getPredecessors(const SwplInst& c_inst) const;
   size_t getLoopBody_ninsts() const { return loop.getSizeBodyInsts(); }
+  const SwplLoop& getLoop() const { return loop; }
 
   void dump();
 

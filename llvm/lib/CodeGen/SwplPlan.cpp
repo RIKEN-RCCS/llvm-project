@@ -70,7 +70,7 @@ void SwplPlan::dump(raw_ostream &stream) {
 /// \param [in] stream 出力stream
 /// \return なし
 void SwplPlan::dumpInstTable(raw_ostream &stream) {
-  size_t table_size = (size_t)end_slot - (size_t)begin_slot;
+  size_t table_size = slots.size();
   std::vector<SwplInst*> table(table_size, nullptr);
 
   for( auto inst : loop.getBodyInsts() ) {
@@ -435,7 +435,7 @@ SwplSlot SwplSlots::findFirstSlot(const SwplLoop& c_loop) {
   SwplSlot first_slot = SwplSlot::slotMax();
 
   for(auto &slot : *this) {
-    assert(slot != 0);
+    if (slot == 0) continue;  // 最大値が0になることは無いからいらない？
     first_slot = (first_slot < slot) ? first_slot : slot;
   }
   return first_slot;
@@ -451,6 +451,7 @@ SwplSlot SwplSlots::findLastSlot(const SwplLoop& c_loop) {
   SwplSlot last_slot = SwplSlot::slotMin();
 
   for(auto &slot : *this) {
+    if (slot == 0) continue;
     last_slot = (last_slot > slot) ? last_slot : slot;
   }
   return last_slot;
@@ -676,6 +677,7 @@ void SwplSlots::getMaxMinSlot(SwplSlot& max_slot, SwplSlot& min_slot) {
   SwplSlot min=SwplSlot::slotMax();
 
   for(auto& mp : *this) {
+    if(mp == 0) continue;
     if(max < mp) max=mp;
     if(min > mp) min=mp;
   }
@@ -718,6 +720,7 @@ SwplSlot SwplSlots::getEmptySlotInCycle( unsigned cycle,
   unsigned target_modulo_cycle = cycle % iteration_interval;
 
   for(auto& mp : *this) {
+    if (mp == 0) continue;
     unsigned modulo_cycle = mp.calcCycle() % iteration_interval;
     if(target_modulo_cycle == modulo_cycle) {
       openslot[mp.calcFetchSlot()] = false; // 使用済み
@@ -732,7 +735,7 @@ SwplSlot SwplSlots::getEmptySlotInCycle( unsigned cycle,
 }
 
 /// \brief デバッグ用ダンプ
-void SwplSlots::dump() {
+void SwplSlots::dump(const SwplLoop& c_loop) {
   if( this->size() == 0 ) {
       dbgs() << "Nothing...\n";
       return;
@@ -748,13 +751,13 @@ void SwplSlots::dump() {
   max_slot = SwplSlot::construct(max_cycle, 0) + SWPipeliner::STM->getFetchBandwidth();
   min_slot = SwplSlot::construct(min_cycle, 0);
 
-  size_t table_size = (size_t)max_slot - (size_t)min_slot;
+  size_t table_size = this->size();
   std::vector<SwplInst*> table(table_size, nullptr);
   int ix = 0;
-  SwplLoop loop;
 
-  for(auto* inst : loop.getBodyInsts()) {
-    table[(this->at(ix) - min_slot)] = inst;
+  for(auto* inst : c_loop.getBodyInsts()) {
+    if(this->at(ix))
+      table[(this->at(ix) - min_slot)] = inst;
     ix++;
   }
 

@@ -381,8 +381,9 @@ void SwplMrt::printInstRotation(raw_ostream &stream,
   }
 
   unsigned max_slot = SwplSlot::baseSlot(ii);
-  for(auto& slot : slots) {
-    if(max_slot < slot) max_slot = slot;
+  for(auto& t : slots) {
+    if(t == 0) continue;  // 最大値が0になることは無いからいらない？
+    if(max_slot < t) max_slot = t;
   }
 
   unsigned max_cycle = max_slot / SWPipeliner::STM->getFetchBandwidth();
@@ -586,7 +587,7 @@ bool SwplTrialState::tryNext() {
     dbgs() << " SIP.slot             : " << SIP.slot << "\n";
     dbgs() << " SIP.slot.calcCycle() : " << SIP.slot.calcCycle() << "\n";
     getMrt()->dump();
-    getInstSlotMap()->dump();
+    getInstSlotMap()->dump(modulo_ddg.getLoop());
   }
 
   return true;
@@ -736,7 +737,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
 unsigned SwplTrialState::getNewScheduleCycle(const SwplInst& inst) {
   SwplSlot slot;
 
-  if(last_slots->at(inst.inst_ix) == 0){
+  if(last_slots->at(inst.inst_ix)){
     slot = last_slots->at(inst.inst_ix);
     slot = slot -
            SWPipeliner::STM->getFetchBandwidth(); // FetchBandwidthを引けば、1cycle前のいずれかのslotとなる

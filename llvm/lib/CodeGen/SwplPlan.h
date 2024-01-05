@@ -87,7 +87,14 @@ public:
   unsigned calcLastUseCycleInBodyWithInheritance(const SwplReg& reg, unsigned iteration_interval) const;
   unsigned calcLastUseCycleInBody(const SwplReg& reg, unsigned iteration_interval) const;
   SwplSlot getEmptySlotInCycle( unsigned cycle, unsigned iteration_interval, bool isvirtual );
-  void dump();
+  size_t size() const {
+    size_t s = 0;
+    for (auto& t : *this) {
+      if (t) s++;
+    }
+    return s;
+  }
+  void dump(const SwplLoop& c_loop);
 };
 
 class SwplMsResourceResult;
