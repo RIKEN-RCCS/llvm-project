@@ -70,7 +70,7 @@ void SwplPlan::dump(raw_ostream &stream) {
 /// \param [in] stream 出力stream
 /// \return なし
 void SwplPlan::dumpInstTable(raw_ostream &stream) {
-  size_t table_size = slots.size();
+  size_t table_size = (size_t)end_slot - (size_t)begin_slot;
   std::vector<SwplInst*> table(table_size, nullptr);
 
   for( auto inst : loop.getBodyInsts() ) {
@@ -435,7 +435,7 @@ SwplSlot SwplSlots::findFirstSlot(const SwplLoop& c_loop) {
   SwplSlot first_slot = SwplSlot::slotMax();
 
   for(auto &slot : *this) {
-    if (slot == 0) continue;  // 最大値が0になることは無いからいらない？
+    if (slot == 0) continue;
     first_slot = (first_slot < slot) ? first_slot : slot;
   }
   return first_slot;
@@ -751,7 +751,7 @@ void SwplSlots::dump(const SwplLoop& c_loop) {
   max_slot = SwplSlot::construct(max_cycle, 0) + SWPipeliner::STM->getFetchBandwidth();
   min_slot = SwplSlot::construct(min_cycle, 0);
 
-  size_t table_size = this->size();
+  size_t table_size = (size_t)max_slot - (size_t)min_slot;
   std::vector<SwplInst*> table(table_size, nullptr);
   int ix = 0;
 

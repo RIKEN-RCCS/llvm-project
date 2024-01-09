@@ -1022,7 +1022,8 @@ void SwplTransformMIR::importPlan() {
   Plan.setBeginSlot(ioplan.begin_slot);
   // 念の為MAPをリセット
   Slots.clear();
-  for (auto &slot:ioplan.Slots) {
+  Slots.resize(Loop.getSizeBodyInsts());
+  for (auto& slot:ioplan.Slots) {
     /// \note スケジューリングが必要な命令に対し、指示が不足しているかは確認していない。
     /// また、指示で指定した命令IDが、存在範囲外かも確認していない
     Slots[Loop.getBodyInst(slot.id).inst_ix]=slot.slot+ioplan.begin_slot;
