@@ -233,17 +233,6 @@ public:
   /// \param mf Target MachineFunction
   virtual void initialize(const MachineFunction &mf) = 0;
 
-
-  /// Returns the number of concurrent read instructions in the instruction fetch stage.
-  /// \details
-  /// Returns the return value of getRealFetchBandwidth() + the number of virtual slots (for Pseudo).
-  /// \return number of slot
-  virtual unsigned int getFetchBandwidth(void) const = 0;
-
-  /// Returns the number of concurrent read instructions in the decode stage.
-  /// \return number of slot
-  virtual unsigned int getRealFetchBandwidth(void) const = 0;
-
   /// Calculate flow-dependent latency.
   /// \param [in] def
   /// \param [in] use
