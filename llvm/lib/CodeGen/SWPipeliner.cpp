@@ -101,11 +101,7 @@ SwplTargetMachine *SWPipeliner::STM = nullptr;
 AliasAnalysis *SWPipeliner::AA = nullptr;
 std::string SWPipeliner::Reason;
 SwplLoop *SWPipeliner::currentLoop = nullptr;
-
-/// the number of concurrent read instructions in the instruction fetch stage.
 unsigned SWPipeliner::FetchBandwidth = 0;
-
-/// the number of concurrent read instructions in the decode stage.
 unsigned SWPipeliner::RealFetchBandwidth = 0;
 
 /// loop normalization pass for SWPL

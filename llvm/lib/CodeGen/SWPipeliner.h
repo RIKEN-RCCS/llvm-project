@@ -844,7 +844,11 @@ public:
   static SwplLoop *currentLoop;
   static unsigned min_ii_for_retry;
   static unsigned loop_number;
+
+  /// the number of concurrent read instructions in the instruction fetch stage.
   static unsigned FetchBandwidth;
+
+  /// the number of concurrent read instructions in the decode stage.
   static unsigned RealFetchBandwidth;
 
   /// 制限抑止オプション指定の結果
