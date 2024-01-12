@@ -568,7 +568,7 @@ bool SwplSlots::isIccFreeAtBoundary(const SwplLoop& loop,
     unsigned def_block;
 
     if ((def_slot = this->at(inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
-      report_fatal_error("inst not found in inst_slot_map.");
+      report_fatal_error("inst not found in slots.");
     }
     def_block = def_slot.calcBlock(iteration_interval);
 
@@ -631,7 +631,7 @@ unsigned SwplSlots::calcLastUseCycleInBody(const SwplReg& reg,
     SwplSlot def_slot;
 
     if ((def_slot = this->at(def_inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
-      report_fatal_error("instruction not found in InstSlotHashmap.");
+      report_fatal_error("instruction not found in Slots.");
     }
     last_use_cycle = def_slot.calcCycle();
   } else {

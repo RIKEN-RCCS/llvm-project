@@ -375,7 +375,7 @@ void SwplMrt::printInstRotation(raw_ostream &stream,
   /* inst_slot_mapからrotationの値を取得する */
 
   if ((slot = slots.at(inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
-    report_fatal_error("instruction not found in InstSlotHashmap.");
+    report_fatal_error("instruction not found in Slots.");
   }
 
   unsigned max_slot = SwplSlot::baseSlot(ii);
