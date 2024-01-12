@@ -370,20 +370,18 @@ void SwplMrt::printInstRotation(raw_ostream &stream,
                                 const SwplSlots& slots,
                                 const SwplInst* inst, unsigned ii) {
   SwplSlot slot;
-  
-
   int rotation;
 
   /* inst_slot_mapからrotationの値を取得する */
 
-  if (!(slot = slots.at(inst->inst_ix))) {
+  if ((slot = slots.at(inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
     report_fatal_error("instruction not found in InstSlotHashmap.");
   }
 
   unsigned max_slot = SwplSlot::baseSlot(ii);
-  for(auto& t : slots) {
-    if(t == 0) continue;  // 最大値が0になることは無いからいらない？
-    if(max_slot < t) max_slot = t;
+  for (auto& t : slots) {
+    if (t == SwplSlot::UNCONFIGURED_SLOT) continue;
+    if (max_slot < t) max_slot = t;
   }
 
   unsigned max_cycle = max_slot / SWPipeliner::FetchBandwidth;
@@ -645,7 +643,7 @@ unsigned SwplTrialState::calculateLatestCycle(const SwplInst& inst) {
 
     // successor_instが、inst_slot_mapに存在しているか
     // 存在する場合はSlot番号をsuccessor_slotに取得
-    if (!(successor_slot = slots->at(successor_inst->inst_ix))) {
+    if ((successor_slot = slots->at(successor_inst->inst_ix)) == successor_slot.UNCONFIGURED_SLOT) {
       // successor_instが、inst_slot_mapに存在していなければ、次のsuccessorを探す
       if( OptionDumpEveryInst ) {
         dbgs() << "successor_inst : " << successor_inst->getName() << " (not placed)\n";
@@ -737,7 +735,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
 unsigned SwplTrialState::getNewScheduleCycle(const SwplInst& inst) {
   SwplSlot slot;
 
-  if(last_slots->at(inst.inst_ix)){
+  if (last_slots->at(inst.inst_ix) != SwplSlot::UNCONFIGURED_SLOT) {
     slot = last_slots->at(inst.inst_ix);
     slot = slot -
            SWPipeliner::FetchBandwidth; // FetchBandwidthを引けば、1cycle前のいずれかのslotとなる
@@ -839,7 +837,7 @@ void SwplTrialState::unsetDependenceConstrainedInsts(SlotInstPipeline& SIP) {
     unsigned predecessor_cycle;
     int delay;
 
-    if(!(predecessor_slot = slots->at(predecessor_inst->inst_ix))) {
+    if((predecessor_slot = slots->at(predecessor_inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
       continue;
     }
     predecessor_cycle = predecessor_slot.calcCycle();
@@ -896,7 +894,7 @@ void SwplTrialState::unsetInst(const SwplInst& inst) {
   inst_queue->insert( std::make_pair( priority, &inst ) );
 
   // 配置済みSlotマップから、Instが配置されたSlotを除外
-  slots->at(inst.inst_ix) = 0;
+  slots->at(inst.inst_ix) = SwplSlot::UNCONFIGURED_SLOT;
 
   // MRTからInstを除外
   mrt->cancelResourcesForInst( inst );
@@ -1532,7 +1530,7 @@ SwplMsResourceResult SwplMsResult::isHardRegsSufficient(const SwplPlanSpec & spe
   ms_resource_result.setNecessaryPreg(n_necessary_regs);
 
 
-  if ( !(slots->isIccFreeAtBoundary(spec.loop, ii)) ) {
+  if (!(slots->isIccFreeAtBoundary(spec.loop, ii))) {
     ms_resource_result.setSufficientWithArg(false);
   }
 
@@ -2237,7 +2235,7 @@ SwplMsResult *SwplMsResult::calculateMsResultByBinarySearch(SwplPlanSpec spec) {
    * ms_result_childのiiがend_iiより必ず小さいので採用する
    */
   if(ms_result_child ) {
-    if( ms_result_child->slots != nullptr) {
+    if(ms_result_child->slots != nullptr) {
       if (ms_result) {
         if(ms_result->slots != nullptr) {
           delete ms_result->slots;
@@ -2274,7 +2272,7 @@ SwplMsResult::calculateMsResultAtSpecifiedII(SwplPlanSpec spec, unsigned ii, Pro
   ms_result->outputDebugMessageForSchedulingResult(spec);
 
   /* binary searchを行なう際は, effective以上のものしか受け入れない*/
-  if ( !ms_result->isModerate() &&
+  if (!ms_result->isModerate() &&
        ms_result->slots != nullptr) {
     delete ms_result->slots;
     ms_result->slots = nullptr;

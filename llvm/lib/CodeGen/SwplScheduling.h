@@ -107,8 +107,8 @@ class SwplTrialState {
   unsigned iteration_interval;             ///< Iteration Interval（Initiation Interval）
   SwplInstIntMap* priorities;              ///< SwplInstと優先度(priority)の組のMap
   SwplInstPrioque* inst_queue;             ///< 未配置命令のキュー
-  SwplSlots* slots;                        ///< Slot番号の組の動的配列
-  SwplSlots* last_slots;                   ///< 前回配置の状態を記録するlast_slot
+  SwplSlots* slots;                        ///< Arrangement of slot numbers
+  SwplSlots* last_slots;                   ///< Record the state of the previous placement last_slot
   SwplMrt* mrt;                            ///< MRT。{resourceID, SwplInst}のmapのVector
 
 public:
@@ -305,7 +305,6 @@ public:
                       SwplSlots *slots,
                       raw_ostream &stream );
   static void dumpSSMoveinfo(raw_ostream &stream, const SwplSSMoveinfo &v);
-  // static bool adjustSlot(SwplInstSlotHashmap& ism, SwplSSMoveinfo &v);
   static bool adjustSlot(SwplSlots& slots, SwplSSMoveinfo &v);
 };
 

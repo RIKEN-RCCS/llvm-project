@@ -1026,7 +1026,7 @@ void SwplTransformMIR::importPlan() {
   for (auto& slot:ioplan.Slots) {
     /// \note スケジューリングが必要な命令に対し、指示が不足しているかは確認していない。
     /// また、指示で指定した命令IDが、存在範囲外かも確認していない
-    Slots[Loop.getBodyInst(slot.id).inst_ix]=slot.slot+ioplan.begin_slot;
+    Slots.at(Loop.getBodyInst(slot.id).inst_ix)=slot.slot+ioplan.begin_slot;
   }
 }
 

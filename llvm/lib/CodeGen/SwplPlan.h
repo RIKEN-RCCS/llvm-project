@@ -68,6 +68,8 @@ public:
   static SwplSlot constructFromBlock(unsigned block, unsigned iteration_interval);
   static SwplSlot slotMax();
   static SwplSlot slotMin();
+
+  static const unsigned UNCONFIGURED_SLOT = 0;
 };
 
 

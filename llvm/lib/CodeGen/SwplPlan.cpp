@@ -434,8 +434,8 @@ size_t SwplSlots::calcPrologBlocks(const SwplLoop& c_loop,
 SwplSlot SwplSlots::findFirstSlot(const SwplLoop& c_loop) {
   SwplSlot first_slot = SwplSlot::slotMax();
 
-  for(auto &slot : *this) {
-    if (slot == 0) continue;
+  for (auto &slot : *this) {
+    if (slot == SwplSlot::UNCONFIGURED_SLOT) continue;
     first_slot = (first_slot < slot) ? first_slot : slot;
   }
   return first_slot;
@@ -450,8 +450,8 @@ SwplSlot SwplSlots::findFirstSlot(const SwplLoop& c_loop) {
 SwplSlot SwplSlots::findLastSlot(const SwplLoop& c_loop) {
   SwplSlot last_slot = SwplSlot::slotMin();
 
-  for(auto &slot : *this) {
-    if (slot == 0) continue;
+  for (auto &slot : *this) {
+    if (slot == SwplSlot::UNCONFIGURED_SLOT) continue;
     last_slot = (last_slot > slot) ? last_slot : slot;
   }
   return last_slot;
@@ -489,7 +489,7 @@ size_t SwplSlots::calcKernelBlocks(const SwplLoop& c_loop,
 /// \return instが配置されたslot番号（begin_slot起点）
 unsigned SwplSlots::getRelativeInstSlot(const SwplInst& c_inst,
                                                   const SwplSlot& begin_slot) const {
-  assert(this->at(c_inst.inst_ix));
+  assert(this->at(c_inst.inst_ix) != SwplSlot::UNCONFIGURED_SLOT);
   return this->at(c_inst.inst_ix) - begin_slot;
 }
 
@@ -507,11 +507,11 @@ size_t SwplSlots::calcNRenamingVersions(const SwplLoop& c_loop,
   size_t necessary_n_renaming_versions;
 
   max_live_cycles = 1;
-  for(auto* def_inst : c_loop.getBodyInsts()) {
+  for (auto* def_inst : c_loop.getBodyInsts()) {
     SwplSlot def_slot;
     size_t def_cycle;
 
-    assert(this->at(def_inst->inst_ix));
+    assert(this->at(def_inst->inst_ix) != SwplSlot::UNCONFIGURED_SLOT);
     def_slot = this->at(def_inst->inst_ix);
     def_cycle = def_slot.calcCycle();
     for( auto reg : def_inst->getDefRegs() ) {
@@ -567,7 +567,7 @@ bool SwplSlots::isIccFreeAtBoundary(const SwplLoop& loop,
     SwplSlot def_slot;
     unsigned def_block;
 
-    if (!(def_slot = this->at(inst->inst_ix))) {
+    if ((def_slot = this->at(inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
       report_fatal_error("inst not found in inst_slot_map.");
     }
     def_block = def_slot.calcBlock(iteration_interval);
@@ -630,7 +630,7 @@ unsigned SwplSlots::calcLastUseCycleInBody(const SwplReg& reg,
   if (def_inst->isBodyInst()) {
     SwplSlot def_slot;
 
-    if (!(def_slot = this->at(def_inst->inst_ix))) {
+    if ((def_slot = this->at(def_inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
       report_fatal_error("instruction not found in InstSlotHashmap.");
     }
     last_use_cycle = def_slot.calcCycle();
@@ -653,10 +653,9 @@ unsigned SwplSlots::calcLastUseCycleInBody(const SwplReg& reg,
     } else if( use_inst->isBodyInst() ) {
       SwplSlot use_slot;
 
-      if (!(use_slot = this->at(use_inst->inst_ix))) {
+      if ((use_slot = this->at(use_inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
         report_fatal_error("instruction not found in Slots.");
       }
-      use_slot = this->at(use_inst->inst_ix);
       use_cycle = use_slot.calcCycle();
     } else {
       llvm_unreachable("unexpected use_inst.");
@@ -676,10 +675,10 @@ void SwplSlots::getMaxMinSlot(SwplSlot& max_slot, SwplSlot& min_slot) {
   SwplSlot max=0;
   SwplSlot min=SwplSlot::slotMax();
 
-  for(auto& mp : *this) {
-    if(mp == 0) continue;
-    if(max < mp) max=mp;
-    if(min > mp) min=mp;
+  for (auto& mp : *this) {
+    if (mp == SwplSlot::UNCONFIGURED_SLOT) continue;
+    if (max < mp) max=mp;
+    if (min > mp) min=mp;
   }
   max_slot = max;
   min_slot = min;
@@ -719,8 +718,8 @@ SwplSlot SwplSlots::getEmptySlotInCycle( unsigned cycle,
 
   unsigned target_modulo_cycle = cycle % iteration_interval;
 
-  for(auto& mp : *this) {
-    if (mp == 0) continue;
+  for (auto& mp : *this) {
+    if (mp == SwplSlot::UNCONFIGURED_SLOT) continue;
     unsigned modulo_cycle = mp.calcCycle() % iteration_interval;
     if(target_modulo_cycle == modulo_cycle) {
       openslot[mp.calcFetchSlot()] = false; // 使用済み
@@ -756,7 +755,7 @@ void SwplSlots::dump(const SwplLoop& c_loop) {
   int ix = 0;
 
   for(auto* inst : c_loop.getBodyInsts()) {
-    if(this->at(ix))
+    if (this->at(ix) != SwplSlot::UNCONFIGURED_SLOT)
       table[(this->at(ix) - min_slot)] = inst;
     ix++;
   }
