@@ -31,7 +31,7 @@ private:
 
 
   SwplPlan &Plan; ///< 処理対象のスケジュールプラン
-  SwplInstSlotHashmap &InstSlotMap; ///< Planの命令配置
+  SwplSlots &Slots; ///< Planの命令配置
   SwplLoop &Loop; ///< 処理対象のループ
   DebugLoc LoopLoc; ///< 対象ループのソース情報
   SwplTransformedMIRInfo TMI; ///< 変換に必要な回転数などの情報
@@ -172,7 +172,7 @@ public:
   /// \param [in] plan スケジューリング計画
   /// \param [in] liveOutReg 対象ループから出力Busyとなるレジスタ（スケジューリング結果反映時にレジスタ修正範囲を特定するために利用）
   SwplTransformMIR(llvm::MachineFunction &mf, SwplPlan&plan, SwplScr::UseMap &liveOutReg)
-  :Plan(plan),InstSlotMap(plan.getInstSlotMap()),Loop(plan.getLoop()),MF(mf),LiveOutReg(liveOutReg) {
+  :Plan(plan),Slots(plan.getInstSlotMap()),Loop(plan.getLoop()),MF(mf),LiveOutReg(liveOutReg) {
     LoopLoc = Loop.getML()->getStartLoc();
   }
 

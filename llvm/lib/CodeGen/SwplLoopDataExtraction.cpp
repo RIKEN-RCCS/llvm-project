@@ -215,6 +215,7 @@ void SwplLoop::makeBodyInsts(Register2SwplRegMap &rmap) {
   MachineInstr*cmp=nullptr;
   MachineInstr*addsub=nullptr;
   MachineBasicBlock *mbb=getML()->getTopBlock();
+  int ix = 0;
   SWPipeliner::TII->findMIsForLoop(*mbb, &branch, &cmp, &addsub);
   for (auto &MI:getNewBodyMBB()->instrs()) {
     if (MI.isDebugInstr()) { continue; }
@@ -223,6 +224,8 @@ void SwplLoop::makeBodyInsts(Register2SwplRegMap &rmap) {
     if (MI.isBranch()) { continue; }
     SwplInst *inst = new SwplInst(&MI, &*this);
     inst->InitializeWithDefUse(&MI, &*this, rmap, getPreviousInsts(), &(getMems()), &(getMemsOtherBody()));
+    inst->inst_ix = ix;
+    ix++;
     addBodyInsts(inst);
   }
 }

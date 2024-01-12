@@ -31,12 +31,12 @@ namespace llvm{
 bool SwplPlan::existsPragma = false;
 
 /// \brief instが配置されたslot番号（begin_slot起点）を返す
-/// \details SwplPlan.inst_slot_mapに配置されたinstを探し、
+/// \details SwplPlan.slotsに配置されたinstを探し、
 ///          begin_slot起点のslot番号を返す
 /// \param [in] c_inst
 /// \return instが配置されたslot番号（begin_slot起点）
 unsigned SwplPlan::relativeInstSlot(const SwplInst& c_inst) const {
-  return inst_slot_map.getRelativeInstSlot(c_inst, begin_slot);
+  return slots.getRelativeInstSlot(c_inst, begin_slot);
 }
 
 /// \brief 命令が配置された範囲のCycle数を返す
@@ -75,7 +75,7 @@ void SwplPlan::dumpInstTable(raw_ostream &stream) {
 
   for( auto inst : loop.getBodyInsts() ) {
     unsigned slot;
-    slot = inst_slot_map.getRelativeInstSlot(*inst, begin_slot);
+    slot = slots.getRelativeInstSlot(*inst, begin_slot);
     table[slot] = inst;
   }
   stream << "\n\t( MachineInstr* : OpcodeName )\n";
@@ -111,7 +111,7 @@ void SwplPlan::dumpInstTable(raw_ostream &stream) {
 /// \brief registerが足りているかを判定する
 /// \details renaming_versionsでregisterが足りるかを判定する
 /// \param [in] c_loop ループ情報
-/// \param [in] c_inst_slot_map スケジューリング結果
+/// \param [in] slots スケジューリング結果
 /// \param [in] iteration_interval iteration interval
 /// \param [in] n_renaming_versions renaming versions
 /// \retval true 足りる
@@ -120,7 +120,7 @@ void SwplPlan::dumpInstTable(raw_ostream &stream) {
 /// \note 固定割付けでないレジスタが、整数、浮動小数点数、プレディケートであることが前提の処理である。
 /// \note CCRegは固定割付けのため処理しない。
 bool SwplPlan::isSufficientWithRenamingVersions(const SwplLoop& c_loop,
-                                                const SwplInstSlotHashmap& c_inst_slot_map,
+                                                const SwplSlots& slots,
                                                 unsigned iteration_interval,
                                                 unsigned n_renaming_versions) {
   SwplMsResourceResult ms_resource_result;
@@ -128,22 +128,22 @@ bool SwplPlan::isSufficientWithRenamingVersions(const SwplLoop& c_loop,
 
   ms_resource_result.init();
 
-  n_necessary_regs = SwplRegEstimate::calcNumRegs(c_loop, &c_inst_slot_map, iteration_interval,
+  n_necessary_regs = SwplRegEstimate::calcNumRegs(c_loop, &slots, iteration_interval,
                                                   llvm::StmRegKind::getIntRegID(),
                                                   n_renaming_versions);
   ms_resource_result.setNecessaryIreg(n_necessary_regs);
 
-  n_necessary_regs = SwplRegEstimate::calcNumRegs(c_loop, &c_inst_slot_map, iteration_interval,
+  n_necessary_regs = SwplRegEstimate::calcNumRegs(c_loop, &slots, iteration_interval,
                                                   llvm::StmRegKind::getFloatRegID(),
                                                   n_renaming_versions);
   ms_resource_result.setNecessaryFreg(n_necessary_regs);
 
-  n_necessary_regs = SwplRegEstimate::calcNumRegs(c_loop, &c_inst_slot_map, iteration_interval,
+  n_necessary_regs = SwplRegEstimate::calcNumRegs(c_loop, &slots, iteration_interval,
                                                   llvm::StmRegKind::getPredicateRegID(),
                                                   n_renaming_versions);
   ms_resource_result.setNecessaryPreg(n_necessary_regs);
 
-  if ( !(c_inst_slot_map.isIccFreeAtBoundary(c_loop, iteration_interval)) ) {
+  if ( !(slots.isIccFreeAtBoundary(c_loop, iteration_interval)) ) {
     ms_resource_result.setSufficientWithArg(false);
   }
 
@@ -154,13 +154,13 @@ bool SwplPlan::isSufficientWithRenamingVersions(const SwplLoop& c_loop,
 /// \details SwplPlanを取得し、スケジューリング結果からSwplPlanの要素を設定する。
 ///          SwplPlanは、schedulingが完了した後, transform mirへ渡す情報となる。
 /// \param [in] c_loop ループを構成する命令の情報
-/// \param [in] inst_slot_map スケジューリング結果
+/// \param [in] slots スケジューリング結果
 /// \param [in] min_ii 計算されたMinII
 /// \param [in] ii スケジュールで採用されたII
 /// \param [in] resource スケジュールで利用する資源情報
 /// \return スケジューリング結果を設定したSwplPlanを返す。
 SwplPlan* SwplPlan::construct(const SwplLoop& c_loop,
-                              SwplInstSlotHashmap& inst_slot_map,
+                              SwplSlots& slots,
                               unsigned min_ii,
                               unsigned ii,
                               const SwplMsResourceResult& resource) {
@@ -169,15 +169,15 @@ SwplPlan* SwplPlan::construct(const SwplLoop& c_loop,
 
   plan->minimum_iteration_interval = min_ii;
   plan->iteration_interval = ii;
-  plan->inst_slot_map = inst_slot_map;
+  plan->slots = slots;
 
-  prolog_blocks = inst_slot_map.calcPrologBlocks(plan->loop, ii);
-  kernel_blocks = inst_slot_map.calcKernelBlocks(plan->loop, ii);
+  prolog_blocks = slots.calcPrologBlocks(plan->loop, ii);
+  kernel_blocks = slots.calcKernelBlocks(plan->loop, ii);
   plan->n_iteration_copies = prolog_blocks + kernel_blocks;
   plan->n_renaming_versions
-    = inst_slot_map.calcNRenamingVersions(plan->loop, ii);
+    = slots.calcNRenamingVersions(plan->loop, ii);
 
-  plan->begin_slot = inst_slot_map.findBeginSlot(plan->loop, ii);
+  plan->begin_slot = slots.findBeginSlot(plan->loop, ii);
   plan->end_slot = SwplSlot::baseSlot(ii) + 1;
 
   plan->prolog_cycles = prolog_blocks * ii;
@@ -213,17 +213,18 @@ void SwplPlan::destroy(SwplPlan* plan) {
 /// \retval nullptr schedule結果が得られない場合
 SwplPlan* SwplPlan::generatePlan(SwplDdg& ddg)
 {
-  SwplInstSlotHashmap inst_slot_map;
+  SwplSlots slots;
+  slots.resize(ddg.getLoopBody_ninsts());
   unsigned ii, min_ii, itr;
   SwplMsResourceResult resource;
 
   TryScheduleResult rslt =
     selectPlan(ddg,
-               inst_slot_map, &ii, &min_ii, &itr, resource);
+               slots, &ii, &min_ii, &itr, resource);
 
   switch(rslt) {
   case TryScheduleResult::TRY_SCHEDULE_SUCCESS:
-    return SwplPlan::construct( *(ddg.getLoop()), inst_slot_map, min_ii, ii, resource);
+    return SwplPlan::construct( *(ddg.getLoop()), slots, min_ii, ii, resource);
 
   case TryScheduleResult::TRY_SCHEDULE_FAIL:
     return nullptr;
@@ -321,7 +322,7 @@ unsigned SwplPlan::calcResourceMinIterationInterval(const SwplLoop& c_loop) {
 ///
 /// \param [in] c_ddg 対象の DDG
 /// \param [in] res_mii ddg に対して計算された ResMII
-/// \param [out] inst_slot_map スケジュールしたスロットのマップ
+/// \param [out] slots スケジュールしたスロットの動的配列
 /// \param [out] selected_ii スケジュールで採用された II
 /// \param [out] calculated_min_ii 計算された MinII
 /// \param [out] required_itr ソフトパイプルートを通るのに必要なイテレート数
@@ -332,7 +333,7 @@ unsigned SwplPlan::calcResourceMinIterationInterval(const SwplLoop& c_loop) {
 ///         required_itr のみ利用できる。
 TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
                                         unsigned res_mii,
-                                        SwplInstSlotHashmap** inst_slot_map,
+                                        SwplSlots** slots,
                                         unsigned* selected_ii,
                                         unsigned* calculated_min_ii,
                                         unsigned* required_itr,
@@ -351,8 +352,8 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
 
   SwplMsResult *ms_result = SwplMsResult::calculateMsResult(spec);
 
-  if (ms_result != nullptr && ms_result->inst_slot_map != nullptr) {
-    *inst_slot_map = ms_result->inst_slot_map;
+  if (ms_result != nullptr && ms_result->slots != nullptr) {
+    *slots = ms_result->slots;
     *selected_ii = ms_result->ii;
     *resource = ms_result->resource;
     delete ms_result;
@@ -366,7 +367,7 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
 /// \brief IMSでスケジューリングを行う
 ///
 /// \param [in] c_ddg 対象の DDG
-/// \param [out] rslt_inst_slot_map スケジュール結果であるスロットのマップ
+/// \param [out] rslt_slots スケジュール結果であるスロットの動的配列
 /// \param [out] selected_ii スケジュールで採用された II
 /// \param [out] calculated_min_ii 計算された MinII
 /// \param [out] required_itr ソフトパイプルートを通るのに必要なイテレート数
@@ -376,27 +377,27 @@ TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
 /// \retval TRY_SCHEDULE_FEW_ITER ループのイテレート数不足によりソフトパイプ適用不可。
 ///                               required_itr のみ利用できる。
 TryScheduleResult SwplPlan::selectPlan(const SwplDdg& c_ddg,
-                                       SwplInstSlotHashmap& rslt_inst_slot_map,
+                                       SwplSlots& rslt_slots,
                                        unsigned* selected_ii,
                                        unsigned* calculated_min_ii,
                                        unsigned* required_itr,
                                        SwplMsResourceResult& resource) {
   unsigned res_mii = calcResourceMinIterationInterval( c_ddg.getLoop() );
 
-  SwplInstSlotHashmap* inst_slot_map_tmp;
+  SwplSlots* slots_tmp;
   unsigned ii_tmp, min_ii_tmp, itr;
   SwplMsResourceResult resource_tmp;
 
   switch(trySchedule(c_ddg,
                      res_mii,
-                     &inst_slot_map_tmp,
+                     &slots_tmp,
                      &ii_tmp,
                      &min_ii_tmp,
                      &itr,
                      &resource_tmp)) {
   case TryScheduleResult::TRY_SCHEDULE_SUCCESS:
-    rslt_inst_slot_map = *inst_slot_map_tmp; // copy
-    delete inst_slot_map_tmp;
+    rslt_slots = *slots_tmp; // copy
+    delete slots_tmp;
     *selected_ii = ii_tmp;
     *calculated_min_ii = min_ii_tmp;
     *required_itr = itr;
@@ -419,38 +420,38 @@ TryScheduleResult SwplPlan::selectPlan(const SwplDdg& c_ddg,
 /// \param [in] c_loop ループを構成する命令の情報
 /// \param [in] iteration_interval II
 /// \return プロローグを構成するblock数
-size_t SwplInstSlotHashmap::calcPrologBlocks(const SwplLoop& c_loop,
+size_t SwplSlots::calcPrologBlocks(const SwplLoop& c_loop,
                                                  unsigned iteration_interval) {
   return (calcFlatScheduleBlocks(c_loop, iteration_interval) - 1);
 }
 
-/// \brief inst_slot_mapにて、命令が配置されている最初のSlot番号を返す
-/// \details inst_slot_mapにて、命令が配置されている最初のSlot番号を返す。
+/// \brief slotsにて、命令が配置されている最初のSlot番号を返す
+/// \details first_slotsにて、命令が配置されている最初のSlot番号を返す。
 /// \param [in] c_loop ループを構成する命令の情報
 /// \return 検出したスロット番号
 ///
 /// \note c_loop.BodyInstsの命令がすべて配置済みでなければならない。
-SwplSlot SwplInstSlotHashmap::findFirstSlot(const SwplLoop& c_loop) {
+SwplSlot SwplSlots::findFirstSlot(const SwplLoop& c_loop) {
   SwplSlot first_slot = SwplSlot::slotMax();
 
-  for(auto inst : const_cast<SwplLoop&>(c_loop).getBodyInsts()) {
-    SwplSlot slot = (*this)[inst];
+  for (auto &slot : *this) {
+    if (slot == SwplSlot::UNCONFIGURED_SLOT) continue;
     first_slot = (first_slot < slot) ? first_slot : slot;
   }
   return first_slot;
 }
 
-/// \brief inst_slot_mapにて、命令が配置されている最後のSlot番号を返す
-/// \details inst_slot_mapにて、命令が配置されている最後のSlot番号を返す。
+/// \brief last_slotsにて、命令が配置されている最後のSlot番号を返す
+/// \details slotsにて、命令が配置されている最後のSlot番号を返す。
 /// \param [in] c_loop ループを構成する命令の情報
 /// \return 検出したスロット番号
 ///
 /// \note c_loop.BodyInstsの命令がすべて配置済みでなければならない。
-SwplSlot SwplInstSlotHashmap::findLastSlot(const SwplLoop& c_loop) {
+SwplSlot SwplSlots::findLastSlot(const SwplLoop& c_loop) {
   SwplSlot last_slot = SwplSlot::slotMin();
 
-  for(auto inst : const_cast<SwplLoop&>(c_loop).getBodyInsts()) {
-    SwplSlot slot = (*this)[inst];
+  for (auto &slot : *this) {
+    if (slot == SwplSlot::UNCONFIGURED_SLOT) continue;
     last_slot = (last_slot > slot) ? last_slot : slot;
   }
   return last_slot;
@@ -460,7 +461,7 @@ SwplSlot SwplInstSlotHashmap::findLastSlot(const SwplLoop& c_loop) {
 /// \param [in] c_loop ループを構成する命令の情報
 /// \param [in] iteration_interval II
 /// \return スケジューリング結果のunroll前のブロック数
-size_t SwplInstSlotHashmap::calcFlatScheduleBlocks(const SwplLoop& c_loop,
+size_t SwplSlots::calcFlatScheduleBlocks(const SwplLoop& c_loop,
                                                    unsigned iteration_interval) {
   SwplSlot first_slot, last_slot;
   first_slot = findFirstSlot(c_loop);
@@ -474,7 +475,7 @@ size_t SwplInstSlotHashmap::calcFlatScheduleBlocks(const SwplLoop& c_loop,
 /// \param [in] c_loop ループを構成する命令の情報
 /// \param [in] iteration_interval II
 /// \return renaming version
-size_t SwplInstSlotHashmap::calcKernelBlocks(const SwplLoop& c_loop,
+size_t SwplSlots::calcKernelBlocks(const SwplLoop& c_loop,
                                                  unsigned iteration_interval) {
   size_t n_renaming_versions;
 
@@ -486,10 +487,10 @@ size_t SwplInstSlotHashmap::calcKernelBlocks(const SwplLoop& c_loop,
 /// \param [in] c_inst
 /// \param [in] begin_slot
 /// \return instが配置されたslot番号（begin_slot起点）
-unsigned SwplInstSlotHashmap::getRelativeInstSlot(const SwplInst& c_inst,
+unsigned SwplSlots::getRelativeInstSlot(const SwplInst& c_inst,
                                                   const SwplSlot& begin_slot) const {
-  assert( find(&(const_cast<SwplInst&>(c_inst))) != end() );
-  return  find(&(const_cast<SwplInst&>(c_inst)))->second - begin_slot;
+  assert(this->at(c_inst.inst_ix) != SwplSlot::UNCONFIGURED_SLOT);
+  return this->at(c_inst.inst_ix) - begin_slot;
 }
 
 /// \brief registerのlive rangeとiiの関係からrenaming versionを求める
@@ -500,18 +501,18 @@ unsigned SwplInstSlotHashmap::getRelativeInstSlot(const SwplInst& c_inst,
 /// \param [in] c_loop ループを構成する命令の情報
 /// \param [in] iteration_interval II
 /// \return renaming versions数
-size_t SwplInstSlotHashmap::calcNRenamingVersions(const SwplLoop& c_loop,
+size_t SwplSlots::calcNRenamingVersions(const SwplLoop& c_loop,
                                                   unsigned iteration_interval) const {
   size_t max_live_cycles;
   size_t necessary_n_renaming_versions;
 
   max_live_cycles = 1;
-  for( auto def_inst : c_loop.getBodyInsts() ) {
+  for (auto* def_inst : c_loop.getBodyInsts()) {
     SwplSlot def_slot;
     size_t def_cycle;
 
-    assert( find(def_inst) != end() );
-    def_slot = find(def_inst)->second;
+    assert(this->at(def_inst->inst_ix) != SwplSlot::UNCONFIGURED_SLOT);
+    def_slot = this->at(def_inst->inst_ix);
     def_cycle = def_slot.calcCycle();
     for( auto reg : def_inst->getDefRegs() ) {
       size_t live_cycles, last_use_cycle;
@@ -545,7 +546,7 @@ size_t SwplInstSlotHashmap::calcNRenamingVersions(const SwplLoop& c_loop,
 /// \param [in] c_loop ループを構成する命令の情報
 /// \param [in] iteration_interval II
 /// \return 最初のInstが配置されているblockの先頭Slot番号
-SwplSlot SwplInstSlotHashmap::findBeginSlot(const SwplLoop& c_loop,
+SwplSlot SwplSlots::findBeginSlot(const SwplLoop& c_loop,
                                 unsigned iteration_interval) {
   SwplSlot first_slot;
   unsigned begin_block;
@@ -560,16 +561,15 @@ SwplSlot SwplInstSlotHashmap::findBeginSlot(const SwplLoop& c_loop,
 /// \param [in] iteration_interval II
 /// \retval true ブロックを跨って使用されていない
 /// \retval false ブロックを跨って使用されている
-bool SwplInstSlotHashmap::isIccFreeAtBoundary(const SwplLoop& loop,
+bool SwplSlots::isIccFreeAtBoundary(const SwplLoop& loop,
                                              unsigned iteration_interval) const {
   for( auto inst : loop.getBodyInsts() ) {
     SwplSlot def_slot;
     unsigned def_block;
 
-    if( this->find(inst) == this->end() ) {
-      report_fatal_error("inst not found in inst_slot_map.");
+    if ((def_slot = this->at(inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
+      report_fatal_error("inst not found in slots.");
     }
-    def_slot = this->find(inst)->second;
     def_block = def_slot.calcBlock(iteration_interval);
 
     for( auto reg : inst->getDefRegs() ) {
@@ -602,7 +602,7 @@ bool SwplInstSlotHashmap::isIccFreeAtBoundary(const SwplLoop& loop,
 /// \param [in] reg 調査対象のreg
 /// \param [in] iteration_interval II
 /// \return regが最後に使われる cycle
-unsigned SwplInstSlotHashmap::calcLastUseCycleInBodyWithInheritance(const SwplReg& reg,
+unsigned SwplSlots::calcLastUseCycleInBodyWithInheritance(const SwplReg& reg,
                                                                     unsigned iteration_interval) const {
   const SwplReg* successor_reg;
 
@@ -620,7 +620,7 @@ unsigned SwplInstSlotHashmap::calcLastUseCycleInBodyWithInheritance(const SwplRe
 /// \param [in] reg 調査対象のreg
 /// \param [in] iteration_interval II
 /// \return regが最後に使われる cycle
-unsigned SwplInstSlotHashmap::calcLastUseCycleInBody(const SwplReg& reg,
+unsigned SwplSlots::calcLastUseCycleInBody(const SwplReg& reg,
                                                      unsigned iteration_interval) const {
   unsigned last_use_cycle;
   const SwplInst* def_inst;
@@ -630,13 +630,9 @@ unsigned SwplInstSlotHashmap::calcLastUseCycleInBody(const SwplReg& reg,
   if (def_inst->isBodyInst()) {
     SwplSlot def_slot;
 
-    if( this->find(def_inst) != this->end() )  {
-      def_slot = this->find(def_inst)->second;
+    if ((def_slot = this->at(def_inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
+      report_fatal_error("instruction not found in Slots.");
     }
-    else {
-      report_fatal_error("instruction not found in InstSlotHashmap.");
-    }
-
     last_use_cycle = def_slot.calcCycle();
   } else {
     last_use_cycle = SwplSlot::slotMin().calcCycle();
@@ -657,11 +653,8 @@ unsigned SwplInstSlotHashmap::calcLastUseCycleInBody(const SwplReg& reg,
     } else if( use_inst->isBodyInst() ) {
       SwplSlot use_slot;
 
-      if( this->find(use_inst) != this->end() )  {
-        use_slot = this->find(use_inst)->second;
-      }
-      else {
-        report_fatal_error("instruction not found in InstSlotHashmap.");
+      if ((use_slot = this->at(use_inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
+        report_fatal_error("instruction not found in Slots.");
       }
       use_cycle = use_slot.calcCycle();
     } else {
@@ -673,19 +666,19 @@ unsigned SwplInstSlotHashmap::calcLastUseCycleInBody(const SwplReg& reg,
   return last_use_cycle;
 }
 
-/// \brief inst_slot_map中の最大最小slotを求める。
+/// \brief slots中の最大最小slotを求める。
 /// \param [out] max_slot 最大slot
 /// \param [out] max_slot 最小slot
 /// \return なし
-void SwplInstSlotHashmap::getMaxMinSlot(SwplSlot& max_slot, SwplSlot& min_slot) {
+void SwplSlots::getMaxMinSlot(SwplSlot& max_slot, SwplSlot& min_slot) {
   assert(this->size()!=0);
   SwplSlot max=0;
   SwplSlot min=SwplSlot::slotMax();
 
-  for(auto mp : *this) {
-    SwplSlot tmp = mp.second;
-    if(max < tmp) max=tmp;
-    if(min > tmp) min=tmp;
+  for (auto& mp : *this) {
+    if (mp == SwplSlot::UNCONFIGURED_SLOT) continue;
+    if (max < mp) max=mp;
+    if (min > mp) min=mp;
   }
   max_slot = max;
   min_slot = min;
@@ -697,7 +690,7 @@ void SwplInstSlotHashmap::getMaxMinSlot(SwplSlot& max_slot, SwplSlot& min_slot) 
 /// \param [in] iteration_interval II
 /// \param [in] isvirtual 仮想命令用の空きSlotを探すのであればtrue
 /// \return cycleのうち、命令が配置されていないslot
-SwplSlot SwplInstSlotHashmap::getEmptySlotInCycle( unsigned cycle,
+SwplSlot SwplSlots::getEmptySlotInCycle( unsigned cycle,
                                                    unsigned iteration_interval,
                                                    bool isvirtual ) {
   // InstSlotHashmapを２次元配列で表したイメージは以下のとおり。
@@ -725,10 +718,11 @@ SwplSlot SwplInstSlotHashmap::getEmptySlotInCycle( unsigned cycle,
 
   unsigned target_modulo_cycle = cycle % iteration_interval;
 
-  for( auto mp : *this ) {
-    unsigned modulo_cycle = mp.second.calcCycle() % iteration_interval;
-    if( target_modulo_cycle == modulo_cycle ) {
-      openslot[mp.second.calcFetchSlot()] = false; // 使用済み
+  for (auto& mp : *this) {
+    if (mp == SwplSlot::UNCONFIGURED_SLOT) continue;
+    unsigned modulo_cycle = mp.calcCycle() % iteration_interval;
+    if(target_modulo_cycle == modulo_cycle) {
+      openslot[mp.calcFetchSlot()] = false; // 使用済み
     }
   }
   for( unsigned idx=0; idx<bandwidth; idx++) {
@@ -740,7 +734,7 @@ SwplSlot SwplInstSlotHashmap::getEmptySlotInCycle( unsigned cycle,
 }
 
 /// \brief デバッグ用ダンプ
-void SwplInstSlotHashmap::dump() {
+void SwplSlots::dump(const SwplLoop& c_loop) {
   if( this->size() == 0 ) {
       dbgs() << "Nothing...\n";
       return;
@@ -758,9 +752,12 @@ void SwplInstSlotHashmap::dump() {
 
   size_t table_size = (size_t)max_slot - (size_t)min_slot;
   std::vector<SwplInst*> table(table_size, nullptr);
+  int ix = 0;
 
-  for( auto mp : *this ) {
-    table[(mp.second - min_slot)] = mp.first;
+  for(auto* inst : c_loop.getBodyInsts()) {
+    if (this->at(ix) != SwplSlot::UNCONFIGURED_SLOT)
+      table[(this->at(ix) - min_slot)] = inst;
+    ix++;
   }
 
   for (unsigned i = 0; i < table_size; ++i) {

@@ -68,11 +68,13 @@ public:
   static SwplSlot constructFromBlock(unsigned block, unsigned iteration_interval);
   static SwplSlot slotMax();
   static SwplSlot slotMin();
+
+  static const unsigned UNCONFIGURED_SLOT = 0;
 };
 
 
-/// \brief スケジューリング結果となるSwplInstとSwplSlotのMap
-class SwplInstSlotHashmap : public llvm::DenseMap<SwplInst*, SwplSlot> {
+/// \brief Dynamic array of SwplSlots that result in scheduling
+class SwplSlots : public std::vector<SwplSlot> {
 public:
   size_t calcFlatScheduleBlocks(const SwplLoop& c_loop, unsigned iteration_interval);
   size_t calcPrologBlocks(const SwplLoop& loop, unsigned iteration_interval);
@@ -87,7 +89,14 @@ public:
   unsigned calcLastUseCycleInBodyWithInheritance(const SwplReg& reg, unsigned iteration_interval) const;
   unsigned calcLastUseCycleInBody(const SwplReg& reg, unsigned iteration_interval) const;
   SwplSlot getEmptySlotInCycle( unsigned cycle, unsigned iteration_interval, bool isvirtual );
-  void dump();
+  size_t size() const {
+    size_t s = 0;
+    for (auto& t : *this) {
+      if (t) s++;
+    }
+    return s;
+  }
+  void dump(const SwplLoop& c_loop);
 };
 
 class SwplMsResourceResult;
@@ -96,7 +105,7 @@ class SwplMsResourceResult;
 /// \details transform mirへ渡す情報となる
 class SwplPlan {
   const SwplLoop& loop;              ///< スケジューリング対象のループ情報
-  SwplInstSlotHashmap inst_slot_map; ///< スケジューリング結果
+  SwplSlots slots; ///< スケジューリング結果
   unsigned minimum_iteration_interval;   ///< min II。スケジューリング試行を開始したII
   unsigned iteration_interval; ///< スケジューリング結果のII
   size_t n_iteration_copies;   ///< prolog+kernelのブロック数。ブロックはII単位となる。
@@ -121,8 +130,8 @@ public:
   // getters
   const SwplLoop& getLoop() const { return loop; } ///< getter
   SwplLoop& getLoop() { return const_cast<SwplLoop&>(loop); } ///< getter
-  SwplInstSlotHashmap& getInstSlotMap() { return inst_slot_map ; } ///< getter
-  const SwplInstSlotHashmap& getInstSlotMap() const { return inst_slot_map ; } ///< getter
+  SwplSlots& getInstSlotMap() { return slots ; } ///< getter
+  const SwplSlots& getInstSlotMap() const { return slots ; } ///< getter
   unsigned getMinimumIterationInterval() const { return minimum_iteration_interval; } ///< getter
   unsigned getIterationInterval() const { return iteration_interval; } ///< getter
   size_t getNIterationCopies() const { return n_iteration_copies; } ///< getter
@@ -163,11 +172,11 @@ public:
   void dumpInstTable(raw_ostream &stream);
 
   static bool isSufficientWithRenamingVersions(const SwplLoop& c_loop,
-                                               const SwplInstSlotHashmap& c_inst_slot_map,
+                                               const SwplSlots& c_slots,
                                                unsigned iteration_interval,
                                                unsigned n_renaming_versions);
   static SwplPlan* construct(const SwplLoop& c_loop,
-                             SwplInstSlotHashmap& inst_slot_map,
+                             SwplSlots& slots,
                              unsigned min_ii,
                              unsigned ii,
                              const SwplMsResourceResult& resource);
@@ -179,13 +188,13 @@ private:
   static unsigned calcResourceMinIterationInterval(const SwplLoop& c_loop);
   static TryScheduleResult trySchedule(const SwplDdg& c_ddg,
                                        unsigned res_mii,
-                                       SwplInstSlotHashmap** inst_slot_map,
+                                       SwplSlots** slots,
                                        unsigned* selected_ii,
                                        unsigned* calculated_min_ii,
                                        unsigned* required_itr,
                                        SwplMsResourceResult* resource);
   static TryScheduleResult selectPlan(const SwplDdg& c_ddg,
-                                      SwplInstSlotHashmap& rslt_inst_slot_map,
+                                      SwplSlots& rslt_slots,
                                       unsigned* selected_ii,
                                       unsigned* calculated_min_ii,
                                       unsigned* required_itr,

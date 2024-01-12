@@ -222,7 +222,7 @@ void SwplMrt::cancelResourcesForInst(const SwplInst& inst) {
 /// \param [in] inst_slot_map
 /// \param [in] stream 出力stream
 /// \return なし
-void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream) {
+void SwplMrt::dump(const SwplSlots& slots, raw_ostream &stream) {
   unsigned modulo_cycle;
   StmResourceId resource_id;
   unsigned res_max_length = 0;
@@ -241,7 +241,7 @@ void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream
   }
 
   inst_gen_width = std::max( getMaxOpcodeNameLength()+1, res_max_length);  // 1 = 'p|f' の分
-  inst_rotation_width = ( inst_slot_map.size() > 0 ) ? 4 : 0;              // 4 = '(n) 'の分
+  inst_rotation_width = ( slots.size() > 0 ) ? 4 : 0;              // 4 = '(n) 'の分
   word_width = inst_gen_width+inst_rotation_width;
 
   // Resource名の出力
@@ -277,7 +277,7 @@ void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream
         // オペコード名と回転数の出力
         printInstMI(stream, pr->second /* inst */, inst_gen_width);
         if( inst_rotation_width != 0 ) {
-          printInstRotation( stream, inst_slot_map, pr->second /* inst */, ii);
+          printInstRotation( stream, slots, pr->second /* inst */, ii);
         }
       }
     }
@@ -289,7 +289,7 @@ void SwplMrt::dump(const SwplInstSlotHashmap& inst_slot_map, raw_ostream &stream
 /// \brief デバッグ向けMRTダンプ
 /// \details デバッグ向けMRTダンプ。inst_slot_mapを用いたrotationは出力しない。
 void SwplMrt::dump() {
-  SwplInstSlotHashmap dummy;
+  SwplSlots dummy;
   dbgs() << " iteration_interval = " << iteration_interval << "\n";
   dump( dummy, dbgs() );
   return;
@@ -367,23 +367,21 @@ void SwplMrt::printInstMI(raw_ostream &stream,
 /// \param [in] ii iteration interval
 /// \detaile  Instの回転数を '(n) 'の形式で出力する。
 void SwplMrt::printInstRotation(raw_ostream &stream,
-                                const SwplInstSlotHashmap& inst_slot_map,
+                                const SwplSlots& slots,
                                 const SwplInst* inst, unsigned ii) {
   SwplSlot slot;
   int rotation;
 
   /* inst_slot_mapからrotationの値を取得する */
 
-  if( inst_slot_map.find(inst) != inst_slot_map.end() )  {
-    slot = inst_slot_map.find(inst)->second;
-  }
-  else {
-    report_fatal_error("instruction not found in InstSlotHashmap.");
+  if ((slot = slots.at(inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
+    report_fatal_error("instruction not found in Slots.");
   }
 
   unsigned max_slot = SwplSlot::baseSlot(ii);
-  for(auto pair : inst_slot_map ) {
-    if( max_slot < pair.second ) max_slot = pair.second;
+  for (auto& t : slots) {
+    if (t == SwplSlot::UNCONFIGURED_SLOT) continue;
+    if (max_slot < t) max_slot = t;
   }
 
   unsigned max_cycle = max_slot / SWPipeliner::FetchBandwidth;
@@ -587,7 +585,7 @@ bool SwplTrialState::tryNext() {
     dbgs() << " SIP.slot             : " << SIP.slot << "\n";
     dbgs() << " SIP.slot.calcCycle() : " << SIP.slot.calcCycle() << "\n";
     getMrt()->dump();
-    getInstSlotMap()->dump();
+    getInstSlotMap()->dump(modulo_ddg.getLoop());
   }
 
   return true;
@@ -612,7 +610,7 @@ void SwplTrialState::dump( raw_ostream &stream ) {
   stream <<":\n";
   stream << "(mrt\n";
   stream << "  II = " << iteration_interval << "\n";
-  mrt->dump(*inst_slot_map, stream);
+  mrt->dump(*slots, stream);
   stream <<  ")\n";
   return;
 }
@@ -638,21 +636,20 @@ unsigned SwplTrialState::calculateLatestCycle(const SwplInst& inst) {
   latest_cycle = SwplSlot::baseSlot(iteration_interval).calcCycle();
 
   // instのsuccessorの個数分ループ
-  for( auto successor_inst : modulo_ddg.getSuccessors(inst) ) {
+  for( auto* successor_inst : modulo_ddg.getSuccessors(inst) ) {
     SwplSlot successor_slot;
     unsigned cycle;
     int delay;
 
     // successor_instが、inst_slot_mapに存在しているか
     // 存在する場合はSlot番号をsuccessor_slotに取得
-    if( inst_slot_map->find(successor_inst) == inst_slot_map->end() ) {
+    if ((successor_slot = slots->at(successor_inst->inst_ix)) == successor_slot.UNCONFIGURED_SLOT) {
       // successor_instが、inst_slot_mapに存在していなければ、次のsuccessorを探す
       if( OptionDumpEveryInst ) {
         dbgs() << "successor_inst : " << successor_inst->getName() << " (not placed)\n";
       }
       continue;
     }
-    successor_slot = inst_slot_map->find(successor_inst)->second;
 
     // inst→successor_instのdelayを取得
     delay = modulo_ddg.getDelay(inst, *successor_inst);
@@ -700,7 +697,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
 
     // cycleに空きSlotがあるかを確認
     bool isvirtual = SWPipeliner::STM->isPseudo(mi);
-    SwplSlot slot = inst_slot_map->getEmptySlotInCycle( cycle, iteration_interval, isvirtual );
+    SwplSlot slot = slots->getEmptySlotInCycle( cycle, iteration_interval, isvirtual );
     if( slot != SWPL_ILLEGAL_SLOT) {
       // 空きslotあり
 
@@ -738,8 +735,8 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
 unsigned SwplTrialState::getNewScheduleCycle(const SwplInst& inst) {
   SwplSlot slot;
 
-  if( inst_last_slot_map->find(&inst) != inst_last_slot_map->end() ){
-    slot = inst_last_slot_map->find(&inst)->second;
+  if (last_slots->at(inst.inst_ix) != SwplSlot::UNCONFIGURED_SLOT) {
+    slot = last_slots->at(inst.inst_ix);
     slot = slot -
            SWPipeliner::FetchBandwidth; // FetchBandwidthを引けば、1cycle前のいずれかのslotとなる
   }
@@ -764,7 +761,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::latestValidSlot(const SwplInst&
 
   // cycle単位に資源の空きを確認する。
   for (; begin_cycle != end_cycle; begin_cycle-- ) {
-    SwplSlot slot = inst_slot_map->getEmptySlotInCycle( begin_cycle, iteration_interval, isvirtual );
+    SwplSlot slot = slots->getEmptySlotInCycle( begin_cycle, iteration_interval, isvirtual );
     if( slot != SWPL_ILLEGAL_SLOT) {
       if( isvirtual ) {
         return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), nullptr );
@@ -840,10 +837,9 @@ void SwplTrialState::unsetDependenceConstrainedInsts(SlotInstPipeline& SIP) {
     unsigned predecessor_cycle;
     int delay;
 
-    if( inst_slot_map->find(predecessor_inst) == inst_slot_map->end() ) {
+    if((predecessor_slot = slots->at(predecessor_inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
       continue;
     }
-    predecessor_slot = inst_slot_map->find(predecessor_inst)->second;
     predecessor_cycle = predecessor_slot.calcCycle();
     delay = modulo_ddg.getDelay(*predecessor_inst, *(SIP.inst));
     assert ((int) (predecessor_cycle + delay) >= 0);
@@ -865,10 +861,9 @@ void SwplTrialState::unsetDependenceConstrainedInsts(SlotInstPipeline& SIP) {
 /// \param [in] SIP SlotInstPipelineブジェクト。instが配置できるslot, inst, 配置可能となったpipeline
 /// \return なし
 void SwplTrialState::setInst(SlotInstPipeline& SIP) {
-  assert (inst_slot_map->find(SIP.inst) == inst_slot_map->end() );
 
-  inst_slot_map->insert( std::make_pair( SIP.inst, SIP.slot ) );
-  inst_last_slot_map->insert( std::make_pair( SIP.inst, SIP.slot ) );
+  slots->at(SIP.inst->inst_ix) = SIP.slot;
+  last_slots->at(SIP.inst->inst_ix) = SIP.slot;
 
   if( SIP.pipeline == nullptr ) {
     assert(SWPipeliner::STM->isPseudo(*(SIP.inst->getMI())) ); // 資源情報無し＝仮想命令である
@@ -899,7 +894,7 @@ void SwplTrialState::unsetInst(const SwplInst& inst) {
   inst_queue->insert( std::make_pair( priority, &inst ) );
 
   // 配置済みSlotマップから、Instが配置されたSlotを除外
-  inst_slot_map->erase( inst_slot_map->find( &inst ) );
+  slots->at(inst.inst_ix) = SwplSlot::UNCONFIGURED_SLOT;
 
   // MRTからInstを除外
   mrt->cancelResourcesForInst( inst );
@@ -936,8 +931,10 @@ SwplTrialState* SwplTrialState::construct(const SwplModuloDdg& c_modulo_ddg) {
     state->inst_queue->insert( std::make_pair( pair.second, pair.first ) );
   }
 
-  state->inst_slot_map = new SwplInstSlotHashmap();
-  state->inst_last_slot_map = new SwplInstSlotHashmap();
+  state->slots = new SwplSlots();
+  state->slots->resize(c_modulo_ddg.getLoopBody_ninsts());
+  state->last_slots = new SwplSlots();
+  state->last_slots->resize(c_modulo_ddg.getLoopBody_ninsts());
   state->mrt = SwplMrt::construct(state->iteration_interval);
 
   return state;
@@ -951,7 +948,7 @@ void SwplTrialState::destroy(SwplTrialState* state) {
   // state->inst_slot_map は使うので destroy しない。
   delete state->priorities;
   delete state->inst_queue;
-  delete state->inst_last_slot_map;
+  delete state->last_slots;
   SwplMrt::destroy(state->mrt);
   delete state;
   return;
@@ -1379,13 +1376,13 @@ bool SwplMsResourceResult::isModerate() {
 ///  - スケジューリング結果(SwplTrialState->inst_slot_map)を、MsResultに保持させる
 ///  - SwplTrialStateを破棄 ※ただし、inst_slot_map域は残す
 bool SwplMsResult::constructInstSlotMapAtSpecifiedII(SwplPlanSpec spec) {
-  SwplInstSlotHashmap* instslotmap;
+  SwplSlots* p_slots;
   SwplModuloDdg* modulo_ddg;
   SwplTrialState* state;
   bool is_schedule_completed;
 
   is_schedule_completed = false;
-  instslotmap = nullptr;
+  p_slots = nullptr;
   modulo_ddg = SwplModuloDdg::construct(spec.ddg, ii);
   if( OptionDumpModuleDdg ) {
     modulo_ddg->dump();
@@ -1417,18 +1414,18 @@ bool SwplMsResult::constructInstSlotMapAtSpecifiedII(SwplPlanSpec spec) {
     }
   }
 
-  instslotmap = state->getInstSlotMap();
-  tried_n_insts = instslotmap->size();
+  p_slots = state->getInstSlotMap();
+  tried_n_insts = p_slots->size();
   SwplTrialState::destroy(state);
   SwplModuloDdg::destroy(modulo_ddg);
 
   if (is_schedule_completed) {
-    inst_slot_map = instslotmap;
+    slots = p_slots;
     return true;
   }  else {
-    inst_slot_map = nullptr;
+    slots = nullptr;
     /* 不完全なinst_slot_mapのため,解放する*/
-    delete instslotmap;
+    delete p_slots;
     return false;
   }
 }
@@ -1450,7 +1447,7 @@ void SwplMsResult::checkInstSlotMap(const SwplPlanSpec & spec, bool limit_reg) {
 ///
 /// \note 現在のところ,整数, predicateレジスタが不足している場合は採用していない
 void SwplMsResult::checkHardResource(const SwplPlanSpec & spec, bool limit_reg) {
-  if (inst_slot_map == nullptr || !limit_reg) {
+  if (slots == nullptr || !limit_reg) {
     is_reg_sufficient = true;
     n_insufficient_iregs = 0;
     n_insufficient_fregs = 0;
@@ -1490,7 +1487,7 @@ void SwplMsResult::checkHardResource(const SwplPlanSpec & spec, bool limit_reg) 
     }
 
     if ( resource.isIregSufficient() ) {
-      unsigned kernel_blocks = inst_slot_map->calcKernelBlocks(spec.loop, ii);
+      unsigned kernel_blocks = slots->calcKernelBlocks(spec.loop, ii);
       evaluateSpillingSchedule(spec, kernel_blocks);
     } else {
       evaluation = -1.0;
@@ -1511,14 +1508,14 @@ SwplMsResourceResult SwplMsResult::isHardRegsSufficient(const SwplPlanSpec & spe
   SwplMsResourceResult ms_resource_result;
 
   ms_resource_result.init();
-  n_renaming_versions = inst_slot_map->calcNRenamingVersions(spec.loop, ii);
+  n_renaming_versions = slots->calcNRenamingVersions(spec.loop, ii);
 
-  n_necessary_regs = SwplRegEstimate::calcNumRegs(spec.loop, inst_slot_map, ii,
+  n_necessary_regs = SwplRegEstimate::calcNumRegs(spec.loop, slots, ii,
                                                   llvm::StmRegKind::getIntRegID(),
                                                   n_renaming_versions);
   ms_resource_result.setNecessaryIreg(n_necessary_regs);
 
-  n_necessary_regs = SwplRegEstimate::calcNumRegs(spec.loop, inst_slot_map, ii,
+  n_necessary_regs = SwplRegEstimate::calcNumRegs(spec.loop, slots, ii,
                                                   llvm::StmRegKind::getFloatRegID(),
                                                   n_renaming_versions);
   if(n_necessary_regs > spec.n_fillable_float_invariants) {
@@ -1527,13 +1524,13 @@ SwplMsResourceResult SwplMsResult::isHardRegsSufficient(const SwplPlanSpec & spe
   }
   ms_resource_result.setNecessaryFreg(n_necessary_regs);
 
-  n_necessary_regs = SwplRegEstimate::calcNumRegs(spec.loop, inst_slot_map, ii,
+  n_necessary_regs = SwplRegEstimate::calcNumRegs(spec.loop, slots, ii,
                                                   llvm::StmRegKind::getPredicateRegID(),
                                                   n_renaming_versions);
   ms_resource_result.setNecessaryPreg(n_necessary_regs);
 
 
-  if ( !(inst_slot_map->isIccFreeAtBoundary(spec.loop, ii)) ) {
+  if (!(slots->isIccFreeAtBoundary(spec.loop, ii))) {
     ms_resource_result.setSufficientWithArg(false);
   }
 
@@ -1547,14 +1544,14 @@ void SwplMsResult::checkIterationCount(const SwplPlanSpec & spec) {
   required_itr_count = 0;
 
   /* スケジューリング自体がない場合は,制限にかからない */
-  if (inst_slot_map == nullptr ) {
+  if (slots == nullptr ) {
     is_itr_sufficient = true;
     return;
   }
 
   /* inst_slot_mapから展開に必要な回転数を取得する*/
-  unsigned prolog_blocks = inst_slot_map->calcPrologBlocks(spec.loop, ii);
-  unsigned kernel_blocks = inst_slot_map->calcKernelBlocks(spec.loop, ii);
+  unsigned prolog_blocks = slots->calcPrologBlocks(spec.loop, ii);
+  unsigned kernel_blocks = slots->calcKernelBlocks(spec.loop, ii);
 
   unsigned n_copies  = prolog_blocks + kernel_blocks;
   required_itr_count = n_copies; // insert_move_into_prolog is true.
@@ -1582,12 +1579,12 @@ void SwplMsResult::checkMve(const SwplPlanSpec & spec) {
   required_mve = 0;
 
   /* スケジューリング自体がない場合は,制限にかからない */
-  if (inst_slot_map == nullptr ) {
+  if (slots == nullptr ) {
     is_mve_appropriate = true;
     return;
   }
 
-  required_mve = inst_slot_map->calcKernelBlocks(spec.loop, ii);
+  required_mve = slots->calcKernelBlocks(spec.loop, ii);
   if(required_mve <= OptionMveLimit) {  // option value (default:30)
     is_mve_appropriate = true;
   } else {
@@ -1608,7 +1605,7 @@ void SwplMsResult::outputDebugMessageForSchedulingResult(SwplPlanSpec spec) {
   max_freg = 0; max_ireg = 0; max_preg = 0;
   req_freg = 0; req_ireg = 0; req_preg = 0;
 
-  if (inst_slot_map == nullptr) {
+  if (slots == nullptr) {
     /* scheduling失敗*/
     dbgs() << "        :  (x) Run out of budget      ";
   } else {
@@ -1720,7 +1717,7 @@ bool SwplMsResult::isModerate() {
 ///
 /// \note heuristicな条件は確認しない
 bool SwplMsResult::isEffective() {
-  if (inst_slot_map != nullptr &&
+  if (slots != nullptr &&
       is_itr_sufficient == true &&
       is_reg_sufficient == true &&
       is_mve_appropriate == true ) {
@@ -1740,12 +1737,12 @@ bool SwplMsResult::isEffective() {
 /// \note 現在の仕様ではregister不足でschedulingできなかった場合も,
 ///       inst_slot_mapがnullptrとなっている事に注意すること.
 void SwplMsResult::outputGiveupMessageForEstimate(SwplPlanSpec & spec) {
-  assert(inst_slot_map == nullptr ||
+  assert(slots == nullptr ||
          !(is_reg_sufficient &&
            is_itr_sufficient &&
            is_mve_appropriate));
 
-  if (inst_slot_map != nullptr) {
+  if (slots != nullptr) {
     /* schedulingに成功したが,レジスタ不足となった場合,
      * iiの上限に達したとき,schedulingをあきらめるメッセージを出す.
      *
@@ -1856,7 +1853,7 @@ void SwplMsResult::evaluateSpillingSchedule(const SwplPlanSpec & spec, unsigned 
 SwplMsResult *SwplMsResult::constructInit(unsigned ii, ProcState procstate ) {
   SwplMsResult * ms_result = new SwplMsResult();
 
-  ms_result->inst_slot_map = nullptr;
+  ms_result->slots = nullptr;
   ms_result->ii = ii;
   ms_result->tried_n_insts = 0;
 
@@ -2009,8 +2006,8 @@ SwplMsResult *SwplMsResult::calculateMsResult(SwplPlanSpec spec) {
 
   /* 不要なinst_slot_mapを解放する*/
   for( auto ms_free : ms_result_candidate) {
-    if (ms_free->inst_slot_map != nullptr) {
-      delete ms_free->inst_slot_map;
+    if (ms_free->slots != nullptr) {
+      delete ms_free->slots;
     }
     delete ms_free; // MsResult域の解放
   }
@@ -2053,8 +2050,8 @@ SwplMsResult *SwplMsResult::calculateMsResult(SwplPlanSpec spec) {
      */
     SwplMsResult * ms_result_binary = calculateMsResultByBinarySearch(spec);
     if (ms_result_binary) {
-      if(ms_result_binary->inst_slot_map != nullptr) {
-        delete ms_result->inst_slot_map;
+      if(ms_result_binary->slots != nullptr) {
+        delete ms_result->slots;
         delete ms_result;
         ms_result = ms_result_binary;
       }
@@ -2068,15 +2065,15 @@ SwplMsResult *SwplMsResult::calculateMsResult(SwplPlanSpec spec) {
     // 現在のms_resultは捨てる。calculateMsResultSimplyは、
     // spec.min_ii～spec.max_iiまでスケジューリング試みるため、
     // 必ず何かしらのms_resultを返却する。
-    if (ms_result->inst_slot_map != nullptr) {
-      delete ms_result->inst_slot_map;
+    if (ms_result->slots != nullptr) {
+      delete ms_result->slots;
     }
     delete ms_result;
 
     ms_result = calculateMsResultSimply(spec);
   }
 
-  assert(ms_result->inst_slot_map != nullptr);
+  assert(ms_result->slots != nullptr);
   return ms_result;
 }
 
@@ -2220,7 +2217,7 @@ SwplMsResult *SwplMsResult::calculateMsResultByBinarySearch(SwplPlanSpec spec) {
   ms_result = SwplMsResult::calculateMsResultAtSpecifiedII(spec, point_ii, ProcState::BINARY_SEARCH);
 
   /* 探索範囲を二分する*/
-  if (ms_result && ms_result->inst_slot_map == nullptr) {
+  if (ms_result && ms_result->slots == nullptr) {
     /* scheduling不可の最大iiを増加 */
     start_ii = point_ii;
   } else {
@@ -2238,10 +2235,10 @@ SwplMsResult *SwplMsResult::calculateMsResultByBinarySearch(SwplPlanSpec spec) {
    * ms_result_childのiiがend_iiより必ず小さいので採用する
    */
   if(ms_result_child ) {
-    if( ms_result_child->inst_slot_map != nullptr) {
+    if(ms_result_child->slots != nullptr) {
       if (ms_result) {
-        if(ms_result->inst_slot_map != nullptr) {
-          delete ms_result->inst_slot_map;
+        if(ms_result->slots != nullptr) {
+          delete ms_result->slots;
         }
         delete ms_result;
       }
@@ -2270,15 +2267,15 @@ SwplMsResult::calculateMsResultAtSpecifiedII(SwplPlanSpec spec, unsigned ii, Pro
 
   ms_result = SwplMsResult::constructInit(ii, procstate);
   ms_result->constructInstSlotMapAtSpecifiedII(spec);
-  ms_result->inst_slot_map = SwplSSProc::execute(spec.ddg, spec.loop, ii, ms_result->inst_slot_map, dbgs());
+  ms_result->slots = SwplSSProc::execute(spec.ddg, spec.loop, ii, ms_result->slots, dbgs());
   ms_result->checkInstSlotMap(spec);
   ms_result->outputDebugMessageForSchedulingResult(spec);
 
   /* binary searchを行なう際は, effective以上のものしか受け入れない*/
-  if ( !ms_result->isModerate() &&
-       ms_result->inst_slot_map != nullptr) {
-    delete ms_result->inst_slot_map;
-    ms_result->inst_slot_map = nullptr;
+  if (!ms_result->isModerate() &&
+       ms_result->slots != nullptr) {
+    delete ms_result->slots;
+    ms_result->slots = nullptr;
   }
   return ms_result;
 }
@@ -2296,7 +2293,7 @@ SwplMsResult *SwplMsResult::calculateMsResultSimply(SwplPlanSpec spec) {
 
   for (ii = spec.min_ii; ii <= spec.max_ii; ++ii) {
     ms_result = SwplMsResult::calculateMsResultAtSpecifiedII(spec, ii, ProcState::SIMPLY_SEARCH);
-    if (ms_result->inst_slot_map != nullptr) {
+    if (ms_result->slots != nullptr) {
       break;
     }
     delete ms_result; // inst_slot_mapが得られなかったMsResultは捨てる
@@ -2335,7 +2332,7 @@ bool SwplMsResult::collectCandidate(
   for (ii = spec.min_ii; /* 下で */; ii += inc_ii) {
     ms_result = SwplMsResult::constructInit(ii, procstate);
     ms_result->constructInstSlotMapAtSpecifiedII(spec);
-    ms_result->inst_slot_map = SwplSSProc::execute(spec.ddg, spec.loop, ii, ms_result->inst_slot_map, dbgs());
+    ms_result->slots = SwplSSProc::execute(spec.ddg, spec.loop, ii, ms_result->slots, dbgs());
     ms_result->checkInstSlotMap(spec);
     ms_result->outputDebugMessageForSchedulingResult(spec);
 
@@ -2344,7 +2341,7 @@ bool SwplMsResult::collectCandidate(
      * scheduleが採用される可能性がある為,候補として登録する.
      */
     SwplMsResult ms_result_tmp = *ms_result; // チェックおよび情報出力のためcopy
-    if (ms_result->inst_slot_map != nullptr) {
+    if (ms_result->slots != nullptr) {
       ms_result_candidate.insert(ms_result);
     }
     else {
@@ -2409,7 +2406,7 @@ bool SwplMsResult::collectModerateCandidate(
   for (ii = spec.min_ii; ii < spec.max_ii; ii += inc_ii) {
     ms_result = SwplMsResult::constructInit(ii, state);
     ms_result->constructInstSlotMapAtSpecifiedII(spec);
-    ms_result->inst_slot_map = SwplSSProc::execute(spec.ddg, spec.loop, ii, ms_result->inst_slot_map, dbgs());
+    ms_result->slots = SwplSSProc::execute(spec.ddg, spec.loop, ii, ms_result->slots, dbgs());
     ms_result->checkInstSlotMap(spec);
     ms_result->outputDebugMessageForSchedulingResult(spec);
 
@@ -2419,11 +2416,11 @@ bool SwplMsResult::collectModerateCandidate(
     }
     else {
       spec.unable_max_ii = ii;
-      if (ms_result->inst_slot_map != nullptr) {
+      if (ms_result->slots != nullptr) {
         /* moderateでは無い場合、scheduleが採用される可能性はなく、
          * Hashに入れないため、不要なinst_slot_mapは破棄する */
-        delete ms_result->inst_slot_map;
-        ms_result->inst_slot_map = nullptr;
+        delete ms_result->slots;
+        ms_result->slots = nullptr;
       }
       delete ms_result;
     }
@@ -2588,7 +2585,7 @@ bool SwplMsResult::isRegReducible(
 
   for(auto temp : ms_result_candidate) {
     assert(temp->isEffective() == false);
-    if (temp->inst_slot_map != nullptr && temp->is_itr_sufficient) {
+    if (temp->slots != nullptr && temp->is_itr_sufficient) {
       if (able_maxii < temp->ii) {
         n_candidate++;
         able_second_maxii = able_maxii;
@@ -2625,28 +2622,28 @@ bool SwplMsResult::isRegReducible(
 
 /// \brief Execute StageScheduling
 /// \return SwplInstSlotHashmap adopt scheduling results
-SwplInstSlotHashmap* SwplSSProc::execute(const SwplDdg &ddg,
+SwplSlots* SwplSSProc::execute(const SwplDdg &ddg,
                          const SwplLoop &loop,
                          unsigned ii,
-                         SwplInstSlotHashmap *inst_slot_map,
+                         SwplSlots *slots,
                          raw_ostream &stream) {
   auto fname = (loop.getBodyInsts())[0]->getMI()->getMF()->getName();
 
   if (!OptionEnableStageScheduling)
-    return inst_slot_map;
+    return slots;
 
-  if (inst_slot_map==nullptr) {
+  if (slots==nullptr) {
     if (OptionDumpSSProgress)
       stream << "*** No StageScheduling: [" << fname << "] no result of SWPL at II=" << ii << ".\n";
-    return inst_slot_map;
+    return slots;
   }
-  if (inst_slot_map->calcPrologBlocks(loop, ii)==0) {
+  if (slots->calcPrologBlocks(loop, ii)==0) {
     if (OptionDumpSSProgress)
       stream << "*** No StageScheduling: [" << fname << "] loop is Scheduled. But prologue-cycle is 0." << ii << ".\n";
-    return inst_slot_map;
+    return slots;
   }
 
-  SwplSSNumRegisters estimateRegBefore(loop, ii, inst_slot_map);
+  SwplSSNumRegisters estimateRegBefore(loop, ii, slots);
   if (OptionDumpSSProgress) {
     stream << "*** before SS : dump SwplSSNumRegisters ***\n";
     estimateRegBefore.dump(stream);
@@ -2657,7 +2654,7 @@ SwplInstSlotHashmap* SwplSSProc::execute(const SwplDdg &ddg,
     ssCyclicInfo.dump(stream);
   }
 
-  SwplSSEdges ssEdges(ddg, loop, ii, *inst_slot_map);
+  SwplSSEdges ssEdges(ddg, loop, ii, *slots);
   ssEdges.updateInCyclic(ssCyclicInfo);
   if (OptionDumpSSProgress) {
     stream << "*** before SS : dump SwplSSEdges ***\n";
@@ -2665,8 +2662,8 @@ SwplInstSlotHashmap* SwplSSProc::execute(const SwplDdg &ddg,
   }
 
   // replicate scheduling results
-  auto* inst_slot_map_temp = new SwplInstSlotHashmap;
-  *inst_slot_map_temp = *inst_slot_map;
+  auto* slots_temp = new SwplSlots;
+  *slots_temp = *slots;
 
   SwplSSMoveinfo acresult;
 
@@ -2678,13 +2675,13 @@ SwplInstSlotHashmap* SwplSSProc::execute(const SwplDdg &ddg,
   }
 
   // adjust SwplInstSlotHashmap by SwplSSMoveinfo
-  SwplSSProc::adjustSlot(*inst_slot_map_temp, acresult);
-  SwplSSNumRegisters estimateRegAfter(loop, ii, inst_slot_map_temp);
+  SwplSSProc::adjustSlot(*slots_temp, acresult);
+  SwplSSNumRegisters estimateRegAfter(loop, ii, slots_temp);
   if (OptionDumpSSProgress) {
     stream << "*** after SS : dump SwplSSNumRegisters ***\n";
     estimateRegAfter.dump(stream);
     stream << "*** after SS : dump SwplSSEdges ***\n";
-    SwplSSEdges TEMPssEdges(ddg, loop, ii, *inst_slot_map_temp);
+    SwplSSEdges TEMPssEdges(ddg, loop, ii, *slots_temp);
     TEMPssEdges.updateInCyclic(ssCyclicInfo);
     TEMPssEdges.dump(stream, fname);
   }
@@ -2696,8 +2693,8 @@ SwplInstSlotHashmap* SwplSSProc::execute(const SwplDdg &ddg,
     if (OptionDumpSSProgress) {
       stream << "*** StageScheduling results rejected... ***\n";
     }
-    delete inst_slot_map_temp;
-    return inst_slot_map;
+    delete slots_temp;
+    return slots;
   }
 
   // Adopt StageScheduling results
@@ -2712,8 +2709,8 @@ SwplInstSlotHashmap* SwplSSProc::execute(const SwplDdg &ddg,
       estimateRegAfter.print(dbgs());
       dbgs() << "\n";
   }
-  delete inst_slot_map;
-  return inst_slot_map_temp;
+  delete slots;
+  return slots_temp;
 }
 
 /// \brief dump SwplSSMoveinfo
@@ -2733,11 +2730,11 @@ void SwplSSProc::dumpSSMoveinfo(raw_ostream &stream, const SwplSSMoveinfo &v) {
 /// \param [in/out] SwplInstSlotHashmap to be updated
 /// \param [in] Instruction placement cycle movement information
 /// \return true if SwplInstSlotHashmap changed
-bool SwplSSProc::adjustSlot(SwplInstSlotHashmap& ism, SwplSSMoveinfo &v) {
+bool SwplSSProc::adjustSlot(SwplSlots& slots, SwplSSMoveinfo &v) {
   auto bandwidth = SWPipeliner::FetchBandwidth;
   for (auto [cinst, movecycle]: v) {
     SwplInst *inst = const_cast<SwplInst *>(cinst);
-    ism[inst].moveSlotIndex(movecycle*bandwidth);
+    slots.at(inst->inst_ix).moveSlotIndex(movecycle*bandwidth);
   }
   return true;
 }
@@ -2889,14 +2886,14 @@ void SwplSSEdge::dump(raw_ostream &stream, StringRef fname) const {
 SwplSSEdges::SwplSSEdges(const SwplDdg &ddg,
                          const SwplLoop &loop,
                          unsigned ii,
-                         SwplInstSlotHashmap& inst_slot_map) : II(ii) {
+                         SwplSlots& slots) : II(ii) {
   const SwplInstGraph &graph = ddg.getGraph();
   for (auto *inst : loop.getBodyInsts()) {
     SwplSlot p_slot;
     unsigned p_cycle;
 
-    auto begin_slot = inst_slot_map.findBeginSlot(loop, ii);
-    p_slot = inst_slot_map.getRelativeInstSlot(*inst, begin_slot);
+    auto begin_slot = slots.findBeginSlot(loop, ii);
+    p_slot = slots.getRelativeInstSlot(*inst, begin_slot);
     p_cycle = p_slot.calcCycle();
 
     for (auto *sucinst: graph.getSuccessors(*inst) ) {
@@ -2934,7 +2931,7 @@ SwplSSEdges::SwplSSEdges(const SwplDdg &ddg,
         }
       }
 
-      SwplSlot s_slot = inst_slot_map.getRelativeInstSlot(*sucinst, begin_slot);
+      SwplSlot s_slot = slots.getRelativeInstSlot(*sucinst, begin_slot);
       unsigned s_cycle = s_slot.calcCycle();
 
       if (out_distance==20) {
@@ -3109,16 +3106,16 @@ void SwplSSCyclicInfo::dump(raw_ostream &stream) const {
 /// \brief SwplSSNumRegisters constructor
 SwplSSNumRegisters::SwplSSNumRegisters(const SwplLoop &loop,
                                        unsigned ii,
-                                       const SwplInstSlotHashmap *inst_slot_map) {
-  auto n_renaming_versions = inst_slot_map->calcNRenamingVersions(loop, ii);
+                                       const SwplSlots *slots) {
+  auto n_renaming_versions = slots->calcNRenamingVersions(loop, ii);
 
-  ireg = SwplRegEstimate::calcNumRegs(loop, inst_slot_map, ii,
+  ireg = SwplRegEstimate::calcNumRegs(loop, slots, ii,
                                       llvm::StmRegKind::getIntRegID(),
                                       n_renaming_versions);
-  freg = SwplRegEstimate::calcNumRegs(loop, inst_slot_map, ii,
+  freg = SwplRegEstimate::calcNumRegs(loop, slots, ii,
                                       llvm::StmRegKind::getFloatRegID(),
                                       n_renaming_versions);
-  preg = SwplRegEstimate::calcNumRegs(loop, inst_slot_map, ii,
+  preg = SwplRegEstimate::calcNumRegs(loop, slots, ii,
                                       llvm::StmRegKind::getPredicateRegID(),
                                       n_renaming_versions);
 }
