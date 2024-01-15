@@ -73,7 +73,7 @@ void SwplPlan::dumpInstTable(raw_ostream &stream) {
   size_t table_size = (size_t)end_slot - (size_t)begin_slot;
   std::vector<SwplInst*> table(table_size, nullptr);
 
-  for( auto inst : loop.getBodyInsts() ) {
+  for( auto *inst : loop.getBodyInsts() ) {
     unsigned slot;
     slot = slots.getRelativeInstSlot(*inst, begin_slot);
     table[slot] = inst;
@@ -267,12 +267,12 @@ unsigned SwplPlan::calculateResourceII(const SwplLoop& c_loop) {
   numresource = SWPipeliner::STM->getNumResource();
   std::vector<float> resource_appears(numresource+1, 0.0);
 
-  for (auto inst : c_loop.getBodyInsts()) {
+  for (auto *inst : c_loop.getBodyInsts()) {
     // 資源情報の生成と資源パターン数の取得
     const auto *pipes = SWPipeliner::STM->getPipelines( *(inst->getMI()) );
     unsigned num_pattern = pipes->size();
 
-    for(auto pipeline : *pipes ) {
+    for(auto *pipeline : *pipes ) {
       for(unsigned i=0; i<pipeline->resources.size(); i++) {
         StmResourceId resource = pipeline->resources[i];
 
@@ -283,7 +283,7 @@ unsigned SwplPlan::calculateResourceII(const SwplLoop& c_loop) {
     }
   }
   max_counter = 0;
-  for(auto val : resource_appears ) {
+  for(auto &val : resource_appears ) {
     int count = std::ceil(val); // 小数点切り上げ
     max_counter = std::max( max_counter, count );
   }
@@ -514,7 +514,7 @@ size_t SwplSlots::calcNRenamingVersions(const SwplLoop& c_loop,
     assert(this->at(def_inst->inst_ix) != SwplSlot::UNCONFIGURED_SLOT);
     def_slot = this->at(def_inst->inst_ix);
     def_cycle = def_slot.calcCycle();
-    for( auto reg : def_inst->getDefRegs() ) {
+    for( auto *reg : def_inst->getDefRegs() ) {
       size_t live_cycles, last_use_cycle;
 
       if ( reg->isRegNull() ) {
@@ -563,7 +563,7 @@ SwplSlot SwplSlots::findBeginSlot(const SwplLoop& c_loop,
 /// \retval false ブロックを跨って使用されている
 bool SwplSlots::isIccFreeAtBoundary(const SwplLoop& loop,
                                              unsigned iteration_interval) const {
-  for( auto inst : loop.getBodyInsts() ) {
+  for( auto *inst : loop.getBodyInsts() ) {
     SwplSlot def_slot;
     unsigned def_block;
 
@@ -572,7 +572,7 @@ bool SwplSlots::isIccFreeAtBoundary(const SwplLoop& loop,
     }
     def_block = def_slot.calcBlock(iteration_interval);
 
-    for( auto reg : inst->getDefRegs() ) {
+    for( auto *reg : inst->getDefRegs() ) {
       unsigned last_use_cycle, last_use_block;
 
       if( reg->isRegNull() ) {
@@ -638,7 +638,7 @@ unsigned SwplSlots::calcLastUseCycleInBody(const SwplReg& reg,
     last_use_cycle = SwplSlot::slotMin().calcCycle();
   }
 
-  for (auto use_inst : reg.getUseInsts() ) {
+  for (auto *use_inst : reg.getUseInsts() ) {
     unsigned use_cycle;
 
     if( use_inst->isPhi()) {

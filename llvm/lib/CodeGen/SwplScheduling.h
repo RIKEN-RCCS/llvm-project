@@ -332,7 +332,7 @@ class SwplSSCyclicInfo {
 public:
   SwplSSCyclicInfo(const SwplDdg& ddg, const SwplLoop& loop);
   virtual ~SwplSSCyclicInfo() {
-    for (auto root: cyclic_node_list){
+    for (auto *root: cyclic_node_list){
       delete root;
     }
   }
