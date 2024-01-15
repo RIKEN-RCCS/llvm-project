@@ -477,7 +477,8 @@ static int createLiveRange(MachineInstr *mi, unsigned idx,
  */
 static void extendLiveRange(SwplTransformedMIRInfo *tmi) {
   assert(tmi);
-  for (size_t i = 0; i < tmi->swplRAITbl->length(); i++) {
+  auto RAITblLen = tmi->swplRAITbl->length();
+  for (size_t i = 0; i < RAITblLen; i++) {
     RegAllocInfo *rinfo = tmi->swplRAITbl->getWithIdx(i);
     // 後に呼び出すcallSetReg()内でカーネル終端にCOPY命令を追加する
     // 条件に合致したレジスタはnum_useを当該COPY命令に設定して
@@ -601,7 +602,8 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
   int ret = 0;
 
   // 割り当て済みレジスタ情報でループ
-  for (size_t i = 0; i < rai_tbl.length(); i++) {
+  auto RaiTblLen = rai_tbl.length();
+  for (size_t i = 0; i < RaiTblLen; i++) {
     RegAllocInfo *itr_cur =rai_tbl.getWithIdx(i);
     bool allocated = false;
 
@@ -683,7 +685,8 @@ static void callSetReg(MachineFunction &MF,
                        DebugLoc post_dl,
                        SwplTransformedMIRInfo *tmi) {
   assert(tmi);
-  for (size_t i = 0; i < tmi->swplRAITbl->length(); i++) {
+  auto RAITblLen = tmi->swplRAITbl->length();
+  for (size_t i = 0; i < RAITblLen; i++) {
     RegAllocInfo *rinfo = tmi->swplRAITbl->getWithIdx(i);
     // 仮想レジスタと物理レジスタが有効な値でない限り何もしない
     if ((rinfo->vreg == 0) || (rinfo->preg == 0))
@@ -817,7 +820,8 @@ bool AArch64InstrInfo::SwplRegAlloc(SwplTransformedMIRInfo *tmi,
       lastDL = mi->getDebugLoc();
 
     // MIのオペランド数でループ
-    for (unsigned opIdx = 0, e = mi->getNumOperands(); opIdx != e; ++opIdx) {
+    auto NumOperands = mi->getNumOperands();
+    for (unsigned opIdx = 0, e = NumOperands; opIdx != e; ++opIdx) {
       MachineOperand &mo = mi->getOperand(opIdx);
       // レジスタオペランドなら以降の処理継続
       // レジスタ番号 0 はいかなる種類のレジスタも表していない
@@ -1006,7 +1010,8 @@ bool SwplExcKernelRegInfoTbl::isUseFirstVRegInExcK(unsigned vreg) {
 void SwplExcKernelRegInfoTbl::dump() {
   dbgs() << "Virtual registers of the epilogue.\n"
          << "No.\tvreg\tdef\tuse\n";
-  for (size_t i = 0; i < ekri_tbl.size(); i++) {
+  auto EkriTblSize = ekri_tbl.size();
+  for (size_t i = 0; i < EkriTblSize; i++) {
     ExcKernelRegInfo *ri_p = &(ekri_tbl[i]);
     dbgs() << i << "\t"
            << printReg(ri_p->vreg, SWPipeliner::TRI) << "\t" // 仮想レジスタ
@@ -1086,7 +1091,8 @@ unsigned SwplRegAllocInfoTbl::getReusePReg( RegAllocInfo* rai ) {
   // 既に割り当て済みの行を収集し、そのすべての生存区間が重なっていなければ、
   // 再利用可能とする。
   const TargetRegisterClass *trc = SWPipeliner::MRI->getRegClass(rai->vreg);
-  for (auto itr = trc->begin(), itr_end = trc->end();
+  auto TrcEnd = trc->end();
+  for (auto itr = trc->begin(), itr_end = TrcEnd;
        itr != itr_end; ++itr) {
     unsigned candidate_preg = *itr;
     std::vector<RegAllocInfo*> ranges;
@@ -1097,7 +1103,8 @@ unsigned SwplRegAllocInfoTbl::getReusePReg( RegAllocInfo* rai ) {
       continue;
     }
 
-    for (size_t j = 0; j < rai_tbl.size(); j++) {
+    auto RaiTblSize = rai_tbl.size();
+    for (size_t j = 0; j < RaiTblSize; j++) {
       RegAllocInfo *wk_reginfo = &(rai_tbl[j]);
       if( isPRegOverlap( candidate_preg, wk_reginfo->preg ) ) {
         ranges.push_back( wk_reginfo );
@@ -1105,7 +1112,8 @@ unsigned SwplRegAllocInfoTbl::getReusePReg( RegAllocInfo* rai ) {
     }
 
     bool isoverlap = false;
-    for(unsigned i=0; i<ranges.size(); i++) {
+    auto RangesSize = ranges.size();
+    for(unsigned i=0; i<RangesSize; i++) {
       if ((isOverlapLiveRange(ranges[i], rai)) ||
           ((tied) && (isOverlapLiveRange(ranges[i], tied)))) {
          // 「自分のliverange」もしくは「tied相手のliverange」のどちらかがチェック対象と重なる
@@ -1140,7 +1148,8 @@ bool SwplRegAllocInfoTbl::isPRegOverlap( unsigned preg1, unsigned preg2 ) {
  * @retval false 使用されていない
  */
 bool SwplRegAllocInfoTbl::isUsePReg( unsigned preg ) {
-  for(unsigned i=0; i<rai_tbl.size(); i++) {
+  auto RaiTblSize = rai_tbl.size();
+  for(unsigned i=0; i<RaiTblSize; i++) {
     unsigned usedpreg = rai_tbl[i].preg;
     // 物理的に重複するレジスタは"使用されている"
     if(isPRegOverlap(usedpreg, preg))
@@ -1155,7 +1164,8 @@ bool SwplRegAllocInfoTbl::isUsePReg( unsigned preg ) {
 void SwplRegAllocInfoTbl::dump() {
   dbgs() << "Information of the registers of the kernel. MI=" << total_mi << "\n"
          << "No.\tvreg\tpreg\tdef\tuse\trange\ttied\tclass\tMO\n";
-  for (size_t i = 0; i < rai_tbl.size(); i++) {
+  auto RaiTblSize = rai_tbl.size();
+  for (size_t i = 0; i < RaiTblSize; i++) {
     RegAllocInfo *ri_p = &(rai_tbl[i]);
     dbgs() << i << "\t"
            << printReg(ri_p->vreg, SWPipeliner::TRI) << "\t" // 割り当て済み仮想レジスタ
@@ -1173,7 +1183,8 @@ void SwplRegAllocInfoTbl::dump() {
       dbgs() << ri_p->vreg_classid  << "\t";
     }
     dbgs() << "[ ";
-    for (size_t l = 0; l < ri_p->vreg_mo.size(); l++) {
+    auto VregMoSize = ri_p->vreg_mo.size();
+    for (size_t l = 0; l < VregMoSize; l++) {
       // 仮想レジスタのMachineOperand
       MachineOperand *m = ri_p->vreg_mo[l];
       // レジスタオペランドなら出力内容を分かり易くする

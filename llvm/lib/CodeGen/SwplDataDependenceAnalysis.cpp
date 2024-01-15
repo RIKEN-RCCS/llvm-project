@@ -250,8 +250,8 @@ void SwplDdg::analysisRegDependence_for_tieddef() {
     auto *mi = def_inst->getMI();
 
 //    dbgs() << *mi;
-
-    for (unsigned def_ix=0; def_ix < mi->getNumDefs(); def_ix++) {
+    auto NumDefs = mi->getNumDefs();
+    for (unsigned def_ix=0; def_ix < NumDefs; def_ix++) {
       unsigned int use_ix = 0;
       if (!mi->isRegTiedToUseOperand(def_ix, &use_ix)) {
         continue;

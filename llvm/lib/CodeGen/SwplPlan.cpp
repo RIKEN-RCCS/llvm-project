@@ -273,7 +273,8 @@ unsigned SwplPlan::calculateResourceII(const SwplLoop& c_loop) {
     unsigned num_pattern = pipes->size();
 
     for(auto pipeline : *pipes ) {
-      for(unsigned i=0; i<pipeline->resources.size(); i++) {
+      auto ResourcesSize = pipeline->resources.size();
+      for(unsigned i=0; i<ResourcesSize; i++) {
         StmResourceId resource = pipeline->resources[i];
 
         // どの資源パターンが使用されるかはわからないため、
