@@ -391,7 +391,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     }
   } while ( redo );
   min_ii_for_retry = 0;
-  delete ddg;
+  SwplDdg::destroy(ddg);
   delete currentLoop;
   currentLoop = nullptr;
 
