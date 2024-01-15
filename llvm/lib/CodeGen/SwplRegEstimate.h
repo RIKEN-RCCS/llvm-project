@@ -34,7 +34,7 @@ public:
   using RenamedRegVector = std::vector<SwplRegEstimate::Renamed_Reg*>;
 
   static unsigned calcNumRegs(const SwplLoop& loop,
-                              const SwplInstSlotHashmap* inst_slot_map,
+                              const SwplSlots* slots,
                               unsigned iteration_interval,
                               unsigned regclassid,
                               unsigned n_renaming_versions);
@@ -47,17 +47,17 @@ private:
                             unsigned iteration_interval,
                             bool is_recurrence);
   static unsigned getNumInterferedRegs(const SwplLoop& loop,
-                                       const SwplInstSlotHashmap* inst_slot_map,
+                                       const SwplSlots* slots,
                                        unsigned iteration_interval,
                                        unsigned regclassid,
                                        unsigned n_renaming_versions);
   static unsigned getNumImmortalRegs (const SwplLoop& loop, unsigned regclassid );
   static unsigned getNumMortalRegs (const SwplLoop& loop,
-                                    const SwplInstSlotHashmap* inst_slot_map,
+                                    const SwplSlots* slots,
                                     unsigned iteration_interval,
                                     unsigned regclassid);
   static void collectRenamedRegs(const SwplLoop& loop,
-                                 const SwplInstSlotHashmap* inst_slot_map,
+                                 const SwplSlots* slots,
                                  unsigned iteration_interval,
                                  unsigned regclassid,
                                  unsigned n_renaming_versions,
@@ -96,7 +96,7 @@ private:
                                      unsigned iteration_interval,
                                      unsigned n_renaming_versions, unsigned regclassid);
   static unsigned getNumExtendedRegs (RenamedRegVector* vector_renamed_regs,
-                                      const SwplInstSlotHashmap* inst_slot_map,
+                                      const SwplSlots* slots,
                                       unsigned iteration_interval,
                                       unsigned regclassid,
                                       unsigned n_renaming_versions);

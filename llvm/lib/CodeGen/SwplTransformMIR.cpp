@@ -141,7 +141,7 @@ bool SwplTransformMIR::transformMIR() {
 /// - 上から数えて一つ目のsubを0番目としてあつかう.
 size_t SwplTransformMIR::chooseCmpIteration(size_t bandwidth, size_t slot) {
   size_t i, initial_cycle, cycle, iteration;
-  initial_cycle = slot / SWPipeliner::STM->getFetchBandwidth();
+  initial_cycle = slot / SWPipeliner::FetchBandwidth;
   /* EPILOGUEから逆向きに探索を始め,最初にKERNELのcycleの範囲に入るものを返却する*/
   for (i = 0; i <= TMI.nCopies - 1; ++i) {
     iteration = TMI.nCopies - 1 - i;
@@ -263,7 +263,7 @@ void SwplTransformMIR::convertPlan2MIR() {
   size_t cmp_iteration;
 
   SwplScr SCR(*Loop.getML());
-  size_t bandwidth = SWPipeliner::STM->getFetchBandwidth();
+  size_t bandwidth = SWPipeliner::FetchBandwidth;
 
   /// (1) SwplScr::findBasicInductionVariable():元のループの制御変数に関する情報の取得
   ///  制御変数の初期値を見つける
@@ -625,7 +625,7 @@ void SwplTransformMIR::prepareMIs() {
   unsigned iteration_interval_slot;
 
   TMI.mis.resize(TMI.epilogEndIndx);
-  iteration_interval_slot = TMI.iterationInterval * SWPipeliner::STM->getFetchBandwidth();
+  iteration_interval_slot = TMI.iterationInterval * SWPipeliner::FetchBandwidth;
   /// (1) shiftConvertIteration2Version() :命令挿入位置（コピー毎の移動値）を計算する
   int n_shift = shiftConvertIteration2Version(TMI.nVersions, TMI.nCopies);
 
@@ -1021,11 +1021,12 @@ void SwplTransformMIR::importPlan() {
   Plan.setNIterationCopies(ioplan.n_iteration_copies);
   Plan.setBeginSlot(ioplan.begin_slot);
   // 念の為MAPをリセット
-  InstSlotMap.clear();
-  for (auto &slot:ioplan.Slots) {
+  Slots.clear();
+  Slots.resize(Loop.getSizeBodyInsts());
+  for (auto& slot:ioplan.Slots) {
     /// \note スケジューリングが必要な命令に対し、指示が不足しているかは確認していない。
     /// また、指示で指定した命令IDが、存在範囲外かも確認していない
-    InstSlotMap[&(Loop.getBodyInst(slot.id))]=slot.slot+ioplan.begin_slot;
+    Slots.at(Loop.getBodyInst(slot.id).inst_ix)=slot.slot+ioplan.begin_slot;
   }
 }
 
@@ -1062,7 +1063,7 @@ void SwplTransformMIR::dumpMIR(DumpMIRID id) const {
 }
 
 unsigned SwplTransformMIR::relativeInstSlot(const SwplInst *inst) const {
-  return InstSlotMap[const_cast<SwplInst*>(inst)]-Plan.getBeginSlot();
+  return Slots[inst->inst_ix]-Plan.getBeginSlot();
 }
 
 void SwplTransformMIR::printTransformingMI(const MachineInstr *mi) {

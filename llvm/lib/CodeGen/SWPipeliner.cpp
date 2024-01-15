@@ -43,6 +43,8 @@ static cl::opt<unsigned> OptionMaxIIBase("swpl-maxii",cl::init(0), cl::ReallyHid
 static cl::opt<std::string> OptionExportDDG("export-swpl-dep-mi",cl::init(""), cl::ReallyHidden);
 static cl::opt<std::string> OptionImportDDG("import-swpl-dep-mi",cl::init(""), cl::ReallyHidden);
 
+static cl::opt<int> OptionRealFetchWidth("swpl-real-fetch-width",cl::init(4), cl::ReallyHidden);
+static cl::opt<int> OptionVirtualFetchWidth("swpl-virtual-fetch-width",cl::init(4), cl::ReallyHidden);
 
 namespace llvm {
 
@@ -99,6 +101,8 @@ SwplTargetMachine *SWPipeliner::STM = nullptr;
 AliasAnalysis *SWPipeliner::AA = nullptr;
 std::string SWPipeliner::Reason;
 SwplLoop *SWPipeliner::currentLoop = nullptr;
+unsigned SWPipeliner::FetchBandwidth = 0;
+unsigned SWPipeliner::RealFetchBandwidth = 0;
 
 /// loop normalization pass for SWPL
 struct SWPipelinerPre : public MachineFunctionPass {
@@ -175,6 +179,10 @@ FunctionPass *createSWPipelinerPass() {
  * \retval false MF を変更していないことを示す
  */
 bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
+
+  FetchBandwidth = OptionRealFetchWidth + OptionVirtualFetchWidth;
+  RealFetchBandwidth = OptionRealFetchWidth;
+
   if (skipFunction(mf.getFunction())) {
     if (isDebugOutput()) {
       dbgs() << "SWPipeliner: Not processed because skipFunction() is true.\n";
