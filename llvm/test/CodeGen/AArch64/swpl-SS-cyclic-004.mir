@@ -332,7 +332,7 @@ body:             |
     %21:gpr64all = COPY %54, debug-location !30
     %55:gpr64 = SUBSXri %11, 1, 0, implicit-def $nzcv, debug-location !18
     %22:gpr64all = COPY %55, debug-location !18
-    %101:gpr32 = nsw ADDWrr %25, %27, debug-location !19
+    %101:gpr32 = SUBWrr %25, %27, debug-location !19
     %111:gpr32 = nsw ADDWrr %29, %101, debug-location !19
     %112:gpr32 = nsw ADDWrr %31, %111, debug-location !19
     %113:gpr32 = nsw ADDWrr %33, %111, debug-location !19

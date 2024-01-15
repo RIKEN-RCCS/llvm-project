@@ -309,13 +309,13 @@ body:             |
     %16:gpr64all = COPY %42, debug-location !27
     %43:gpr64 = SUBSXri %9, 1, 0, implicit-def $nzcv, debug-location !18
     %17:gpr64all = COPY %43, debug-location !18
-    %101:gpr32 = nsw ADDWrr %20, %22, debug-location !19
+    %101:gpr32 = SUBWrr %20, %22, debug-location !19
     %111:gpr32 = nsw ADDWrr %26, %101, debug-location !19
     %112:gpr32 = nsw ADDWrr %111, %24, debug-location !19
     %113:gpr32 = nsw ADDWrr %111, %24, debug-location !19
     %114:gpr32 = nsw ADDWrr %112, %113, debug-location !19
-    %121:gpr32 = nsw ADDWrr %28, %114, debug-location !19
-    %122:gpr32 = nsw ADDWrr %28, %114, debug-location !19
+    %121:gpr32 = SUBWrr %28, %114, debug-location !19
+    %122:gpr32 = SUBWrr %28, %114, debug-location !19
     Bcc 1, %bb.1, implicit $nzcv, debug-location !18
     B %bb.2, debug-location !18
   

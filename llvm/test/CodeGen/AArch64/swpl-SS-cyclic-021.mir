@@ -335,10 +335,10 @@ body:             |
     %102:gpr32 = nsw ADDWrr %29, %101, debug-location !19
     %103:gpr32 = nsw ADDWrr %31, %101, debug-location !19
     %104:gpr32 = nsw ADDWrr %102, %103, debug-location !19
-    %111:gpr32 = nsw ADDWrr %33, %104, debug-location !19
-    %112:gpr32 = nsw ADDWrr %33, %104, debug-location !19
-    %113:gpr32 = nsw ADDWrr %35, %103, debug-location !19
-    %114:gpr32 = nsw ADDWrr %35, %103, debug-location !19
+    %111:gpr32 = SUBWrr %33, %104, debug-location !19
+    %112:gpr32 = SUBWrr %33, %104, debug-location !19
+    %113:gpr32 = SUBWrr %35, %103, debug-location !19
+    %114:gpr32 = SUBWrr %35, %103, debug-location !19
     Bcc 1, %bb.1, implicit $nzcv, debug-location !18
     B %bb.2, debug-location !18
   

@@ -2,7 +2,7 @@
 #CHECK:*** dump SwplSSSyclicInfo ***
 #CHECK-NEXT:root : { ({{[A-Za-z0-9]+}}:MADDWrrr) ({{[A-Za-z0-9]+}}:LDRWroX) ({{[A-Za-z0-9]+}}:ADDXri) ({{[A-Za-z0-9]+}}:STRWroX) ({{[A-Za-z0-9]+}}:MADDWrrr) }
 #CHECK-NEXT:root : { ({{[A-Za-z0-9]+}}:ADDWrr) ({{[A-Za-z0-9]+}}:MADDWrrr) ({{[A-Za-z0-9]+}}:COPY) ({{[A-Za-z0-9]+}}:COPY) ({{[A-Za-z0-9]+}}:ADDWrr) }
-#CHECK-NEXT:root : { ({{[A-Za-z0-9]+}}:ADDWrr) ({{[A-Za-z0-9]+}}:ADDWrr) ({{[A-Za-z0-9]+}}:ADDWrr) ({{[A-Za-z0-9]+}}:ADDWrr) }
+#CHECK-NEXT:root : { ({{[A-Za-z0-9]+}}:SUBWrr) ({{[A-Za-z0-9]+}}:SUBWrr) ({{[A-Za-z0-9]+}}:ADDWrr) ({{[A-Za-z0-9]+}}:SUBWrr) }
 #CHECK-NEXT:root : { ({{[A-Za-z0-9]+}}:ADDWrr) ({{[A-Za-z0-9]+}}:ADDWrr) ({{[A-Za-z0-9]+}}:ADDWrr) ({{[A-Za-z0-9]+}}:ADDWrr) ({{[A-Za-z0-9]+}}:ADDWrr) }
 --- |
   ; ModuleID = '/home/xxxx/swpl-SS-cyclic-xxx.c'
@@ -332,17 +332,17 @@ body:             |
     %21:gpr64all = COPY %54, debug-location !30
     %55:gpr64 = SUBSXri %11, 1, 0, implicit-def $nzcv, debug-location !18
     %22:gpr64all = COPY %55, debug-location !18
-    %101:gpr32 = nsw ADDWrr %25, %27, debug-location !19
-    %102:gpr32 = nsw ADDWrr %29, %101, debug-location !19
-    %103:gpr32 = nsw ADDWrr %33, %31, debug-location !19
+    %101:gpr32 = SUBWrr %25, %27, debug-location !19
+    %102:gpr32 = SUBWrr %29, %101, debug-location !19
+    %103:gpr32 = SUBWrr %33, %31, debug-location !19
     %111:gpr32 = nsw ADDWrr %102, %101, debug-location !19
     %112:gpr32 = nsw ADDWrr %111, %103, debug-location !19
     %113:gpr32 = nsw ADDWrr %111, %35, debug-location !19
     %114:gpr32 = nsw ADDWrr %113, %112, debug-location !19
-    %121:gpr32 = nsw ADDWrr %37, %114, debug-location !19
-    %122:gpr32 = nsw ADDWrr %37, %114, debug-location !19
-    %123:gpr32 = nsw ADDWrr %39, %113, debug-location !19
-    %124:gpr32 = nsw ADDWrr %39, %113, debug-location !19
+    %121:gpr32 = SUBWrr %37, %114, debug-location !19
+    %122:gpr32 = SUBWrr %37, %114, debug-location !19
+    %123:gpr32 = SUBWrr %39, %113, debug-location !19
+    %124:gpr32 = SUBWrr %39, %113, debug-location !19
     Bcc 1, %bb.1, implicit $nzcv, debug-location !18
     B %bb.2, debug-location !18
   
