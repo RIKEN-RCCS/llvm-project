@@ -466,7 +466,18 @@ SwplModuloDdg* SwplModuloDdg::construct(const SwplDdg& c_ddg, unsigned iterator_
   SwplModuloDdg* modulo_ddg = new SwplModuloDdg( c_ddg.getGraph(),
                                                  c_ddg.getLoop() );
   modulo_ddg->iterator_interval = iterator_interval;
-  modulo_ddg->modulo_delay_map = c_ddg.getModuloDelayMap(iterator_interval);
+
+  if (SWPipeliner::isImportDDG()) {
+    // Dependency information changed in yaml is used to generate moduloDelayMap in order to
+    // only affect SWPL scheduling.
+    SwplDdg copied_ddg;
+    copied_ddg = c_ddg; //copy
+    copied_ddg.importYaml(); //change DistanceMap and DelaysMap by importYaml().
+    modulo_ddg->modulo_delay_map = copied_ddg.getModuloDelayMap(iterator_interval);
+  }
+  else {
+    modulo_ddg->modulo_delay_map = c_ddg.getModuloDelayMap(iterator_interval);
+  }
   return modulo_ddg;
 }
 
