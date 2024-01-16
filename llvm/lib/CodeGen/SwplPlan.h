@@ -96,6 +96,16 @@ public:
     }
     return s;
   }
+  SwplSlot& at(unsigned ix) {
+    static SwplSlot s;
+    if(ix==UINT_MAX) return s;
+    return vector::at(ix);
+  }
+  const SwplSlot& at(unsigned ix) const {
+    static SwplSlot s;
+    if(ix==UINT_MAX) return s;
+    return vector::at(ix);
+  }
   void dump(const SwplLoop& c_loop);
 };
 

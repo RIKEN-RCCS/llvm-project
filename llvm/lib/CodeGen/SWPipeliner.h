@@ -453,7 +453,7 @@ public:
     return ix;
   }
   /// Remember index of SwplInst
-  int inst_ix = -1;
+  unsigned inst_ix = UINT_MAX;
 };
 
 /// \class SwplReg
