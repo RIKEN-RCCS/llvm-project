@@ -1,8 +1,9 @@
-# RUN: llc -mcpu=a64fx -start-before=aarch64-swpipeliner -fswp -import-swpl-dep-mi=%S/Inputs/swpl-export-import-ddg-008.yaml -swpl-debug-dump-ddg -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mcpu=a64fx -start-before=aarch64-swpipeliner -fswp -import-swpl-dep-mi=%S/Inputs/swpl-export-import-ddg-008.yaml -swpl-debug-dump-moduloddg -o /dev/null %s 2>&1 | FileCheck %s
 
-# CHECK: ### from: %140:zpr = LD1D_IMM %98:ppr_3b, %138:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv, align 64, !tbaa !13)
-# CHECK: ### to  : ST1D_IMM killed %145:zpr, %143:ppr_3b, %137:gpr64sp, 0 :: (store unknown-size into %ir.lsr.iv122, align 8, !tbaa !13)
-# CHECK: ### distance:19 delay:2
+# CHECK:-- ModuloDdg dump --
+# CHECK:iterator_interval : 8
+# CHECK:%140:zpr = LD1D_IMM %98:ppr_3b, %138:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv, align 64, !tbaa !13)
+# CHECK:		delay -150 : ST1D_IMM killed %145:zpr, %143:ppr_3b, %137:gpr64sp, 0 :: (store unknown-size into %ir.lsr.iv122, align 8, !tbaa !13)
 
 --- |
   ; ModuleID = '/home/dev/s.c'

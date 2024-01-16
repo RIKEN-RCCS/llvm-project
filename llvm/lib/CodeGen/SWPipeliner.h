@@ -727,9 +727,14 @@ public:
     Loop = &l;
   }
 
-  /// destructor
-  ~SwplDdg() {
-    delete Graph;
+  /// destructor. Use destroy() to also delete the Graph area.
+  virtual ~SwplDdg() {
+  }
+
+  /// destroy ddg object
+  static void destroy(SwplDdg* ddg) {
+    delete ddg->Graph;
+    delete ddg;
   }
   
   /// SwplLoop::BodyInsts のiterator-beginを返す
@@ -801,6 +806,9 @@ public:
     std::vector<IOddgnode> ddgnodes;
   };
 
+  /// Import yaml of DDG
+  void importYaml();
+
 private:
   /// 命令単位に SwplInstGraph を生成する
   void generateInstGraph() {
@@ -824,8 +832,6 @@ private:
   void analysisMemDependence();
   /// Analyze instruction dependencies
   void analysisInstDependence();
-  /// Import yaml of DDG
-  void importYaml();
   /// Export yaml of DDG
   void exportYaml ();
 

@@ -46,9 +46,9 @@ SwplDdg *SwplDdg::Initialize (SwplLoop &loop, bool Nodep) {
   /// into PhiInsts after generating SwplDdg.
   loop.recollectPhiInsts();
 
-  // Import yaml of DDG
-  if (SWPipeliner::isImportDDG())
-    ddg->importYaml();
+  // Importing dependency information will not be performed here.
+  // The edited dependency information is imported within create ModuloDelayMap,
+  // so that it only affects SWPL scheduling.
 
   // Export yaml of DDG
   if (SWPipeliner::isExportDDG())
