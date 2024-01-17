@@ -1,22 +1,20 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-enable-stagescheduling=true -swpl-debug-dump-ss-progress -o /dev/null 2>&1  | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-enable-stagescheduling=true -swpl-debug-dump-ss-progress -import-swpl-dep-mi=%S/Inputs/swpl-SS-AC-009.yaml -o /dev/null 2>&1  | FileCheck %s
 
 #CHECK:*** before SS : dump SwplSSNumRegisters ***
-#CHECK:estimate VReg  Fp: 0, Int: 14, Pre: 1
+#CHECK:estimate VReg  Fp: 1, Int: 18, Pre: 1
 #CHECK-NEXT:*** before SS : dump SwplSSEdges ***
-#CHECK:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:15, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:ADDWrr), inCyclic:1, SkipFactor<0>, p_cycle:11, s_cycle:12, delay:1, distance:0, II:8
+#CHECK:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:0, SkipFactor<3>, p_cycle:6, s_cycle:31, delay:1, distance:0, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:ADDWrr), inCyclic:1, SkipFactor<0>, p_cycle:6, s_cycle:12, delay:1, distance:0, II:8
 #CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ADDWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<0>, p_cycle:12, s_cycle:13, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:SUBWrr) to ({{[A-Za-z0-9]+}}:ORRWrr), inCyclic:1, SkipFactor<0>, p_cycle:13, s_cycle:11, delay:1, distance:1, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:SUBWrr) to ({{[A-Za-z0-9]+}}:ORRWrr), inCyclic:1, SkipFactor<0>, p_cycle:13, s_cycle:6, delay:1, distance:1, II:8
 
-#CHECK:*** dump SwplSSMoveinfo after AC ***
-#CHECK-NEXT:none...
-#CHECK-NEXT:*** after SS : dump SwplSSNumRegisters ***
-#CHECK-NEXT:estimate VReg  Fp: 0, Int: 14, Pre: 1
+#CHECK:*** after SS : dump SwplSSNumRegisters ***
+#CHECK-NEXT:estimate VReg  Fp: 1, Int: 15, Pre: 1
 #CHECK:*** after SS : dump SwplSSEdges ***
-#CHECK:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:0, SkipFactor<0>, p_cycle:11, s_cycle:15, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:ADDWrr), inCyclic:1, SkipFactor<0>, p_cycle:11, s_cycle:12, delay:1, distance:0, II:8
+#CHECK:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:0, SkipFactor<0>, p_cycle:6, s_cycle:7, delay:1, distance:0, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:ADDWrr), inCyclic:1, SkipFactor<0>, p_cycle:6, s_cycle:12, delay:1, distance:0, II:8
 #CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ADDWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<0>, p_cycle:12, s_cycle:13, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:SUBWrr) to ({{[A-Za-z0-9]+}}:ORRWrr), inCyclic:1, SkipFactor<0>, p_cycle:13, s_cycle:11, delay:1, distance:1, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:SUBWrr) to ({{[A-Za-z0-9]+}}:ORRWrr), inCyclic:1, SkipFactor<0>, p_cycle:13, s_cycle:6, delay:1, distance:1, II:8
 
 --- |
   ; ModuleID = '/home/xxxx/swpl-SS-cyclic-xxx.c'
