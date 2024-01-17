@@ -97,13 +97,13 @@ public:
     return s;
   }
   SwplSlot& at(unsigned ix) {
-    static SwplSlot s;
-    if(ix==UINT_MAX) return s;
+    static SwplSlot UNCONFIGURED_Slot;
+    if(ix==UINT_MAX) return UNCONFIGURED_Slot;
     return vector::at(ix);
   }
   const SwplSlot& at(unsigned ix) const {
-    static SwplSlot s;
-    if(ix==UINT_MAX) return s;
+    static SwplSlot UNCONFIGURED_Slot;
+    if(ix==UINT_MAX) return UNCONFIGURED_Slot;
     return vector::at(ix);
   }
   void dump(const SwplLoop& c_loop);
