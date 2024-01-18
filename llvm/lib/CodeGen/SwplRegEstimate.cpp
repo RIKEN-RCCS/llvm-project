@@ -800,7 +800,7 @@ unsigned SwplRegEstimate::countOverlapsWithMask(RenamedRegVector* vector_renamed
   }
 
   pattern_max_counter = 0;      
-  for( auto &counter : tmp_reg_counters ) {
+  for( auto counter : tmp_reg_counters ) {
     if((signed)pattern_max_counter < counter) { pattern_max_counter = counter; }
   }
 

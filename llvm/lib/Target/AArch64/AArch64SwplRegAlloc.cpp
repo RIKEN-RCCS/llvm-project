@@ -1270,9 +1270,9 @@ void SwplRegAllocInfoTbl::countRegs() {
     }
   }
   // レジスタ割付では、なぜか１から始まるので、以下のforでは0番目を処理しているがほんの少し無駄になっている
-  for (int &i:ireg) num_ireg = std::max(num_ireg, i);
-  for (int &i:freg) num_freg = std::max(num_freg, i);
-  for (int &i:preg) num_preg = std::max(num_preg, i);
+  for (int i:ireg) num_ireg = std::max(num_ireg, i);
+  for (int i:freg) num_freg = std::max(num_freg, i);
+  for (int i:preg) num_preg = std::max(num_preg, i);
 }
 
 /**

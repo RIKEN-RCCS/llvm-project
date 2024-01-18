@@ -283,7 +283,7 @@ unsigned SwplPlan::calculateResourceII(const SwplLoop& c_loop) {
     }
   }
   max_counter = 0;
-  for(auto &val : resource_appears ) {
+  for(auto val : resource_appears ) {
     int count = std::ceil(val); // 小数点切り上げ
     max_counter = std::max( max_counter, count );
   }
