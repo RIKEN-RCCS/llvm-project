@@ -90,7 +90,7 @@ unsigned SwplRegEstimate::calcNumRegs(const SwplLoop& loop,
   }
 
   /* vector_renamed_regs, renamed_regを解放する*/
-  for( auto rr : *vector_renamed_regs ) {
+  for( auto *rr : *vector_renamed_regs ) {
     delete rr;
   }
   delete vector_renamed_regs;
@@ -185,7 +185,7 @@ unsigned SwplRegEstimate::getNumInterferedRegs(const SwplLoop& loop,
     def_cycle = def_slot.calcCycle();
     is_recurrence = inst->isRecurrence();
 
-    for( auto reg : inst->getDefRegs() ) {
+    for( auto *reg : inst->getDefRegs() ) {
       unsigned last_use_cycle;
    
       if (isCountedReg(*reg, regclassid) == false) {
@@ -266,8 +266,8 @@ unsigned SwplRegEstimate::getNumImmortalRegs(const SwplLoop& loop, unsigned regc
   llvm::SmallSet<int, 20> regset;
 
   counter = 0;
-  for( auto inst : loop.getBodyInsts() ) {
-    for( auto reg : inst->getUseRegs() ) {
+  for( auto *inst : loop.getBodyInsts() ) {
+    for( auto *reg : inst->getUseRegs() ) {
       if ( reg->isRegNull() ) {
         continue;
       }
@@ -286,7 +286,7 @@ unsigned SwplRegEstimate::getNumImmortalRegs(const SwplLoop& loop, unsigned regc
     }
   }
 
-  for( auto inst : loop.getPhiInsts() ) {
+  for( auto *inst : loop.getPhiInsts() ) {
     SwplReg *reg, *successor;
     reg = &(inst->getDefRegs(0));
     assert ( !(reg->isRegNull()) );
@@ -325,7 +325,7 @@ unsigned SwplRegEstimate::getNumMortalRegs(const SwplLoop& loop,
     def_slot = slots->at(inst->inst_ix);
     def_cycle = def_slot.calcCycle();
 
-    for( auto reg : inst->getDefRegs() ) {
+    for( auto *reg : inst->getDefRegs() ) {
       unsigned last_use_cycle;
    
       if (isCountedReg(*reg, regclassid) == false) {
@@ -384,7 +384,7 @@ void SwplRegEstimate::collectRenamedRegs(const SwplLoop& loop,
 
     is_recurrence = inst->isRecurrence();
 
-    for( auto reg : inst->getDefRegs() ) {
+    for( auto *reg : inst->getDefRegs() ) {
       SwplRegEstimate::Renamed_Reg *renamed_reg;
       unsigned last_use_cycle;
    
@@ -553,7 +553,7 @@ void SwplRegEstimate::extendRenamedRegLivesBackward(RenamedRegVector* vector_ren
   int const init_use_offset = iteration_interval + 1;
   int full_kernel_cycles = n_renaming_versions * iteration_interval;
 
-  for( auto reg1 : *vector_renamed_regs ) {
+  for( auto *reg1 : *vector_renamed_regs ) {
     int min_use_offset;
     min_use_offset = init_use_offset;
 
@@ -562,7 +562,7 @@ void SwplRegEstimate::extendRenamedRegLivesBackward(RenamedRegVector* vector_ren
     /* reg2を配置するすきまがないため */
     if (reg1->use_cycle - reg1->def_cycle + 1 == full_kernel_cycles) { continue; }
     
-    for( auto reg2 : *vector_renamed_regs ) {
+    for( auto *reg2 : *vector_renamed_regs ) {
       /* 自身との重なりをみるため、indx,indx2は同じ場合もチェックする */
 
       /* 空き領域に配置可能か */
@@ -648,7 +648,7 @@ void SwplRegEstimate::extendRenamedRegLivesForward(RenamedRegVector* vector_rena
   int const init_def_offset = iteration_interval + 1;
   int full_kernel_cycles = n_renaming_versions * iteration_interval;
 
-  for( auto reg1 : *vector_renamed_regs ) {
+  for( auto *reg1 : *vector_renamed_regs ) {
     int min_def_offset;
     min_def_offset = init_def_offset;
 
@@ -657,7 +657,7 @@ void SwplRegEstimate::extendRenamedRegLivesForward(RenamedRegVector* vector_rena
     /* reg2を配置するすきまがないため */
     if (reg1->use_cycle - reg1->def_cycle + 1 == full_kernel_cycles) { continue; }
     
-    for( auto reg2 : *vector_renamed_regs ) {
+    for( auto *reg2 : *vector_renamed_regs ) {
       /* 自身との重なりをみるため、indx,indx2は同じ場合もチェックする */
 
       /* 空き領域に配置可能か */
@@ -729,7 +729,7 @@ unsigned SwplRegEstimate::getEstimateResult(RenamedRegVector* vector_renamed_reg
   unsigned indx;
   unsigned max_counter, counter;
 
-  for( auto rreg : *vector_renamed_regs ) {
+  for( auto *rreg : *vector_renamed_regs ) {
     incrementCounters (rreg->reg->getRegSize(),
                         reg_counters,
                         iteration_interval,
@@ -751,7 +751,7 @@ unsigned SwplRegEstimate::countLivesWithMask(RenamedRegVector* vector_renamed_re
   unsigned count_lives = 0;
 
   /* 最大、最小のcycleを収集 */
-  for( auto rreg : *vector_renamed_regs ) {
+  for( auto *rreg : *vector_renamed_regs ) {
     unsigned live_range;
     live_range = rreg->use_cycle - rreg->def_cycle + 1;
     if(live_range >= live_range_mask) {
@@ -773,7 +773,7 @@ unsigned SwplRegEstimate::countOverlapsWithMask(RenamedRegVector* vector_renamed
   max_cycle = SwplSlot::slotMin().calcCycle();
 
   /* 最大、最小のcycleを収集 */
-  for( auto rreg : *vector_renamed_regs ) {
+  for( auto *rreg : *vector_renamed_regs ) {
     unsigned live_range;
     live_range = rreg->use_cycle - rreg->def_cycle + 1;
     if(live_range <= live_range_mask || rreg->is_recurrence == true) { continue; }
@@ -788,7 +788,7 @@ unsigned SwplRegEstimate::countOverlapsWithMask(RenamedRegVector* vector_renamed
 
   /* 各renamed_regのcycle毎の生存数を積み上げる*/
   std::vector<int> tmp_reg_counters( (max_cycle - min_cycle + 1), 0 ); /* cycle毎の生存数 */
-  for( auto rreg : *vector_renamed_regs ) {
+  for( auto *rreg : *vector_renamed_regs ) {
     int live, live_range;
     live_range = rreg->use_cycle - rreg->def_cycle + 1;
   

@@ -170,7 +170,7 @@ static void createSwpliveinMI(MachineFunction &MF,
 
   // Create SWPLIVEIN instruction
   MachineInstrBuilder mib = BuildMI(MF, dl, SWPipeliner::TII->get(AArch64::SWPLIVEIN));
-  for(auto copy:copy_mis){
+  for(auto *copy:copy_mis){
     mib.addReg(copy->getOperand(vreg_loc).getReg(), RegState::ImplicitDefine);
   }
   *livein_mi = mib.getInstr();
@@ -188,12 +188,12 @@ static void addRegSwpliveoutMI(MachineInstrBuilder &mib,
                               std::vector<MachineInstr*> &copy_mis,
                               unsigned vreg_loc,
                               std::vector<Register> &added_regs) {
-  for (auto copy:copy_mis) {
+  for (auto *copy:copy_mis) {
     Register reg = copy->getOperand(vreg_loc).getReg();
     bool added = false;
 
     // Already added registers?
-    for (auto added_reg:added_regs) {
+    for (auto &added_reg:added_regs) {
       if (reg == added_reg){
         added = true;
         break;
@@ -618,7 +618,7 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
     // オプション指定があった場合は、空いている物理レジスタから優先して割り付け
     if ((!allocated) && (SwplRegAllocPrio == PRIO_UNUSE)) {
       const TargetRegisterClass *trc = SWPipeliner::MRI->getRegClass(itr_cur->vreg);
-      for (auto preg:*trc) {
+      for (auto &preg:*trc) {
         // 物理レジスタ番号取得
 
         // 使ってはいけない物理レジスタは割付けない
