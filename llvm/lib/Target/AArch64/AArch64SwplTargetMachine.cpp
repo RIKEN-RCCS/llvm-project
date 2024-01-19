@@ -580,7 +580,7 @@ AArch64SwplTargetMachine::~AArch64SwplTargetMachine() {
   for (auto *p:forNoImplMI) delete p;
   forPseudoMI.clear();
   forNoImplMI.clear();
-  for (auto tms: stmPipelines) {
+  for (auto &tms: stmPipelines) {
     if (tms.getSecond()) {
       for (auto *t:*(tms.getSecond())) {
         delete const_cast<StmPipeline *>(t);
@@ -694,7 +694,7 @@ AArch64SwplTargetMachine::getPipelines(const MachineInstr &mi) const {
     dbgs() << "  ResourceID: " << q << "+" << (id&0xfff) << "\n";
     dbgs() << "  latency: " << SwplSched.getLatency(id) << "\n";
     dbgs() << "  seqDecode: " << (SwplSched.isSeqDecode(id) ? "true" : "false") << "\n";
-    for (const auto s: *p) {
+    for (const auto *s: *p) {
       print(dbgs(), *s);
     }
   }
