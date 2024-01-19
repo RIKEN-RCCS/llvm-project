@@ -602,8 +602,8 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
   int ret = 0;
 
   // 割り当て済みレジスタ情報でループ
-  auto e = rai_tbl.length();
-  for (size_t i = 0; i < e; i++) {
+  // This loop will slow down translation time if you store the termination condition in a variable before the loop.
+  for (size_t i = 0; i < rai_tbl.length(); i++) {
     RegAllocInfo *itr_cur =rai_tbl.getWithIdx(i);
     bool allocated = false;
 
