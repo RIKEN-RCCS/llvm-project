@@ -14,7 +14,7 @@
 #CHECK-NEXT:none...
 #CHECK-NEXT:*** after SS : dump SwplSSNumRegisters ***
 #CHECK-NEXT:estimate VReg  Fp: 1, Int: 17, Pre: 1
-#CHECK:*** after SS : dump SwplSSEdges ***
+#CHECK-NEXT:*** after SS : dump SwplSSEdges ***
 #CHECK:[main] Edge:({{[A-Za-z0-9]+}}:ADDWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<0>, p_cycle:21, s_cycle:22, delay:1, distance:0, II:8
 #CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<0>, p_cycle:21, s_cycle:22, delay:1, distance:0, II:8
 #CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:SUBWrr) to ({{[A-Za-z0-9]+}}:ORRWrr), inCyclic:1, SkipFactor<0>, p_cycle:22, s_cycle:23, delay:1, distance:0, II:8

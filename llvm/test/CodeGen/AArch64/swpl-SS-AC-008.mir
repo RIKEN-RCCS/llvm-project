@@ -1,26 +1,26 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-enable-stagescheduling=true -swpl-debug-dump-ss-progress -import-swpl-dep-mi=%S/Inputs/swpl-SS-AC-023.yaml -o /dev/null 2>&1  | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-enable-stagescheduling=true -swpl-debug-dump-ss-progress -import-swpl-dep-mi=%S/Inputs/swpl-SS-AC-008.yaml -o /dev/null 2>&1  | FileCheck %s
 
 #CHECK:*** before SS : dump SwplSSNumRegisters ***
-#CHECK:estimate VReg  Fp: 1, Int: 17, Pre: 1
+#CHECK:estimate VReg  Fp: 1, Int: 18, Pre: 1
 #CHECK-NEXT:*** before SS : dump SwplSSEdges ***
-#CHECK:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:ADDWrr), inCyclic:1, SkipFactor<0>, p_cycle:13, s_cycle:19, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:0, SkipFactor<1>, p_cycle:13, s_cycle:22, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ADDWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<0>, p_cycle:19, s_cycle:20, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:SUBWrr) to ({{[A-Za-z0-9]+}}:ORRWrr), inCyclic:1, SkipFactor<0>, p_cycle:20, s_cycle:13, delay:1, distance:1, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<0>, p_cycle:21, s_cycle:22, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:SUBWrr) to ({{[A-Za-z0-9]+}}:ADDWrr), inCyclic:1, SkipFactor<0>, p_cycle:22, s_cycle:23, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ADDWrr) to ({{[A-Za-z0-9]+}}:ORRWrr), inCyclic:1, SkipFactor<0>, p_cycle:23, s_cycle:21, delay:1, distance:1, II:8
+#CHECK:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:ADDWrr), inCyclic:1, SkipFactor<3>, p_cycle:4, s_cycle:29, delay:1, distance:0, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<3>, p_cycle:4, s_cycle:31, delay:1, distance:0, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:ADDWrr), inCyclic:1, SkipFactor<0>, p_cycle:4, s_cycle:10, delay:1, distance:0, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ADDWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<0>, p_cycle:29, s_cycle:31, delay:1, distance:0, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ADDWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<0>, p_cycle:10, s_cycle:11, delay:1, distance:0, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:SUBWrr) to ({{[A-Za-z0-9]+}}:ORRWrr), inCyclic:1, SkipFactor<0>, p_cycle:11, s_cycle:4, delay:1, distance:1, II:8
 
-#CHECK:*** after SS : dump SwplSSNumRegisters ***
-#CHECK-NEXT:estimate VReg  Fp: 1, Int: 16, Pre: 1
+#CHECK:*** dump SwplSSMoveinfo after AC ***
+#CHECK-NEXT:none...
+#CHECK-NEXT:*** after SS : dump SwplSSNumRegisters ***
+#CHECK-NEXT:estimate VReg  Fp: 1, Int: 18, Pre: 1
 #CHECK-NEXT:*** after SS : dump SwplSSEdges ***
-#CHECK:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:ADDWrr), inCyclic:1, SkipFactor<0>, p_cycle:13, s_cycle:19, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:0, SkipFactor<0>, p_cycle:13, s_cycle:14, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ADDWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<0>, p_cycle:19, s_cycle:20, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:SUBWrr) to ({{[A-Za-z0-9]+}}:ORRWrr), inCyclic:1, SkipFactor<0>, p_cycle:20, s_cycle:13, delay:1, distance:1, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<0>, p_cycle:13, s_cycle:14, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:SUBWrr) to ({{[A-Za-z0-9]+}}:ADDWrr), inCyclic:1, SkipFactor<0>, p_cycle:14, s_cycle:15, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ADDWrr) to ({{[A-Za-z0-9]+}}:ORRWrr), inCyclic:1, SkipFactor<0>, p_cycle:15, s_cycle:13, delay:1, distance:1, II:8
+#CHECK:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:ADDWrr), inCyclic:1, SkipFactor<3>, p_cycle:4, s_cycle:29, delay:1, distance:0, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<3>, p_cycle:4, s_cycle:31, delay:1, distance:0, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:ADDWrr), inCyclic:1, SkipFactor<0>, p_cycle:4, s_cycle:10, delay:1, distance:0, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ADDWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<0>, p_cycle:29, s_cycle:31, delay:1, distance:0, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ADDWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<0>, p_cycle:10, s_cycle:11, delay:1, distance:0, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:SUBWrr) to ({{[A-Za-z0-9]+}}:ORRWrr), inCyclic:1, SkipFactor<0>, p_cycle:11, s_cycle:4, delay:1, distance:1, II:8
 
 --- |
   ; ModuleID = '/home/xxxx/swpl-SS-cyclic-xxx.c'
@@ -319,8 +319,7 @@ body:             |
     %7:gpr64common = PHI %18, %bb.0, %16, %bb.1
     %8:gpr32 = PHI %5, %bb.0, %15, %bb.1
     %9:gpr64sp = PHI %6, %bb.0, %17, %bb.1, debug-location !19
-    %113:gpr32 = PHI %22, %bb.0, %103, %bb.1, debug-location !19
-    %116:gpr32 = PHI %24, %bb.0, %106, %bb.1, debug-location !19
+    %115:gpr32 = PHI %24, %bb.0, %105, %bb.1, debug-location !19
     %33:gpr32 = nsw ADDWrr %20, %8, debug-location !19
     %39:gpr32 = LDRWroX %38, %7, 0, 0, debug-location !24 :: (load (s32) from %ir.scevgep23, !tbaa !14)
     %40:gpr32 = nsw MADDWrrr killed %39, %33, $wzr, debug-location !25
@@ -330,12 +329,12 @@ body:             |
     %16:gpr64all = COPY %42, debug-location !27
     %43:gpr64 = SUBSXri %9, 1, 0, implicit-def $nzcv, debug-location !18
     %17:gpr64all = COPY %43, debug-location !18
-    %101:gpr32 = nsw ORRWrr %20, %113, debug-location !19
+    %101:gpr32 = nsw ORRWrr %20, %115, debug-location !19
     %102:gpr32 = nsw ADDWrr %20, %101, debug-location !19
-    %103:gpr32 = nsw SUBWrr %20, %102, debug-location !19
-    %104:gpr32 = nsw ORRWrr %20, %116, debug-location !19
-    %105:gpr32 = nsw SUBWrr %101, %104, debug-location !19
-    %106:gpr32 = nsw ADDWrr %20, %105, debug-location !19
+    %103:gpr32 = nsw SUBWrr %101, %102, debug-location !19
+    %104:gpr32 = nsw ADDWrr %20, %101, debug-location !19
+    %105:gpr32 = nsw SUBWrr %20, %104, debug-location !19
+
     Bcc 1, %bb.1, implicit $nzcv, debug-location !18
     B %bb.2, debug-location !18
   
