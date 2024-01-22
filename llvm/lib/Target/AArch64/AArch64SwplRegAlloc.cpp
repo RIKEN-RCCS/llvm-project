@@ -602,8 +602,8 @@ static int physRegAllocWithLiveRange(SwplRegAllocInfoTbl &rai_tbl,
   int ret = 0;
 
   // 割り当て済みレジスタ情報でループ
-  // This loop will slow down translation time if you store the termination condition in a variable before the loop.
-  for (size_t i = 0; i < rai_tbl.length(); i++) {
+  auto e = rai_tbl.length();
+  for (size_t i = 0; i < e; i++) {
     RegAllocInfo *itr_cur =rai_tbl.getWithIdx(i);
     bool allocated = false;
 
@@ -1110,8 +1110,8 @@ unsigned SwplRegAllocInfoTbl::getReusePReg( RegAllocInfo* rai ) {
     }
 
     bool isoverlap = false;
-    auto RangesSize = ranges.size();
-    for(unsigned i=0; i<RangesSize; i++) {
+    auto e = ranges.size();
+    for(unsigned i=0; i<e; i++) {
       if ((isOverlapLiveRange(ranges[i], rai)) ||
           ((tied) && (isOverlapLiveRange(ranges[i], tied)))) {
          // 「自分のliverange」もしくは「tied相手のliverange」のどちらかがチェック対象と重なる
