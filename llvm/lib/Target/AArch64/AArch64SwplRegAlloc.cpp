@@ -1110,8 +1110,8 @@ unsigned SwplRegAllocInfoTbl::getReusePReg( RegAllocInfo* rai ) {
     }
 
     bool isoverlap = false;
-    auto e = ranges.size();
-    for(unsigned i=0; i<e; i++) {
+    auto ranges_e = ranges.size();
+    for(unsigned i=0; i<ranges_e; i++) {
       if ((isOverlapLiveRange(ranges[i], rai)) ||
           ((tied) && (isOverlapLiveRange(ranges[i], tied)))) {
          // 「自分のliverange」もしくは「tied相手のliverange」のどちらかがチェック対象と重なる
