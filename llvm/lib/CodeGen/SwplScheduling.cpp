@@ -425,8 +425,9 @@ int SwplModuloDdg::getDelay(const SwplInst& c_former_isnt, const SwplInst& c_lat
   edge = graph.findEdge( c_former_isnt, c_latter_inst );
   assert (edge != nullptr);
 
-  assert(modulo_delay_map->find(edge) != modulo_delay_map->end());
-  delay =  modulo_delay_map->find(edge)->second;
+  auto MapFindEdge = modulo_delay_map->find(edge);
+  assert(MapFindEdge != modulo_delay_map->end());
+  delay = MapFindEdge->second;
 
   if( c_former_isnt.isPrefetch() ) {
     return std::min(delay, (int)iterator_interval);
@@ -917,8 +918,9 @@ void SwplTrialState::unsetInst(const SwplInst& inst) {
 /// \param [in] inst 優先度を求めるInst
 /// \return Instの優先度
 int SwplTrialState::instPriority(const SwplInst* inst) {
-  assert( priorities->find(inst) != priorities->end() );
-  return priorities->find(inst)->second;
+  auto Find_Inst = priorities->find(inst);
+  assert( Find_Inst != priorities->end() );
+  return Find_Inst->second;
 }
 
 /// \brief 該当のループのDebugLocを返す
