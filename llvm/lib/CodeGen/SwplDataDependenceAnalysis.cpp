@@ -46,9 +46,9 @@ SwplDdg *SwplDdg::Initialize (SwplLoop &loop, bool Nodep) {
   /// into PhiInsts after generating SwplDdg.
   loop.recollectPhiInsts();
 
-  // Import yaml of DDG
-  if (SWPipeliner::isImportDDG())
-    ddg->importYaml();
+  // Importing dependency information will not be performed here.
+  // The edited dependency information is imported within create ModuloDelayMap,
+  // so that it only affects SWPL scheduling.
 
   // Export yaml of DDG
   if (SWPipeliner::isExportDDG())
@@ -250,8 +250,8 @@ void SwplDdg::analysisRegDependence_for_tieddef() {
     auto *mi = def_inst->getMI();
 
 //    dbgs() << *mi;
-
-    for (unsigned def_ix=0; def_ix < mi->getNumDefs(); def_ix++) {
+    auto e = mi->getNumDefs();
+    for (unsigned def_ix=0; def_ix < e; def_ix++) {
       unsigned int use_ix = 0;
       if (!mi->isRegTiedToUseOperand(def_ix, &use_ix)) {
         continue;

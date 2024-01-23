@@ -80,7 +80,8 @@ bool AArch64SwplExpandPseudo::expandMF(MachineFunction &MF) {
       auto op = MI.getOpcode(); 
       if (op == AArch64::SWPLIVEIN) {
         eraseInstrs.push_back(&MI);
-        for (size_t i = 0; i < MI.getNumOperands(); i++) {
+        auto e = MI.getNumOperands();
+        for (size_t i = 0; i < e; i++) {
           Register LiveinReg = MI.getOperand(i).getReg();
           /// After register allocation, 
           /// liveins are used to represent registers that span the MBB.
