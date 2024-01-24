@@ -41,12 +41,12 @@ using SwplRegs = std::vector<SwplReg *>;
 using SwplMems = std::vector<SwplMem *>;
 using SwplInstList = std::list<SwplInst *>; //vectorではダメなのか
 using SwplInstEdges = std::vector<SwplInstEdge *>;
-using SwplInst2InstsMap = std::map<SwplInst *, SwplInsts>;
-using SwplInst2InstEdgesMap = std::map<SwplInst *, SwplInstEdges>;
-using Register2SwplRegMap = std::map<Register, SwplReg *>;
-using SwplInstEdge2Distances = std::map<SwplInstEdge *, std::vector<unsigned>>;
-using SwplInstEdge2Delays = std::map<SwplInstEdge *, std::vector<int>>;
-using SwplInstEdge2ModuloDelay = std::map<SwplInstEdge *, int>;
+using SwplInst2InstsMap = llvm::DenseMap<SwplInst *, SwplInsts>;
+using SwplInst2InstEdgesMap = llvm::DenseMap<SwplInst *, SwplInstEdges>;
+using Register2SwplRegMap = llvm::DenseMap<Register, SwplReg *>;
+using SwplInstEdge2Distances = llvm::DenseMap<SwplInstEdge *, std::vector<unsigned>>;
+using SwplInstEdge2Delays = llvm::DenseMap<SwplInstEdge *, std::vector<int>>;
+using SwplInstEdge2ModuloDelay = llvm::DenseMap<SwplInstEdge *, int>;
 
 using SwplInsts_iterator = SwplInsts::iterator;
 using SwplRegs_iterator = SwplRegs::iterator;
@@ -81,11 +81,11 @@ class SwplLoop {
   SwplInsts PhiInsts;                  ///< Phi命令の集合
   SwplInsts BodyInsts;                 ///< ループボディの命令の集合
   SwplMems Mems;                       ///< ループボディ内の SwplMem の集合
-  std::map<SwplMem *, int> MemIncrementMap;  ///< SwplMem と増分値のマップ
+  llvm::DenseMap<SwplMem *, int> MemIncrementMap;  ///< SwplMem と増分値のマップ
   MachineBasicBlock *NewBodyMBB; ///< 対象ループのbodyのMBBを複製し非SSA化したMBB
-  std::map<const MachineInstr *, MachineInstr *> OrgMI2NewMI;                   ///< 対象ループのbodyのオリジナルのMIと複製先のMIのMap
-  std::map<const MachineInstr *, const MachineInstr *> NewMI2OrgMI;                   ///< 対象ループのbodyの複製先のMIとオリジナルのMIのMap
-  std::map<Register, Register> OrgReg2NewReg;                ///< 対象ループのbodyのオリジナルのRegisterと複製先のRegisterのMap
+  llvm::DenseMap<const MachineInstr *, MachineInstr *> OrgMI2NewMI;                   ///< 対象ループのbodyのオリジナルのMIと複製先のMIのMap
+  llvm::DenseMap<const MachineInstr *, const MachineInstr *> NewMI2OrgMI;                   ///< 対象ループのbodyの複製先のMIとオリジナルのMIのMap
+  llvm::DenseMap<Register, Register> OrgReg2NewReg;                ///< 対象ループのbodyのオリジナルのRegisterと複製先のRegisterのMap
   std::vector<MachineInstr *>    Copies;                       ///< 非SSA化の際に、PhiのLiveinレジスタをLoop内で使用するレジスタへCopyする命令をPreHeaderに生成している \n
                                        ///このCopy命令の集合
   SwplRegs Regs;                       ///< 対象ループ内で生成した SwplReg を管理する \note メモリ解放時に利用する
@@ -113,7 +113,7 @@ public:
   SwplInsts &getBodyInsts() { return BodyInsts; }
   const SwplInsts &getBodyInsts() const { return BodyInsts; }
   SwplMems &getMems() { return Mems; }
-  std::map<SwplMem *, int> &getMemIncrementMap() { return MemIncrementMap; };
+  llvm::DenseMap<SwplMem *, int> &getMemIncrementMap() { return MemIncrementMap; };
   /// SwplLoop::NewBodyMBB を返す
   MachineBasicBlock *getNewBodyMBB() { return NewBodyMBB; }
   /// SwplLoop::NewBodyMBB を設定する
@@ -130,11 +130,11 @@ public:
   /// SwplLoop::NewBodyMBB を削除する
   void deleteNewBodyMBB();
   /// SwplLoop::OrgMI2NewMI を返す
-  std::map<const MachineInstr *, MachineInstr *> &getOrgMI2NewMI() { return OrgMI2NewMI; };
+  llvm::DenseMap<const MachineInstr *, MachineInstr *> &getOrgMI2NewMI() { return OrgMI2NewMI; };
   /// SwplLoop::NewMI2OrgMI を返す
   const MachineInstr *getOrgMI(const MachineInstr *newMI) { return NewMI2OrgMI.at(newMI); };
   /// SwplLoop::OrgReg2NewReg を返す
-  std::map<Register, Register> &getOrgReg2NewReg() { return OrgReg2NewReg; };
+  llvm::DenseMap<Register, Register> &getOrgReg2NewReg() { return OrgReg2NewReg; };
   /// SwplLoop::Copies を返す
   std::vector<MachineInstr *> &getCopies() { return Copies; };
   /// SwplLoop::Regs を返す
@@ -339,8 +339,8 @@ class SwplInst {
   SwplLoop *Loop;             ///< 本命令が属するループのSwplLoop
   SwplRegs UseRegs;           ///< 本命令が参照するレジスタのVector
   SwplRegs DefRegs;           ///< 本命令が定義するレジスタのVector
-  std::map<int,int> DefOpMap; ///< defsとMachineOperand位置のMap
-  std::map<int,int> UseOpMap; ///< usesとMachineOperand位置のMap
+  llvm::DenseMap<int,int> DefOpMap; ///< defsとMachineOperand位置のMap
+  llvm::DenseMap<int,int> UseOpMap; ///< usesとMachineOperand位置のMap
 
 public:
   SwplInst() {};

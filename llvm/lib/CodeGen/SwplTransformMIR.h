@@ -22,7 +22,7 @@ namespace llvm {
 class SwplTransformMIR {
 private:
   using Reg2Vreg=DenseMap<const SwplReg*, std::vector<Register>*>;
-  using RegMap=std::map<Register, Register>;
+  using RegMap=llvm::DenseMap<Register, Register>;
 
   /// 変換結果の移動先
   enum BLOCK {  PRO_MOVE,  PROLOGUE,  KERNEL,  EPILOGUE,  EPI_MOVE};
@@ -144,12 +144,12 @@ private:
   /// 指定MBBのレジスタ書き換え
   /// \param [out] mbb
   /// \param [out] regmap
-  void replaceDefReg(MachineBasicBlock &mbb, std::map<Register,Register>&regmap);
+  void replaceDefReg(MachineBasicBlock &mbb, llvm::DenseMap<Register,Register>&regmap);
 
   /// 指定MBBのレジスタ書き換え
   /// \param [out] mbb
   /// \param [in] regmap
-  void replaceUseReg(std::set<MachineBasicBlock*> &mbbs, const std::map<Register,Register>&regmap);
+  void replaceUseReg(std::set<MachineBasicBlock*> &mbbs, const llvm::DenseMap<Register,Register>&regmap);
 
   /// 指定命令のスロット位置を返す
   /// \param [in] inst

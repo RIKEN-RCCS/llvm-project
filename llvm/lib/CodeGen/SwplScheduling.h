@@ -22,7 +22,7 @@
 namespace llvm{
 
 using SwplInstIntMap = llvm::DenseMap<const SwplInst*, int>;
-using SwplInstPrioque = std::map<int, const SwplInst*>;
+using SwplInstPrioque = llvm::DenseMap<int, const SwplInst*>;
 using SwplInstSet = std::set<const SwplInst*>;
 
 
@@ -39,7 +39,7 @@ using SwplInstSet = std::set<const SwplInst*>;
 ///
 class SwplMrt {
   unsigned iteration_interval; ///< II
-  std::vector<std::map<StmResourceId, const SwplInst*>*> table; //< Mrt
+  std::vector<llvm::DenseMap<StmResourceId, const SwplInst*>*> table; //< Mrt
 
 public:
   SwplMrt(unsigned ii) : iteration_interval(ii) {} ///< constructor

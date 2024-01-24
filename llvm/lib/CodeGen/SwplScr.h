@@ -416,7 +416,7 @@ private:
   void removePredFromPhi(MachineBasicBlock *fromMBB, MachineBasicBlock *removeMBB);
 
 public:
-  using UseMap=std::map<Register, std::vector<MachineOperand*>>;
+  using UseMap=llvm::DenseMap<Register, std::vector<MachineOperand*>>;
 
   SwplScr(MachineLoop&ml):ML(ml){}
 

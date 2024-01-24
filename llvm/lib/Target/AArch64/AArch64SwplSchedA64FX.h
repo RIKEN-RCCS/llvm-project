@@ -120,7 +120,7 @@ struct AArch64SwplSchedA64FX{
   };
 
   static std::map<ResourceID, SchedResource> ResInfo; ///< 資源情報を参照するための紐づけ
-  static std::map<unsigned int, ResourceID> MIOpcodeInfo; ///< MIと資源情報の紐づけ
+  static llvm::DenseMap<unsigned int, ResourceID> MIOpcodeInfo; ///< MIと資源情報の紐づけ
 
   /**
    * \brief 利用資源IDを返す。

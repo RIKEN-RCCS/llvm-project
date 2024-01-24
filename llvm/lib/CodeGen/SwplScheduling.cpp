@@ -316,7 +316,7 @@ SwplMrt* SwplMrt::construct (unsigned iteration_interval) {
   SwplMrt*  mrt = new SwplMrt(iteration_interval);
   unsigned ii = mrt->iteration_interval;
   for(unsigned i=0; i<ii; i++) {
-    mrt->table.push_back( (new std::map<StmResourceId, const SwplInst*>()) );
+    mrt->table.push_back( (new llvm::DenseMap<StmResourceId, const SwplInst*>()) );
   }
   return mrt;
 }
