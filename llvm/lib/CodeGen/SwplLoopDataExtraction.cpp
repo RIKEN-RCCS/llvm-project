@@ -667,7 +667,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
               .addReg(def_r);
       NewMI2OrgMI[Copy]=org_phi;
     }
-    for (auto x:OrgReg2NewReg) {
+    for (auto &x:OrgReg2NewReg) {
       Register r = x.second;
       if (r.id() == own_r.id()) {
         if (LiveOutReg.count(x.first)) {
@@ -732,7 +732,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     }
 
     ///          OrgMI2NewMIがorgのphiとnewのphiとなっているので、new側をCopy命令に変更する。
-    for (auto itr: getOrgMI2NewMI()) {
+    for (auto &itr: getOrgMI2NewMI()) {
       if (itr.second == phi) {
         addOrgMI2NewMI(itr.first, const_cast<llvm::MachineInstr *>(Copy));
       }
@@ -765,7 +765,7 @@ static void collectDefReg(llvm::MachineInstr &orgMI, llvm::DenseMap<Register, Re
 }
 
 void SwplLoop::renameReg() {
-  for (auto m_itr: getOrgMI2NewMI()) {
+  for (auto &m_itr: getOrgMI2NewMI()) {
     const MachineInstr *orgMI = m_itr.first;
     MachineInstr *newMI = m_itr.second;
     for (unsigned i = 0, e = orgMI->getNumOperands(); i != e; ++i) {
@@ -1236,21 +1236,21 @@ void SwplInst::print() {
 void SwplLoop::dumpOrgMI2NewMI() {
   // @todo オリジナル命令がpost/pre命令の場合は、変換後のadd命令が出力されない
   // これは、MAPがオリジナル命令とクローンした命令が1対1を前提としているため
-  for (auto itr: getOrgMI2NewMI()) {
+  for (auto &itr: getOrgMI2NewMI()) {
     dbgs() << "OldMI=" << *itr.first << "\n";
     dbgs() << "NewMI=" << *itr.second << "\n";
   }
 }
 
 void SwplLoop::dumpOrgReg2NewReg() {
-  for (auto itr: getOrgReg2NewReg()) {
+  for (auto &itr: getOrgReg2NewReg()) {
     dbgs() << "OldReg=" << printReg(itr.first, SWPipeliner::TRI)
            << "NewReg=" << printReg(itr.second, SWPipeliner::TRI) << "\n";
   }
 }
 
 void SwplLoop::dumpCopies() {
-  for (auto itr: getCopies()) {
+  for (auto *itr: getCopies()) {
     dbgs() << "MI=" << *itr << "\n";
   }
 }

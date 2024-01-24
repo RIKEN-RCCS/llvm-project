@@ -299,8 +299,8 @@ void SwplMrt::dump() {
 /// \return オペコード名の最長の長さ
 unsigned SwplMrt::getMaxOpcodeNameLength() {
   unsigned max_length=0;
-  for( auto cl : table ) {
-    for( auto pr : *cl ) {
+  for( auto *cl : table ) {
+    for( auto &pr : *cl ) {
       max_length = std::max( max_length,
                              (unsigned)(pr.second->getName().size()+1) );
     }
@@ -425,8 +425,9 @@ int SwplModuloDdg::getDelay(const SwplInst& c_former_isnt, const SwplInst& c_lat
   edge = graph.findEdge( c_former_isnt, c_latter_inst );
   assert (edge != nullptr);
 
-  assert(modulo_delay_map->find(edge) != modulo_delay_map->end());
-  delay =  modulo_delay_map->find(edge)->second;
+  auto MapFindEdge = modulo_delay_map->find(edge);
+  assert(MapFindEdge != modulo_delay_map->end());
+  delay = MapFindEdge->second;
 
   if( c_former_isnt.isPrefetch() ) {
     return std::min(delay, (int)iterator_interval);
@@ -498,7 +499,7 @@ void SwplModuloDdg::dump() {
 
   dbgs() << "-- ModuloDdg dump --\n";
   dbgs() << "iterator_interval : " <<iterator_interval << "\n";
-  for( auto inst : loop.getBodyInsts() ) {
+  for( auto *inst : loop.getBodyInsts() ) {
     inst->getMI()->print( dbgs() );
 
     dbgs() << "\tPipelines\n";
@@ -506,7 +507,7 @@ void SwplModuloDdg::dump() {
       dbgs() << "\t\tNothing...(pseudo instruction)\n";
     }
     else {
-      for( auto pl : *(SWPipeliner::STM->getPipelines( *(inst->getMI()) ) ) ){
+      for( auto *pl : *(SWPipeliner::STM->getPipelines( *(inst->getMI()) ) ) ){
         dbgs() << "\t\t";
         SWPipeliner::STM->print( dbgs(), *pl );
       }
@@ -517,7 +518,7 @@ void SwplModuloDdg::dump() {
       dbgs() << "\t\tNothing...\n";
     }
     else {
-      for( auto mp : *modulo_delay_map ) {
+      for( auto &mp : *modulo_delay_map ) {
         if( mp.first->getInitial() == inst ) {
           dbgs() << "\t\tdelay " << format("%2d : ", mp.second);
           mp.first->getTerminal()->getMI()->print( dbgs() );
@@ -719,7 +720,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::chooseSlot(unsigned begin_cycle
       else {
         // 資源情報を取得し、MRTに資源競合を問い合わせる。
         // 資源競合がなければ配置可能
-        for( auto pl : *(SWPipeliner::STM->getPipelines(mi)) ) {
+        for( auto *pl : *(SWPipeliner::STM->getPipelines(mi)) ) {
           if( mrt->isOpenForInst(cycle, inst, *pl) ) {
             return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), const_cast<StmPipeline *>(pl) );
           }
@@ -778,7 +779,7 @@ SwplTrialState::SlotInstPipeline SwplTrialState::latestValidSlot(const SwplInst&
         return SlotInstPipeline(slot, &(const_cast<SwplInst&>(inst)), nullptr );
       }
       else {
-        for( auto pl : *(SWPipeliner::STM->getPipelines(mi)) ) {
+        for( auto *pl : *(SWPipeliner::STM->getPipelines(mi)) ) {
           if( mrt->isOpenForInst(begin_cycle, inst, *pl) ) {
             // slotと資源は結び付いていない。
             //
@@ -826,7 +827,7 @@ void SwplTrialState::unsetResourceConstrainedInsts(SlotInstPipeline& SIP) {
   }
 
   blocking_insts = mrt->findBlockingInsts( SIP.slot.calcCycle(), *(SIP.inst), *(SIP.pipeline) );
-  for( auto inst : *blocking_insts ) {
+  for( auto *inst : *blocking_insts ) {
     if( OptionDumpEveryInst ) {
       dbgs() << "unset (ResourceConstrained) : " << inst->getName() << "\n";
     }
@@ -917,8 +918,9 @@ void SwplTrialState::unsetInst(const SwplInst& inst) {
 /// \param [in] inst 優先度を求めるInst
 /// \return Instの優先度
 int SwplTrialState::instPriority(const SwplInst* inst) {
-  assert( priorities->find(inst) != priorities->end() );
-  return priorities->find(inst)->second;
+  auto Find_Inst = priorities->find(inst);
+  assert( Find_Inst != priorities->end() );
+  return Find_Inst->second;
 }
 
 /// \brief 該当のループのDebugLocを返す
@@ -938,7 +940,7 @@ SwplTrialState* SwplTrialState::construct(const SwplModuloDdg& c_modulo_ddg) {
   state->priorities = state->modulo_ddg.computePriorities();
 
   state->inst_queue = new SwplInstPrioque();
-  for( auto pair : *(state->priorities) ) {
+  for( auto &pair : *(state->priorities) ) {
     state->inst_queue->insert( std::make_pair( pair.second, pair.first ) );
   }
 
@@ -1066,7 +1068,7 @@ void SwplPlanSpec::countLoadStore(unsigned *num_load, unsigned *num_store, unsig
   *num_store = 0;
   *num_float = 0;
 
-  for( auto inst : loop.getBodyInsts() ) {
+  for( auto *inst : loop.getBodyInsts() ) {
     if( inst->isStore() ) {
       (*num_store)++;
     } else if( inst->isLoad() ) {
@@ -2016,7 +2018,7 @@ SwplMsResult *SwplMsResult::calculateMsResult(SwplPlanSpec spec) {
   }
 
   /* 不要なinst_slot_mapを解放する*/
-  for( auto ms_free : ms_result_candidate) {
+  for( auto *ms_free : ms_result_candidate) {
     if (ms_free->slots != nullptr) {
       delete ms_free->slots;
     }
@@ -2100,7 +2102,7 @@ SwplMsResult *SwplMsResult::getEffectiveSchedule(const SwplPlanSpec & spec,
   able_min_ii = spec.max_ii;
   effective_ms_result = nullptr;
 
-  for( auto temp : ms_result_candidate) {
+  for( auto *temp : ms_result_candidate) {
     if (temp->isEffective()) {
       if (temp->ii < able_min_ii) {
         able_min_ii = temp->ii;
@@ -2117,7 +2119,7 @@ SwplMsResult *SwplMsResult::getEffectiveSchedule(const SwplPlanSpec & spec,
 /// \retval true ms_result_candidateに回転数が足りるscheduleが存在する
 /// \retval false ms_result_candidateに回転数が足りるscheduleが存在しない
 bool SwplMsResult::isAnyScheduleItrSufficient(std::unordered_set<SwplMsResult *>& ms_result_candidate) {
-  for( auto temp : ms_result_candidate) {
+  for( auto *temp : ms_result_candidate) {
     if (temp != nullptr && temp->is_itr_sufficient) {
       return true;
     }
@@ -2136,7 +2138,7 @@ SwplMsResult *SwplMsResult::getModerateSchedule(std::unordered_set<SwplMsResult 
 #if !defined(NDEBUG)
   {
     unsigned int number_of_moderate_schedule = 0;
-    for( auto temp : ms_result_candidate) {
+    for( auto *temp : ms_result_candidate) {
       if(temp->isModerate()) {
         ++number_of_moderate_schedule;
       }
@@ -2145,7 +2147,7 @@ SwplMsResult *SwplMsResult::getModerateSchedule(std::unordered_set<SwplMsResult 
   }
 #endif
 
-  for( auto temp : ms_result_candidate) {
+  for( auto *temp : ms_result_candidate) {
     if(temp->isModerate()) {
       return temp;
     }
@@ -2167,7 +2169,7 @@ void SwplMsResult::getBinarySearchRange(const SwplPlanSpec & spec,
   *able_min_ii   = spec.max_ii;
   *unable_max_ii = spec.unable_max_ii;
 
-  for( auto temp : ms_result_candidate ) {
+  for( auto *temp : ms_result_candidate ) {
     if ( temp->isModerate() ) {
       if (temp->ii < *able_min_ii) {
         *able_min_ii = temp->ii;
@@ -2594,7 +2596,7 @@ bool SwplMsResult::isRegReducible(
   unsigned maxii_short_freg = 0, maxii_short_ireg = 0, maxii_short_preg = 0;
   unsigned second_maxii_short_freg = 0, second_maxii_short_ireg = 0, second_maxii_short_preg = 0;
 
-  for(auto temp : ms_result_candidate) {
+  for(auto *temp : ms_result_candidate) {
     assert(temp->isEffective() == false);
     if (temp->slots != nullptr && temp->is_itr_sufficient) {
       if (able_maxii < temp->ii) {
