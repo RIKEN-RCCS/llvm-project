@@ -22,7 +22,7 @@
 namespace llvm{
 
 using SwplInstIntMap = llvm::DenseMap<const SwplInst*, int>;
-using SwplInstPrioque = llvm::DenseMap<int, const SwplInst*>;
+using SwplInstPrioque = std::map<int, const SwplInst*>;
 using SwplInstSet = std::set<const SwplInst*>;
 
 

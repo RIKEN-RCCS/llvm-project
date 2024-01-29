@@ -46,7 +46,7 @@ using SwplInst2InstEdgesMap = llvm::DenseMap<SwplInst *, SwplInstEdges>;
 using Register2SwplRegMap = llvm::DenseMap<Register, SwplReg *>;
 using SwplInstEdge2Distances = llvm::DenseMap<SwplInstEdge *, std::vector<unsigned>>;
 using SwplInstEdge2Delays = llvm::DenseMap<SwplInstEdge *, std::vector<int>>;
-using SwplInstEdge2ModuloDelay = llvm::DenseMap<SwplInstEdge *, int>;
+using SwplInstEdge2ModuloDelay = std::map<SwplInstEdge *, int>;
 
 using SwplInsts_iterator = SwplInsts::iterator;
 using SwplRegs_iterator = SwplRegs::iterator;
@@ -85,7 +85,7 @@ class SwplLoop {
   MachineBasicBlock *NewBodyMBB; ///< 対象ループのbodyのMBBを複製し非SSA化したMBB
   llvm::DenseMap<const MachineInstr *, MachineInstr *> OrgMI2NewMI;                   ///< 対象ループのbodyのオリジナルのMIと複製先のMIのMap
   llvm::DenseMap<const MachineInstr *, const MachineInstr *> NewMI2OrgMI;                   ///< 対象ループのbodyの複製先のMIとオリジナルのMIのMap
-  llvm::DenseMap<Register, Register> OrgReg2NewReg;                ///< 対象ループのbodyのオリジナルのRegisterと複製先のRegisterのMap
+  std::map<Register, Register> OrgReg2NewReg;                ///< 対象ループのbodyのオリジナルのRegisterと複製先のRegisterのMap
   std::vector<MachineInstr *>    Copies;                       ///< 非SSA化の際に、PhiのLiveinレジスタをLoop内で使用するレジスタへCopyする命令をPreHeaderに生成している \n
                                        ///このCopy命令の集合
   SwplRegs Regs;                       ///< 対象ループ内で生成した SwplReg を管理する \note メモリ解放時に利用する
@@ -134,7 +134,7 @@ public:
   /// SwplLoop::NewMI2OrgMI を返す
   const MachineInstr *getOrgMI(const MachineInstr *newMI) { return NewMI2OrgMI.at(newMI); };
   /// SwplLoop::OrgReg2NewReg を返す
-  llvm::DenseMap<Register, Register> &getOrgReg2NewReg() { return OrgReg2NewReg; };
+  std::map<Register, Register> &getOrgReg2NewReg() { return OrgReg2NewReg; };
   /// SwplLoop::Copies を返す
   std::vector<MachineInstr *> &getCopies() { return Copies; };
   /// SwplLoop::Regs を返す
@@ -339,8 +339,8 @@ class SwplInst {
   SwplLoop *Loop;             ///< 本命令が属するループのSwplLoop
   SwplRegs UseRegs;           ///< 本命令が参照するレジスタのVector
   SwplRegs DefRegs;           ///< 本命令が定義するレジスタのVector
-  llvm::DenseMap<int,int> DefOpMap; ///< defsとMachineOperand位置のMap
-  llvm::DenseMap<int,int> UseOpMap; ///< usesとMachineOperand位置のMap
+  std::map<int,int> DefOpMap; ///< defsとMachineOperand位置のMap
+  std::map<int,int> UseOpMap; ///< usesとMachineOperand位置のMap
 
 public:
   SwplInst() {};
