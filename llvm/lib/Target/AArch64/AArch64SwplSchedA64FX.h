@@ -19,7 +19,7 @@ namespace llvm {
 
 struct AArch64SwplSchedA64FX{
   static unsigned VectorLength;
-  /// 命令の種類
+  /// Types of Instructions
   enum InstKind {
     INT_OP = 0x1000,
     INT_LD = 0x2000,
@@ -33,7 +33,7 @@ struct AArch64SwplSchedA64FX{
     PREDICATE_ST = 0xA000
   };
 
-  /// 資源
+  /// Resources
   enum PortKind {
     FLA=1, FLB=2, EXA=3, EXB=4, EAGA=5, EAGB=6, PRX=7, BR=8,
     LSU1=9, LSU2=10,
@@ -42,7 +42,7 @@ struct AArch64SwplSchedA64FX{
   };
 
 
-  /// 利用資源ID
+  /// Usage resource ID
   enum ResourceID {
     MI_NA,
     MI_INT_OP_001 = INT_OP + 1,
@@ -112,15 +112,15 @@ struct AArch64SwplSchedA64FX{
     MI_PREDICATE_OP_002 = PREDICATE_OP + 2,
   };
 
-  /// 利用資源情報（Pipeline情報群 + レイテンシ）
+  /// Usage Resource Information（Pipeline information group + latency）
   struct SchedResource {
     StmPipelines pipelines;
     int latency;
     bool seqdecode = false;
   };
 
-  static std::map<ResourceID, SchedResource> ResInfo; ///< 資源情報を参照するための紐づけ
-  static llvm::DenseMap<unsigned int, ResourceID> MIOpcodeInfo; ///< MIと資源情報の紐づけ
+  static std::map<ResourceID, SchedResource> ResInfo; ///< Linking for referencing resource information
+  static llvm::DenseMap<unsigned int, ResourceID> MIOpcodeInfo; ///< Linking MI and resource information
 
   /**
    * \brief 利用資源IDを返す。

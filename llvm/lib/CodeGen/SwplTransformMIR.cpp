@@ -862,10 +862,10 @@ void SwplTransformMIR::replaceDefReg(MachineBasicBlock &mbb, llvm::DenseMap<Regi
 }
 
 void SwplTransformMIR::replaceUseReg(std::set<MachineBasicBlock*> &mbbs, const llvm::DenseMap<Register,Register>&regmap) {
-  // registerのdef/use情報は正しい場合、効率的にレジスタの変更がおこなえる
+  // If the register def/use information is correct, the register can be changed efficiently.
   std::vector<MachineOperand*> targets;
   for (auto &m:regmap) {
-    /// (1) 変更すべきオペランドを集める
+    /// (1) Collect operands to be changed
     for (auto &op:SWPipeliner::MRI->use_operands(m.first)) {
       auto *mi=op.getParent();
       auto *mbb=mi->getParent();
@@ -873,11 +873,11 @@ void SwplTransformMIR::replaceUseReg(std::set<MachineBasicBlock*> &mbbs, const l
         targets.push_back(&op);
       }
     }
-    /// (2) 収集したターゲットのレジスタを書き換える
+    /// (2) Rewrite the collected target registers
     for (auto *op:targets) {
       op->setReg(m.second);
     }
-    /// (3) 収集した情報をクリアし、次のターゲット収集に備える
+    /// (3) Clear collected information and prepare for next target collection
     targets.clear();
   }
 }

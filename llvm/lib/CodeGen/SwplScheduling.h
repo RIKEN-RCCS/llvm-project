@@ -26,11 +26,11 @@ using SwplInstPrioque = std::map<int, const SwplInst*>;
 using SwplInstSet = std::set<const SwplInst*>;
 
 
-/// \brief MRTを表現
-/// \details MRTを表現する。
-///          MRTは、ResourceIDが要素番号として扱えない場合でも対応可能とするため、
-///          ResourceIDとSwplInst*のmapのvectorで表現する。
-///          以下のようなイメージである。(ID=ResourceID, instn=SwplInst*)
+/// \brief represents MRT
+/// \details represents MRT
+///          MRT can handle cases where ResourceID cannot be treated as an element number, so
+///          represented as a map vector of ResourceID and SwplInst*.
+///          The image is as below.(ID=ResourceID, instn=SwplInst*)
 ///          cycle1: { ID1:inst1, ID2:inst2,            ... } ↑
 ///          cycle2: { ID1:inst1,            ID3:inst3, ... } ｜
 ///          cycle3: {            ID2:inst1, ID3:inst4, ... } II
