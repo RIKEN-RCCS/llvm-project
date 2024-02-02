@@ -26,7 +26,7 @@
 
 namespace llvm {
 
-/// classの前方宣言
+/// forward declaration of class
 class SwplLoop;
 class SwplInst;
 class SwplReg;
@@ -35,17 +35,17 @@ class SwplInstEdge;
 class SwplInstGraph;
 class SwplDdg;
 
-// 利用コンテナのエイリアス宣言
+// Alias ​​declaration of usage container
 using SwplInsts = std::vector<SwplInst *>;
 using SwplRegs = std::vector<SwplReg *>;
 using SwplMems = std::vector<SwplMem *>;
-using SwplInstList = std::list<SwplInst *>; //vectorではダメなのか
+using SwplInstList = std::list<SwplInst *>; //May be useless in vector!
 using SwplInstEdges = std::vector<SwplInstEdge *>;
-using SwplInst2InstsMap = std::map<SwplInst *, SwplInsts>;
-using SwplInst2InstEdgesMap = std::map<SwplInst *, SwplInstEdges>;
-using Register2SwplRegMap = std::map<Register, SwplReg *>;
-using SwplInstEdge2Distances = std::map<SwplInstEdge *, std::vector<unsigned>>;
-using SwplInstEdge2Delays = std::map<SwplInstEdge *, std::vector<int>>;
+using SwplInst2InstsMap = llvm::DenseMap<SwplInst *, SwplInsts>;
+using SwplInst2InstEdgesMap = llvm::DenseMap<SwplInst *, SwplInstEdges>;
+using Register2SwplRegMap = llvm::DenseMap<Register, SwplReg *>;
+using SwplInstEdge2Distances = llvm::DenseMap<SwplInstEdge *, std::vector<unsigned>>;
+using SwplInstEdge2Delays = llvm::DenseMap<SwplInstEdge *, std::vector<int>>;
 using SwplInstEdge2ModuloDelay = std::map<SwplInstEdge *, int>;
 
 using SwplInsts_iterator = SwplInsts::iterator;
@@ -74,23 +74,23 @@ bool enableSWP(const Loop*, bool ignoreMetadataOfRemainder);
 bool enableNodep(const Loop *L);
 
 /// \class SwplLoop
-/// \brief ループ内の命令情報を管理する
+/// \brief Manage instruction information in loops
 class SwplLoop {
-  MachineLoop *ML;               ///< ループを示す中間表現
-  SwplInsts PreviousInsts;             ///< preheaderの命令の集合
-  SwplInsts PhiInsts;                  ///< Phi命令の集合
-  SwplInsts BodyInsts;                 ///< ループボディの命令の集合
-  SwplMems Mems;                       ///< ループボディ内の SwplMem の集合
-  std::map<SwplMem *, int> MemIncrementMap;  ///< SwplMem と増分値のマップ
-  MachineBasicBlock *NewBodyMBB; ///< 対象ループのbodyのMBBを複製し非SSA化したMBB
-  std::map<const MachineInstr *, MachineInstr *> OrgMI2NewMI;                   ///< 対象ループのbodyのオリジナルのMIと複製先のMIのMap
-  std::map<const MachineInstr *, const MachineInstr *> NewMI2OrgMI;                   ///< 対象ループのbodyの複製先のMIとオリジナルのMIのMap
-  std::map<Register, Register> OrgReg2NewReg;                ///< 対象ループのbodyのオリジナルのRegisterと複製先のRegisterのMap
-  std::vector<MachineInstr *>    Copies;                       ///< 非SSA化の際に、PhiのLiveinレジスタをLoop内で使用するレジスタへCopyする命令をPreHeaderに生成している \n
-                                       ///このCopy命令の集合
-  SwplRegs Regs;                       ///< 対象ループ内で生成した SwplReg を管理する \note メモリ解放時に利用する
-  SwplMems MemsOtherBody;              ///< Body以外で生成された SwplMem を管理する \note メモリ解放時に利用する
-  SmallSet<Register, 30> liveOuts; ///< SWPL適用後に登場する仮想レジスタがLiveOutしているかを確認するための集合
+  MachineLoop *ML;               ///< IR showing a loop
+  SwplInsts PreviousInsts;             ///< collection of preheader instructions
+  SwplInsts PhiInsts;                  ///< collection Phi instructions
+  SwplInsts BodyInsts;                 ///< collection of loop body's instructions
+  SwplMems Mems;                       ///< collection of SwplMem in loop body
+  llvm::DenseMap<SwplMem *, int> MemIncrementMap;  ///< Map of SwplMem and Increment value
+  MachineBasicBlock *NewBodyMBB; ///< MBB that duplicates the MBB of the body of the target loop and makes it non-SSA
+  llvm::DenseMap<const MachineInstr *, MachineInstr *> OrgMI2NewMI;                   ///< Map of the original MI of the body of the target loop and the MI of the copy destination
+  llvm::DenseMap<const MachineInstr *, const MachineInstr *> NewMI2OrgMI;                   ///< Map of the MI to which the body of the target loop is copied and the original MI
+  std::map<Register, Register> OrgReg2NewReg;                ///< Map of the original Register and copy destination Register of the body of the target loop
+  std::vector<MachineInstr *>    Copies;                       ///< When non-SSA, an instruction is generated in PreHeader to copy Phi's Livein register to the register used in Loop. \n
+                                       ///collection of this Copy instructions
+  SwplRegs Regs;                       ///< Manage SwplReg generated within the target loop \note Used when freeing memory
+  SwplMems MemsOtherBody;              ///< Manage SwplMem generated outside of Body \note Used when freeing memory
+  SmallSet<Register, 30> liveOuts; ///< A collection to check whether the virtual registers that appear after applying SWPL are LiveOut
 
 public:
   SwplLoop(){}
@@ -113,12 +113,12 @@ public:
   SwplInsts &getBodyInsts() { return BodyInsts; }
   const SwplInsts &getBodyInsts() const { return BodyInsts; }
   SwplMems &getMems() { return Mems; }
-  std::map<SwplMem *, int> &getMemIncrementMap() { return MemIncrementMap; };
-  /// SwplLoop::NewBodyMBB を返す
+  llvm::DenseMap<SwplMem *, int> &getMemIncrementMap() { return MemIncrementMap; };
+  /// Return SwplLoop::NewBodyMBB
   MachineBasicBlock *getNewBodyMBB() { return NewBodyMBB; }
-  /// SwplLoop::NewBodyMBB を設定する
+  /// Set SwplLoop::NewBodyMBB
   void setNewBodyMBB(MachineBasicBlock *MBB) { NewBodyMBB = MBB; }
-  /// SwplLoop::NewBodyMBB のpreMBBを返す
+  /// Return preMBB of SwplLoop::NewBodyMBB
   MachineBasicBlock *getNewBodyPreMBB(MachineBasicBlock *bodyMBB) {
     assert(bodyMBB->pred_size() == 1);
     MachineBasicBlock *preMBB;
@@ -127,19 +127,19 @@ public:
     }
     return preMBB;
   }
-  /// SwplLoop::NewBodyMBB を削除する
+  /// Delete SwplLoop::NewBodyMBB
   void deleteNewBodyMBB();
-  /// SwplLoop::OrgMI2NewMI を返す
-  std::map<const MachineInstr *, MachineInstr *> &getOrgMI2NewMI() { return OrgMI2NewMI; };
-  /// SwplLoop::NewMI2OrgMI を返す
+  /// Return SwplLoop::OrgMI2NewMI
+  llvm::DenseMap<const MachineInstr *, MachineInstr *> &getOrgMI2NewMI() { return OrgMI2NewMI; };
+  /// Return SwplLoop::NewMI2OrgMI
   const MachineInstr *getOrgMI(const MachineInstr *newMI) { return NewMI2OrgMI.at(newMI); };
-  /// SwplLoop::OrgReg2NewReg を返す
+  /// Return SwplLoop::OrgReg2NewReg
   std::map<Register, Register> &getOrgReg2NewReg() { return OrgReg2NewReg; };
-  /// SwplLoop::Copies を返す
+  /// Return SwplLoop::Copies
   std::vector<MachineInstr *> &getCopies() { return Copies; };
-  /// SwplLoop::Regs を返す
+  /// Return SwplLoop::Regs
   SwplRegs &getRegs() { return Regs; };
-  /// MemsOtherBody を返す
+  /// Return MemsOtherBody
   SwplMems &getMemsOtherBody() { return MemsOtherBody; };
 
   // iterator

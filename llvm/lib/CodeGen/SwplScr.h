@@ -410,13 +410,13 @@ private:
   /// \param [out] oldBody 移動元
   void moveBody(MachineBasicBlock*newBody, MachineBasicBlock*oldBody);
 
-  /// fromMBBのphiからremoveMBBを取り去る
+  /// removeMBB from phi in fromMBB
   /// \param [in,out] fromMBB
   /// \param [in] removeMBB
   void removePredFromPhi(MachineBasicBlock *fromMBB, MachineBasicBlock *removeMBB);
 
 public:
-  using UseMap=std::map<Register, std::vector<MachineOperand*>>;
+  using UseMap=llvm::DenseMap<Register, std::vector<MachineOperand*>>;
 
   SwplScr(MachineLoop&ml):ML(ml){}
 

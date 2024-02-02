@@ -579,7 +579,7 @@ void SwplDdg::importYaml() {
   if (!target_yamlddg)
     return;
 
-  std::map<const MachineInstr*, unsigned> mimap;
+  llvm::DenseMap<const MachineInstr*, unsigned> mimap;
   int mi_no=0;
   for (auto *inst : getLoopBodyInsts()) {
     auto *mi = inst->getMI();
@@ -635,7 +635,7 @@ void SwplDdg::exportYaml() {
     report_fatal_error("can not open yaml file", false);
 
   int mi_no = 0;
-  std::map<const MachineInstr*, unsigned> mimap;
+  llvm::DenseMap<const MachineInstr*, unsigned> mimap;
   *OutStrm << "# No., MI\n";
   for (auto *inst : getLoopBodyInsts()) {
     auto *mi = inst->getMI();

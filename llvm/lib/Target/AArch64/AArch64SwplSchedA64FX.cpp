@@ -1024,8 +1024,8 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
     {{&RES_PREDICATE_OP_002_01}, 4}}
   };
 
-/// 命令と利用資源IDのmap
-std::map<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX::MIOpcodeInfo{
+/// Map of commands and used resource IDs
+llvm::DenseMap<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSchedA64FX::MIOpcodeInfo{
   // Base
   {AArch64::ADDSXri, MI_INT_OP_002},
   {AArch64::ADDWri, MI_INT_OP_001},

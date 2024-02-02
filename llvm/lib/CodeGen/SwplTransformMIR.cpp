@@ -816,8 +816,8 @@ void SwplTransformMIR::postTransformKernel() {
   }
 }
 
-void SwplTransformMIR::replaceDefReg(MachineBasicBlock &mbb, std::map<Register,Register>&regmap) {
-  std::map<Register, std::vector<MachineOperand*>> useregs;
+void SwplTransformMIR::replaceDefReg(MachineBasicBlock &mbb, llvm::DenseMap<Register,Register>&regmap) {
+  llvm::DenseMap<Register, std::vector<MachineOperand*>> useregs;
   auto InsertPoint=mbb.getFirstNonPHI();
   bool kernel = (&mbb== TMI.OrgBody);
 
@@ -861,11 +861,11 @@ void SwplTransformMIR::replaceDefReg(MachineBasicBlock &mbb, std::map<Register,R
   }
 }
 
-void SwplTransformMIR::replaceUseReg(std::set<MachineBasicBlock*> &mbbs, const std::map<Register,Register>&regmap) {
-  // registerのdef/use情報は正しい場合、効率的にレジスタの変更がおこなえる
+void SwplTransformMIR::replaceUseReg(std::set<MachineBasicBlock*> &mbbs, const llvm::DenseMap<Register,Register>&regmap) {
+  // If the register def/use information is correct, the register can be changed efficiently.
   std::vector<MachineOperand*> targets;
   for (auto &m:regmap) {
-    /// (1) 変更すべきオペランドを集める
+    /// (1) Collect operands to be changed
     for (auto &op:SWPipeliner::MRI->use_operands(m.first)) {
       auto *mi=op.getParent();
       auto *mbb=mi->getParent();
@@ -873,17 +873,17 @@ void SwplTransformMIR::replaceUseReg(std::set<MachineBasicBlock*> &mbbs, const s
         targets.push_back(&op);
       }
     }
-    /// (2) 収集したターゲットのレジスタを書き換える
+    /// (2) Rewrite the collected target registers
     for (auto *op:targets) {
       op->setReg(m.second);
     }
-    /// (3) 収集した情報をクリアし、次のターゲット収集に備える
+    /// (3) Clear collected information and prepare for next target collection
     targets.clear();
   }
 }
 
 void SwplTransformMIR::convertEpilog2SSA() {
-  std::map<Register,Register> conv;
+  llvm::DenseMap<Register,Register> conv;
   replaceDefReg(*(TMI.Epilog), conv);
 
   std::set<MachineBasicBlock*> mbbs;
@@ -896,7 +896,7 @@ void SwplTransformMIR::convertEpilog2SSA() {
 }
 
 void SwplTransformMIR::convertKernel2SSA() {
-  std::map<Register,Register> conv;
+  llvm::DenseMap<Register,Register> conv;
   replaceDefReg(*(TMI.OrgBody), conv);
 
   std::set<MachineBasicBlock*> mbbs;
@@ -910,7 +910,7 @@ void SwplTransformMIR::convertKernel2SSA() {
 }
 
 void SwplTransformMIR::convertProlog2SSA() {
-  std::map<Register,Register> conv;
+  llvm::DenseMap<Register,Register> conv;
   std::set<Register> defs;
   for (auto &mi:*(TMI.Prolog)) {
     for (auto &op:mi.operands()) {

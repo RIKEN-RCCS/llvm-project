@@ -18,15 +18,15 @@
 #include <unordered_map>
 namespace llvm {
 
-/// スケジューリング結果反映
+/// Scheduling results reflected
 class SwplTransformMIR {
 private:
   using Reg2Vreg=DenseMap<const SwplReg*, std::vector<Register>*>;
-  using RegMap=std::map<Register, Register>;
+  using RegMap=llvm::DenseMap<Register, Register>;
 
-  /// 変換結果の移動先
+  /// Destination of conversion results
   enum BLOCK {  PRO_MOVE,  PROLOGUE,  KERNEL,  EPILOGUE,  EPI_MOVE};
-  /// MIR出力タイミング
+  /// MIR Output Timing
   enum DumpMIRID {BEFORE=1, AFTER=2, AFTER_SSA=4, LAST=8, SLOT_BEFORE=16};
 
 
@@ -141,27 +141,27 @@ private:
   /// PROLOGの定義レジスタを書き換える
   void convertProlog2SSA();
 
-  /// 指定MBBのレジスタ書き換え
+  /// Rewrite Register of specified MBB
   /// \param [out] mbb
   /// \param [out] regmap
-  void replaceDefReg(MachineBasicBlock &mbb, std::map<Register,Register>&regmap);
+  void replaceDefReg(MachineBasicBlock &mbb, llvm::DenseMap<Register,Register>&regmap);
 
-  /// 指定MBBのレジスタ書き換え
+  /// Rewrite Register of specified MBB
   /// \param [out] mbb
   /// \param [in] regmap
-  void replaceUseReg(std::set<MachineBasicBlock*> &mbbs, const std::map<Register,Register>&regmap);
+  void replaceUseReg(std::set<MachineBasicBlock*> &mbbs, const llvm::DenseMap<Register,Register>&regmap);
 
-  /// 指定命令のスロット位置を返す
+  /// Returns the slot position of the specified instruction
   /// \param [in] inst
   /// \return slot-begin_slot
   unsigned relativeInstSlot(const SwplInst*inst) const;
 
-  ///  対象関数を標準エラーに出力する
-  /// \param [in] id Dumpタイミング
+  ///  Output the target function to standard error
+  /// \param [in] id Dump Timing
   void dumpMIR(DumpMIRID id) const;
 
-  /// 結果反映前のMachineInstrのprint
-  /// \param [in] mi 対象のMachineInstr
+  /// Print MachineInstr before reflecting results
+  /// \param [in] mi Targeted MachineInstr
   void printTransformingMI(const MachineInstr *mi);
 
   /// Count the number of COPY in the kernel loop
