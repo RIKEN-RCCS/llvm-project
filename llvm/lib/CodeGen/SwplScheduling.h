@@ -478,20 +478,12 @@ public:
 };
 
 // }
-// #endif
 
 //===----------------------------------------------------------------------===//
 //
 // Classes that interface with result reflection in SWPL.
 //
 //===----------------------------------------------------------------------===//
-
-// #ifndef LLVM_LIB_CODEGEN_SWPLPLAN_H
-// #define LLVM_LIB_CODEGEN_SWPLPLAN_H
-
-// #include "SWPipeliner.h"
-
-// namespace llvm{
 
 
 /// スケジューリング結果の状態を表すenum
@@ -611,7 +603,6 @@ private:
 };
 
 // }
-// #endif
 
 //===----------------------------------------------------------------------===//
 //
@@ -619,13 +610,6 @@ private:
 //
 //===----------------------------------------------------------------------===//
 
-// #ifndef LLVM_LIB_CODEGEN_SWPLREGESTIMATE_H
-// #define LLVM_LIB_CODEGEN_SWPLREGESTIMATE_H
-
-// #include "SWPipeliner.h"
-
-// namespace llvm{
-// namespace llvm {
 
 /// \brief 指定したレジスタがいくつ必要であるかを数える処理群
 class SwplRegEstimate {
@@ -713,22 +697,12 @@ private:
 };
 
 // }
-// #endif
 
 //===----------------------------------------------------------------------===//
 //
 // Processing related to checking Iteration in SWPL.
 //
 //===----------------------------------------------------------------------===//
-
-// #ifndef LLVM_LIB_CODEGEN_SWPLCALSITERATIONS_H
-// #define LLVM_LIB_CODEGEN_SWPLCALSITERATIONS_H
-
-
-// #include "SWPipeliner.h"
-
-// namespace llvm {
-
 
 
 /// \brief SwplのPlanを選択するための、ループ回転数に関するルーチン群
