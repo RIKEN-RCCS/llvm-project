@@ -21,7 +21,8 @@
 #include "llvm/InitializePasses.h"
 
 #include "SWPipeliner.h"
-#include "SwplPlan.h"
+// #include "SwplPlan.h"
+#include "SwplScheduling.h"
 #include "SwplScr.h"
 #include "SwplTransformMIR.h"
 #include "llvm/Support/FormatVariadic.h"

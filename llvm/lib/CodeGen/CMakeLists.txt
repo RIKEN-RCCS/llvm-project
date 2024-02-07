@@ -239,10 +239,7 @@ add_llvm_component_library(LLVMCodeGen
   SwplLoopDataExtraction.cpp
   SwplDataDependenceAnalysis.cpp
   SwplScr.cpp
-  SwplPlan.cpp
   SwplScheduling.cpp
-  SwplRegEstimate.cpp
-  SwplCalclIterations.cpp
   SwplTransformMIR.cpp
   TailDuplication.cpp
   TailDuplicator.cpp

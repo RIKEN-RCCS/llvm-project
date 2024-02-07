@@ -21,7 +21,8 @@ namespace llvm {
 
 #include "SwplTransformMIR.h"
 #include "SWPipeliner.h"
-#include "SwplPlan.h"
+// #include "SwplPlan.h"
+#include "SwplScheduling.h"
 #include "SwplScr.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"

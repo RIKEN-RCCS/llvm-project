@@ -14,7 +14,6 @@
 #define LLVM_LIB_CODEGEN_SWPLSCHEDULING_H
 
 #include "SWPipeliner.h"
-#include "SwplPlan.h"
 #include <set>
 #include <unordered_set>
 
@@ -37,6 +36,80 @@ using SwplInstSet = std::set<const SwplInst*>;
 ///          cycle4: {            ID2:inst4,            ... } ｜
 ///          cycle5: { ID1:inst4,                       ... } ↓
 ///
+class SwplSlot {
+  unsigned slot_index;
+
+public:
+  /// constructor
+  constexpr SwplSlot(unsigned val = 0): slot_index(val) {}
+  constexpr operator unsigned() const {
+    return slot_index;
+  }
+
+  ///////////////
+  // オブジェクトの比較にならないように
+
+  /// Comparisons between SwplSlot objects
+  bool operator==(const SwplSlot &Other) const { return slot_index == Other.slot_index; }
+  bool operator!=(const SwplSlot &Other) const { return slot_index != Other.slot_index; }
+
+  /// Comparisons against SwplSlot constants.
+  bool operator==(unsigned Other) const { return slot_index == Other; }
+  bool operator!=(unsigned Other) const { return slot_index != Other; }
+  bool operator==(int Other) const { return slot_index == unsigned(Other); }
+  bool operator!=(int Other) const { return slot_index != unsigned(Other); }
+
+  unsigned calcBlock(unsigned iteration_interval);
+  unsigned calcCycle();
+  unsigned calcFetchSlot();
+  /// \brief change SlotIndex
+  /// \param [in] v amount of change
+  /// \return Nothing
+  void moveSlotIndex(long v) {slot_index=slot_index+v; return;}
+
+  static SwplSlot baseSlot(unsigned iteration_interval);
+  static SwplSlot construct(unsigned cycle, unsigned fetch_slot);
+  static SwplSlot constructFromBlock(unsigned block, unsigned iteration_interval);
+  static SwplSlot slotMax();
+  static SwplSlot slotMin();
+
+  static const unsigned UNCONFIGURED_SLOT = 0;
+};
+/// \brief Dynamic array of SwplSlots that result in scheduling
+class SwplSlots : public std::vector<SwplSlot> {
+public:
+  size_t calcFlatScheduleBlocks(const SwplLoop& c_loop, unsigned iteration_interval);
+  size_t calcPrologBlocks(const SwplLoop& loop, unsigned iteration_interval);
+  size_t calcKernelBlocks(const SwplLoop& c_loop, unsigned iteration_interval);
+  size_t calcNRenamingVersions(const SwplLoop& c_loop, unsigned iteration_interval) const;
+  SwplSlot findBeginSlot(const SwplLoop& c_loop, unsigned iteration_interval);
+  SwplSlot findFirstSlot(const SwplLoop& c_loop);
+  SwplSlot findLastSlot(const SwplLoop& c_loop);
+  unsigned getRelativeInstSlot(const SwplInst& c_inst, const SwplSlot& begin_slot) const;
+  void getMaxMinSlot(SwplSlot& max_slot, SwplSlot &min_slot);
+  bool isIccFreeAtBoundary(const SwplLoop& loop,  unsigned iteration_interval) const;
+  unsigned calcLastUseCycleInBodyWithInheritance(const SwplReg& reg, unsigned iteration_interval) const;
+  unsigned calcLastUseCycleInBody(const SwplReg& reg, unsigned iteration_interval) const;
+  SwplSlot getEmptySlotInCycle( unsigned cycle, unsigned iteration_interval, bool isvirtual );
+  size_t size() const {
+    size_t s = 0;
+    for (auto& t : *this) {
+      if (t) s++;
+    }
+    return s;
+  }
+  SwplSlot& at(unsigned ix) {
+    static SwplSlot UNCONFIGURED_Slot;
+    if(ix==UINT_MAX) return UNCONFIGURED_Slot;
+    return vector::at(ix);
+  }
+  const SwplSlot& at(unsigned ix) const {
+    static SwplSlot UNCONFIGURED_Slot;
+    if(ix==UINT_MAX) return UNCONFIGURED_Slot;
+    return vector::at(ix);
+  }
+  void dump(const SwplLoop& c_loop);
+};
 class SwplMrt {
   unsigned iteration_interval; ///< II
   std::vector<llvm::DenseMap<StmResourceId, const SwplInst*>*> table; //< Mrt
@@ -402,6 +475,269 @@ public:
   }
   void dump(raw_ostream &stream) const;
   void print(raw_ostream &stream) const;
+};
+
+// }
+// #endif
+
+//===----------------------------------------------------------------------===//
+//
+// Classes that interface with result reflection in SWPL.
+//
+//===----------------------------------------------------------------------===//
+
+// #ifndef LLVM_LIB_CODEGEN_SWPLPLAN_H
+// #define LLVM_LIB_CODEGEN_SWPLPLAN_H
+
+// #include "SWPipeliner.h"
+
+// namespace llvm{
+
+
+/// スケジューリング結果の状態を表すenum
+enum class TryScheduleResult {
+                              /// スケジュール成功
+                              TRY_SCHEDULE_SUCCESS,
+                              /// スケジュール失敗
+                              TRY_SCHEDULE_FAIL,
+                              /// ループ回転数が少ないためスケジュール失敗
+                              TRY_SCHEDULE_FEW_ITER,
+};
+
+
+#define SWPL_ILLEGAL_SLOT (SwplSlot)0
+
+
+class SwplMsResourceResult;
+
+/// \brief スケジューリング結果を保持するクラス
+/// \details transform mirへ渡す情報となる
+class SwplPlan {
+  const SwplLoop& loop;              ///< スケジューリング対象のループ情報
+  SwplSlots slots; ///< スケジューリング結果
+  unsigned minimum_iteration_interval;   ///< min II。スケジューリング試行を開始したII
+  unsigned iteration_interval; ///< スケジューリング結果のII
+  size_t n_iteration_copies;   ///< prolog+kernelのブロック数。ブロックはII単位となる。
+  size_t n_renaming_versions;  ///< kernelがMVEによりコピーされる数
+  SwplSlot begin_slot;         ///< 命令が配置されたblockの先頭スロット番号
+  SwplSlot end_slot;           ///< 命令が配置されたblockの最後スロット番号
+  size_t total_cycles;         ///< prolog,kernal,epilogの総サイクル数
+  size_t prolog_cycles;        ///< prolog部分の（MVE展開後の）サイクル数
+  size_t kernel_cycles;        ///< kernal部分のサイクル数
+  size_t epilog_cycles;        ///< epilog部分のサイクル数
+  unsigned num_necessary_ireg; ///< スケジューリング結果から算出した必要な整数レジスタ
+  unsigned num_necessary_freg; ///< スケジューリング結果から算出した必要な浮動小数点数レジスタ
+  unsigned num_necessary_preg; ///< スケジューリング結果から算出した必要なプレディケートレジスタ
+  unsigned num_max_ireg;       ///< 整数レジスタの最大数(ローカルオプションによる調整込み)
+  unsigned num_max_freg;       ///< 浮動小数点数レジスタの最大数(ローカルオプションによる調整込み)
+  unsigned num_max_preg;       ///< プレディケートレジスタの最大数(ローカルオプションによる調整込み)
+
+public:
+  SwplPlan(const SwplLoop& loop) : loop(loop) {} ///< constructor
+
+  ////////////////////
+  // getters
+  const SwplLoop& getLoop() const { return loop; } ///< getter
+  SwplLoop& getLoop() { return const_cast<SwplLoop&>(loop); } ///< getter
+  SwplSlots& getInstSlotMap() { return slots ; } ///< getter
+  const SwplSlots& getInstSlotMap() const { return slots ; } ///< getter
+  unsigned getMinimumIterationInterval() const { return minimum_iteration_interval; } ///< getter
+  unsigned getIterationInterval() const { return iteration_interval; } ///< getter
+  size_t getNIterationCopies() const { return n_iteration_copies; } ///< getter
+  size_t getNRenamingVersions() const { return n_renaming_versions; } ///< getter
+  SwplSlot getBeginSlot() const { return begin_slot; } ///< getter
+  SwplSlot getEndSlot() const { return end_slot; } ///< getter
+  size_t getEpilogCycles() const { return epilog_cycles; } ///< getter
+  size_t getKernelCycles() const { return kernel_cycles; } ///< getter
+  size_t getPrologCycles() const { return prolog_cycles; } ///< getter
+  size_t getTotalCycles() const { return total_cycles; } ///< getter
+  unsigned getNecessaryIreg() const { return num_necessary_ireg; } ///< getter
+  unsigned getNecessaryFreg() const { return num_necessary_freg; } ///< getter
+  unsigned getNecessaryPreg() const { return num_necessary_preg; } ///< getter
+  unsigned getMaxIreg() const { return num_max_ireg; } ///< getter
+  unsigned getMaxFreg() const { return num_max_freg; } ///< getter
+  unsigned getMaxPreg() const { return num_max_preg; } ///< getter
+  static bool existsPragma;    ///< Is II specified in pragma?
+
+  ////////////////////
+  // setters
+  void setMinimumIterationInterval( unsigned arg ) { minimum_iteration_interval = arg; } ///< setter
+  void setIterationInterval( unsigned arg ) { iteration_interval = arg; } ///< setter
+  void setNIterationCopies( size_t arg ) { n_iteration_copies = arg; } ///< setter
+  void setNRenamingVersions( size_t arg ) { n_renaming_versions = arg; } ///< setter
+  void setBeginSlot( SwplSlot arg ) { begin_slot = arg; } ///< setter
+  void setBeginSlot( unsigned arg ) { begin_slot = arg; } ///< setter
+  void setEndSlot( SwplSlot arg ) { end_slot = arg; } ///< setter
+  void setEndSlot( unsigned arg ) { end_slot = arg; } ///< setter
+  void setEpilogCycles( size_t arg ) { epilog_cycles = arg; } ///< setter
+  void setKernelCycles( size_t arg ) { kernel_cycles = arg; } ///< setter
+  void setPrologCycles( size_t arg ) { prolog_cycles = arg; } ///< setter
+  void setTotalCycles( size_t arg ) { total_cycles = arg; } ///< setter
+
+  unsigned relativeInstSlot(const SwplInst& c_inst) const;
+  int getTotalSlotCycles();
+  void printInstTable();
+  void dump(raw_ostream &stream);
+  void dumpInstTable(raw_ostream &stream);
+
+  static bool isSufficientWithRenamingVersions(const SwplLoop& c_loop,
+                                               const SwplSlots& c_slots,
+                                               unsigned iteration_interval,
+                                               unsigned n_renaming_versions);
+  static SwplPlan* construct(const SwplLoop& c_loop,
+                             SwplSlots& slots,
+                             unsigned min_ii,
+                             unsigned ii,
+                             const SwplMsResourceResult& resource);
+  static void destroy(SwplPlan* plan);
+  static SwplPlan* generatePlan(SwplDdg& ddg);
+
+private:
+  static unsigned calculateResourceII(const SwplLoop& c_loop);
+  static unsigned calcResourceMinIterationInterval(const SwplLoop& c_loop);
+  static TryScheduleResult trySchedule(const SwplDdg& c_ddg,
+                                       unsigned res_mii,
+                                       SwplSlots** slots,
+                                       unsigned* selected_ii,
+                                       unsigned* calculated_min_ii,
+                                       unsigned* required_itr,
+                                       SwplMsResourceResult* resource);
+  static TryScheduleResult selectPlan(const SwplDdg& c_ddg,
+                                      SwplSlots& rslt_slots,
+                                      unsigned* selected_ii,
+                                      unsigned* calculated_min_ii,
+                                      unsigned* required_itr,
+                                      SwplMsResourceResult& resource);
+};
+
+// }
+// #endif
+
+//===----------------------------------------------------------------------===//
+//
+// Processing related to register number calculation in SWPL.
+//
+//===----------------------------------------------------------------------===//
+
+// #ifndef LLVM_LIB_CODEGEN_SWPLREGESTIMATE_H
+// #define LLVM_LIB_CODEGEN_SWPLREGESTIMATE_H
+
+// #include "SWPipeliner.h"
+
+// namespace llvm{
+// namespace llvm {
+
+/// \brief 指定したレジスタがいくつ必要であるかを数える処理群
+class SwplRegEstimate {
+public:
+  /// \brief レジスタ見積り時に、def,useのサイクル数を変更するための一時的なレジスタ表現
+  class Renamed_Reg {
+  public:
+    SwplReg* reg;
+    int def_cycle;
+    int use_cycle;
+    bool is_recurrence;
+  };
+
+  using RenamedRegVector = std::vector<SwplRegEstimate::Renamed_Reg*>;
+
+  static unsigned calcNumRegs(const SwplLoop& loop,
+                              const SwplSlots* slots,
+                              unsigned iteration_interval,
+                              unsigned regclassid,
+                              unsigned n_renaming_versions);
+private:
+  static void initRenamedReg(Renamed_Reg* reg);
+  static void setRenamedReg(Renamed_Reg* reg,
+                            const SwplReg& sreg,
+                            unsigned def_cycle,
+                            unsigned use_cycle,
+                            unsigned iteration_interval,
+                            bool is_recurrence);
+  static unsigned getNumInterferedRegs(const SwplLoop& loop,
+                                       const SwplSlots* slots,
+                                       unsigned iteration_interval,
+                                       unsigned regclassid,
+                                       unsigned n_renaming_versions);
+  static unsigned getNumImmortalRegs (const SwplLoop& loop, unsigned regclassid );
+  static unsigned getNumMortalRegs (const SwplLoop& loop,
+                                    const SwplSlots* slots,
+                                    unsigned iteration_interval,
+                                    unsigned regclassid);
+  static void collectRenamedRegs(const SwplLoop& loop,
+                                 const SwplSlots* slots,
+                                 unsigned iteration_interval,
+                                 unsigned regclassid,
+                                 unsigned n_renaming_versions,
+                                 RenamedRegVector* vector_renamed_regs);
+  static void normalizeDefUseCycle(Renamed_Reg *reg1,
+                                   Renamed_Reg *reg2,
+                                   int *def_cycle_reg1, int *use_cycle_reg1,
+                                   int *def_cycle_reg2, int *use_cycle_reg2,
+                                   unsigned iteration_interval);
+  static unsigned getOffsetAllocationForward(Renamed_Reg *reg1,
+                                             Renamed_Reg *reg2,
+                                             unsigned iteration_interval,
+                                             unsigned n_renaming_versions);
+  static unsigned getOffsetAllocationBackward(Renamed_Reg *reg1,
+                                              Renamed_Reg *reg2,
+                                              unsigned iteration_interval,
+                                              unsigned n_renaming_versions);
+  static void extendRenamedRegLivesBackward(RenamedRegVector* vector_renamed_regs,
+                                            unsigned iteration_interval,
+                                            unsigned n_renaming_versions);
+  static void extendRenamedRegLivesForward(RenamedRegVector* vector_renamed_regs,
+                                           unsigned iteration_interval,
+                                           unsigned n_renaming_versions);
+  static void incrementCounters(int reg_size, std::vector<int>* reg_counters,
+                                unsigned iteration_interval,
+                                unsigned begin_cycle, unsigned end_cycle);
+  static unsigned getEstimateResult(RenamedRegVector* vector_renamed_regs,
+                                    std::vector<int>* reg_counters,
+                                    unsigned iteration_interval);
+  static unsigned countLivesWithMask(RenamedRegVector* vector_renamed_regs,
+                                     unsigned live_range_mask);
+  static unsigned countOverlapsWithMask(RenamedRegVector* vector_renamed_regs,
+                                        unsigned live_range_mask,
+                                        unsigned n_renaming_versions);
+  static unsigned getNumPatternRegs (RenamedRegVector* vector_renamed_regs,
+                                     unsigned iteration_interval,
+                                     unsigned n_renaming_versions, unsigned regclassid);
+  static unsigned getNumExtendedRegs (RenamedRegVector* vector_renamed_regs,
+                                      const SwplSlots* slots,
+                                      unsigned iteration_interval,
+                                      unsigned regclassid,
+                                      unsigned n_renaming_versions);
+  static bool isCountedReg(const SwplReg& reg, unsigned regclassid);
+  static int findMaxCounter(std::vector<int>* reg_counters, unsigned iteration_interval);
+};
+
+// }
+// #endif
+
+//===----------------------------------------------------------------------===//
+//
+// Processing related to checking Iteration in SWPL.
+//
+//===----------------------------------------------------------------------===//
+
+// #ifndef LLVM_LIB_CODEGEN_SWPLCALSITERATIONS_H
+// #define LLVM_LIB_CODEGEN_SWPLCALSITERATIONS_H
+
+
+// #include "SWPipeliner.h"
+
+// namespace llvm {
+
+
+
+/// \brief SwplのPlanを選択するための、ループ回転数に関するルーチン群
+class SwplCalclIterations {
+public:
+
+  static bool preCheckIterationCount(const SwplPlanSpec & spec, unsigned int *required_itr);
+  static bool checkIterationCountVariable(const SwplPlanSpec & spec, const SwplMsResult & ms);
+  static bool checkIterationCountConstant(const SwplPlanSpec & spec, const SwplMsResult & ms);
 };
 
 }

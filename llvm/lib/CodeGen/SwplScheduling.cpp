@@ -12,14 +12,15 @@
 
 #include "SwplScheduling.h"
 #include "SWPipeliner.h"
-#include "SwplCalclIterations.h"
-#include "SwplPlan.h"
-#include "SwplRegEstimate.h"
+// #include "SwplCalclIterations.h"
+// #include "SwplPlan.h"
+// #include "SwplRegEstimate.h"
 #include "SwplScr.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/CodeGen/SwplTargetMachine.h"
 #include <cmath>
 
 using namespace llvm;
@@ -3143,4 +3144,1858 @@ void SwplSSNumRegisters::print(raw_ostream &stream) const {
   stream << "(VReg  Fp: " << freg << ", Int: " << ireg << ", Pre: " << preg <<")";
 }
 
+}
+
+//===----------------------------------------------------------------------===//
+//
+// Processing related to checking Iteration in SWPL.
+//
+//===----------------------------------------------------------------------===//
+
+
+
+
+namespace llvm {
+
+/// \brief スケジューリング結果が要する回転数が、実際の回転数（可変）を満たすかをチェックする
+/// \note assumeに対応しないため、常にtrueを返却する
+bool SwplCalclIterations::checkIterationCountVariable(const SwplPlanSpec & spec, const SwplMsResult & ms) {
+  return true;
+}
+
+/// \brief スケジューリング結果が要する回転数が、実際の回転数（固定）を満たすかをチェックする
+/// \details スケジューリング結果が要する回転数が、実際の回転数（固定）を満たすかをチェックする
+///          実際の命令列上の回転数を優先する.
+/// \retval true スケジューリング結果が要する回転数が、実際の回転数（固定）を満たす
+/// \retval false スケジューリング結果が要する回転数が、実際の回転数（固定）を満たさない
+bool SwplCalclIterations::checkIterationCountConstant(const SwplPlanSpec & spec, const SwplMsResult & ms) {
+  return (ms.required_itr_count <= spec.itr_count);
+}
+
+/// \brief schedulingする前に、SWPLの最低条件を確認する
+/// \param [in] spec スケジューリング指示情報
+/// \param [in,out] required_itr 必要なループ回転数
+/// \retval true 条件を満して、SWPL可能
+/// \retval false 条件を満しておらず、SWPL不可能
+/// \remark required_itrに、ソース上必要なループ回転数を設定する.
+///         元ループの回転数が2回転以下の時, SWPL不可.
+/// \note 2回転の時はschedulingしたいが,
+///       現在の実装ではn_copies >=3 を要求する為,できていない.
+///       この値(2回転) はis_iteration_count_constantでも利用している為そろえる事.
+/// \note 現在、SwplPlanSpec.assumed_iterationは常にASSUMED_ITERATIONS_NONE (-1)
+/// \note 現在、SwplPlanSpec.pre_expand_numは常に1
+bool SwplCalclIterations::preCheckIterationCount(const SwplPlanSpec & spec, unsigned int *required_itr) {
+  *required_itr = 0;
+
+  unsigned int const minimum_n_copies = 3;
+  *required_itr = spec.pre_expand_num * minimum_n_copies;
+
+  /* 定数の場合、Pragma 指定よりも、実際のMIR上の数を優先する */
+  if(spec.is_itr_count_constant) {
+    if (spec.itr_count <= 2) {
+      if (SWPipeliner::isDebugOutput()) {
+        dbgs() << "        : SWPL is canceled for this loop whose iteration count < 3. \n";
+      }
+      return false;
+    }
+    return true; /* MIR上に定数がある場合は、見積値を参照しない. */
+  } else {
+    /* 見積り値 */
+    int assumed_iterations = spec.assumed_iterations;
+    if (assumed_iterations >= 0) {
+      assert(assumed_iterations <= SwplPlanSpec::ASSUMED_ITERATIONS_MAX);
+    }
+
+    if( assumed_iterations >= 0 && *required_itr > (unsigned)assumed_iterations ) {
+      if (SWPipeliner::isDebugOutput()) {
+        dbgs() << "        : SWPL is canceled for this loop whose assumed iteration count < 3. \n";
+      }
+      return false;
+    }
+  }
+  return true;
+}
+
+}
+
+
+//===----------------------------------------------------------------------===//
+//
+// Processing related to register number calculation in SWPL.
+//
+//===----------------------------------------------------------------------===//
+
+
+
+static llvm::cl::opt<bool> OptionDumpReg("swpl-debug-dump-estimate-reg",llvm::cl::init(false), llvm::cl::ReallyHidden);
+
+namespace llvm{
+
+/// \brief scheduling結果に対して指定したレジスタがいくつ必要であるかを数える処理
+/// \note 必要なレジスタ数を正確に計算する事は、RAでなければできないため、
+///       SWPL独自に必要となるレジスタを概算する
+unsigned SwplRegEstimate::calcNumRegs(const SwplLoop& loop,
+                                      const SwplSlots* slots,
+                                      unsigned iteration_interval,
+                                      unsigned regclassid,
+                                      unsigned n_renaming_versions) {
+  RenamedRegVector* vector_renamed_regs;
+  unsigned n_immortal_regs, n_mortal_regs, n_interfered_regs,
+    n_extended_regs, n_patten_regs;
+  unsigned max_regs = 0, margin = 0;
+
+  assert(slots != nullptr);
+  assert(n_renaming_versions > 0);
+
+  /* 見積もり対象のレジスタを収集 */
+  vector_renamed_regs = new RenamedRegVector();
+  collectRenamedRegs(loop, slots, iteration_interval,
+                     regclassid, n_renaming_versions, vector_renamed_regs);
+
+  /* predecessor, successor, phi をたどってつながるものは全て
+   * 同一の hard reg に割り当てられる。
+   * したがって、頭だけ数えなければならない。*/
+
+  n_immortal_regs = getNumImmortalRegs (loop, regclassid);
+  n_interfered_regs = getNumInterferedRegs(loop, slots,
+                                           iteration_interval, regclassid,
+                                           n_renaming_versions);
+  n_mortal_regs = getNumMortalRegs (loop, slots,
+                                    iteration_interval, regclassid);
+  n_patten_regs = getNumPatternRegs(vector_renamed_regs,
+                                    iteration_interval,
+                                    n_renaming_versions, regclassid);
+  n_extended_regs = getNumExtendedRegs (vector_renamed_regs,
+                                        slots,
+                                        iteration_interval, regclassid,
+                                        n_renaming_versions);					      
+
+  max_regs = std::max(max_regs, n_immortal_regs + n_mortal_regs);
+  max_regs = std::max(max_regs, n_immortal_regs + n_interfered_regs);
+  max_regs = std::max(max_regs, n_immortal_regs + n_extended_regs);
+  max_regs = std::max(max_regs, n_immortal_regs + n_patten_regs);
+  const char* regname="other";
+
+  if (llvm::StmRegKind::isInteger(regclassid) && n_renaming_versions >= 3 ) {
+    regname = "I";
+    margin = 1;
+  } else if( llvm::StmRegKind::isFloating(regclassid) && n_renaming_versions >= 3 ) {
+    regname = "F";
+    margin = 1;
+  } else if( llvm::StmRegKind::isPredicate(regclassid) ) { /* versionの制限は無し */
+    regname = "P";
+    margin = 1;
+  }
+
+  max_regs += margin;
+
+  if (OptionDumpReg) {
+    dbgs() << "Estimated number of "
+           << regname << " registers (classid:" << regclassid << ") :";
+    dbgs() << " immortal " << n_immortal_regs
+           << ", mortal  " << n_mortal_regs
+           << ", interfered "<< n_interfered_regs
+           << ", extended "<< n_extended_regs
+           << ", pattern "<< n_patten_regs
+           << ", margin "<< margin <<",\n"
+           << " total    : "<< max_regs << "\n";
+  }
+
+  /* vector_renamed_regs, renamed_regを解放する*/
+  for( auto *rr : *vector_renamed_regs ) {
+    delete rr;
+  }
+  delete vector_renamed_regs;
+
+  return max_regs;
+}
+
+/// \brief RenamedRegの初期化
+void SwplRegEstimate::initRenamedReg(SwplRegEstimate::Renamed_Reg* reg) {
+  reg->reg = nullptr;
+  reg->def_cycle = 0;
+  reg->use_cycle = 0;
+  reg->is_recurrence = false;
+  return;
+}
+
+/// \brief RenamedRegへの設定
+void SwplRegEstimate::setRenamedReg(SwplRegEstimate::Renamed_Reg* reg,
+                                    const SwplReg& sreg,
+                                    unsigned def_cycle,
+                                    unsigned use_cycle,
+                                    unsigned iteration_interval,
+                                    bool is_recurrence) {
+  assert(reg != nullptr);
+  initRenamedReg(reg);
+  reg->reg = &(const_cast<SwplReg&>(sreg));
+  reg->def_cycle = (int)def_cycle;
+  reg->use_cycle = (int)use_cycle;
+  reg->is_recurrence = is_recurrence;
+  return;
+}
+
+/// \brief 干渉を考慮してrenaming version後の変数が要求するレジスタを数える処理
+/// \note レジスタ数見積りの下限を求めるために用いる
+///
+/// ```
+///   - 以下では、T = MVE*IIと定義する.
+///   また、RAが割り付けるレジスタの意味で、"レジスタ"
+///   SwplRegの意味で、"vreg"という言葉を用いる.
+///   また、RAが割付ける場合、renaming versiong後ろのそれぞれのvregは,
+///   単一のレジスタに割付けられ、live rangeの途中で、二つのレジスタ間で乗り換える
+///   様なことはない事を前提としている.
+///     
+///   - 一次補正
+///   ライブレンンジL1がT/2を越えるようなvregが要求するレジスタ数の最小値を求める.
+///   L1はT/2を超えるため、renaming versionされた自身のvregは
+///   すべてのversionと互いに干渉するため, レジスタをMVE個だけ要求する.
+///   また、他のprライブレンジL1がT/2を越えるvregも,
+///   T/2以上のvreg同士は常に重なるため, レジスタを共有する事はないため、
+///   要求するレジスタを単純に加算すればよい.
+///   さらに、vregの空き区間(T-L1)に、同じレジスタを使用できる他のvregは、
+///   T/2以上のライブレンジを持たないため、無視している.
+///
+///   - 二次補正
+///   vregの空き区間(T-L1)区間に、埋めるられないライブレンジL2をもつ
+///   vregをカウントする。以下の点が、L1のvregと異なる.
+///   - L2のライブレンジをもつvregは、自身のすべてのversionとかさなるとは限らない。
+///   => 要求するレジスタがMVE個でない場合があり、L2とversion数の関係で定まる.
+///   - L2のライブレンジをもつ異なるレジスタ同士が、重なるとは限らない.
+///   => 異なるvregの要求レジスタ数同士を単純に加算してはならない.
+///
+///   一次補正と二次補正の和と、getNumImmortalRegの結果の和が、
+///   必要なレジスタ数の下限を与える.
+/// ```
+///
+unsigned SwplRegEstimate::getNumInterferedRegs(const SwplLoop& loop,
+                                               const SwplSlots* slots,
+                                               unsigned iteration_interval,
+                                               unsigned regclassid,
+                                               unsigned n_renaming_versions) {
+  unsigned counter = 0;
+  unsigned maximum_live_range;
+  int full_kernel_cycles, live_range;
+  int maximum_gap;
+  bool is_recurrence;
+
+  assert(slots != nullptr);
+  assert(n_renaming_versions > 0);
+
+  full_kernel_cycles = n_renaming_versions * iteration_interval;
+  maximum_gap = -1;
+  maximum_live_range = 0;
+
+  /* 一次補正のため,ライブレンジがT/2を越えるvregの重なりを数える
+   * 同時に、二次補正に必要な情報を収集する
+   */
+  for( auto* inst : loop.getBodyInsts() ) {
+    SwplSlot def_slot;
+    unsigned def_cycle;
+  
+    def_slot = slots->at(inst->inst_ix);
+    def_cycle = def_slot.calcCycle();
+    is_recurrence = inst->isRecurrence();
+
+    for( auto *reg : inst->getDefRegs() ) {
+      unsigned last_use_cycle;
+   
+      if (isCountedReg(*reg, regclassid) == false) {
+        continue;
+      }
+    
+      if ( !(reg->getUseInsts().empty()) ) {
+        last_use_cycle
+          = slots->calcLastUseCycleInBodyWithInheritance(*reg, iteration_interval);
+      }  else {
+        last_use_cycle = def_cycle;
+      }
+
+      assert(last_use_cycle >= def_cycle);
+      live_range = (int)(last_use_cycle-def_cycle+1);
+
+      if(is_recurrence == true && n_renaming_versions == 2) {
+        /* rucurrenceのlive rangeは、1cycle重ねて冗長に表現している.
+         * n_renaming_versions == 2の場合に、閾値T/2を超えるかどうかに影響をあたえる.
+         * ひとつのSwplRegで隙間なく一つのレジスタをを占有できる.
+         * 但し、最適化が動くとその限りではない。
+         * countとしては、+1するように特別扱いする.
+         */
+        counter += reg->getRegSize();
+      } else if(live_range*2 > full_kernel_cycles) {
+        /* T/2をこえるvregのうち、非生存区間の最大長 */
+        if(maximum_gap < full_kernel_cycles - live_range) {
+          maximum_gap = full_kernel_cycles - live_range;
+          assert(maximum_gap >= 0);
+        }
+        /* 一次補正 */
+        counter += n_renaming_versions * reg->getRegSize();
+      } else {
+        /* T/2をこえないregisterのうち、最大のライブレンジ */
+        if(maximum_live_range < (last_use_cycle - def_cycle + 1)) {
+          maximum_live_range = (last_use_cycle - def_cycle + 1);
+        }
+      }
+    }
+  }
+
+  /**
+   * T/2を越えないライブレンンジL2をもつレジスタのうち、
+   * T/2を越えるレジスタの隙間(T-L1)にいれられないレジスタをカウントする.
+   * 具体的には,versioningされたレジスタを表現するために必要なレジスタ数(total_color)を計算する
+   * 各々のversion(0,1,2,...,n_renaming_version-1)に、
+   * 0,1,2,...,total_color-1を順番に塗っていき,
+   * 最終versionと,それとlive rangeが重なるversionのレジスタの色が異なればよい.
+   *
+   * \note 本実装では、以下に対応できていない
+   *  - modulo cycleまでは考慮できていない
+   *  - この条件に該当するレジスタ同士の干渉は考えていない
+   *  - tuple型を考慮できていない
+   */
+  if(maximum_gap != -1 && maximum_gap < (signed)maximum_live_range) {
+    int total_color, last_color;
+
+    /* liverangeがのびているstage数だけ少なくとも、レジスタが必要 */
+    int stage = (maximum_live_range + iteration_interval -1)/iteration_interval;
+
+    for(total_color = stage; total_color <= (signed)n_renaming_versions; ++total_color) {
+      /* 最終versionのcolor */
+      last_color = (n_renaming_versions-1)%total_color;
+      /* 最終versionのcolorが、0-(stage-1)のcolorなら重なる */
+      if(last_color < (stage - 1)%total_color ) {
+        continue;
+      }
+    }
+    counter += total_color;
+  }
+  return counter;
+}
+
+/// \brief Processing to count unrenamed registers
+/// \note unrenamed registers is livein register or defined by φ, and following successor leads to itself
+unsigned SwplRegEstimate::getNumImmortalRegs(const SwplLoop& loop, unsigned regclassid ) {
+  unsigned counter;
+  llvm::SmallSet<int, 20> regset;
+
+  counter = 0;
+  for( auto *inst : loop.getBodyInsts() ) {
+    for( auto *reg : inst->getUseRegs() ) {
+      if ( reg->isRegNull() ) {
+        continue;
+      }
+      if( !(reg->isSameKind(regclassid)) ) {
+        continue;
+      }
+      if ( reg->isStack() ) {
+        continue;
+      }
+      auto *def = reg->getDefInst();
+      if (def!=nullptr && !def->isInLoop()) {
+        if (regset.contains(reg->getReg())) continue;
+        regset.insert(reg->getReg());
+        counter += reg->getRegSize();
+      }
+    }
+  }
+
+  for( auto *inst : loop.getPhiInsts() ) {
+    SwplReg *reg, *successor;
+    reg = &(inst->getDefRegs(0));
+    assert ( !(reg->isRegNull()) );
+    if ( !reg->isSameKind(regclassid) ) {
+      continue;
+    }
+  
+    for (successor = reg->getSuccessor();
+         successor != nullptr;
+         successor = successor->getSuccessor()) {
+      if (successor == reg) {
+        if (regset.contains(reg->getReg())) continue;
+        regset.insert(reg->getReg());
+        counter += reg->getRegSize();
+        break;
+      }
+    }
+  }
+  return counter;
+}
+
+/// \brief renamingされるレジスタを数える
+/// \note rename される reg （body で定義されていて、predecessor が無いもの）。
+///       それぞれ live_range を計算し、重複分もそのまま予約する。
+unsigned SwplRegEstimate::getNumMortalRegs(const SwplLoop& loop, 
+                                           const SwplSlots* slots,
+                                           unsigned iteration_interval,
+                                           unsigned regclassid) {
+  unsigned max_counter;
+  std::vector<int> reg_counters(iteration_interval, 0);
+
+  for( auto* inst : loop.getBodyInsts() ) {
+    SwplSlot def_slot;
+    unsigned def_cycle;
+  
+    def_slot = slots->at(inst->inst_ix);
+    def_cycle = def_slot.calcCycle();
+
+    for( auto *reg : inst->getDefRegs() ) {
+      unsigned last_use_cycle;
+   
+      if (isCountedReg(*reg, regclassid) == false) {
+        continue;
+      }
+    
+      if ( reg->isUsed() ) {
+        last_use_cycle = slots->calcLastUseCycleInBodyWithInheritance(*reg, iteration_interval);
+      }  else {
+        last_use_cycle = def_cycle;
+      }
+      incrementCounters (reg->getRegSize(),
+                         &reg_counters, iteration_interval,
+                         def_cycle, last_use_cycle);
+    }
+  }
+
+  /* branch 用の icc をカウントする。
+   * icc が iteration_interval のブロックを跨って使用されているかを、
+   * チェックする場所が他にない。*/
+  if( llvm::StmRegKind::isCC( regclassid ) ) {
+    incrementCounters (1, &reg_counters, iteration_interval,
+                        0, 0);
+  }
+
+  max_counter = findMaxCounter(&reg_counters, iteration_interval);
+  return max_counter;
+}
+
+/// \brief regclassid毎にレジスタ見積りの数え上げを行う
+/// \note 従来の見積もりと同様であり、SwplSlotをcycleに換算しているため、
+///       過剰な重なりを生成する場合がある.結果、spillが出ない安全サイドに倒している.
+///       Slot単位でも見積もりが可能であり、より正確になるはずあるが、
+///       暫定的にcycle単位で処理をおこなう.
+void SwplRegEstimate::collectRenamedRegs(const SwplLoop& loop, 
+                                         const SwplSlots* slots,
+                                         unsigned iteration_interval,
+                                         unsigned regclassid,
+                                         unsigned n_renaming_versions,
+                                         RenamedRegVector* vector_renamed_regs) {
+#ifndef NDEBUG
+  // assertでのみ使用
+  unsigned full_kernel_cycles;
+  full_kernel_cycles = n_renaming_versions * iteration_interval;
+#endif
+
+  for( auto* inst : loop.getBodyInsts() ) {
+    SwplSlot def_slot;
+    unsigned def_cycle;
+    bool is_recurrence;
+  
+    assert( inst->isPhi()==false);
+  
+    def_slot = slots->at(inst->inst_ix);
+    def_cycle = def_slot.calcCycle();
+
+    is_recurrence = inst->isRecurrence();
+
+    for( auto *reg : inst->getDefRegs() ) {
+      SwplRegEstimate::Renamed_Reg *renamed_reg;
+      unsigned last_use_cycle;
+   
+      if (isCountedReg(*reg, regclassid) == false) {
+        continue;
+      }
+    
+      if ( !(reg->getUseInsts().empty()) ) {
+        last_use_cycle
+          = slots->calcLastUseCycleInBodyWithInheritance(*reg, iteration_interval);
+      }  else {
+        last_use_cycle = def_cycle;
+      }
+      assert(last_use_cycle >= def_cycle);
+      assert(last_use_cycle - def_cycle + 1 <= full_kernel_cycles);
+
+      renamed_reg = new SwplRegEstimate::Renamed_Reg();
+      setRenamedReg(renamed_reg, *reg, def_cycle,
+                    last_use_cycle, iteration_interval,
+                    is_recurrence);
+
+      vector_renamed_regs->push_back(renamed_reg);
+    }
+  }
+  return;
+}
+
+/// \brief reg2をiteration_intervalずつずらして、cycleの位置を正規化する
+void SwplRegEstimate::normalizeDefUseCycle(SwplRegEstimate::Renamed_Reg *reg1,
+                                           SwplRegEstimate::Renamed_Reg *reg2,
+                                           int *def_cycle_reg1, int *use_cycle_reg1,
+                                           int *def_cycle_reg2, int *use_cycle_reg2,
+                                           unsigned iteration_interval) {
+  int base_cycle;
+
+  base_cycle = reg1->def_cycle - 1;
+			    
+  *def_cycle_reg1 = 1; /* reg1->def_cycle - base_cycle */
+  *use_cycle_reg1 = reg1->use_cycle - base_cycle;
+  *def_cycle_reg2 = reg2->def_cycle - base_cycle;
+  *use_cycle_reg2 = reg2->use_cycle - base_cycle;
+
+  /* def_cycle_reg2をdef_cycle_reg1と同じversionにする正規化処理 */
+  if(*def_cycle_reg2 < *def_cycle_reg1) {
+    while(*def_cycle_reg2 < *def_cycle_reg1) {
+      *def_cycle_reg2 += iteration_interval;
+      *use_cycle_reg2 += iteration_interval;
+    }
+  } else if (*def_cycle_reg2 >= *def_cycle_reg1 + (signed)iteration_interval) {
+    while(*def_cycle_reg2 >= *def_cycle_reg1 + (signed)iteration_interval) {
+      *def_cycle_reg2 -= iteration_interval;
+      *use_cycle_reg2 -= iteration_interval;
+    }
+  }
+  assert(*def_cycle_reg1 <= *def_cycle_reg2);
+  assert(*def_cycle_reg2 <= (signed)iteration_interval);
+  return;
+}
+				      
+/// \brief reg1のuse後方の空領域に、reg2を配置できるかどうかを判定し、
+///        可能ならreg1->use_cycleからの最小のoffset値を返す. 不可能なら0を返却する.
+/// \retval reg2を配置可能なreg1->use_cycleからの最小のoffset値
+unsigned SwplRegEstimate::getOffsetAllocationForward(SwplRegEstimate::Renamed_Reg *reg1,
+                                                     SwplRegEstimate::Renamed_Reg *reg2,
+                                                     unsigned iteration_interval,
+                                                     unsigned n_renaming_versions) {
+  int version;
+  int dead_cycle_reg1, live_cycle_reg2;
+  int full_kernel_cycles;
+  int offset_value = 0;
+  int def_cycle_reg1, use_cycle_reg1, def_cycle_reg2, use_cycle_reg2;
+
+  full_kernel_cycles = n_renaming_versions * iteration_interval;
+
+  /* def_cycle_reg1 <= def_cycle_reg2をみたすように正規化 */
+  normalizeDefUseCycle(reg1, reg2,
+                       &def_cycle_reg1, &use_cycle_reg1,
+                       &def_cycle_reg2, &use_cycle_reg2,
+                       iteration_interval);
+
+  assert(use_cycle_reg1 <= full_kernel_cycles &&
+         use_cycle_reg2 <= full_kernel_cycles + (signed)iteration_interval);
+
+  dead_cycle_reg1 = full_kernel_cycles - (use_cycle_reg1 - def_cycle_reg1 + 1);
+  live_cycle_reg2 = use_cycle_reg2 - def_cycle_reg2 + 1;
+
+  if(dead_cycle_reg1 < live_cycle_reg2) {
+    /* どのようにずらしても隙間に入らないため */
+    return offset_value;
+  }
+
+  /* reg2のcycleをiiずつversion回だけずらして、重なりを判定 */
+  for(version=0; version < (signed)n_renaming_versions; ++version) {
+    int renamed_def_cycle_reg2, renamed_use_cycle_reg2;
+    renamed_def_cycle_reg2 = def_cycle_reg2 + version * iteration_interval;
+    renamed_use_cycle_reg2 = use_cycle_reg2 + version * iteration_interval;
+
+    /* reg1がdeadである領域に,reg2がおさまっていれば良い */
+    if (use_cycle_reg1 < renamed_def_cycle_reg2 &&
+        renamed_use_cycle_reg2 <= full_kernel_cycles) {
+      offset_value = renamed_def_cycle_reg2 - use_cycle_reg1;
+      assert(offset_value >= 1);
+      assert(offset_value <= (signed)iteration_interval);
+      /* 条件に最初に適合するoffsetが最小のoffsetのためreturn */
+      return offset_value;
+    }
+  }
+  return offset_value;
+}
+
+/// \brief reg1の空領域に、reg2を配置できるかどうかを
+///        modulo cycleとrenamingを考慮して判定し、
+///        可能ならreg1->use_cycleからの最小のoffset値を返す
+///        不可能なら0を返却する.
+/// \retval reg2を配置可能なreg1->use_cycleからの最小のoffset値
+unsigned SwplRegEstimate::getOffsetAllocationBackward(SwplRegEstimate::Renamed_Reg *reg1,
+                                                      SwplRegEstimate::Renamed_Reg *reg2,
+                                                      unsigned iteration_interval,
+                                                      unsigned n_renaming_versions) {
+  unsigned version;
+  int dead_cycle_reg1, live_cycle_reg2;
+  int full_kernel_cycles;
+  int def_cycle_reg1, use_cycle_reg1, def_cycle_reg2, use_cycle_reg2;
+  int offset_value = 0;
+
+  full_kernel_cycles = n_renaming_versions * iteration_interval;  
+
+  /* def_cycle_reg2 <= def_cycle_reg1をみたすように正規化 */
+  normalizeDefUseCycle(reg2, reg1,
+                       &def_cycle_reg2, &use_cycle_reg2,
+                       &def_cycle_reg1, &use_cycle_reg1,
+                       iteration_interval);
+
+  dead_cycle_reg1 = full_kernel_cycles - (use_cycle_reg1 - def_cycle_reg1 + 1);
+  live_cycle_reg2 = use_cycle_reg2 - def_cycle_reg2 + 1;
+
+  if(dead_cycle_reg1 < live_cycle_reg2) {
+    /* どのようにずらしても隙間に入らないため */
+    return offset_value;
+  }
+
+  /* reg2のcycleをiiずつversion回だけ前にずらして、重なりを判定 */
+  for(version=0; version < n_renaming_versions; ++version) {
+    int renamed_def_cycle_reg2, renamed_use_cycle_reg2;
+    renamed_def_cycle_reg2 = def_cycle_reg2 - version * iteration_interval;
+    renamed_use_cycle_reg2 = use_cycle_reg2 - version * iteration_interval;
+
+    /* reg1がdeadである領域に,reg2がおさまっていれば良い */
+    if (use_cycle_reg1 - full_kernel_cycles + 1 <= renamed_def_cycle_reg2 &&
+        renamed_use_cycle_reg2  < def_cycle_reg1) {
+      offset_value = def_cycle_reg1 - renamed_use_cycle_reg2;
+      assert(offset_value >= 1);
+      assert(offset_value <= (signed)iteration_interval);
+      /* 条件に最初に適合するoffsetが最小のoffsetのためreturn */
+      return offset_value;
+    }
+  }
+  return offset_value;
+}
+
+/// \brief renamed_regのlive rangeを前方に延す処理
+/// \note 詳細はextendRenamedRegLivesForwardを参照
+void SwplRegEstimate::extendRenamedRegLivesBackward(RenamedRegVector* vector_renamed_regs,
+                                                    unsigned iteration_interval,
+                                                    unsigned n_renaming_versions) {
+  int const init_use_offset = iteration_interval + 1;
+  int full_kernel_cycles = n_renaming_versions * iteration_interval;
+
+  for( auto *reg1 : *vector_renamed_regs ) {
+    int min_use_offset;
+    min_use_offset = init_use_offset;
+
+    if (reg1->is_recurrence && n_renaming_versions == 2) { continue; }
+  
+    /* reg2を配置するすきまがないため */
+    if (reg1->use_cycle - reg1->def_cycle + 1 == full_kernel_cycles) { continue; }
+    
+    for( auto *reg2 : *vector_renamed_regs ) {
+      /* 自身との重なりをみるため、indx,indx2は同じ場合もチェックする */
+
+      /* 空き領域に配置可能か */
+      int use_offset = getOffsetAllocationBackward(reg1, reg2, iteration_interval,
+                                                   n_renaming_versions);
+      if(use_offset != 0) {
+        /* reg1->use_cycleより大きくかつ, 最もreg1->use_cycleに近い値を取得 */
+        if(min_use_offset > use_offset) {
+          min_use_offset = use_offset;
+          if(min_use_offset == 1) {
+            /* 最小のoffsetであるため */
+            break;
+          }
+        }
+      }
+    }
+  
+    if(min_use_offset == 1) {
+      /* use直後で、別のrenamed_regで使うことが可能なためuseは延ばせない. */
+      continue;
+    } else{
+      int old_live_range, new_live_range;
+      old_live_range = reg1->use_cycle - reg1->def_cycle + 1;
+    
+      if(min_use_offset == init_use_offset) {
+        /* forwardの場合と同様に延す */
+        if( old_live_range * n_renaming_versions > full_kernel_cycles *(n_renaming_versions/2) ) {
+          new_live_range = full_kernel_cycles;
+        } else {
+          new_live_range = ((old_live_range + iteration_interval - 1)/iteration_interval)*iteration_interval;
+        }
+      } else {
+        new_live_range = old_live_range + min_use_offset - 1;
+      }
+      reg1->def_cycle = reg1->use_cycle - (new_live_range - 1);
+    
+    }
+  }
+  return;
+}
+
+/// \brief live rangeの空き領域において, 他のrenamed_regを
+///        配置できないcycleをみつけ、live rangeを延ばす
+///
+/// ```
+///   例として、ii=3,n_renaming_versions=3の場合を考える.
+///   reg1は、6-9cycleが空いており、reg2(version=0),
+///   reg3(version=2)を埋めることが可能である.
+///   したがって、RAでreg1とreg2またはreg1とreg2は同じレジスタを
+///   割り付けることが可能である.
+///   ここで、reg1の6cycle目は、reg2,reg3のいずれにおいても
+///   使用されることがないため、reg1のuse_cycleを後ろへ延ばす.
+///   reg2の9cycle目も同様に、use_cycleを延す.
+///   互いにすべての配置を比較して影響を与えない範囲に限定して、
+///   use_cycleを延すため、regの順序は問わない.
+///
+///   1<------->9
+///   reg1 *** **- ---  def:1, use:5
+///   reg2 --- --- **-  def:7, use:8
+///   reg3 -** --- ---  def:2, use:3
+///   122 110 110 => 342 
+///
+///   1<------->9
+///   reg1 *** *** ---  def:1, use:6
+///   reg2 --- --- ***  def:7, use:8
+///   reg3 -** --- ---  def:2, use:3
+///   122 111 111 => 344
+///
+///   さらに、def側にlive rangeを延すことを考えると
+///   reg3の1cycle目を延すことが可能である。
+///   後ろ側へは、extendRenamedRegLivesBackwardで実施する.
+///
+///   1<------->9
+///   reg1 *** *** ---  def:1, use:6
+///   reg2 --- --- ***  def:7, use:8
+///   reg3 *** --- ---  def:2, use:3
+///   222 111 111 => 444
+/// ```
+/// 
+void SwplRegEstimate::extendRenamedRegLivesForward(RenamedRegVector* vector_renamed_regs,
+                                                   unsigned iteration_interval,
+                                                   unsigned n_renaming_versions) {
+  int const init_def_offset = iteration_interval + 1;
+  int full_kernel_cycles = n_renaming_versions * iteration_interval;
+
+  for( auto *reg1 : *vector_renamed_regs ) {
+    int min_def_offset;
+    min_def_offset = init_def_offset;
+
+    if (reg1->is_recurrence && n_renaming_versions == 2) { continue; }
+  
+    /* reg2を配置するすきまがないため */
+    if (reg1->use_cycle - reg1->def_cycle + 1 == full_kernel_cycles) { continue; }
+    
+    for( auto *reg2 : *vector_renamed_regs ) {
+      /* 自身との重なりをみるため、indx,indx2は同じ場合もチェックする */
+
+      /* 空き領域に配置可能か */
+      int def_offset = getOffsetAllocationForward(reg1, reg2, iteration_interval,
+                                                  n_renaming_versions);
+      if(def_offset != 0) {
+        /* reg1->use_cycleより大きくかつ, 最もreg1->use_cycleに近い値を取得 */
+        if(min_def_offset > def_offset) {
+          min_def_offset = def_offset;
+          if(min_def_offset == 1) {
+            /* 最小のoffsetであるため */
+            break;
+          }
+        }
+      }
+    }
+  
+    if(min_def_offset == 1) {
+      /* use直後で、別のrenamed_regで使うことが可能なためuseは延ばせない. */
+      continue;
+    } else{
+      int old_live_range, new_live_range;
+      old_live_range = reg1->use_cycle - reg1->def_cycle + 1;
+    
+      if(min_def_offset == init_def_offset) {
+        /* 自身も含めて他のrenamed_regが隙間に配置不可能であるため、live rangeを延す.
+         * iteration_intervalを超えてlive rangeを延すと、reg1 == reg2の場合に、
+         * 新しいversionとの重なりが生成されてしまう.
+         */
+        if( old_live_range * n_renaming_versions > full_kernel_cycles *(n_renaming_versions/2) ) {
+          /* reg1==reg2の場合に,他のversionと既に重なっている場合,限界まで延す */
+          new_live_range = full_kernel_cycles;
+        } else {
+          /* 自身との過剰な重なりを作らないために、iteration_intervalを超えない範囲まで延す */
+          new_live_range = ((old_live_range + iteration_interval - 1)/iteration_interval)*iteration_interval;
+        }
+      } else {
+        new_live_range = old_live_range + min_def_offset - 1;
+      }
+      reg1->use_cycle = reg1->def_cycle + new_live_range - 1;
+    
+    }
+  }
+  return;
+}
+
+/// \brief reg_counterのでliveなcycleをincrementする
+/// \note  begin_cycle, end_cycle は両方カウントされる。
+///        cycle のどこで使われるか判らないから。
+void SwplRegEstimate::incrementCounters(int reg_size, std::vector<int>* reg_counters,
+                                        unsigned iteration_interval,
+                                        unsigned begin_cycle, unsigned end_cycle) {
+  unsigned cycle;
+  for (cycle = begin_cycle; cycle <= end_cycle; ++cycle) {
+    int counter;
+    unsigned modulo_cycle;
+
+    modulo_cycle = cycle % iteration_interval;
+    counter = (*reg_counters)[modulo_cycle];
+    (*reg_counters)[modulo_cycle] = (counter + reg_size);
+  }
+  return;
+}
+
+/// \brief 各cycle毎のbusy数の最大値を見積もり結果として取得する
+unsigned SwplRegEstimate::getEstimateResult(RenamedRegVector* vector_renamed_regs,
+                                            std::vector<int>* reg_counters,
+                                            unsigned iteration_interval) {
+  unsigned indx;
+  unsigned max_counter, counter;
+
+  for( auto *rreg : *vector_renamed_regs ) {
+    incrementCounters (rreg->reg->getRegSize(),
+                        reg_counters,
+                        iteration_interval,
+                        rreg->def_cycle, rreg->use_cycle);
+  }
+
+  max_counter = 0;
+  for (indx=0; indx < iteration_interval; ++indx) {
+    counter = (*reg_counters)[indx];
+    if(max_counter < counter) { max_counter = counter; }
+  }
+  return max_counter;
+
+}
+
+/// \brief live_range_mask以上のlive rangeをもつレジスタの数を求める
+unsigned SwplRegEstimate::countLivesWithMask(RenamedRegVector* vector_renamed_regs,
+                                             unsigned live_range_mask) {
+  unsigned count_lives = 0;
+
+  /* 最大、最小のcycleを収集 */
+  for( auto *rreg : *vector_renamed_regs ) {
+    unsigned live_range;
+    live_range = rreg->use_cycle - rreg->def_cycle + 1;
+    if(live_range >= live_range_mask) {
+      count_lives += rreg->reg->getRegSize();
+    }
+  }
+
+  return count_lives;
+}
+
+/// \brief live_range_mask以上のlive rangeをもつレジスタの最大重なり数を求める
+unsigned SwplRegEstimate::countOverlapsWithMask(RenamedRegVector* vector_renamed_regs,
+                                                unsigned live_range_mask,
+                                                unsigned n_renaming_versions) {
+  unsigned max_cycle, min_cycle;
+  unsigned pattern_max_counter;
+
+  min_cycle = SwplSlot::slotMax().calcCycle();
+  max_cycle = SwplSlot::slotMin().calcCycle();
+
+  /* 最大、最小のcycleを収集 */
+  for( auto *rreg : *vector_renamed_regs ) {
+    unsigned live_range;
+    live_range = rreg->use_cycle - rreg->def_cycle + 1;
+    if(live_range <= live_range_mask || rreg->is_recurrence == true) { continue; }
+    if((signed)max_cycle < rreg->use_cycle) { max_cycle = rreg->use_cycle; }
+    if((signed)min_cycle > rreg->def_cycle) { min_cycle = rreg->def_cycle; }
+  }
+
+  if (max_cycle <= min_cycle) {
+    /* 該当するregが無いため中断*/
+    return 0;
+  }
+
+  /* 各renamed_regのcycle毎の生存数を積み上げる*/
+  std::vector<int> tmp_reg_counters( (max_cycle - min_cycle + 1), 0 ); /* cycle毎の生存数 */
+  for( auto *rreg : *vector_renamed_regs ) {
+    int live, live_range;
+    live_range = rreg->use_cycle - rreg->def_cycle + 1;
+  
+    if(live_range <= (signed)live_range_mask || rreg->is_recurrence == true) { continue; }
+  
+    for (live=rreg->def_cycle - min_cycle; live < live_range; ++ live) {
+      tmp_reg_counters[live] = (tmp_reg_counters[live] + 1);
+    }
+  }
+
+  pattern_max_counter = 0;      
+  for( auto counter : tmp_reg_counters ) {
+    if((signed)pattern_max_counter < counter) { pattern_max_counter = counter; }
+  }
+
+  return pattern_max_counter;
+}
+
+/// \brief iiに対するlive rangeの重なりから、必要レジスタ数をパターンマッチ
+/// \note 必要レジスタ数はheuristicな条件で決めている
+/// \note OoOが豊富な場合、SWPLの重なりを緩くしても問題ないため、
+///       大きなMVEに対して過剰に見積もる事は許容される
+unsigned SwplRegEstimate::getNumPatternRegs (RenamedRegVector* vector_renamed_regs,
+                                             unsigned iteration_interval,
+                                             unsigned n_renaming_versions, unsigned regclassid) {
+  unsigned live_range_mask;
+  unsigned live_overlaps;
+  unsigned pattern_max_counter = 0;
+
+  /* live_range > ii/2のケース
+   * ii/2を越える場合に、SwplRegはレジスタを共有できないため、
+   * renamed_regの全versionに1つのレジスタを割り当てることを前提に, レジスタ数が予測できる.
+   * ただし、SwplRegが複数のレジスタを割り当てられる場合があり、
+   * その場合に対しては、過剰な見積もりになっている.
+   * 例えば、2/3*iiのrenamed_regが3つで、互いに1/3*iiずれている場合、
+   * 2つのレジスタで割り付ける事ができる.
+   * \note 効果があるケースが見つかっていないため不要と思われる
+   */
+  {
+    live_range_mask = (iteration_interval+1)/2;
+    pattern_max_counter = countLivesWithMask (vector_renamed_regs, live_range_mask);
+  }
+
+  /* live_range > iiのケース
+   * 自身の隣接するversionと重なるため、renamed_regに対して複数レジスタが必要になる
+   * ただし、別のrenamed_regと共有する事が可能であるため、2で割る
+   */
+  {
+    live_range_mask = iteration_interval;
+    live_overlaps = countOverlapsWithMask (vector_renamed_regs, live_range_mask,
+                                           n_renaming_versions);
+
+    /* 証明できていないが、傾向はあっている思われる*/
+    if(n_renaming_versions%2 == 1) {
+      /* 奇数の場合、一つのrenamed_regに対し少なくとも3個が必要であり、
+       * 互いに共有できる場合があるため.
+       */
+      pattern_max_counter = std::max(pattern_max_counter,
+                                     3 * ((live_overlaps+1)/2));
+    } else {
+      /* 奇数の場合、一つのrenamed_regに対し少なくとも2個が必要*/
+      pattern_max_counter = std::max(pattern_max_counter,
+                                     2 * ((live_overlaps+1)/2));
+    }
+
+    /* MVE==5の場合は、spillがおきやすい傾向にあるため多めに見積る */
+    if( llvm::StmRegKind::isPredicate(regclassid) ) {
+      if (n_renaming_versions == 5) {
+        pattern_max_counter = std::max(pattern_max_counter,
+                                       3 * live_overlaps);
+      }
+    }
+  }
+
+  /* live_range > (2*ii) のケース
+   * MVEが4以下の場合は, pattern以外の見積もりで十分と判断した
+   */
+  {
+    if(n_renaming_versions >= 5) {
+      live_range_mask = iteration_interval * 2;
+      live_overlaps = countOverlapsWithMask (vector_renamed_regs, live_range_mask,
+                                             n_renaming_versions);
+      switch (n_renaming_versions) {
+      case 5:
+        /* 前後2version重なり、全体が重なりあうため、5個レジスタが必要 
+         * live_overlapsが少数の場合は、妥当な見積もりと思われる
+         */
+        pattern_max_counter = std::max(pattern_max_counter,
+                                       5 * live_overlaps );
+        break;
+      default:
+        // \note MVE=5以外の場合、明確な数は不明
+        break;
+      }
+    }
+  }
+
+  /* tmp_reg_countersは、呼出し元で解放 */
+  return pattern_max_counter;
+}
+
+/// \brief 干渉と割付けを意識してlive rangeを伸ばしながら見積もりを実施する
+/// \note getNumMortalRegsよりかならず大きい結果を返却する
+unsigned SwplRegEstimate::getNumExtendedRegs (RenamedRegVector* vector_renamed_regs,
+                                              const SwplSlots* slots,
+                                              unsigned iteration_interval,
+                                              unsigned regclassid,
+                                              unsigned n_renaming_versions) {
+  std::vector<int> reg_counters( iteration_interval, 0 );
+  int max_counter;
+
+  /* 見積もりのためlive rangeの延長 */
+  extendRenamedRegLivesForward(vector_renamed_regs,
+                               iteration_interval, n_renaming_versions);
+  extendRenamedRegLivesBackward(vector_renamed_regs,
+                                iteration_interval, n_renaming_versions);
+  max_counter = getEstimateResult(vector_renamed_regs,
+                                  &reg_counters, iteration_interval);
+  return max_counter;
+}
+
+/// \brief SwplRegが見積り時の対象となるかどうか
+/// \note getNumMortalRegs、getNumInterferedRegsで用いる
+bool SwplRegEstimate::isCountedReg(const SwplReg& reg, unsigned regclassid) {
+  if ( reg.isRegNull() ) {
+    return false;
+  }
+  if( !reg.isSameKind(regclassid) ) {
+    return false;
+  }
+  if (reg.getPredecessor() != nullptr) {
+    /* 既に割り当てられた reg を使うだけなので、計算しない。*/
+    return false;
+  }
+  if ( reg.isStack() ) {
+    return false;
+  }
+  return true;
+}
+
+/// \brief int_Vector内の最大の値を取得する
+int SwplRegEstimate::findMaxCounter(std::vector<int>* reg_counters, unsigned iteration_interval) {
+  int max_counter;
+  unsigned modulo_cycle;
+
+  /* Find max */
+  max_counter = 0;
+  for (modulo_cycle = 0; modulo_cycle < iteration_interval; ++modulo_cycle) {
+    int counter;
+    counter = (*reg_counters)[modulo_cycle];
+    max_counter = std::max(max_counter, counter);
+  }
+  return max_counter;
+}
+
+}
+
+
+//===----------------------------------------------------------------------===//
+//
+// Classes that interface with result reflection in SWPL.
+//
+//===----------------------------------------------------------------------===//
+
+
+
+// using namespace llvm; // for NV
+// using namespace ore; // for NV
+
+// #define DEBUG_TYPE "aarch64-swpipeliner"
+
+namespace llvm{
+
+#define ceil_div(x, y) (((x) - 1) / (y) + 1)
+
+bool SwplPlan::existsPragma = false;
+
+/// \brief instが配置されたslot番号（begin_slot起点）を返す
+/// \details SwplPlan.slotsに配置されたinstを探し、
+///          begin_slot起点のslot番号を返す
+/// \param [in] c_inst
+/// \return instが配置されたslot番号（begin_slot起点）
+unsigned SwplPlan::relativeInstSlot(const SwplInst& c_inst) const {
+  return slots.getRelativeInstSlot(c_inst, begin_slot);
+}
+
+/// \brief 命令が配置された範囲のCycle数を返す
+/// \return 命令が配置された範囲のCycle数
+int SwplPlan::getTotalSlotCycles() {
+  return (end_slot - begin_slot) / SWPipeliner::FetchBandwidth;
+}
+
+/// \brief SwplPlanをダンプする
+/// \param [in] stream 出力stream
+/// \return なし
+void SwplPlan::dump(raw_ostream &stream) {
+  stream << "(plan " << format("0x%p",this) <<":\n";
+  stream << "  iteration_interval  = " << iteration_interval <<"\n";
+  stream << "  n_iteration_copies  = " << n_iteration_copies << "\n";;
+  stream << "  n_renaming_versions = " << n_renaming_versions <<"\n";
+  stream << "  begin_slot = " << begin_slot << "\n";
+  stream << "  end_slot   = " << end_slot <<"\n";
+  stream << "  total_cycles  = " << total_cycles << "\n";
+  stream << "  prolog_cycles = " << prolog_cycles << "\n";
+  stream << "  kernel_cycles = " << kernel_cycles << "\n";
+  stream << "  epilog_cycles = " << epilog_cycles << "\n";
+
+  dumpInstTable(stream);
+  stream << ")\n";
+  return;
+}
+
+/// \brief SwplPlanの命令配置状態をダンプする
+/// \detail 命令ごとにMachineInstr*とOpcode名を出力する。
+/// \param [in] stream 出力stream
+/// \return なし
+void SwplPlan::dumpInstTable(raw_ostream &stream) {
+  size_t table_size = (size_t)end_slot - (size_t)begin_slot;
+  std::vector<SwplInst*> table(table_size, nullptr);
+
+  for( auto *inst : loop.getBodyInsts() ) {
+    unsigned slot;
+    slot = slots.getRelativeInstSlot(*inst, begin_slot);
+    table[slot] = inst;
+  }
+  stream << "\n\t( MachineInstr* : OpcodeName )\n";
+
+  for (unsigned i = 0; i < table_size; ++i) {
+    SwplInst* inst;
+    SwplSlot slot;
+
+    slot = begin_slot + i;
+    if(slot.calcFetchSlot() == 0) {
+      stream << "\n";
+    }
+    if(i!=0 && i%(SWPipeliner::FetchBandwidth * iteration_interval) == 0 ) { // IIごとに改行
+      stream << "\n";
+    }
+
+    inst = table[i];
+
+    if (inst == nullptr) {
+      stream << "\t--" << slot.calcFetchSlot() << "--\t";
+    } else {
+      stream << "\t(";
+      stream << format("%p", inst->getMI());
+      stream << ":" << inst->getName();
+      stream << ")\t";
+    }
+  }
+  stream << "\n";
+
+  return;
+}
+
+/// \brief registerが足りているかを判定する
+/// \details renaming_versionsでregisterが足りるかを判定する
+/// \param [in] c_loop ループ情報
+/// \param [in] slots スケジューリング結果
+/// \param [in] iteration_interval iteration interval
+/// \param [in] n_renaming_versions renaming versions
+/// \retval true 足りる
+/// \retval false 足りない
+///
+/// \note 固定割付けでないレジスタが、整数、浮動小数点数、プレディケートであることが前提の処理である。
+/// \note CCRegは固定割付けのため処理しない。
+bool SwplPlan::isSufficientWithRenamingVersions(const SwplLoop& c_loop,
+                                                const SwplSlots& slots,
+                                                unsigned iteration_interval,
+                                                unsigned n_renaming_versions) {
+  SwplMsResourceResult ms_resource_result;
+  unsigned n_necessary_regs;
+
+  ms_resource_result.init();
+
+  n_necessary_regs = SwplRegEstimate::calcNumRegs(c_loop, &slots, iteration_interval,
+                                                  llvm::StmRegKind::getIntRegID(),
+                                                  n_renaming_versions);
+  ms_resource_result.setNecessaryIreg(n_necessary_regs);
+
+  n_necessary_regs = SwplRegEstimate::calcNumRegs(c_loop, &slots, iteration_interval,
+                                                  llvm::StmRegKind::getFloatRegID(),
+                                                  n_renaming_versions);
+  ms_resource_result.setNecessaryFreg(n_necessary_regs);
+
+  n_necessary_regs = SwplRegEstimate::calcNumRegs(c_loop, &slots, iteration_interval,
+                                                  llvm::StmRegKind::getPredicateRegID(),
+                                                  n_renaming_versions);
+  ms_resource_result.setNecessaryPreg(n_necessary_regs);
+
+  if ( !(slots.isIccFreeAtBoundary(c_loop, iteration_interval)) ) {
+    ms_resource_result.setSufficientWithArg(false);
+  }
+
+  return ms_resource_result.isModerate();
+}
+
+/// \brief SwplPlanを取得し、スケジューリング結果からPlanの要素を設定する
+/// \details SwplPlanを取得し、スケジューリング結果からSwplPlanの要素を設定する。
+///          SwplPlanは、schedulingが完了した後, transform mirへ渡す情報となる。
+/// \param [in] c_loop ループを構成する命令の情報
+/// \param [in] slots スケジューリング結果
+/// \param [in] min_ii 計算されたMinII
+/// \param [in] ii スケジュールで採用されたII
+/// \param [in] resource スケジュールで利用する資源情報
+/// \return スケジューリング結果を設定したSwplPlanを返す。
+SwplPlan* SwplPlan::construct(const SwplLoop& c_loop,
+                              SwplSlots& slots,
+                              unsigned min_ii,
+                              unsigned ii,
+                              const SwplMsResourceResult& resource) {
+  SwplPlan* plan = new SwplPlan(c_loop); //plan->loop =loop;
+  size_t prolog_blocks, kernel_blocks;
+
+  plan->minimum_iteration_interval = min_ii;
+  plan->iteration_interval = ii;
+  plan->slots = slots;
+
+  prolog_blocks = slots.calcPrologBlocks(plan->loop, ii);
+  kernel_blocks = slots.calcKernelBlocks(plan->loop, ii);
+  plan->n_iteration_copies = prolog_blocks + kernel_blocks;
+  plan->n_renaming_versions
+    = slots.calcNRenamingVersions(plan->loop, ii);
+
+  plan->begin_slot = slots.findBeginSlot(plan->loop, ii);
+  plan->end_slot = SwplSlot::baseSlot(ii) + 1;
+
+  plan->prolog_cycles = prolog_blocks * ii;
+  plan->kernel_cycles = kernel_blocks * ii;
+  plan->epilog_cycles = plan->prolog_cycles;
+  plan->total_cycles = (plan->prolog_cycles
+                        + plan->kernel_cycles
+                        + plan->epilog_cycles);
+
+  plan->num_necessary_freg = resource.getNecessaryFreg();
+  plan->num_max_freg = resource.getMaxFreg();
+  plan->num_necessary_ireg = resource.getNecessaryIreg();
+  plan->num_max_ireg = resource.getMaxIreg();
+  plan->num_necessary_preg = resource.getNecessaryPreg();
+  plan->num_max_preg = resource.getMaxPreg();
+
+  return plan;
+}
+
+/// \brief SwplPlanの解放
+/// \param [in] plan SwplPlanオブジェクトのポインタ
+/// \return なし
+void SwplPlan::destroy(SwplPlan* plan) {
+  delete plan;
+  return;
+}
+
+/// \brief SwplDdgを元にschedulingを試行し,SwplPlanを生成する
+/// \details selectPlan関数がTRY_SCHEDULE_SUCCESSで復帰した場合、
+///          SwplPlan::construct関数の結果を返す。
+/// \param [in] ddg データ依存情報
+/// \retval schedule結果(SwplPlan)
+/// \retval nullptr schedule結果が得られない場合
+SwplPlan* SwplPlan::generatePlan(SwplDdg& ddg)
+{
+  SwplSlots slots;
+  slots.resize(ddg.getLoopBody_ninsts());
+  unsigned ii, min_ii, itr;
+  SwplMsResourceResult resource;
+
+  TryScheduleResult rslt =
+    selectPlan(ddg,
+               slots, &ii, &min_ii, &itr, resource);
+
+  switch(rslt) {
+  case TryScheduleResult::TRY_SCHEDULE_SUCCESS:
+    return SwplPlan::construct( *(ddg.getLoop()), slots, min_ii, ii, resource);
+
+  case TryScheduleResult::TRY_SCHEDULE_FAIL:
+    return nullptr;
+
+  case TryScheduleResult::TRY_SCHEDULE_FEW_ITER: {
+    SWPipeliner::Reason =
+        llvm::formatv("This loop is not software pipelined because the iteration count is smaller than "
+                      "{0} and "
+                      "the software pipelining does not improve the performance.", itr);
+    return nullptr;
+  }
+  }
+  llvm_unreachable("select_plan returned an unknown state.");
+  return nullptr;
+}
+
+
+/// \brief StmのResource情報により制限されるmin IIを計算する
+/// \details resource min IIは以下の手順で求める。
+///          1. 演算器数分のカウンタを用意（0.0で初期化）
+///          2. スケジューリング対象の命令ごとに以下を実施
+///            - 命令が使用する資源パターンごとに以下を実施
+///              - 利用する演算器のカウンタに"1/命令が使用する資源パターン数"を加算
+///          3. 演算器ごとのカウンタの最大（小数点切り上げ）が
+///             Resource情報により制限されるmin IIとなる
+///
+/// \param [in] c_loop ループを構成する命令の情報
+/// \return 算出したresource_ii
+///
+/// \note LLVM版では非パイプライン情報は取得できない。
+///       現実装では、非パイプライン命令もパイプライン命令と同様に扱って計算している
+unsigned SwplPlan::calculateResourceII(const SwplLoop& c_loop) {
+  int max_counter;
+  unsigned numresource;
+
+  // 資源ごとの利用カウントをresource_appearsで保持する。
+  // resource_appearsは、STM->getNumResource()+1分確保し、
+  // resource_appears[A64FXRes::PortKind]が資源ごとの利用カウントとなる。
+  // 要素[0]はA64FXRes::PortKind::P_NULLに該当する要素とし、使用しない。
+  numresource = SWPipeliner::STM->getNumResource();
+  std::vector<float> resource_appears(numresource+1, 0.0);
+
+  for (auto *inst : c_loop.getBodyInsts()) {
+    // 資源情報の生成と資源パターン数の取得
+    const auto *pipes = SWPipeliner::STM->getPipelines( *(inst->getMI()) );
+    unsigned num_pattern = pipes->size();
+
+    for(auto *pipeline : *pipes ) {
+      for(unsigned i=0; i<pipeline->resources.size(); i++) {
+        StmResourceId resource = pipeline->resources[i];
+
+        // どの資源パターンが使用されるかはわからないため、
+        // n_appearsには"1.0/資源利用のパターン数"の値を足しこむ
+        resource_appears[resource] += (1.0 / num_pattern);
+      }
+    }
+  }
+  max_counter = 0;
+  for(auto val : resource_appears ) {
+    int count = std::ceil(val); // 小数点切り上げ
+    max_counter = std::max( max_counter, count );
+  }
+  return max_counter;
+}
+
+/// \brief 資源により制限されるmin IIを計算する
+/// \details 以下から求めたIIの最大を返す。
+///           - 1cycleに単位のfetch slot数の制約から求めたmin II
+///           - TmのResource情報により制限されるmin II
+///
+/// \param [in] c_loop ループを構成する命令の情報
+/// \return ResII
+unsigned SwplPlan::calcResourceMinIterationInterval(const SwplLoop& c_loop) {
+  unsigned fetch_constrained_ii;
+  size_t n_body_insts;
+  unsigned res_ii;
+
+  n_body_insts = c_loop.getSizeBodyRealInsts();
+  assert (n_body_insts != 0);
+
+  /* 1cycleにつきfetch slot数しか命令は発行できない事による制約 */
+  fetch_constrained_ii = ceil_div(n_body_insts, SWPipeliner::RealFetchBandwidth );
+
+  // メモリポート数による制約は、
+  // calculateResorceIIで計算されるmemory unitの制約の方が厳しい為、
+  // 考慮しない。
+  // Tradコードにも「実質的には不要な処理」とコメントがある。
+  res_ii = calculateResourceII(c_loop);
+  return std::max(fetch_constrained_ii, res_ii);
+}
+
+/// \brief 指定のアルゴリズムでスケジュールを試行する
+/// \details スケジューリング指示情報(PLAN_SPEC)を生成し、
+///          calculateMsResultによるスケジューリングを依頼する。
+///
+/// \param [in] c_ddg 対象の DDG
+/// \param [in] res_mii ddg に対して計算された ResMII
+/// \param [out] slots スケジュールしたスロットの動的配列
+/// \param [out] selected_ii スケジュールで採用された II
+/// \param [out] calculated_min_ii 計算された MinII
+/// \param [out] required_itr ソフトパイプルートを通るのに必要なイテレート数
+/// \param [out] resource スケジュールで利用する資源情報
+/// \retval TRY_SCHEDULE_SUCCESS スケジュール成功。全ての出力引数を利用できる。
+/// \retval TRY_SCHEDULE_FAIL スケジュール失敗。全ての出力引数は未定義。
+/// \retval TRY_SCHEDULE_FEW_ITER ループのイテレート数不足によりソフトパイプ適用不可。
+///         required_itr のみ利用できる。
+TryScheduleResult SwplPlan::trySchedule(const SwplDdg& c_ddg,
+                                        unsigned res_mii,
+                                        SwplSlots** slots,
+                                        unsigned* selected_ii,
+                                        unsigned* calculated_min_ii,
+                                        unsigned* required_itr,
+                                        SwplMsResourceResult* resource) {
+  SwplPlanSpec spec(c_ddg);
+  if( !(spec.init(res_mii, existsPragma)) ){
+    // SwplPlanSpec::init()復帰値は現在trueのみ。将来的にfalseがくる可能性を考えifを残す
+    return TryScheduleResult::TRY_SCHEDULE_FAIL;
+  }
+
+  *calculated_min_ii = spec.min_ii;
+
+  if( !(SwplCalclIterations::preCheckIterationCount(const_cast<const SwplPlanSpec &>(spec), required_itr)) ) {
+    return TryScheduleResult::TRY_SCHEDULE_FEW_ITER;
+  }
+
+  SwplMsResult *ms_result = SwplMsResult::calculateMsResult(spec);
+
+  if (ms_result != nullptr && ms_result->slots != nullptr) {
+    *slots = ms_result->slots;
+    *selected_ii = ms_result->ii;
+    *resource = ms_result->resource;
+    delete ms_result;
+    return TryScheduleResult::TRY_SCHEDULE_SUCCESS;
+  } else {
+    return TryScheduleResult::TRY_SCHEDULE_FAIL;
+  }
+
+}
+
+/// \brief IMSでスケジューリングを行う
+///
+/// \param [in] c_ddg 対象の DDG
+/// \param [out] rslt_slots スケジュール結果であるスロットの動的配列
+/// \param [out] selected_ii スケジュールで採用された II
+/// \param [out] calculated_min_ii 計算された MinII
+/// \param [out] required_itr ソフトパイプルートを通るのに必要なイテレート数
+/// \param [out] resource スケジュールで利用する資源情報
+/// \retval TRY_SCHEDULE_SUCCESS スケジュール成功。全ての出力引数を利用できる。
+/// \retval TRY_SCHEDULE_FAIL スケジュール失敗。全ての出力引数は未定義。
+/// \retval TRY_SCHEDULE_FEW_ITER ループのイテレート数不足によりソフトパイプ適用不可。
+///                               required_itr のみ利用できる。
+TryScheduleResult SwplPlan::selectPlan(const SwplDdg& c_ddg,
+                                       SwplSlots& rslt_slots,
+                                       unsigned* selected_ii,
+                                       unsigned* calculated_min_ii,
+                                       unsigned* required_itr,
+                                       SwplMsResourceResult& resource) {
+  unsigned res_mii = calcResourceMinIterationInterval( c_ddg.getLoop() );
+
+  SwplSlots* slots_tmp;
+  unsigned ii_tmp, min_ii_tmp, itr;
+  SwplMsResourceResult resource_tmp;
+
+  switch(trySchedule(c_ddg,
+                     res_mii,
+                     &slots_tmp,
+                     &ii_tmp,
+                     &min_ii_tmp,
+                     &itr,
+                     &resource_tmp)) {
+  case TryScheduleResult::TRY_SCHEDULE_SUCCESS:
+    rslt_slots = *slots_tmp; // copy
+    delete slots_tmp;
+    *selected_ii = ii_tmp;
+    *calculated_min_ii = min_ii_tmp;
+    *required_itr = itr;
+    resource = resource_tmp; // copy
+    return TryScheduleResult::TRY_SCHEDULE_SUCCESS;
+  case TryScheduleResult::TRY_SCHEDULE_FAIL:
+    return TryScheduleResult::TRY_SCHEDULE_FAIL;
+  case TryScheduleResult::TRY_SCHEDULE_FEW_ITER:
+    *required_itr = itr;
+    return TryScheduleResult::TRY_SCHEDULE_FEW_ITER;
+  }
+  llvm_unreachable("unknown TryScheduleResult");
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// \brief プロローグを構成するblock数を返す
+/// \details プロローグを構成するblock数を返す。
+///          block数は、IIで区切られたサイクルの数。ステージ数と同意。
+/// \param [in] c_loop ループを構成する命令の情報
+/// \param [in] iteration_interval II
+/// \return プロローグを構成するblock数
+size_t SwplSlots::calcPrologBlocks(const SwplLoop& c_loop,
+                                                 unsigned iteration_interval) {
+  return (calcFlatScheduleBlocks(c_loop, iteration_interval) - 1);
+}
+
+/// \brief slotsにて、命令が配置されている最初のSlot番号を返す
+/// \details first_slotsにて、命令が配置されている最初のSlot番号を返す。
+/// \param [in] c_loop ループを構成する命令の情報
+/// \return 検出したスロット番号
+///
+/// \note c_loop.BodyInstsの命令がすべて配置済みでなければならない。
+SwplSlot SwplSlots::findFirstSlot(const SwplLoop& c_loop) {
+  SwplSlot first_slot = SwplSlot::slotMax();
+
+  for (auto &slot : *this) {
+    if (slot == SwplSlot::UNCONFIGURED_SLOT) continue;
+    first_slot = (first_slot < slot) ? first_slot : slot;
+  }
+  return first_slot;
+}
+
+/// \brief last_slotsにて、命令が配置されている最後のSlot番号を返す
+/// \details slotsにて、命令が配置されている最後のSlot番号を返す。
+/// \param [in] c_loop ループを構成する命令の情報
+/// \return 検出したスロット番号
+///
+/// \note c_loop.BodyInstsの命令がすべて配置済みでなければならない。
+SwplSlot SwplSlots::findLastSlot(const SwplLoop& c_loop) {
+  SwplSlot last_slot = SwplSlot::slotMin();
+
+  for (auto &slot : *this) {
+    if (slot == SwplSlot::UNCONFIGURED_SLOT) continue;
+    last_slot = (last_slot > slot) ? last_slot : slot;
+  }
+  return last_slot;
+}
+
+/// \brief calcFlatScheduleBlocks
+/// \param [in] c_loop ループを構成する命令の情報
+/// \param [in] iteration_interval II
+/// \return スケジューリング結果のunroll前のブロック数
+size_t SwplSlots::calcFlatScheduleBlocks(const SwplLoop& c_loop,
+                                                   unsigned iteration_interval) {
+  SwplSlot first_slot, last_slot;
+  first_slot = findFirstSlot(c_loop);
+  last_slot = findLastSlot(c_loop);
+  return (last_slot.calcBlock(iteration_interval) + 1
+          - first_slot.calcBlock(iteration_interval));
+}
+
+/// \brief カーネルがunrollされる数(renaming version)を返す
+/// \details カーネルがunrollされる数(renaming version)を返す
+/// \param [in] c_loop ループを構成する命令の情報
+/// \param [in] iteration_interval II
+/// \return renaming version
+size_t SwplSlots::calcKernelBlocks(const SwplLoop& c_loop,
+                                                 unsigned iteration_interval) {
+  size_t n_renaming_versions;
+
+  n_renaming_versions = calcNRenamingVersions(c_loop, iteration_interval);
+  return n_renaming_versions;
+}
+
+/// \brief instが配置されたslot番号（begin_slot起点）を返す
+/// \param [in] c_inst
+/// \param [in] begin_slot
+/// \return instが配置されたslot番号（begin_slot起点）
+unsigned SwplSlots::getRelativeInstSlot(const SwplInst& c_inst,
+                                                  const SwplSlot& begin_slot) const {
+  assert(this->at(c_inst.inst_ix) != SwplSlot::UNCONFIGURED_SLOT);
+  return this->at(c_inst.inst_ix) - begin_slot;
+}
+
+/// \brief registerのlive rangeとiiの関係からrenaming versionを求める
+/// \details  body で定義されていて、predecessor が無い regについて live_range を計算し、
+///           最大値を求める。
+///           live rangeが跨るblockの数だけ、regのrenamingを行なう必要がある。
+///           現状はn_renaming_versionsがkernelに重なる回転数と一致する仕組みとなっている。
+/// \param [in] c_loop ループを構成する命令の情報
+/// \param [in] iteration_interval II
+/// \return renaming versions数
+size_t SwplSlots::calcNRenamingVersions(const SwplLoop& c_loop,
+                                                  unsigned iteration_interval) const {
+  size_t max_live_cycles;
+  size_t necessary_n_renaming_versions;
+
+  max_live_cycles = 1;
+  for (auto* def_inst : c_loop.getBodyInsts()) {
+    SwplSlot def_slot;
+    size_t def_cycle;
+
+    assert(this->at(def_inst->inst_ix) != SwplSlot::UNCONFIGURED_SLOT);
+    def_slot = this->at(def_inst->inst_ix);
+    def_cycle = def_slot.calcCycle();
+    for( auto *reg : def_inst->getDefRegs() ) {
+      size_t live_cycles, last_use_cycle;
+
+      if ( reg->isRegNull() ) {
+        continue;
+      }
+      if ( reg->getPredecessor() != nullptr) {
+        /* 既に割り当てられた reg を使うだけなので、計算しない。*/
+        continue;
+      }
+      if ( !reg->isUsed() ) {
+        continue;
+      }
+      last_use_cycle = calcLastUseCycleInBodyWithInheritance(*reg, iteration_interval);
+      assert (def_cycle <= last_use_cycle);
+
+      live_cycles = last_use_cycle - def_cycle + 1UL;
+      assert (live_cycles >= 1);
+
+      max_live_cycles = std::max(max_live_cycles, live_cycles);
+    }
+  }
+  necessary_n_renaming_versions = ceil_div(max_live_cycles, iteration_interval);
+  assert (necessary_n_renaming_versions >= 1);
+  return necessary_n_renaming_versions;
+}
+
+/// \brief 最初のInstが配置されているblockの先頭Slotを返す
+/// \details 最初のInstが配置されているblockの先頭Slotを返す。
+/// \param [in] c_loop ループを構成する命令の情報
+/// \param [in] iteration_interval II
+/// \return 最初のInstが配置されているblockの先頭Slot番号
+SwplSlot SwplSlots::findBeginSlot(const SwplLoop& c_loop,
+                                unsigned iteration_interval) {
+  SwplSlot first_slot;
+  unsigned begin_block;
+
+  first_slot = findFirstSlot(c_loop);
+  begin_block = first_slot.calcBlock(iteration_interval);
+  return SwplSlot::constructFromBlock(begin_block, iteration_interval);
+}
+
+/// \brief icc が iteration_interval のブロックを跨って使用されていないかをチェックする
+/// \param [in] c_loop ループを構成する命令の情報
+/// \param [in] iteration_interval II
+/// \retval true ブロックを跨って使用されていない
+/// \retval false ブロックを跨って使用されている
+bool SwplSlots::isIccFreeAtBoundary(const SwplLoop& loop,
+                                             unsigned iteration_interval) const {
+  for( auto *inst : loop.getBodyInsts() ) {
+    SwplSlot def_slot;
+    unsigned def_block;
+
+    if ((def_slot = this->at(inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
+      report_fatal_error("inst not found in slots.");
+    }
+    def_block = def_slot.calcBlock(iteration_interval);
+
+    for( auto *reg : inst->getDefRegs() ) {
+      unsigned last_use_cycle, last_use_block;
+
+      if( reg->isRegNull() ) {
+        continue;
+      }
+      if( !reg->isIntegerCCRegister() ) {
+        continue;
+      }
+      if( !reg->isUsed() ) {
+        continue;
+      }
+      last_use_cycle = calcLastUseCycleInBody(*reg, iteration_interval);
+
+      last_use_block = last_use_cycle / iteration_interval;
+      assert (last_use_block >= def_block);
+      if (last_use_block != def_block) { /* F1686 */
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+/// \brief reg が最後に使われる cycle を返す
+/// \details reg が最後に使われる cycle を返す。
+///          regがsuccessorを持つ場合は遡って調べる。
+/// \param [in] reg 調査対象のreg
+/// \param [in] iteration_interval II
+/// \return regが最後に使われる cycle
+unsigned SwplSlots::calcLastUseCycleInBodyWithInheritance(const SwplReg& reg,
+                                                                    unsigned iteration_interval) const {
+  const SwplReg* successor_reg;
+
+  successor_reg = reg.getSuccessor();
+  if (successor_reg != nullptr) {
+    return calcLastUseCycleInBodyWithInheritance (*successor_reg,
+                                                  iteration_interval);
+  }
+  return calcLastUseCycleInBody(reg, iteration_interval);
+}
+
+/// \brief reg が最後に使われる slot を返す
+/// \details phi で使われる場合は、次のイタレーションで最後に使われる slot に
+///          iteration_interval を足して、比べる。
+/// \param [in] reg 調査対象のreg
+/// \param [in] iteration_interval II
+/// \return regが最後に使われる cycle
+unsigned SwplSlots::calcLastUseCycleInBody(const SwplReg& reg,
+                                                     unsigned iteration_interval) const {
+  unsigned last_use_cycle;
+  const SwplInst* def_inst;
+
+  /* last_use_cycle の初期値を設定。 */
+  def_inst = reg.getDefInst();
+  if (def_inst->isBodyInst()) {
+    SwplSlot def_slot;
+
+    if ((def_slot = this->at(def_inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
+      report_fatal_error("instruction not found in Slots.");
+    }
+    last_use_cycle = def_slot.calcCycle();
+  } else {
+    last_use_cycle = SwplSlot::slotMin().calcCycle();
+  }
+
+  for (auto *use_inst : reg.getUseInsts() ) {
+    unsigned use_cycle;
+
+    if( use_inst->isPhi()) {
+      unsigned next_use_cycle;
+
+      assert( !((reg.getDefInst())->isPhi()) );
+      SwplReg& next_reg = use_inst->getDefRegs(0);
+      assert ( !reg.isRegNull() );
+      next_use_cycle = calcLastUseCycleInBodyWithInheritance(next_reg,
+                                                             iteration_interval);
+      use_cycle = next_use_cycle + iteration_interval;
+    } else if( use_inst->isBodyInst() ) {
+      SwplSlot use_slot;
+
+      if ((use_slot = this->at(use_inst->inst_ix)) == SwplSlot::UNCONFIGURED_SLOT) {
+        report_fatal_error("instruction not found in Slots.");
+      }
+      use_cycle = use_slot.calcCycle();
+    } else {
+      llvm_unreachable("unexpected use_inst.");
+      continue;
+    }
+    last_use_cycle = std::max(last_use_cycle, use_cycle);
+  }
+  return last_use_cycle;
+}
+
+/// \brief slots中の最大最小slotを求める。
+/// \param [out] max_slot 最大slot
+/// \param [out] max_slot 最小slot
+/// \return なし
+void SwplSlots::getMaxMinSlot(SwplSlot& max_slot, SwplSlot& min_slot) {
+  assert(this->size()!=0);
+  SwplSlot max=0;
+  SwplSlot min=SwplSlot::slotMax();
+
+  for (auto& mp : *this) {
+    if (mp == SwplSlot::UNCONFIGURED_SLOT) continue;
+    if (max < mp) max=mp;
+    if (min > mp) min=mp;
+  }
+  max_slot = max;
+  min_slot = min;
+  return;
+}
+
+/// \brief cycleにおける空きslotを返す
+/// \param [in] cycle 検索対象のcycle
+/// \param [in] iteration_interval II
+/// \param [in] isvirtual 仮想命令用の空きSlotを探すのであればtrue
+/// \return cycleのうち、命令が配置されていないslot
+SwplSlot SwplSlots::getEmptySlotInCycle( unsigned cycle,
+                                                   unsigned iteration_interval,
+                                                   bool isvirtual ) {
+  // InstSlotHashmapを２次元配列で表したイメージは以下のとおり。
+  // Real命令と仮想命令によって、配置可能なSlotが異なる
+  //
+  //         |----仮想命令用slot-----|----Real命令用slot----|
+  // cycle 1  slot  slot  slot  slot  slot  slot  slot  slot
+  // cycle 2  slot  slot  slot  slot  slot  slot  slot  slot
+  //       :  slot  slot  slot  slot  slot  slot  slot  slot
+  // cycle n  slot  slot  slot  slot  slot  slot  slot  slot
+  //         |<-------------------------------------------->| SWPipeliner::FetchBandwidth
+  //                                 |<-------------------->| SWPipeliner::RealFetchBandwidth
+
+  unsigned bandwidth = SWPipeliner::FetchBandwidth;
+  unsigned realbandwidth = SWPipeliner::RealFetchBandwidth;
+
+  std::vector<bool> openslot(bandwidth);
+  for(unsigned i=0; i<bandwidth; i++) {
+    // isvirtualがfalseの場合は、opnslotの初期値を以下のようにする。
+    // ・0～(bandwidth - realbandwidth - 1)の要素をfalse
+    // ・(bandwidth - realbandwidth)～(bandwidth-1)の要素をtrue
+    // isvirtualがtrueの場合は逆
+    openslot[i] = (i<(bandwidth - realbandwidth)) ? isvirtual : !isvirtual;
+  }
+
+  unsigned target_modulo_cycle = cycle % iteration_interval;
+
+  for (auto& mp : *this) {
+    if (mp == SwplSlot::UNCONFIGURED_SLOT) continue;
+    unsigned modulo_cycle = mp.calcCycle() % iteration_interval;
+    if(target_modulo_cycle == modulo_cycle) {
+      openslot[mp.calcFetchSlot()] = false; // 使用済み
+    }
+  }
+  for( unsigned idx=0; idx<bandwidth; idx++) {
+    if( openslot[idx] == true ) {
+      return SwplSlot::construct(cycle, 0) + idx;
+    }
+  }
+  return SWPL_ILLEGAL_SLOT;
+}
+
+/// \brief デバッグ用ダンプ
+void SwplSlots::dump(const SwplLoop& c_loop) {
+  if( this->size() == 0 ) {
+      dbgs() << "Nothing...\n";
+      return;
+  }
+
+  SwplSlot max_slot, min_slot;
+  getMaxMinSlot(max_slot, min_slot);
+
+  unsigned max_cycle, min_cycle;
+  max_cycle = max_slot.calcCycle();
+  min_cycle = min_slot.calcCycle();
+
+  max_slot = SwplSlot::construct(max_cycle, 0) + SWPipeliner::FetchBandwidth;
+  min_slot = SwplSlot::construct(min_cycle, 0);
+
+  size_t table_size = (size_t)max_slot - (size_t)min_slot;
+  std::vector<SwplInst*> table(table_size, nullptr);
+  int ix = 0;
+
+  for(auto* inst : c_loop.getBodyInsts()) {
+    if (this->at(ix) != SwplSlot::UNCONFIGURED_SLOT)
+      table[(this->at(ix) - min_slot)] = inst;
+    ix++;
+  }
+
+  for (unsigned i = 0; i < table_size; ++i) {
+    SwplInst* inst;
+    SwplSlot slot;
+
+    slot = min_slot + i;
+    if (slot.calcFetchSlot() == 0) {
+      dbgs() << "\n\t(" << slot << ")";
+    }
+
+    inst = table[i];
+
+    dbgs() << "\t";
+    if (inst == nullptr) {
+      dbgs() << "--" << slot.calcFetchSlot() << "--\t";
+    } else {
+      dbgs() << inst->getName() << "\t" ;
+    }
+  }
+  dbgs() << "\n";
+  return;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// \brief slotのcycleを返す
+/// \details cycleに換算した値を返す
+/// \return slotに該当するcycle
+unsigned SwplSlot::calcCycle() {
+  return slot_index / SWPipeliner::FetchBandwidth;
+}
+
+/// \brief slotのFetchSlotを返す
+/// \details FetchSlot = 各cycleの何番目のslotか
+/// \return FetchSlot
+unsigned SwplSlot::calcFetchSlot() {
+  return slot_index % SWPipeliner::FetchBandwidth;
+}
+
+/// \brief slotが何番目のblockであるかを返す
+/// \param [in] iteration_interval II
+/// \return 何番目のblockか
+unsigned SwplSlot::calcBlock(unsigned iteration_interval)
+{
+  return calcCycle() / iteration_interval;
+}
+
+/// \brief base slotを返す
+/// \param [in] iteration_interval II
+/// \return base slot
+SwplSlot SwplSlot::baseSlot(unsigned iteration_interval) {
+  unsigned middle_block;
+  SwplSlot middle_slot;
+
+  middle_slot = SwplSlot::slotMax() / 2 + SwplSlot::slotMin () / 2;
+  middle_block = middle_slot.calcBlock(iteration_interval);
+  return SwplSlot::constructFromBlock(middle_block, iteration_interval) - 1;
+}
+
+/// \brief SwplSlotを生成する
+/// \param [in] cycle cycle
+/// \param [in] fetch_slot fetch slot
+/// \return SwplSlot
+SwplSlot SwplSlot::construct(unsigned cycle, unsigned fetch_slot) {
+  if( ( SwplSlot::slotMin().calcCycle() > cycle ) ||
+      ( cycle > SwplSlot::slotMax().calcCycle() ) ||
+      ( fetch_slot >= SWPipeliner::FetchBandwidth )
+       ) {
+    if (SWPipeliner::isDebugOutput()) {
+      dbgs() << "!swp-msg: Used cycle for scheduling is out of the range.\n";
+    }
+    return SWPL_ILLEGAL_SLOT;
+  }
+  return cycle * SWPipeliner::FetchBandwidth + fetch_slot;
+}
+
+/// \brief block番号からSwplSlotを生成する
+/// \param [in] block block
+/// \param [in] iteration_interval II
+/// \return SwplSlot
+SwplSlot SwplSlot::constructFromBlock(unsigned block, unsigned iteration_interval) {
+  return SwplSlot::construct(block * iteration_interval, 0);
+}
+
+/// \brief slotの最大を返す
+/// \return 最大slot
+SwplSlot SwplSlot::slotMax() { return 1500000; }
+
+/// \brief slotの最小を返す
+/// \return 最小slot
+SwplSlot SwplSlot::slotMin() { return  500000; }
 }
