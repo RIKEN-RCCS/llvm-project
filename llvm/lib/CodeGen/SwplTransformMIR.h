@@ -12,7 +12,7 @@
 #ifndef SWPLTRANSFORMMIR_H
 #define SWPLTRANSFORMMIR_H
 #include "SwplScheduling.h"
-#include "SwplScr.h"
+#include "SWPipeliner.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/Register.h"
 #include <unordered_map>
