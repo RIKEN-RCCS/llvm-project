@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SwplPlan.h"
+//#include "SwplPlan.h"
 #include "SWPipeliner.h"
 #include "SwplCalclIterations.h"
 #include "SwplRegEstimate.h"

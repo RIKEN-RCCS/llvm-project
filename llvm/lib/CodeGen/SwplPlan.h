@@ -17,7 +17,9 @@
 
 namespace llvm{
 
-
+//class SwplLoop; //再定義
+//class SwplInst;　//再定義
+//class SwplDdg;  //再定義
 /// スケジューリング結果の状態を表すenum
 enum class TryScheduleResult {
                               /// スケジュール成功

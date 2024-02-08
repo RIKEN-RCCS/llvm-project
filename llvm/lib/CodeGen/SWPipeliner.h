@@ -14,7 +14,6 @@
 #define LLVM_LIB_CODEGEN_SWPIPELINER_H
 
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "SwplScr.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -24,9 +23,16 @@
 #include "llvm/InitializePasses.h"
 #include <llvm/ADT/SmallSet.h>
 
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/Register.h"
+
+//#include "SwplPlan.h"
+//#include <unordered_map>
+
 namespace llvm {
 
 /// forward declaration of class
+class SwplScr;
 class SwplLoop;
 class SwplInst;
 class SwplReg;
@@ -34,6 +40,10 @@ class SwplMem;
 class SwplInstEdge;
 class SwplInstGraph;
 class SwplDdg;
+//class SwplPlan; //再定義
+//class SwplSlots; //再定義
+
+class SwplTransformMIR;
 
 // Alias ​​declaration of usage container
 using SwplInsts = std::vector<SwplInst *>;
@@ -72,6 +82,84 @@ bool enableSWP(const Loop*, bool ignoreMetadataOfRemainder);
  * @retval false pipeline_nodep is not specified
  */
 bool enableNodep(const Loop *L);
+
+/// Loop形状を変形したり、Loopから情報を探し出す機能を提供する
+class SwplScr {
+private:
+  MachineLoop& ML;
+
+  /// DO制御変数の初期値を取得する
+  /// \param [out] TMI
+  /// \retval true 取得成功
+  /// \retval false 取得失敗
+  bool getDoInitialValue(SwplTransformedMIRInfo &TMI) const;
+
+  /// 定数オペランドを３２ビット整数に変換する
+  /// \param [in] op
+  /// \param [out] coefficient
+  /// \retval true 変換がうまくいった
+  /// \retval false 変換できなかった
+  bool getCoefficient (const MachineOperand&op, int *coefficient) const;
+
+  /// SWPLで必要な回避分岐を生成する
+  /// \param [in] tmi
+  /// \param [in] dbgloc
+  /// \param [out] skip_kernel_from
+  /// \param [out] skip_kernel_to
+  /// \param [out] skip_mod_from
+  /// \param [out] skip_mod_to
+  void makeBypass(const SwplTransformedMIRInfo &tmi, const DebugLoc&dbgloc,
+                  MachineBasicBlock &skip_kernel_from, MachineBasicBlock &skip_kernel_to,
+                  MachineBasicBlock &skip_mod_from, MachineBasicBlock &skip_mod_to);
+
+
+  /// MBBを削除する（およびSuccessor、PHI、Brの更新）
+  /// \param [in,out] target 削除対象
+  /// \param [in,out] from 削除後のPRED
+  /// \param [in,out] to 削除後のSUCC
+  /// \param [in] unnecessaryMod 削除対象がCheck2の場合かつ余りループ削除の場合、真を指定する
+  void removeMBB(MachineBasicBlock *target, MachineBasicBlock *from, MachineBasicBlock *to, bool unnecessaryMod=false);
+
+  /// 回転数が１の場合、余りループの冗長な繰返し分岐を削除する
+  /// \param [in] br
+  void removeIterationBranch(MachineInstr *br, MachineBasicBlock *body);
+
+  /// oldBodyからnewBodyへ、MachineBasicBlock内の全命令を移動する
+  /// \note Successor/Predecessorの変更はここではしない
+  /// \param [out] newBody 移動先
+  /// \param [out] oldBody 移動元
+  void moveBody(MachineBasicBlock*newBody, MachineBasicBlock*oldBody);
+
+  /// removeMBB from phi in fromMBB
+  /// \param [in,out] fromMBB
+  /// \param [in] removeMBB
+  void removePredFromPhi(MachineBasicBlock *fromMBB, MachineBasicBlock *removeMBB);
+
+public:
+  using UseMap=llvm::DenseMap<Register, std::vector<MachineOperand*>>;
+
+  SwplScr(MachineLoop&ml):ML(ml){}
+
+  /// scr に対し、イタレーションの最後で常に vreg == coefficient * nRemainedIterations + constant を満たすような vreg を探す。
+  /// 見つかった場合は vreg の他に、係数や定義点を設定し、 true を返す。
+  /// \param [out] TMI
+  /// \retval true 誘導変数発見
+  /// \retval false 誘導変数検出できず
+  bool findBasicInductionVariable(SwplTransformedMIRInfo &TMI) const;
+
+  /// SWPLの結果をMIRへ反映するために,MBBの構成を行なう.
+  /// \param [in,out] tmi
+  void prepareCompensationLoop(SwplTransformedMIRInfo &tmi);
+
+  /// SWPL処理の最後に、無駄な分岐等を削除する
+  /// \param [in] tmi
+  void postSSA(SwplTransformedMIRInfo &tmi);
+
+  /// original loopから、loop外で参照しているregister情報を収集する
+  void collectLiveOut(UseMap &usemap);
+
+};
+
 
 /// \class SwplLoop
 /// \brief Manage instruction information in loops
@@ -946,6 +1034,558 @@ private:
   bool shouldOptimize(const Loop *BBLoop);
 };
 
+//#endif
 
-} // end namespace llvm
+
+//#ifndef SWPLSCR_H
+#define SWPLSCR_H
+
+class SwplRegAllocInfo;
+class SwplRegAllocInfoTbl;
+class SwplExcKernelRegInfoTbl;
+
+/// Swpl-RAで使用する、カーネルループ外のレジスタ情報の行
+struct ExcKernelRegInfo {
+  unsigned vreg;        ///< 仮想レジスタ
+  int      num_def;     ///< 仮想レジスタの定義番号(無効値:0以下の値, 有効値:1以上の値)
+  int      num_use;     ///< 仮想レジスタの参照番号(無効値:0以下の値, 有効値:1以上の値)
+  unsigned total_mi;    ///< MIの総数
+
+  /// 定義番号を更新する
+  /// \param [in] def 定義番号
+  void updateNumDef(int def) {
+    num_def = def;
+    return;
+  };
+
+  /// 参照番号を更新する
+  /// \param [in] use 参照番号
+  void updateNumUse(int use) {
+    num_use = use;
+    return;
+  };
+};
+
+/// Swpl-RAで使用する、カーネルループ外のレジスタ情報の表
+class SwplExcKernelRegInfoTbl {
+  std::vector<ExcKernelRegInfo> ekri_tbl;
+
+public:
+  unsigned length() {
+    return ekri_tbl.size();
+  }
+
+  /// ExcKernelRegInfo構造体を追加する
+  /// \param [in] vreg 仮想レジスタ番号
+  /// \param [in] num_def 定義番号
+  /// \param [in] num_use 参照番号
+  void addExcKernelRegInfo(unsigned vreg,
+                           int num_def,
+                           int num_use);
+
+  /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の表の内、vregに該当する行を返す
+  /// \param [in] vreg 仮想レジスタ番号
+  /// \retval 非nullptr 指定された仮想レジスタに該当するExcKernelRegInfoへのポインタ
+  /// \retval nullptr 指定された仮想レジスタに該当するExcKernelRegInfoは存在しない
+  ExcKernelRegInfo* getWithVReg(unsigned vreg);
+
+  /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の表の内、vregが参照から始まっている行の有無を返す
+  /// \param [in] vreg 仮想レジスタ番号
+  /// \retval true 指定された仮想レジスタが参照から始まっている行あり
+  /// \retval false 指定された仮想レジスタが参照から始まっている行なし
+  bool isUseFirstVRegInExcK(unsigned vreg);
+
+  /// debug dump
+  void dump();
+};
+
+/// Swpl-RAで使用する生存区間表の行
+struct RegAllocInfo {
+  unsigned vreg;                        ///< 割り当て済み仮想レジスタ
+  unsigned preg;                        ///< 割り当て済み物理レジスタ
+  int      num_def;                     ///< 仮想レジスタの定義番号(無効値:0以下の値, 有効値:1以上の値)
+  int      num_use;                     ///< 仮想レジスタの参照番号(無効値:0以下の値, 有効値:1以上の値)
+  int      liverange;                   ///< 生存区間(参照番号-定義番号)
+  unsigned tied_vreg;                   ///< tied仮想レジスタ
+  unsigned vreg_classid;                ///< 仮想レジスタのレジスタクラスID
+  std::vector<MachineOperand*> vreg_mo; ///< 仮想レジスタのMachineOperand
+  unsigned total_mi;                    ///< MIの総数
+
+  /// MachineOperandを追加する
+  /// \param [in,out] mo vreg_moに追加するMachineOperand
+  void addMo( MachineOperand* mo ) {
+    vreg_mo.push_back( mo );
+    return;
+  };
+
+  /// tied仮想レジスタを更新する
+  /// \param [in] reg tied仮想レジスタ
+  void updateTiedVReg( unsigned reg ) {
+    tied_vreg = reg;
+    return;
+  };
+
+  /// 定義番号を更新する。
+  /// また、更新された定義番号を使用して、LiveRangeを再計算する。
+  /// \param [in] def 定義番号
+  void updateNumDef( int def ) {
+    num_def = def;
+    liverange = calcLiveRange();
+    return;
+  };
+
+  /// 定義番号を更新する。
+  /// また、更新された定義番号を使用して、LiveRangeを再計算する。
+  /// 物理レジスタの再利用を禁止するため、参照点は最大値となる。
+  /// \param [in] def 定義番号
+  void updateNumDefNoReuse(int def) {
+    num_def = def;
+    liverange = calcLiveRangeNoReuse();
+    return;
+  };
+
+  /// 参照番号を更新する。
+  /// また、更新された参照番号を使用して、LiveRangeを再計算する。
+  /// \param [in] use 参照番号
+  void updateNumUse( int use ) {
+    num_use = use;
+    liverange = calcLiveRange();
+    return;
+  };
+
+  /// 参照番号を更新する。
+  /// また、更新された参照番号を使用して、LiveRangeを再計算する。
+  /// 物理レジスタの再利用を禁止するため、参照点は最大値となる。
+  /// \param [in] use 参照番号
+  void updateNumUseNoReuse(int use) {
+    num_use = use;
+    liverange = calcLiveRangeNoReuse();
+    return;
+  };
+
+private:
+  /// 定義点と参照点から生存区間を求める。
+  /// 仮想レジスタごとの生存区間を求める。
+  /// 定義点、参照点のどちらかが存在しない場合、計算不能として-1を返す。
+  /// \retval 0以上 計算した生存区間
+  /// \retval -1 計算不能
+  int calcLiveRange();
+
+  /// 定義点と参照点から生存区間を求める。
+  /// 仮想レジスタごとの生存区間を求める。
+  /// 定義点、参照点のどちらかが存在しない場合、計算不能として-1を返す。
+  /// 定義 < 参照の場合、物理レジスタの再利用を禁止するため、
+  /// 参照点を最大値にする。
+  /// \retval 0以上 計算した生存区間
+  /// \retval -1 計算不能
+  int calcLiveRangeNoReuse();
+};
+
+
+/// Swpl-RAで使用する生存区間表
+class SwplRegAllocInfoTbl {
+
+  std::vector<RegAllocInfo> rai_tbl; ///< Swpl-RAで使用する生存区間表
+  unsigned total_mi;                 ///< MIの総数
+  int num_ireg = -1;                   ///< Integerレジスタの数
+  int num_freg = -1;                   ///< Floating-pointレジスタの数
+  int num_preg = -1;                   ///< Predicateレジスタの数
+
+  /// 割り当てた最大レジスタ数を数える
+  void countRegs();
+
+  /// レジスタ割り付け情報からliverangeを求める
+  /// \param [in] range liverange
+  /// \param [in] r レジスタ割り付け情報
+  /// \param [in] unitNum レジスタを構成するユニット数
+  void setRangeReg(std::vector<int>* range, RegAllocInfo& r, unsigned unitNum);
+
+public:
+  SwplRegAllocInfoTbl(unsigned num_of_mi);
+  virtual ~SwplRegAllocInfoTbl() {}
+
+  unsigned length() {
+    return rai_tbl.size();
+  }
+
+  /// RegAllocInfo構造体を追加する
+  /// \param [in] vreg 仮想レジスタ番号
+  /// \param [in] num_def 定義番号
+  /// \param [in] num_use 参照番号
+  /// \param [in] mo llvm::MachineOperand
+  /// \param [in] tied_vreg tiedの場合、その相手となる仮想レジスタ
+  /// \param [in] preg 物理レジスタ番号
+  void addRegAllocInfo( unsigned vreg,
+                       int num_def,
+                       int num_use,
+                       MachineOperand *mo,
+                       unsigned tied_vreg,
+                       unsigned preg=0);
+
+  /// Swpl-RAで使用する生存区間表のうち、vregに該当する行を返す
+  /// \param [in] vreg 仮想レジスタ番号
+  /// \retval 非nullptr 指定された仮想レジスタに該当するRegAllocInfoへのポインタ
+  /// \retval nullptr 指定された仮想レジスタに該当するRegAllocInfoは存在しない
+  RegAllocInfo* getWithVReg( unsigned vreg );
+
+  /// Swpl-RAで使用する生存区間表のうち、indexに該当する行を返す
+  /// \param [in] idx インデックス番号
+  /// \retval 非nullptr 指定されたインデックス番号に該当するRegAllocInfoへのポインタ
+  /// \retval nullptr 指定されたインデックス番号に該当するRegAllocInfoは存在しない
+  RegAllocInfo* getWithIdx( unsigned idx ) {
+    return &(rai_tbl.at(idx));
+  }
+
+  /// レジスタが不足した場合の、再利用可能な物理レジスタ返す
+  /// \param [in] rai 割り当て対象のRegAllocInfo
+  /// \retval 非0 再利用可能な物理レジスタ番号
+  /// \retval 0 再利用可能な物理レジスタは見つからなかった
+  unsigned getReusePReg( RegAllocInfo* rai );
+
+  /// Swpl-RAで使用する生存区間表のうち、pregに該当する行の有無を返す
+  /// \param [in] preg チェック対象の物理レジスタ
+  /// \retval true pregに該当する行あり
+  /// \retval false pregに該当する行なし
+  bool isUsePReg( unsigned preg );
+
+  /// debug dump
+  void dump();
+
+  /// Integerレジスタに割り当てた最大レジスタ数を返す
+  int countIReg();
+  /// Floating-pointレジスタに割り当てた最大レジスタ数を返す
+  int countFReg();
+  /// Predicateレジスタに割り当てた最大レジスタ数を返す
+  int countPReg();
+
+  /// 割り当て可能なIntegerレジスタの数を返す
+  int availableIRegNumber() const;
+  /// 割り当て可能なFloating-pointレジスタの数を返す
+  int availableFRegNumber() const;
+  /// 割り当て可能なPredicateレジスタの数を返す
+  int availablePRegNumber() const;
+
+private:
+  /// 生存区間表の行のLiveRangeが重なるかを判定する
+  /// \param [in] reginfo1 チェック対象のRegAllocInfo
+  /// \param [in] reginfo2 チェック対象のRegAllocInfo
+  /// \retval true 重なる
+  /// \retval false 重ならない
+  bool isOverlapLiveRange( RegAllocInfo *reginfo1, RegAllocInfo *reginfo2 );
+
+  /// 物理的に重なるレジスタかを判定する
+  /// \param [in] preg1 チェック対象の物理レジスタ
+  /// \param [in] preg2 チェック対象の物理レジスタ
+  /// \retval true 重なる
+  /// \retval false 重なる
+  bool isPRegOverlap( unsigned preg1, unsigned preg2 );
+};
+
+/// 命令列変換情報
+struct SwplTransformedMIRInfo {
+  Register originalDoVReg=0; ///<  オリジナルの制御変数（updateDoVRegMIのop1）
+  Register originalDoInitVar=0; ///< オリジナル制御変数の定義PHIの初期値
+  Register nonSSAOriginalDoVReg =0; ///< オリジナルの制御変数に対応した、データ抽出処理で非SSAに変換したMIR
+  Register nonSSAOriginalDoInitVar=0; ///< 定義PHIの初期値に対応した、データ抽出処理で非SSAに変換したMIR
+  Register doVReg=0; ///<  renaming後の制御変数
+  MachineInstr *updateDoVRegMI=nullptr; ///< オリジナルの制御変数の更新命令
+  MachineInstr *branchDoVRegMI=nullptr; ///< オリジナルの繰り返し分岐命令
+  MachineInstr *initDoVRegMI=nullptr; ///< オリジナルの制御変数の誘導変数(Phi)
+  MachineInstr *branchDoVRegMIKernel=nullptr; ///< kernel loopの繰り返し分岐命令
+  int iterationInterval=0; ///< ii
+  int minimumIterationInterval=0; ///< min_ii
+  int coefficient=0; ///< オリジナルの制御変数の更新言のop3
+  int minConstant=0; ///< オリジナルの制御変数の分岐言の種類に応じた定数. もともとのループを通過した後にループ制御変数がとりうる最小の値.
+  int expansion=0; ///< renaming後の制御変数の分岐言のop3.kernelの最後の分岐言の定数を表す
+  size_t nVersions=0; ///< kernelに展開されるループの数を表す
+  size_t nCopies=0; ///< kernel,prolog,epilogに必要なオリジナルループの回転数
+  size_t requiredKernelIteration=0; ///< tune前の展開に必要な回転数
+  std::vector<MachineInstr*> mis; ///< prepareMIs() で使用するmi_tableの情報
+  std::vector<MachineInstr*> livein_copy_mis; ///< COPY instruction for livein
+  std::vector<MachineInstr*> liveout_copy_mis; ///< COPY instruction for livein
+  MachineInstr *prolog_liveout_mi=nullptr; ///< Instruction for prolog liveout
+  MachineInstr *kernel_livein_mi=nullptr; ///< Instruction for kernel livein
+  MachineInstr *kernel_liveout_mi=nullptr; ///< Instruction for kernel liveout
+  MachineInstr *epilog_livein_mi=nullptr; ///< Instruction for epilog livein
+  size_t prologEndIndx=0; ///< prepareMIs() で使用するmi_tableの情報
+  size_t kernelEndIndx=0; ///< prepareMIs() で使用するmi_tableの情報
+  size_t epilogEndIndx=0; ///< prepareMIs() で使用するmi_tableの情報
+  bool   isIterationCountConstant=false; ///< 制御変数の初期値が定数として見つかったか (ループ回転数による展開制御に関する変数)
+  int doVRegInitialValue=0; ///< オリジナルの制御変数の初期値 (if isIterationCountConstant == true)
+  size_t originalKernelIteration=0; ///< 展開前のkernel部分の繰返し数 (if isIterationCountConstant == true)
+  size_t transformedKernelIteration=0; ///< 展開後のkernel部分の繰返し数 (if isIterationCountConstant == true)
+  size_t transformedModIteration=0; ///<展開後のmod部分の繰返し数 (if isIterationCountConstant == true)
+  MachineBasicBlock*OrgPreHeader=nullptr; ///< オリジナルループの入り口
+  MachineBasicBlock*Check1=nullptr; ///< 回転数チェック
+  MachineBasicBlock*Prolog=nullptr; ///< prolog
+  MachineBasicBlock*OrgBody=nullptr; ///< kernel
+  MachineBasicBlock*Epilog=nullptr; ///< epilog
+  MachineBasicBlock*Check2=nullptr; ///< 余りループ必要性チェック
+  MachineBasicBlock*NewPreHeader=nullptr; ///< 余りループの入り口
+  MachineBasicBlock*NewBody=nullptr; ///< 余りループ
+  MachineBasicBlock*NewExit=nullptr; ///< 余りループの出口
+  MachineBasicBlock*OrgExit=nullptr; ///< オリジナルの出口
+
+  SwplRegAllocInfoTbl *swplRAITbl=nullptr; ///< Swpl-RAで使用する生存区間表
+  SwplExcKernelRegInfoTbl *swplEKRITbl=nullptr; ///< Swpl-RAで使用するカーネルループ外のレジスタ情報の表
+
+  void print();
+
+  virtual ~SwplTransformedMIRInfo() {
+    if (swplRAITbl!=nullptr) {
+      delete swplRAITbl;
+      swplRAITbl = nullptr;
+    }
+    if (swplEKRITbl!=nullptr) {
+      delete swplEKRITbl;
+      swplEKRITbl = nullptr;
+    }
+  }
+
+  /// SWPL変換が必要かどうかの判定
+  /// \retval true 変換必要
+  /// \retval false 変換不要
+  bool isNecessaryTransformMIR() const {
+    return !isIterationCountConstant || transformedKernelIteration != 0;
+  }
+
+  /// SWPL kernelループ回避分岐が必要かどうかの判定
+  /// \retval true 生成必要
+  /// \retval false 生成不要
+  bool isNecessaryBypassKernel() const {
+    return !isIterationCountConstant || transformedKernelIteration == 0;
+  }
+
+  /// SWPL余りループ回避分岐が必要かどうかの判定
+  /// \retval true 生成必要
+  /// \retval false 生成不要
+  bool isNecessaryBypassMod() const {
+    return !isIterationCountConstant || transformedKernelIteration == 0;
+  }
+
+  /// SWPL余りループが必要かどうかの判定
+  /// \retval true 生成必要
+  /// \retval false 生成不要
+  bool isNecessaryMod() const {
+    return !isIterationCountConstant || transformedKernelIteration == 0 || transformedModIteration >= 1;
+  }
+
+  /// kernelの繰り返し分岐が必要か判定する
+  /// \retval true 生成必要
+  /// \retval false 生成不要
+  bool isNecessaryKernelIterationBranch() const {
+    return !isIterationCountConstant || transformedKernelIteration != 1;
+  }
+
+  /// mod繰り返し分岐が必要か判定する
+  /// \retval true 生成必要
+  /// \retval false 生成不要
+  bool isNecessaryModIterationBranch() const {
+    return !isIterationCountConstant || transformedModIteration != 1;
+  }
+};
+}
+
+
+
+//---------------------------------------------------------------------------------------------------------------------
+
+#include "SwplPlan.h"
+#include <unordered_map>
+
+namespace llvm{
+/// Scheduling results reflected
+class SwplTransformMIR {
+private:
+  using Reg2Vreg=DenseMap<const SwplReg*, std::vector<Register>*>;
+  using RegMap=llvm::DenseMap<Register, Register>;
+
+  /// Destination of conversion results
+  enum BLOCK {  PRO_MOVE,  PROLOGUE,  KERNEL,  EPILOGUE,  EPI_MOVE};
+  /// MIR Output Timing
+  enum DumpMIRID {BEFORE=1, AFTER=2, AFTER_SSA=4, LAST=8, SLOT_BEFORE=16};
+
+
+  SwplPlan &Plan; ///< 処理対象のスケジュールプラン
+  SwplSlots &Slots; ///< Planの命令配置
+  SwplLoop &Loop; ///< 処理対象のループ
+  DebugLoc LoopLoc; ///< 対象ループのソース情報
+  SwplTransformedMIRInfo TMI; ///< 変換に必要な回転数などの情報
+  Reg2Vreg VRegMap;  ///< オリジナルRegisterと新Register＋Versionのマップ
+  llvm::MachineFunction& MF; ///< llvm::MachineInstrを扱う際に必要なクラス
+
+  // SSA化で利用するメンバ変数
+  RegMap Org2NewReg; ///< original register->new register
+  SwplScr::UseMap &LiveOutReg;
+
+
+  /// KERNELの分岐言の比較に用いる制御変数のversionを決定する 
+  /// \param [in] bandwidth
+  /// \param [in] slot
+  /// \return 制御変数のversion
+  size_t  chooseCmpIteration(size_t bandwidth, size_t slot);
+
+  /// 指定Register＋Versionに対応する新Registerを返す
+  /// \param [in] orgReg オリジナルレジスタ
+  /// \param [in] version 新レジスタが必要なVersion
+  /// \return 新レジスタ 対応レジスタが登録されていない場合は!isValid()なレジスタを返す
+  llvm::Register getVRegFromMap(const SwplReg* orgReg, unsigned version) const;
+
+  /// <reg, version> と vreg の対応表をつくり、SwplTransformMIR::VRegMapに設定する
+  /// \param [in] n_versions
+  void constructVRegMap(size_t n_versions);
+
+  /// TMI::originalDoVRegを定義している命令をLoop内からさがし,対応するSwplRegを返す
+  /// \param [out] update 更新している命令に対応したSwplInstを返す
+  /// \return 定義SwplReg
+  const SwplReg*controlVReg2RegInLoop(const SwplInst**update);
+
+  /// SwplPlanの情報からTransformMIRInfoを設定する
+  void convertPlan2MIR();
+
+  /// kernelのcopyの順番に対応するversionへの変換量を取得する
+  /// \details
+  ///  original versionが最後のcopyする言になるようずらす
+  ///
+  ///  条件                                 | 処理
+  ///  -------------------------------------|----------------------------------
+  ///  (n_versions -1)                      | original versionの定義
+  ///  - (n_copies - 1)                     | 定義がEPILOGUEの最後になるようずらす
+  ///  (n_copies / n_versions) * n_versions | 値の正数化
+  /// \param [in] n_versions
+  /// \param [in] n_copies
+  /// \return
+  int shiftConvertIteration2Version(int n_versions, int n_copies) const;
+
+  /// SwplInstからMachineInstrを生成する
+  /// \param [in] inst
+  /// \param [in] version
+  /// \return 生成したMachineInstr
+  llvm::MachineInstr*createMIFromInst(const SwplInst &inst, size_t version);
+
+  /// 指定したversionのSwplRegに対応するMIRVRegを取得する
+  /// \param [in] org
+  /// \param [in] version
+  /// \return 取得したvreg
+  llvm::Register getVReg(const SwplReg& org, size_t version );
+
+  /// SwplTransformedMIRInfo::MIsに格納された命令を指定ブロック(KERNEL, PROLOGUE等)へ挿入する
+  /// \param [in] ins
+  /// \param [in] block
+  void insertMIs(llvm::MachineBasicBlock&ins, BLOCK block);
+
+  /// kernelのbodyの繰返し分岐を生成する
+  /// \param [in,out] MBB
+  void makeKernelIterationBranch(llvm::MachineBasicBlock&MBB);
+
+  /// planからMIRに反映したループ情報を表示
+  void outputNontunedMessage();
+
+  /// SWPLのPROLOGUE,KERNEL,EPILOGUE,MOVE部分に入る言をVectorに用意する
+  void prepareMIs();
+
+  /// SwplRegとVRegをマップするための領域を用意する
+  /// \param [in] reg
+  /// \param [in] n_versions
+  void prepareVRegVectorForReg(const SwplReg *reg, size_t n_versions);
+
+  /// SwplRegとVRegをマップする
+  /// \param [in] orgReg
+  /// \param [in] version
+  /// \param [in] newReg
+  void setVReg(const SwplReg* orgReg, size_t version, llvm::Register newReg);
+
+  /// Swpl成功メッセージ出力
+  /// \param [in] n_body_inst
+  void outputLoopoptMessage(int n_body_inst);
+
+  /// SWPL後の新しいKERNEL部分を構成する
+  void transformKernel();
+
+  /// SSA形式への変更前にPHI命令等を整える
+  void postTransformKernel();
+
+  /// 非SSA形式で生成された命令列をSSA形式に変換する
+  void convert2SSA();
+
+  /// EPILOGの定義レジスタを書き換える
+  void convertEpilog2SSA();
+
+  /// Kernelの定義レジスタを書き換える
+  void convertKernel2SSA();
+
+  /// PROLOGの定義レジスタを書き換える
+  void convertProlog2SSA();
+
+  /// Rewrite Register of specified MBB
+  /// \param [out] mbb
+  /// \param [out] regmap
+  void replaceDefReg(MachineBasicBlock &mbb, llvm::DenseMap<Register,Register>&regmap);
+
+  /// Rewrite Register of specified MBB
+  /// \param [out] mbb
+  /// \param [in] regmap
+  void replaceUseReg(std::set<MachineBasicBlock*> &mbbs, const llvm::DenseMap<Register,Register>&regmap);
+
+  /// Returns the slot position of the specified instruction
+  /// \param [in] inst
+  /// \return slot-begin_slot
+  unsigned relativeInstSlot(const SwplInst*inst) const;
+
+  ///  Output the target function to standard error
+  /// \param [in] id Dump Timing
+  void dumpMIR(DumpMIRID id) const;
+
+  /// Print MachineInstr before reflecting results
+  /// \param [in] mi Targeted MachineInstr
+  void printTransformingMI(const MachineInstr *mi);
+
+  /// Count the number of COPY in the kernel loop
+  void countKernelCOPY();
+public:
+  /// コストラクタ
+  /// \param [in] mf 対象MachineFunction
+  /// \param [in] plan スケジューリング計画
+  /// \param [in] liveOutReg 対象ループから出力Busyとなるレジスタ（スケジューリング結果反映時にレジスタ修正範囲を特定するために利用）
+  SwplTransformMIR(llvm::MachineFunction &mf, SwplPlan&plan, SwplScr::UseMap &liveOutReg)
+  :Plan(plan),Slots(plan.getInstSlotMap()),Loop(plan.getLoop()),MF(mf),LiveOutReg(liveOutReg) {
+    LoopLoc = Loop.getML()->getStartLoc();
+  }
+
+  virtual ~SwplTransformMIR() {
+    for (auto &p: VRegMap) {
+      delete p.second;
+      p.second=nullptr;
+    }
+  }
+  /// Planに従い、対象ループをSWPL化する
+  /// \retval true MIRを更新した
+  /// \retval false MIRを更新しなかった
+  bool transformMIR();
+
+  /// SwplPlan情報をファイルに出力する
+  void exportPlan();
+
+  /// ファイルを入力し、SwplPlanへ設定する
+  void importPlan();
+
+  /// 命令の並びを表現するためのクラス
+  struct IOSlot {
+    unsigned id; ///< 命令の番号（スケジューリング対象命令の出現順番号）
+    unsigned slot; ///< 命令を置くslot番号
+  };
+
+  /// SwplPlanとYAMLの仲介で利用するクラス
+  struct IOPlan {
+    unsigned minimum_iteration_interval;
+    unsigned iteration_interval;
+    size_t n_renaming_versions;
+    size_t n_iteration_copies;
+    unsigned begin_slot;
+    std::vector<IOSlot> Slots;
+  };
+
+};
+
+} //end namespace llvm
 #endif

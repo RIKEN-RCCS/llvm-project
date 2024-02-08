@@ -15,7 +15,6 @@
 #include "SwplCalclIterations.h"
 #include "SwplPlan.h"
 #include "SwplRegEstimate.h"
-#include "SwplScr.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/IR/Constants.h"
