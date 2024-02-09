@@ -236,13 +236,7 @@ add_llvm_component_library(LLVMCodeGen
   SwiftErrorValueTracking.cpp
   SwitchLoweringUtils.cpp
   SWPipeliner.cpp
-  SwplLoopDataExtraction.cpp
-  SwplDataDependenceAnalysis.cpp
-  SwplScr.cpp
-  SwplPlan.cpp
   SwplScheduling.cpp
-  SwplRegEstimate.cpp
-  SwplCalclIterations.cpp
   SwplTransformMIR.cpp
   TailDuplication.cpp
   TailDuplicator.cpp
