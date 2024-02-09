@@ -12,10 +12,6 @@
 
 #include "SwplScheduling.h"
 #include "SWPipeliner.h"
-// #include "SwplCalclIterations.h"
-// #include "SwplPlan.h"
-// #include "SwplRegEstimate.h"
-// #include "SwplScr.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/IR/Constants.h"
@@ -3146,15 +3142,6 @@ void SwplSSNumRegisters::print(raw_ostream &stream) const {
 
 }
 
-//===----------------------------------------------------------------------===//
-//
-// Processing related to checking Iteration in SWPL.
-//
-//===----------------------------------------------------------------------===//
-
-
-
-
 namespace llvm {
 
 /// \brief スケジューリング結果が要する回転数が、実際の回転数（可変）を満たすかをチェックする
@@ -3217,15 +3204,6 @@ bool SwplCalclIterations::preCheckIterationCount(const SwplPlanSpec & spec, unsi
 }
 
 }
-
-
-//===----------------------------------------------------------------------===//
-//
-// Processing related to register number calculation in SWPL.
-//
-//===----------------------------------------------------------------------===//
-
-
 
 static llvm::cl::opt<bool> OptionDumpReg("swpl-debug-dump-estimate-reg",llvm::cl::init(false), llvm::cl::ReallyHidden);
 
@@ -4157,20 +4135,6 @@ int SwplRegEstimate::findMaxCounter(std::vector<int>* reg_counters, unsigned ite
 }
 
 }
-
-
-//===----------------------------------------------------------------------===//
-//
-// Classes that interface with result reflection in SWPL.
-//
-//===----------------------------------------------------------------------===//
-
-
-
-// using namespace llvm; // for NV
-// using namespace ore; // for NV
-
-// #define DEBUG_TYPE "aarch64-swpipeliner"
 
 namespace llvm{
 

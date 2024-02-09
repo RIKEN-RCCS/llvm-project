@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-
 #include "../../CodeGen/SWPipeliner.h"
 #include "AArch64SwplTargetMachine.h"
 #include "AArch64TargetTransformInfo.h"
@@ -19,12 +18,8 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Regex.h"
-
-//#include "AArch64SwplSchedA64FX.h"
 #include "AArch64InstrInfo.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
-
-//#include "../../CodeGen/SwplTransformMIR.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <unordered_set>
 #include "llvm/CodeGen/SwplTargetMachine.h"
@@ -800,10 +795,6 @@ bool AArch64SwplTargetMachine::isEnableProEpiCopy(void) const {
   return !DisableProEpiCopy;
 }
 
-
-//------------------------------------------------------------------------------------
-
-using namespace llvm;
 using P_=AArch64SwplSchedA64FX::PortKind;
 
 #define LATENCY_NA 1
@@ -2504,12 +2495,6 @@ AArch64SwplSchedA64FX::ResourceID AArch64SwplSchedA64FX::searchResSBFM(const Mac
   return MI_INT_OP_004;
 }
 
-
-//------------------------------------------------------------------------------------------------
-
-using namespace llvm;
-
-#define DEBUG_TYPE "aarch64-swpipeliner"
 #define UNAVAILABLE_REGS 7
 #define PRIO_ASC_ORDER 0
 #define PRIO_UNUSE 1

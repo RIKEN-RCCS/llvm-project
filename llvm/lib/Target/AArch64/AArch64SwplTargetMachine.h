@@ -12,7 +12,6 @@
 #ifndef AARCH64SWPLTM_H
 #define AARCH64SWPLTM_H
 
-//#include "AArch64SwplSchedA64FX.h"
 #include "AArch64TargetTransformInfo.h"
 #include "llvm/CodeGen/SwplTargetMachine.h"
 #include "llvm/CodeGen/TargetSchedule.h"
@@ -122,129 +121,6 @@ public:
     os << "AArch64StmRegKind:" << MRI.getTargetRegisterInfo()->getRegClassName(r) << "\n";
   }
 };
-
-/// SchedModelを利用してターゲット情報を取得し、SWPL機能に提供する
-class AArch64SwplTargetMachine: public SwplTargetMachine {
-protected:
-  DenseMap<StmOpcodeId, StmPipelinesImpl * > stmPipelines; ///< Opcodeが利用する資源
-  unsigned numResource=0; ///< 資源数（資源種別数ではない）
-
-  /// 指定命令の資源情報が取得できるかどうかをチェックする
-  /// \param [in] mi 調査対象の命令
-  /// \retval true 資源情報を取得可能
-  /// \retval false 資源情報を取得できない
-  bool isImplimented(const MachineInstr &mi) const;
-
-public:
-  AArch64SwplSchedA64FX SwplSched; ///< A64FX SchedModel for SWP
-
-  /// constructor
-  AArch64SwplTargetMachine() {}
-  /// destructor
-  virtual ~AArch64SwplTargetMachine();
-
-  /// SwplTargetMachineの初期化を行う。
-  /// \details
-  /// runOnFunctionが呼び出される毎にinitialize()を実行し、処理対象となるMachineFunction情報を受け渡す必要がある。
-  /// \param mf 処理対象のMachineFunction
-  void initialize(const MachineFunction &mf) override;
-
-  /// レジスタdef/use間のレイテンシを計算する。
-  /// \param [in] def 定義命令
-  /// \param [in] use 利用命令
-  /// \return 定義から参照までのレイテンシ
-  int computeRegFlowDependence(const MachineInstr* def, const MachineInstr* use) const override;
-
-  /// メモリのdef/use間のレイテンシを計算する。
-  /// \param [in] def 定義命令（Store）
-  /// \param [in] use 参照命令（Load）
-  /// \return レイテンシ
-  int computeMemFlowDependence(const MachineInstr* def, const MachineInstr* use) const override;
-
-  /// メモリのuse/def間のレイテンシを計算する。
-  /// \param [in] def 参照命令（Load）
-  /// \param [in] use 定義命令（Store）
-  /// \return レイテンシ
-  int computeMemAntiDependence(const MachineInstr* use, const MachineInstr* def) const override;
-
-  /// メモリのdef/def間のレイテンシを計算する。
-  /// \param [in] def1 定義命令（Store）
-  /// \param [in] def2 定義命令（Store）
-  /// \return レイテンシ
-  int computeMemOutputDependence(const MachineInstr* def1, const MachineInstr* def2) const override;
-
-  /// 指定命令が利用するリソースの利用パターンをすべて返す。
-  /// \param [in] mi 対象命令
-  /// \return StmPipelinesを返す
-  const StmPipelinesImpl * getPipelines(const MachineInstr& mi) const override;
-
-
-  /// 利用可能な資源の数を返す
-  /// \return 資源数
-  unsigned int getNumResource(void) const override;
-
-  /// ResourceIdに応じた名前を返す
-  /// \param [in] resource 名前を取得したい資源
-  /// \return ResourceIdに応じた名前
-  const char* getResourceName(StmResourceId resource) const override;
-
-  /// StmPipelineをダンプする。
-  /// \param ost 出力先
-  /// \param pipeline 出力対象pipeline
-  void print(raw_ostream &ost, const StmPipeline &pipeline) const override;
-
-  /// 命令がPseudoかどうかを判断する
-  /// \details 命令がSchedModelに定義されていない場合のみ、Pseudoと判断する
-  /// \param [in] mi 対象命令
-  /// \retval truer Psedo命令
-  /// \retval false Pseudo命令ではない
-  bool isPseudo(const MachineInstr& mi) const override;
-
-  /// 命令から命令種のIDを取得する
-  /// \param [in] mi 対象命令
-  /// \return 命令種のID AArch64SwplSchedA64FX::INT_OPなど
-  unsigned getInstType(const MachineInstr &mi) const override;
-
-  /// 命令種のIDに該当する文字列を返す
-  /// \param [in] insttypeid 命令種のID
-  /// \return 命令種のIDに該当する文字列
-  const char* getInstTypeString(unsigned insttypeid) const override;
-
-  /// 命令種と依存レジスタによるペナルティを算出する
-  /// \param [in] prod 先行命令のMI
-  /// \param [in] cons 後続命令のMI
-  /// \param [in] regs 先行命令と後続命令で依存するレジスタ
-  /// \return 命令種と依存レジスタによるペナルティ
-  unsigned calcPenaltyByInsttypeAndDependreg(const MachineInstr& prod, const MachineInstr& cons,
-                                             const llvm::Register& reg) const override;
-
-  /// SWPLでのレジスタ割り付けを無効にするか否かを判断する
-  /// \retval true  レジスタ割り付けを無効にする
-  /// \retval false レジスタ割り付けを無効にしない
-  bool isDisableRegAlloc(void) const override;
-
-  /// [TODO:削除予定] SWPLでのレジスタ割り付けを有効にするか否かを判断する
-  /// \retval true  レジスタ割り付けを有効にする
-  /// \retval false レジスタ割り付けを有効にしない
-  bool isEnableRegAlloc(void) const override;
-
-  /// Determine the output location of the COPY instruction for registers that span the MBB
-  /// \retval true  Output COPY instruction to prologue and epilogue
-  /// \retval false Output COPY instruction to the kernel
-  bool isEnableProEpiCopy(void) const override;
-};
-
-
-}
-#endif
-
-
-//---------------------------------------------------------------------------------------
-
-#ifndef TARGET_AARCH64_AARCH64SWPLSCHEDA64FX
-#define TARGET_AARCH64_AARCH64SWPLSCHEDA64FX
-
-namespace llvm {
 
 struct AArch64SwplSchedA64FX{
   static unsigned VectorLength;
@@ -433,6 +309,118 @@ struct AArch64SwplSchedA64FX{
   static ResourceID searchResSBFM(const MachineInstr &mi);
 
 };
+
+/// SchedModelを利用してターゲット情報を取得し、SWPL機能に提供する
+class AArch64SwplTargetMachine: public SwplTargetMachine {
+protected:
+  DenseMap<StmOpcodeId, StmPipelinesImpl * > stmPipelines; ///< Opcodeが利用する資源
+  unsigned numResource=0; ///< 資源数（資源種別数ではない）
+
+  /// 指定命令の資源情報が取得できるかどうかをチェックする
+  /// \param [in] mi 調査対象の命令
+  /// \retval true 資源情報を取得可能
+  /// \retval false 資源情報を取得できない
+  bool isImplimented(const MachineInstr &mi) const;
+
+public:
+  AArch64SwplSchedA64FX SwplSched; ///< A64FX SchedModel for SWP
+
+  /// constructor
+  AArch64SwplTargetMachine() {}
+  /// destructor
+  virtual ~AArch64SwplTargetMachine();
+
+  /// SwplTargetMachineの初期化を行う。
+  /// \details
+  /// runOnFunctionが呼び出される毎にinitialize()を実行し、処理対象となるMachineFunction情報を受け渡す必要がある。
+  /// \param mf 処理対象のMachineFunction
+  void initialize(const MachineFunction &mf) override;
+
+  /// レジスタdef/use間のレイテンシを計算する。
+  /// \param [in] def 定義命令
+  /// \param [in] use 利用命令
+  /// \return 定義から参照までのレイテンシ
+  int computeRegFlowDependence(const MachineInstr* def, const MachineInstr* use) const override;
+
+  /// メモリのdef/use間のレイテンシを計算する。
+  /// \param [in] def 定義命令（Store）
+  /// \param [in] use 参照命令（Load）
+  /// \return レイテンシ
+  int computeMemFlowDependence(const MachineInstr* def, const MachineInstr* use) const override;
+
+  /// メモリのuse/def間のレイテンシを計算する。
+  /// \param [in] def 参照命令（Load）
+  /// \param [in] use 定義命令（Store）
+  /// \return レイテンシ
+  int computeMemAntiDependence(const MachineInstr* use, const MachineInstr* def) const override;
+
+  /// メモリのdef/def間のレイテンシを計算する。
+  /// \param [in] def1 定義命令（Store）
+  /// \param [in] def2 定義命令（Store）
+  /// \return レイテンシ
+  int computeMemOutputDependence(const MachineInstr* def1, const MachineInstr* def2) const override;
+
+  /// 指定命令が利用するリソースの利用パターンをすべて返す。
+  /// \param [in] mi 対象命令
+  /// \return StmPipelinesを返す
+  const StmPipelinesImpl * getPipelines(const MachineInstr& mi) const override;
+
+
+  /// 利用可能な資源の数を返す
+  /// \return 資源数
+  unsigned int getNumResource(void) const override;
+
+  /// ResourceIdに応じた名前を返す
+  /// \param [in] resource 名前を取得したい資源
+  /// \return ResourceIdに応じた名前
+  const char* getResourceName(StmResourceId resource) const override;
+
+  /// StmPipelineをダンプする。
+  /// \param ost 出力先
+  /// \param pipeline 出力対象pipeline
+  void print(raw_ostream &ost, const StmPipeline &pipeline) const override;
+
+  /// 命令がPseudoかどうかを判断する
+  /// \details 命令がSchedModelに定義されていない場合のみ、Pseudoと判断する
+  /// \param [in] mi 対象命令
+  /// \retval truer Psedo命令
+  /// \retval false Pseudo命令ではない
+  bool isPseudo(const MachineInstr& mi) const override;
+
+  /// 命令から命令種のIDを取得する
+  /// \param [in] mi 対象命令
+  /// \return 命令種のID AArch64SwplSchedA64FX::INT_OPなど
+  unsigned getInstType(const MachineInstr &mi) const override;
+
+  /// 命令種のIDに該当する文字列を返す
+  /// \param [in] insttypeid 命令種のID
+  /// \return 命令種のIDに該当する文字列
+  const char* getInstTypeString(unsigned insttypeid) const override;
+
+  /// 命令種と依存レジスタによるペナルティを算出する
+  /// \param [in] prod 先行命令のMI
+  /// \param [in] cons 後続命令のMI
+  /// \param [in] regs 先行命令と後続命令で依存するレジスタ
+  /// \return 命令種と依存レジスタによるペナルティ
+  unsigned calcPenaltyByInsttypeAndDependreg(const MachineInstr& prod, const MachineInstr& cons,
+                                             const llvm::Register& reg) const override;
+
+  /// SWPLでのレジスタ割り付けを無効にするか否かを判断する
+  /// \retval true  レジスタ割り付けを無効にする
+  /// \retval false レジスタ割り付けを無効にしない
+  bool isDisableRegAlloc(void) const override;
+
+  /// [TODO:削除予定] SWPLでのレジスタ割り付けを有効にするか否かを判断する
+  /// \retval true  レジスタ割り付けを有効にする
+  /// \retval false レジスタ割り付けを有効にしない
+  bool isEnableRegAlloc(void) const override;
+
+  /// Determine the output location of the COPY instruction for registers that span the MBB
+  /// \retval true  Output COPY instruction to prologue and epilogue
+  /// \retval false Output COPY instruction to the kernel
+  bool isEnableProEpiCopy(void) const override;
+};
+
 }
 
 #endif

@@ -40,7 +40,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE_SWPL "aarch64-swpipeliner"
+#define DEBUG_TYPE "aarch64-swpipeliner"
 
 static cl::opt<bool> OptionDumpPlan("swpl-debug-dump-plan",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableSwpl("swpl-disable",cl::init(false), cl::ReallyHidden);
@@ -164,11 +164,11 @@ private:
 
 char SWPipeliner::ID = 0;
 
-INITIALIZE_PASS_BEGIN(SWPipeliner, DEBUG_TYPE_SWPL,
+INITIALIZE_PASS_BEGIN(SWPipeliner, DEBUG_TYPE,
                       "Software Pipeliner", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(SWPipeliner, DEBUG_TYPE_SWPL,
+INITIALIZE_PASS_END(SWPipeliner, DEBUG_TYPE,
                     "Software Pipeliner", false, false)
 
 namespace llvm {
@@ -248,7 +248,7 @@ void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {
   }
 
   ORE->emit([&]() {
-    return MachineOptimizationRemarkMissed(DEBUG_TYPE_SWPL, "NotSoftwarePipleined",
+    return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipleined",
                                            L.getStartLoc(), L.getHeader())
            << msg1;
   });
@@ -256,7 +256,7 @@ void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {
 
 void SWPipeliner::remarkAnalysis(const char *msg, MachineLoop &L, const char *Name) {
   ORE->emit([&]() {
-    return MachineOptimizationRemarkAnalysis(DEBUG_TYPE_SWPL, Name,
+    return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, Name,
                                            L.getStartLoc(), L.getHeader())
            << msg;
   });
@@ -599,11 +599,6 @@ bool SWPipelinerPre::createExit(MachineLoop &L) {
   }
   return false;
 }
-
-
-//------------------------------------------------------------------------------
-
-//using namespace llvm;
 
 // private
 
@@ -1078,12 +1073,6 @@ void SwplScr::collectLiveOut(UseMap &usemap) {
     }
   }
 }
-
-//-----------------------------------------------------------------------------------------------------
-
-//using namespace llvm;
-
-#define DEBUG_TYPE_DDG "swp-ddg"
 
 static cl::opt<bool> DebugDumpDdg("swpl-debug-dump-ddg",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableInstDep("swpl-enable-instdep",cl::init(false), cl::ReallyHidden);
@@ -1743,13 +1732,6 @@ void SwplDdg::exportYaml() {
   yaml::Output yout(*OutStrm);
   yout << yamlddg;
 }
-
-
-//-----------------------------------------------------------------------------------------------------------------
-
-//using namespace llvm;
-#define DEBUG_TYPE_LOOP "swp-loop"
-
 
 static cl::opt<bool> DebugLoop("swpl-debug-loop",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DebugPrepare("swpl-debug-prepare",cl::init(false), cl::ReallyHidden);

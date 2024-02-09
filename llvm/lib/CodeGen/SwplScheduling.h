@@ -24,18 +24,6 @@ using SwplInstIntMap = llvm::DenseMap<const SwplInst*, int>;
 using SwplInstPrioque = std::map<int, const SwplInst*>;
 using SwplInstSet = std::set<const SwplInst*>;
 
-
-/// \brief represents MRT
-/// \details represents MRT
-///          MRT can handle cases where ResourceID cannot be treated as an element number, so
-///          represented as a map vector of ResourceID and SwplInst*.
-///          The image is as below.(ID=ResourceID, instn=SwplInst*)
-///          cycle1: { ID1:inst1, ID2:inst2,            ... } ↑
-///          cycle2: { ID1:inst1,            ID3:inst3, ... } ｜
-///          cycle3: {            ID2:inst1, ID3:inst4, ... } II
-///          cycle4: {            ID2:inst4,            ... } ｜
-///          cycle5: { ID1:inst4,                       ... } ↓
-///
 class SwplSlot {
   unsigned slot_index;
 
@@ -110,6 +98,17 @@ public:
   }
   void dump(const SwplLoop& c_loop);
 };
+/// \brief represents MRT
+/// \details represents MRT
+///          MRT can handle cases where ResourceID cannot be treated as an element number, so
+///          represented as a map vector of ResourceID and SwplInst*.
+///          The image is as below.(ID=ResourceID, instn=SwplInst*)
+///          cycle1: { ID1:inst1, ID2:inst2,            ... } ↑
+///          cycle2: { ID1:inst1,            ID3:inst3, ... } ｜
+///          cycle3: {            ID2:inst1, ID3:inst4, ... } II
+///          cycle4: {            ID2:inst4,            ... } ｜
+///          cycle5: { ID1:inst4,                       ... } ↓
+///
 class SwplMrt {
   unsigned iteration_interval; ///< II
   std::vector<llvm::DenseMap<StmResourceId, const SwplInst*>*> table; //< Mrt
@@ -477,15 +476,6 @@ public:
   void print(raw_ostream &stream) const;
 };
 
-// }
-
-//===----------------------------------------------------------------------===//
-//
-// Classes that interface with result reflection in SWPL.
-//
-//===----------------------------------------------------------------------===//
-
-
 /// スケジューリング結果の状態を表すenum
 enum class TryScheduleResult {
                               /// スケジュール成功
@@ -602,15 +592,6 @@ private:
                                       SwplMsResourceResult& resource);
 };
 
-// }
-
-//===----------------------------------------------------------------------===//
-//
-// Processing related to register number calculation in SWPL.
-//
-//===----------------------------------------------------------------------===//
-
-
 /// \brief 指定したレジスタがいくつ必要であるかを数える処理群
 class SwplRegEstimate {
 public:
@@ -695,15 +676,6 @@ private:
   static bool isCountedReg(const SwplReg& reg, unsigned regclassid);
   static int findMaxCounter(std::vector<int>* reg_counters, unsigned iteration_interval);
 };
-
-// }
-
-//===----------------------------------------------------------------------===//
-//
-// Processing related to checking Iteration in SWPL.
-//
-//===----------------------------------------------------------------------===//
-
 
 /// \brief SwplのPlanを選択するための、ループ回転数に関するルーチン群
 class SwplCalclIterations {

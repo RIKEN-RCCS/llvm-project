@@ -24,8 +24,6 @@
 #include <llvm/ADT/SmallSet.h>
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/Register.h"
-//#include "SwplPlan.h"
-//#include <unordered_map>
 
 namespace llvm {
 
@@ -38,10 +36,10 @@ class SwplMem;
 class SwplInstEdge;
 class SwplInstGraph;
 class SwplDdg;
-//class SwplPlan; //再定義
-//class SwplSlots; //再定義
-
 class SwplTransformMIR;
+class SwplRegAllocInfo;
+class SwplRegAllocInfoTbl;
+class SwplExcKernelRegInfoTbl;
 
 // Alias ​​declaration of usage container
 using SwplInsts = std::vector<SwplInst *>;
@@ -55,7 +53,6 @@ using Register2SwplRegMap = llvm::DenseMap<Register, SwplReg *>;
 using SwplInstEdge2Distances = llvm::DenseMap<SwplInstEdge *, std::vector<unsigned>>;
 using SwplInstEdge2Delays = llvm::DenseMap<SwplInstEdge *, std::vector<int>>;
 using SwplInstEdge2ModuloDelay = std::map<SwplInstEdge *, int>;
-
 using SwplInsts_iterator = SwplInsts::iterator;
 using SwplRegs_iterator = SwplRegs::iterator;
 using SwplMems_iterator = SwplMems::iterator;
@@ -1031,16 +1028,6 @@ private:
    */
   bool shouldOptimize(const Loop *BBLoop);
 };
-
-//#endif
-
-
-//#ifndef SWPLSCR_H
-// #define SWPLSCR_H
-
-class SwplRegAllocInfo;
-class SwplRegAllocInfoTbl;
-class SwplExcKernelRegInfoTbl;
 
 /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の行
 struct ExcKernelRegInfo {
