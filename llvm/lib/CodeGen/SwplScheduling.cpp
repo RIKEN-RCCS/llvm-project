@@ -46,8 +46,6 @@ static cl::opt<bool> OptionEnableStageScheduling("swpl-enable-stagescheduling",c
 static cl::opt<bool> OptionDumpSSProgress("swpl-debug-dump-ss-progress",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpCyclicRoots("swpl-debug-dump-ss-cyclicroots",cl::init(false), cl::ReallyHidden);
 
-namespace llvm{
-
 /// \brief 命令が使用する資源を予約する
 /// \details 命令が使用する資源をMrtに記録する。
 ///          疑似命令など資源を使用しない命令の場合は、Mrtでの予約はしない。
@@ -3140,9 +3138,6 @@ void SwplSSNumRegisters::print(raw_ostream &stream) const {
   stream << "(VReg  Fp: " << freg << ", Int: " << ireg << ", Pre: " << preg <<")";
 }
 
-}
-
-namespace llvm {
 
 /// \brief スケジューリング結果が要する回転数が、実際の回転数（可変）を満たすかをチェックする
 /// \note assumeに対応しないため、常にtrueを返却する
@@ -3203,11 +3198,7 @@ bool SwplCalclIterations::preCheckIterationCount(const SwplPlanSpec & spec, unsi
   return true;
 }
 
-}
-
 static llvm::cl::opt<bool> OptionDumpReg("swpl-debug-dump-estimate-reg",llvm::cl::init(false), llvm::cl::ReallyHidden);
-
-namespace llvm{
 
 /// \brief scheduling結果に対して指定したレジスタがいくつ必要であるかを数える処理
 /// \note 必要なレジスタ数を正確に計算する事は、RAでなければできないため、
@@ -4134,10 +4125,6 @@ int SwplRegEstimate::findMaxCounter(std::vector<int>* reg_counters, unsigned ite
   return max_counter;
 }
 
-}
-
-namespace llvm{
-
 #define ceil_div(x, y) (((x) - 1) / (y) + 1)
 
 bool SwplPlan::existsPragma = false;
@@ -4962,4 +4949,3 @@ SwplSlot SwplSlot::slotMax() { return 1500000; }
 /// \brief slotの最小を返す
 /// \return 最小slot
 SwplSlot SwplSlot::slotMin() { return  500000; }
-}

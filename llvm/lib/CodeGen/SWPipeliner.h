@@ -41,7 +41,7 @@ class SwplRegAllocInfo;
 class SwplRegAllocInfoTbl;
 class SwplExcKernelRegInfoTbl;
 
-// Alias ​​declaration of usage container
+// Alias declaration of usage container
 using SwplInsts = std::vector<SwplInst *>;
 using SwplRegs = std::vector<SwplReg *>;
 using SwplMems = std::vector<SwplMem *>;

@@ -15,7 +15,6 @@
 #include "AArch64TargetTransformInfo.h"
 #include "llvm/CodeGen/SwplTargetMachine.h"
 #include "llvm/CodeGen/TargetSchedule.h"
-#include "AArch64SwplTargetMachine.h"
 
 namespace llvm {
 
