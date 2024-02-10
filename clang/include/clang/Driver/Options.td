@@ -3915,6 +3915,13 @@ foreach i = {8-15,18} in
 def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">, Group<m_aarch64_Features_Group>,
   HelpText<"Specify the size in bits of an SVE vector register. Defaults to the"
            " vector length agnostic value of \"scalable\". (AArch64 only)">;
+
+def fswp : Flag<["-"], "fswp">, Group<m_aarch64_Features_Group>,
+  HelpText<"Enable the software pipeline. (AArch64 only)">;
+
+def fls : Flag<["-"], "fls">, Group<m_aarch64_Features_Group>,
+  HelpText<"Enable the local scheduling. (AArch64 only)">;
+
 } // let Flags = [TargetSpecific]
 
 def mvscale_min_EQ : Joined<["-"], "mvscale-min=">,
@@ -3926,9 +3933,6 @@ def mvscale_max_EQ : Joined<["-"], "mvscale-max=">,
   HelpText<"Specify the vscale maximum. Defaults to the"
            " vector length agnostic value of \"0\". (AArch64/RISC-V only)">,
   MarshallingInfoInt<LangOpts<"VScaleMax">>;
-
-def fswp : Flag<["-"], "fswp">, Group<m_aarch64_Features_Group>,
-  HelpText<"Enable the software pipeline. (AArch64 only)">;
 
 def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
   Flags<[CC1Option]>, Group<m_Group>, Values<"none,all,non-leaf">,
