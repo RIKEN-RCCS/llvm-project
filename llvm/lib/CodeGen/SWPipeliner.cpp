@@ -347,7 +347,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     return Changed;
   }
   bool Nodep = false;
-  if (enableNodep(BBLoop)){
+  if (enableNodep(BBLoop) && enableSWP(BBLoop, false)){
     remarkAnalysis("Since the pragma pipeline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.",
                    *currentLoop->getML(), "scheduleLoop");
     Nodep = true;
@@ -356,6 +356,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
 
   // スケジューリング
   bool redo;
+  bool SWPLApplicationFailure = false;
   do {
     redo = false;
 
@@ -365,6 +366,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
         plan->dump( dbgs() );
       }
       if (plan->getPrologCycles() == 0) {
+        SWPLApplicationFailure = true;
         remarkMissed("This loop is not software pipelined because the software pipelining does not improve the performance.",
                      *currentLoop->getML());
         if (SWPipeliner::isDebugOutput()) {
@@ -383,6 +385,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
               dbgs() << "        : Reschedule with minii set to " << min_ii_for_retry << " because ran out of physical registers.\n";
             }
           } else {
+            SWPLApplicationFailure = true;
             remarkMissed("This loop is not software pipelined because no schedule is obtained.", *currentLoop->getML());
             if (SWPipeliner::isDebugOutput()) {
               if (plan->existsPragma) {
@@ -396,12 +399,19 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
       }
       SwplPlan::destroy( plan );
     } else {
+      SWPLApplicationFailure = true;
       remarkMissed("This loop is not software pipelined because no schedule is obtained.", *currentLoop->getML());
       if (SWPipeliner::isDebugOutput()) {
         dbgs() << "        : Loop isn't software pipelined because plan is NULL.\n";
       }
     }
   } while ( redo );
+
+  if (SWPLApplicationFailure && llvm::enableLS()) {
+    // LS
+    dbgs() << "start LocalScheduler!\n";
+  }
+
   min_ii_for_retry = 0;
   SwplDdg::destroy(ddg);
   delete currentLoop;

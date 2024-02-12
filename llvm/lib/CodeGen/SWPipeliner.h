@@ -58,9 +58,6 @@ using SwplRegs_iterator = SwplRegs::iterator;
 using SwplMems_iterator = SwplMems::iterator;
 using SwplInstList_iterator = SwplInstList::iterator;
 
-
-
-
 /**
  * Returns whether or not the specified loop is a candidate for SWP application from the options and Pragma.
  * @param L Specify target Loop information
@@ -69,6 +66,13 @@ using SwplInstList_iterator = SwplInstList::iterator;
  * @retval false SWP not applie
  */
 bool enableSWP(const Loop*, bool ignoreMetadataOfRemainder);
+
+/**
+ * Returns whether or not the specified loop is a candidate for LS application from the options.
+ * @retval true Candidate for LS application
+ * @retval false LS not applie
+ */
+bool enableLS();
 
 /**
  * Returns from Pragma whether the specified loop is memory-independent.
