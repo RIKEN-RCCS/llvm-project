@@ -198,8 +198,8 @@ bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
   if (skipFunction(mf.getFunction())) {
     if (isDebugOutput()) {
       dbgs() << "SWPipeliner: Not processed because skipFunction() is true.\n";
-      return false;
     }
+    return false;
   }
   loop_number=0;
   bool Modified = false;
