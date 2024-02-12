@@ -1,9 +1,22 @@
 #RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-enable-stagescheduling=true -swpl-debug-dump-ss-cyclicroots -o /dev/null 2>&1  | FileCheck %s
 #CHECK:*** dump SwplSSSyclicInfo ***
-#CHECK-NEXT:root : { ({{[A-Za-z0-9]+}}:MADDWrrr) ({{[A-Za-z0-9]+}}:LDRWroX) ({{[A-Za-z0-9]+}}:ADDXri) ({{[A-Za-z0-9]+}}:STRWroX) ({{[A-Za-z0-9]+}}:MADDWrrr) }
-#CHECK-NEXT:root : { ({{[A-Za-z0-9]+}}:ADDWrr) ({{[A-Za-z0-9]+}}:MADDWrrr) ({{[A-Za-z0-9]+}}:COPY) ({{[A-Za-z0-9]+}}:COPY) ({{[A-Za-z0-9]+}}:ADDWrr) }
-#CHECK-NEXT:root : { ({{[A-Za-z0-9]+}}:SUBWrr) ({{[A-Za-z0-9]+}}:SUBWrr) ({{[A-Za-z0-9]+}}:ADDWrr) ({{[A-Za-z0-9]+}}:SUBWrr) }
-#CHECK-NEXT:root : { ({{[A-Za-z0-9]+}}:ADDWrr) ({{[A-Za-z0-9]+}}:ADDWrr) ({{[A-Za-z0-9]+}}:ADDWrr) ({{[A-Za-z0-9]+}}:ADDWrr) ({{[A-Za-z0-9]+}}:ADDWrr) }
+#CHECK:root : {
+#CHECK-DAG:	(0x{{[A-Za-z0-9]+}}:MADDWrrr)
+#CHECK-DAG:	(0x{{[A-Za-z0-9]+}}:LDRWroX)
+#CHECK-DAG:	(0x{{[A-Za-z0-9]+}}:ADDXri)
+#CHECK-DAG:	(0x{{[A-Za-z0-9]+}}:STRWroX)
+#CHECK-DAG:	(0x{{[A-Za-z0-9]+}}:ADDWrr)
+#CHECK-DAG:	(0x{{[A-Za-z0-9]+}}:COPY)
+#CHECK-DAG:	(0x{{[A-Za-z0-9]+}}:COPY)
+#CHECK:}
+#CHECK:root : {
+#CHECK-DAG:	(0x{{[A-Za-z0-9]+}}:SUBWrr)
+#CHECK-DAG:	(0x{{[A-Za-z0-9]+}}:SUBWrr)
+#CHECK-DAG:	(0x{{[A-Za-z0-9]+}}:ADDWrr)
+#CHECK-DAG:	(0x{{[A-Za-z0-9]+}}:ADDWrr)
+#CHECK-DAG:	(0x{{[A-Za-z0-9]+}}:ADDWrr)
+#CHECK-DAG:	(0x{{[A-Za-z0-9]+}}:ADDWrr)
+#CHECK:}
 --- |
   ; ModuleID = '/home/xxxx/swpl-SS-cyclic-xxx.c'
   source_filename = "/home/xxxx/swpl-SS-cyclic-xxx.c"

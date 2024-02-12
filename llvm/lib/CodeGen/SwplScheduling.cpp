@@ -18,6 +18,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/CodeGen/SwplTargetMachine.h"
 #include <cmath>
+#include <queue>
 
 using namespace llvm;
 using namespace ore; // for NV
@@ -44,6 +45,7 @@ static cl::opt<bool> OptionDumpEveryInst("swpl-debug-dump-scheduling-every-inst"
 
 static cl::opt<bool> OptionEnableStageScheduling("swpl-enable-stagescheduling",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpSSProgress("swpl-debug-dump-ss-progress",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> OptionDumpSSProgressDetail("swpl-debug-dump-ss-progress-detail",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpCyclicRoots("swpl-debug-dump-ss-cyclicroots",cl::init(false), cl::ReallyHidden);
 
 /// \brief 命令が使用する資源を予約する
@@ -2629,7 +2631,12 @@ bool SwplMsResult::isRegReducible(
 }
 
 /// \brief Execute StageScheduling
-/// \return SwplInstSlotHashmap adopt scheduling results
+/// \param [in] ddg DDG
+/// \param [in] loop Loop information
+/// \param [in] ii initiation interval
+/// \param [in] slots Instruction placement slot information
+/// \param [in] stream stream of message output
+/// \return New swplslots if scheduling results are adopted. If not selected, use the argument swplslot
 SwplSlots* SwplSSProc::execute(const SwplDdg &ddg,
                          const SwplLoop &loop,
                          unsigned ii,
@@ -2647,7 +2654,7 @@ SwplSlots* SwplSSProc::execute(const SwplDdg &ddg,
   }
   if (slots->calcPrologBlocks(loop, ii)==0) {
     if (OptionDumpSSProgress)
-      stream << "*** No StageScheduling: [" << fname << "] loop is Scheduled. But prologue-cycle is 0." << ii << ".\n";
+      stream << "*** No StageScheduling: [" << fname << "] loop is Scheduled. But prologue-cycle is 0 at II=" << ii << ".\n";
     return slots;
   }
 
@@ -2662,6 +2669,9 @@ SwplSlots* SwplSSProc::execute(const SwplDdg &ddg,
     ssCyclicInfo.dump(stream);
   }
 
+  // for SS common processing
+  SwplSSProc ssproc(ddg, ii);
+
   SwplSSEdges ssEdges(ddg, loop, ii, *slots);
   ssEdges.updateInCyclic(ssCyclicInfo);
   if (OptionDumpSSProgress) {
@@ -2671,24 +2681,36 @@ SwplSlots* SwplSSProc::execute(const SwplDdg &ddg,
 
   // replicate scheduling results
   auto* slots_temp = new SwplSlots;
-  *slots_temp = *slots;
+  *slots_temp = *slots; // copy
 
-  SwplSSMoveinfo acresult;
+  SwplSSMoveinfo moveinfo_result;
 
   // heuristic AC
-  SwplSSACProc::execute(ddg, ii, ssEdges, acresult, stream);
+  SwplSSACProc::execute(ssproc, ssEdges, moveinfo_result, stream);
   if (OptionDumpSSProgress) {
     stream << "*** dump SwplSSMoveinfo after AC ***\n";
-    SwplSSProc::dumpSSMoveinfo(stream, acresult);
+    SwplSSProc::dumpSSMoveinfo(stream, moveinfo_result);
+  }
+
+  // heuristic UP/SS
+  SwplSSUPSSProc::execute(ssproc, ssCyclicInfo, ssEdges, moveinfo_result, stream);
+  if (OptionDumpSSProgress) {
+    stream << "*** dump SwplSSMoveinfo after UP/SS ***\n";
+    SwplSSProc::dumpSSMoveinfo(stream, moveinfo_result);
   }
 
   // adjust SwplInstSlotHashmap by SwplSSMoveinfo
-  SwplSSProc::adjustSlot(*slots_temp, acresult);
+  SwplSSProc::adjustSlot(*slots_temp, moveinfo_result);
   SwplSSNumRegisters estimateRegAfter(loop, ii, slots_temp);
   if (OptionDumpSSProgress) {
     stream << "*** after SS : dump SwplSSNumRegisters ***\n";
     estimateRegAfter.dump(stream);
     stream << "*** after SS : dump SwplSSEdges ***\n";
+    ssEdges.dump(stream, fname);
+  }
+
+  if (OptionDumpSSProgress) {
+    stream << "*** recalc cycle : dump SwplSSEdges ***\n";
     SwplSSEdges TEMPssEdges(ddg, loop, ii, *slots_temp);
     TEMPssEdges.updateInCyclic(ssCyclicInfo);
     TEMPssEdges.dump(stream, fname);
@@ -2735,68 +2757,32 @@ void SwplSSProc::dumpSSMoveinfo(raw_ostream &stream, const SwplSSMoveinfo &v) {
 }
 
 /// \brief update SwplInstSlotHashmap by SwplSSMoveinfo
-/// \param [in/out] SwplInstSlotHashmap to be updated
-/// \param [in] Instruction placement cycle movement information
-/// \return true if SwplInstSlotHashmap changed
-bool SwplSSProc::adjustSlot(SwplSlots& slots, SwplSSMoveinfo &v) {
+/// \param [in/out] slots SwplInstSlotHashmap to be updated
+/// \param [in] moveinfo Instruction placement cycle movement information
+/// \return true if SwplSlots changed
+bool SwplSSProc::adjustSlot(SwplSlots& slots, SwplSSMoveinfo &moveinfo) {
   auto bandwidth = SWPipeliner::FetchBandwidth;
-  for (auto [cinst, movecycle]: v) {
+  for (auto [cinst, movecycle]: moveinfo) {
     SwplInst *inst = const_cast<SwplInst *>(cinst);
     slots.at(inst->inst_ix).moveSlotIndex(movecycle*bandwidth);
   }
   return true;
 }
 
-/// \brief execute AC
-/// \param [in] d DDG
-/// \param [in] ii InitiationInterval
-/// \param [in] e Edge information
-/// \param [in/out] Instruction placement cycle movement information
-/// \param [in] stream stream of message output
-/// \retval true change SwplInstSlotHashmap by StageScheduling-AC
-bool SwplSSACProc::execute(const SwplDdg &d,
-                           unsigned ii,
-                           SwplSSEdges &e,
-                           SwplSSMoveinfo &moveinfo,
-                           raw_ostream &stream) {
-  SwplSSACProc acproc(d, ii, e);
-  llvm::SmallVector<SwplSSEdge*, 8> targetedges;
-  acproc.getTargetEdges(targetedges);
-  for (auto &t: targetedges) {
-    acproc.collectPostInsts(*t, moveinfo);
-    t->numSkipFactor = 0;
-  }
-  e.updateCycles(moveinfo);
-  return true;
-}
-
-/// \brief Collect Edges eligible for AC
-/// \param [in/out] v Collection result vector
-/// \return num of Collection Edges
-unsigned SwplSSACProc::getTargetEdges(llvm::SmallVector<SwplSSEdge*, 8> &v){
-  for (auto *e: ssedges.Edges) {
-    if ((e->numSkipFactor!=0) && (e->isCyclic()==false)) {
-      v.push_back(e);
-    }
-  }
-  return v.size();
-}
-
-/// \brief Node search for adjustment by AC
+/// \brief Node search for adjustment
 /// \param [in] ddg DDG
 /// \param [in/out] explored_list set to store route search results
 /// \param [in] out Search information(to) 
 /// \param [in] in Search information(from) 
-/// \return Nothing
 static void node_search(const SwplDdg& ddg,
-                        std::set<const SwplInst*> &explored_list,
+                        llvm::SmallSet<const SwplInst*, 8> &explored_list,
                         const SwplInst* out, const SwplInst* in) {
   if (explored_list.count(in) > 0) {
     return; // already checked.
   }
   explored_list.insert(in);
 
-  std::set<const SwplInst*> dest;
+  llvm::SmallSet<const SwplInst*, 8> dest;
   for (auto *edge: ddg.getGraph().getEdges()) {
     const std::vector<unsigned> &distances = ddg.getDistancesFor(*edge);
     if (distances.size()==1 && distances[0]==20)
@@ -2826,31 +2812,195 @@ static void node_search(const SwplDdg& ddg,
 }
 
 /// \brief Collect subsequent instructions and movement amount
-/// \param [in] e Edge information
-/// \param [in/out] Cycle movement per instruction
-/// \return Nothing
-void SwplSSACProc::collectPostInsts(const SwplSSEdge &e, SwplSSMoveinfo &v) {
-  auto pre_i = e.InitialVertex;
-  auto post_i = e.TerminalVertex;
-  auto sf = e.numSkipFactor;
-  long movecycle = (0-sf)*II;
+/// \param [in] edge Edge that is the starting point for searching for subsequent nodes
+/// \param [in/out] moveinfo Cycle movement per instruction
+/// \param [in] amount movement amount
+void SwplSSProc::collectPostInsts(const SwplSSEdge &edge, SwplSSMoveinfo &moveinfo, long amount) {
+  auto pre_i = edge.InitialVertex;
+  auto post_i = edge.TerminalVertex;
 
-  std::set<const SwplInst*> node_list;
+  llvm::SmallSet<const SwplInst*, 8> node_list;
   node_search(ddg, node_list, pre_i, post_i);
   for (auto *p: node_list) {
-    if (v.contains(p)) {
-      v[p]+=movecycle;
+    if (moveinfo.contains(p)) {
+      moveinfo[p]+=amount;
     }
     else {
-      v.insert(std::make_pair(p, movecycle));
+      moveinfo.insert(std::make_pair(p, amount));
     }
   }
   return;
 }
 
+/// \brief Collect preceding instructions and movement amount
+/// \param [in] edge Edge that is the starting point for searching for the preceding node
+/// \param [in/out] moveinfo Cycle movement per instruction
+/// \param [in] amount movement amount
+void SwplSSProc::collectPreInsts(const SwplSSEdge &edge, SwplSSMoveinfo &moveinfo, long amount) {
+  auto pre_i = edge.InitialVertex;
+  auto post_i = edge.TerminalVertex;
+
+  llvm::SmallSet<const SwplInst*, 8> node_list;
+  node_search(ddg, node_list, post_i, pre_i);
+  for (auto *p: node_list) {
+    if (moveinfo.contains(p)) {
+      moveinfo[p]+=amount;
+    }
+    else {
+      moveinfo.insert(std::make_pair(p, amount));
+    }
+  }
+  return;
+}
+
+/// \brief execute AC
+/// \details Perform AC and update SwplMoveinfo with the required instruction move cycle
+/// \param [in] ssproc SwplSSProc
+/// \param [in/out] edges Edge information
+/// \param [in/out] moveinfo Instruction placement cycle movement information
+/// \param [in] stream stream of message output
+/// \retval true change SwplInstSlotHashmap by StageScheduling-AC
+bool SwplSSACProc::execute(SwplSSProc &ssproc,
+                           SwplSSEdges &edges,
+                           SwplSSMoveinfo &moveinfo,
+                           raw_ostream &stream) {
+  auto ii=ssproc.getII();
+  llvm::SmallVector<SwplSSEdge*, 8> targetedges;
+  getTargetEdges(edges, targetedges);
+
+  for (auto *t: targetedges) {
+    auto sf = t->numSkipFactor;
+    long movecycle = (0-sf)*ii;
+    ssproc.collectPostInsts(*t, moveinfo, movecycle);
+    t->numSkipFactor = 0;
+  }
+  edges.updateCycles(moveinfo);
+  return true;
+}
+
+/// \brief Collect Edges eligible for AC
+/// \param [in] edges Edge information
+/// \param [in/out] v Collection result vector
+/// \return num of Collection Edges
+unsigned SwplSSACProc::getTargetEdges(SwplSSEdges &edges,
+                                      llvm::SmallVector<SwplSSEdge*, 8> &v){
+  for (auto *e: edges.Edges) {
+    if ((e->numSkipFactor!=0) && (e->isCyclic()==false)) {
+      v.push_back(e);
+    }
+  }
+  return v.size();
+}
+
+/// \brief execute UP/SS
+/// \details Perform UP/SS and update SwplMoveinfo with the required instruction move cycle
+/// \param [in] ssproc SwplSSProc
+/// \param [in] CI Cyclic part information
+/// \param [in/out] edges Edge information
+/// \param [in/out] moveinfo Instruction placement cycle movement information
+/// \param [in] stream stream of message output
+/// \retval true change SwplInstSlotHashmap by StageScheduling-UP/SS
+bool SwplSSUPSSProc::execute(SwplSSProc &ssproc,
+                             const SwplSSCyclicInfo &CI,
+                             SwplSSEdges &edges,
+                             SwplSSMoveinfo &moveinfo,
+                             raw_ostream &stream) {
+  bool changed=false;
+  auto ii=ssproc.getII();
+
+  if (OptionDumpSSProgressDetail) {
+    stream << "######## processing UP/SS (II=" << ii <<") ########\n";
+  }
+
+  for (auto *c: CI.getList()) {
+    auto sortedNodes = reverseTopologicalSort(*c, edges);
+
+    for (auto [f,s]: sortedNodes) { // f:target node, s:set of outedge
+      if (OptionDumpSSProgressDetail) {
+        stream << "--- target: " << "(" << format("%p", f->getMI()) << ":" << f->getName() << ")\n";
+      }
+
+      if (s.size()==0) {
+        if (OptionDumpSSProgressDetail) {
+          stream << "no outEdge...\n";
+        }
+        continue;
+      }
+
+      long minSF = LONG_MAX;
+      llvm::SmallVector<long> sfs;
+      for (auto o: s) {
+        // Take the edge of f->o and find the minimum SkipFacotr
+        long sf = (edges.getEdge(f, o))->numSkipFactor;
+        sfs.push_back(sf);
+        minSF = std::min(minSF, sf);
+      }
+
+      // If the minimum SkipFacot is greater than 0, UP/SS is possible.
+      if (minSF == 0) {
+        if (OptionDumpSSProgressDetail) {
+          stream << "All outEdges have no SkipFactor... [ ";
+          for (auto l: sfs) stream << l << " ";
+          stream << "]\n";
+        }
+        continue;
+      }
+
+      changed = true;
+
+      if (OptionDumpSSProgressDetail) {
+        stream << "The number of SkipFactories that can be UP is " << minSF << " [ ";
+        for (auto l: sfs) stream << l << " ";
+        stream << "]\n";
+      }
+
+      SwplSSMoveinfo tempMInfo; // temporary SwplSSMoveinfo
+
+      // Record movement of nodes targeted for UP/SS
+      long movecycle = minSF*ii;
+      tempMInfo.insert(std::make_pair(f, movecycle));
+
+      // Record the movement of all nodes connected from the cut edge
+      auto es = edges.getEdgeByTerminalVertex(f);
+      for (auto *t: es) {
+        if (!(t->isCyclic())) {
+          ssproc.collectPreInsts(*t, tempMInfo, movecycle);
+        }
+      }
+      es = edges.getEdgeByInitialVertex(f);
+      for (auto *t: es) {
+        if (!(t->isCyclic())) {
+          ssproc.collectPostInsts(*t, tempMInfo, movecycle);
+        }
+      }
+
+      // update SwplSSEdges. SkipFactor is also updated.
+      edges.updateCycles(tempMInfo);
+
+      // update SwplSSMoveinfo by temporary
+      for (auto [inst,movecycle]: tempMInfo) {
+        if (moveinfo.contains(inst)) {
+          moveinfo[inst]+=movecycle;
+        }
+        else {
+          moveinfo.insert(std::make_pair(inst, movecycle));
+        }
+      }
+    }
+  }
+  return changed;
+}
+
 /// \brief SwplSSEdge constructor
-SwplSSEdge::SwplSSEdge(const SwplInst *ini, unsigned inicycle,
-                       const SwplInst *term, unsigned termcycle,
+/// \param [in] ini initial instruction
+/// \param [in] inicycle placement cycle of initial instruction
+/// \param [in] term terminal instruction
+/// \param [in] termcycle placement cycle of terminal instruction
+/// \param [in] delay_in delay between preceding and succeeding instructions
+/// \param [in] distance_in distance between preceding and succeeding instructions
+/// \param [in] ii initiation interval
+SwplSSEdge::SwplSSEdge(const SwplInst *ini, long inicycle,
+                       const SwplInst *term, long termcycle,
                        int delay_in, unsigned distance_in,
                        unsigned ii) : delay(delay_in),
                                       distance(distance_in),
@@ -2861,6 +3011,12 @@ SwplSSEdge::SwplSSEdge(const SwplInst *ini, unsigned inicycle,
                                       TerminalVertex(term),
                                       TerminalCycle(termcycle),
                                       numSkipFactor(0) {
+  this->updateSkipFactor();
+}
+
+/// \brief update SkipFactor of Edge
+/// \details Function for recalculating SkipFactor when changing Edge's InitialCycle or TerminalCycle.
+void SwplSSEdge::updateSkipFactor() {
   long sf_val=0;
   if ((InitialCycle==TerminalCycle) && (InitialVertex->getMI()==TerminalVertex->getMI())) {
     // Edge to self is not subject to StageScheduling
@@ -2898,11 +3054,12 @@ SwplSSEdges::SwplSSEdges(const SwplDdg &ddg,
   const SwplInstGraph &graph = ddg.getGraph();
   for (auto *inst : loop.getBodyInsts()) {
     SwplSlot p_slot;
-    unsigned p_cycle;
+    long p_cycle;
 
     auto begin_slot = slots.findBeginSlot(loop, ii);
     p_slot = slots.getRelativeInstSlot(*inst, begin_slot);
-    p_cycle = p_slot.calcCycle();
+    assert(p_slot.calcCycle()<=LONG_MAX);
+    p_cycle = (long)(p_slot.calcCycle());
 
     for (auto *sucinst: graph.getSuccessors(*inst) ) {
 
@@ -2940,7 +3097,8 @@ SwplSSEdges::SwplSSEdges(const SwplDdg &ddg,
       }
 
       SwplSlot s_slot = slots.getRelativeInstSlot(*sucinst, begin_slot);
-      unsigned s_cycle = s_slot.calcCycle();
+      assert(s_slot.calcCycle()<=LONG_MAX);
+      long s_cycle = (long)(s_slot.calcCycle());
 
       if (out_distance==20) {
         continue;
@@ -2963,10 +3121,10 @@ void SwplSSEdges::updateInCyclic(const SwplSSCyclicInfo & ci) {
 }
 
 /// \brief update SwplSSedge.InitialCycle/TerminalCycle by SwplSSMoveinfo
-/// \param [in/out] Instruction placement cycle movement information
+/// \param [in/out] moveinfo Instruction placement cycle movement information
 /// \return Nothing
-void SwplSSEdges::updateCycles(const SwplSSMoveinfo &v) {
-  for (auto [cinst, movecycle]: v) {
+void SwplSSEdges::updateCycles(const SwplSSMoveinfo &moveinfo) {
+  for (auto [cinst, movecycle]: moveinfo) {
     for (auto *edge: Edges) {
       if (edge->InitialVertex==cinst)
         edge->InitialCycle+=movecycle;
@@ -2974,6 +3132,45 @@ void SwplSSEdges::updateCycles(const SwplSSMoveinfo &v) {
         edge->TerminalCycle+=movecycle;
     }
   }
+  for (auto *edge: Edges) {
+    edge->updateSkipFactor();
+  }
+}
+
+/// \brief find SwplSSEdge by initial and terminal
+/// \param [in] ini SwplInst of initial
+/// \param [in] term SwplInst of terminal
+/// \return finded SwplSSEdge, or nullptr(not find)
+SwplSSEdge* SwplSSEdges::getEdge(const SwplInst* ini, const SwplInst* term) {
+  for (auto *edge: Edges) {
+    if (edge->InitialVertex==ini && edge->TerminalVertex==term)
+      return edge;
+  }
+  return nullptr;
+}
+
+/// \brief find SwplSSEdge by initial
+/// \param [in] ini SwplInst of initial
+/// \return finded SwplSSEdges
+llvm::SmallVector<SwplSSEdge *, 8> SwplSSEdges::getEdgeByInitialVertex(const SwplInst* ini) {
+  llvm::SmallVector<SwplSSEdge *, 8> v;
+  for (auto *edge: Edges) {
+    if (edge->InitialVertex==ini)
+      v.push_back(edge);
+  }
+  return v;
+}
+
+/// \brief find SwplSSEdge by terminal
+/// \param [in] term SwplInst of terminal
+/// \return finded SwplSSEdges
+llvm::SmallVector<SwplSSEdge *, 8> SwplSSEdges::getEdgeByTerminalVertex(const SwplInst* term) {
+  llvm::SmallVector<SwplSSEdge *, 8> v;
+  for (auto *edge: Edges) {
+    if (edge->TerminalVertex==term)
+      v.push_back(edge);
+  }
+  return v;
 }
 
 /// \brief dump SwplSSedges
@@ -2990,17 +3187,17 @@ void SwplSSEdges::dump(raw_ostream &stream, StringRef fname) const {
 /// \param [in] out Search information(to)
 /// \param [in] in Search information(from)
 /// \param [in/out] rootlist circular partial information
-/// \return Nothing
 static void cyclic_search( const SwplDdg& ddg,
-                         std::set<const SwplInst*> &explored_list,
-                         std::vector<std::vector<const SwplInst*> *> &rootlists,
-                         const SwplInst* out, const SwplInst* in, std::vector<const SwplInst*> *rootlist ) {
+                           llvm::SmallSet<const SwplInst*, 8> &explored_list,
+                           llvm::SmallVector<llvm::SmallVector<const SwplInst*, 8> *, 8> &rootlists,
+                           const SwplInst* out, const SwplInst* in,
+                           llvm::SmallVector<const SwplInst*, 8> *rootlist ) {
   if (explored_list.count(in) > 0) {
     return; // already checked.
   }
   explored_list.insert(in);
 
-  std::set<const SwplInst*> dest;
+  llvm::SmallSet<const SwplInst*, 8> dest;
   for (auto *edge: ddg.getGraph().getEdges()) {
     const std::vector<unsigned> &distances = ddg.getDistancesFor(*edge);
     if (distances.size()==1 && distances[0]==20)
@@ -3023,7 +3220,7 @@ static void cyclic_search( const SwplDdg& ddg,
   }
 
   for (auto *d: dest) {
-    std::vector<const SwplInst*> *reprootlist = new std::vector<const SwplInst*>;
+    llvm::SmallVector<const SwplInst*, 8> *reprootlist = new llvm::SmallVector<const SwplInst*, 8>;
     for (auto *node: *rootlist) {
       reprootlist->push_back(node);
     }
@@ -3045,14 +3242,15 @@ static void cyclic_search( const SwplDdg& ddg,
 /// \detail Extract circulating nodes.
 /// \param [in] ddg DDG
 /// \param [in] loop loop information
-/// \return Nothing
 SwplSSCyclicInfo::SwplSSCyclicInfo(const SwplDdg& ddg,
                                    const SwplLoop& loop) {
-  std::set<const SwplInst*> explored_list;
-  std::vector<std::vector<const SwplInst*> *> rootlists;
+  cyclic_nodes.clear();
+
+  llvm::SmallSet<const SwplInst*, 8> explored_list;
+  llvm::SmallVector<llvm::SmallVector<const SwplInst*, 8> *, 8> rootlists;
   for (auto *inst: loop.getBodyInsts()) {
     if (!(explored_list.count(inst) > 0)) {
-      std::vector<const SwplInst*> *rootlist = new std::vector<const SwplInst*>;
+      llvm::SmallVector<const SwplInst*, 8> *rootlist = new llvm::SmallVector<const SwplInst*, 8>;
       rootlist->push_back(inst);
       cyclic_search(ddg,
                   explored_list, rootlists,
@@ -3061,14 +3259,15 @@ SwplSSCyclicInfo::SwplSSCyclicInfo(const SwplDdg& ddg,
     }
   }
 
+  llvm::SmallVector<llvm::SmallVector<const SwplInst*, 8> *, 8> cyclic_node_list;
   for (auto *root: rootlists) {
     unsigned size = root->size();
     for (unsigned i=0; i<(size-1); i++) {
       for (unsigned j=(i+1); j<size; j++) {
-        if (root->at(i)==root->at(j)) {
-          std::vector<const SwplInst*> *cnodes = new std::vector<const SwplInst*>;
+        if ((*root)[i]==(*root)[j]) {
+          llvm::SmallVector<const SwplInst*, 8> *cnodes = new llvm::SmallVector<const SwplInst*, 8>;
           for (unsigned k=i; k<=j; k++) {
-            cnodes->push_back(root->at(k));
+            cnodes->push_back((*root)[k]);
           }
           cyclic_node_list.push_back(cnodes);
         }
@@ -3076,20 +3275,78 @@ SwplSSCyclicInfo::SwplSSCyclicInfo(const SwplDdg& ddg,
     }
     delete root;
   }
+
+  if (cyclic_node_list.empty())
+    return;
+
+  // Convert the information of the circular path (cyclic_node_list)
+  // into a set of nodes in the circular part (cyclic_nodes as class-menber)
+  //
+  // ex.)
+  // cyclic_node_list[0]: : { (FADDDrr1) (LDURDi1) (FMULDrr1) (LDURDi2) (FMULDrr2) (COPY1) (FADDDrr1) }
+  // cyclic_node_list[1]: : { (LDRDui1) (FADDDrr1) (LDURDi1) (FMULDrr1) (STURDi1) (LDRDui1) }
+  // cyclic_node_list[2]: : { (LDRDui1) (FADDDrr1) (LDURDi1) (FMULDrr1) (STURDi1) (ADDXri1) (LDRDui1) }
+  //    V
+  // cyclic_nodes[0]: { (LDRDui1) (LDURDi1) (FADDDrr1) (LDURDi2) (FMULDrr1) (STURDi1) (ADDXri1) (FMULDrr2) (COPY1) }
+  //
+  auto s = cyclic_node_list.size();
+  for (unsigned i=0; i<(s-1);) {
+    auto t = cyclic_node_list[i];
+
+    if (t->empty()) {
+      i++;
+      continue;
+    }
+
+    bool dup=false;
+    for (unsigned j=i+1; j<s; j++) {
+      auto ct = cyclic_node_list[j]; // ct = Target to check whether a node in t exists
+      for (auto *p: *t) {
+        auto itr = std::find(ct->begin(), ct->end(), p);
+        if (itr != ct->end()) {
+          dup=true;
+          t->insert(t->end(), ct->begin(), ct->end());
+          ct->clear();
+          break;
+        }
+      }
+    }
+
+    if (!dup)
+      i++;
+  }
+
+  for (auto *nl: cyclic_node_list) {
+    if (nl->empty())
+      continue;
+
+    llvm::SmallSet<const SwplInst*, 8> *ns = new llvm::SmallSet<const SwplInst*, 8>;
+    for (auto *n: *(nl)) {
+      ns->insert(n);
+    }
+    cyclic_nodes.push_back(ns);
+  }
+
+  for (auto *root: cyclic_node_list){
+    delete root;
+  }
 }
 
 /// \brief Check if Edge is in cyclic-part.
+/// \details Operation is not guaranteed if non-existent Edge(ini and term) are specified.
+/// \param [in] ini SwplInst of initial
+/// \param [in] term SwplInst of terminal
 /// \retval true edge of ini to term, is in cyclic-part.
 /// \retval false edge of ini to term, is not in cyclic-part.
 bool SwplSSCyclicInfo::isInCyclic(const SwplInst *ini, const SwplInst *term) const {
-  for (auto *nodes: cyclic_node_list) {
-    unsigned size=nodes->size();
-    if (size < 2) continue;
-    for (unsigned i=0; i<(size-1); i++) {
-      if ((nodes->at(i)==ini  && nodes->at(i+1)==term) ||
-          (nodes->at(i)==term && nodes->at(i+1)==ini ))
-        return true;
-    }
+  // In StageScheduling, circulation to itself is not treated as a circulation part.
+  if (ini==term)
+    return false;
+
+  for (auto *nodes: cyclic_nodes) {
+    auto e=nodes->end();
+    if(nodes->find(ini)!=e && nodes->find(term)!=e)
+      return true;
   }
   return false;
 }
@@ -3097,21 +3354,89 @@ bool SwplSSCyclicInfo::isInCyclic(const SwplInst *ini, const SwplInst *term) con
 /// \brief dump SwplSSCycleInfo
 void SwplSSCyclicInfo::dump(raw_ostream &stream) const {
   stream << "*** dump SwplSSSyclicInfo ***\n";
-  if (cyclic_node_list.size()==0) {
+  if (cyclic_nodes.size()==0) {
     stream << "There is no circulation part.\n";
   }
   else {
-    for (auto *root: cyclic_node_list){
-      stream << "root : { ";
+    for (auto *root: cyclic_nodes){
+      stream << "root : {\n";
       for (auto *node: *root){
-        stream << "(" << format("%p", node->getMI()) << ":" << node->getName() << ") ";
+        stream << "\t(" << format("%p", node->getMI()) << ":" << node->getName() << ")\n";
       }
       stream << "}\n";
     }
   }
 }
 
+/// \brief Reverse topological sorting of circular parts
+/// \param [in] c_nodes nodes in one cycle
+/// \param [in] edges Edge information
+/// \return MapVector of node and set of outedge
+SwplSSUPOrder SwplSSUPSSProc::reverseTopologicalSort(const SwplSSCyclicNodes &c_nodes,
+                                                     const SwplSSEdges &edges) {
+  int numNodes = c_nodes.size();
+  llvm::DenseMap<const SwplInst*, llvm::SmallSet<const SwplInst*, 8>*> outputEdgeList;
+
+  auto e=c_nodes.end();
+  for (auto *n: c_nodes) {
+    outputEdgeList.insert(std::make_pair(n, new llvm::SmallSet<const SwplInst*, 8>));
+
+    for (auto *edge: edges.Edges) {
+      auto i=edge->InitialVertex;
+      auto t=edge->TerminalVertex;
+      if (i!=t && n==i && c_nodes.find(t)!=e) {
+        assert(edge->isCyclic());
+        outputEdgeList[n]->insert(t);
+      }
+    }
+  }
+
+  llvm::DenseMap<const SwplInst*, int> outdegreesCount;
+  for (auto *n: c_nodes) {
+    outdegreesCount[n]=outputEdgeList[n]->size();
+  }
+
+  std::queue<const SwplInst*> Q;
+  for (auto *n: c_nodes) {
+    if(outdegreesCount[n]==0){
+      Q.push(n);
+    }
+  }
+
+  SwplSSUPOrder order; // returning MapVector
+
+  int numVisitedNodes = 0;
+  while (!Q.empty()){
+    const SwplInst *u = Q.front();
+    Q.pop();
+    order.insert(std::pair(u, *(outputEdgeList[u]))); // outputEdgeList[u] copied
+
+    for (auto [f,s]: outputEdgeList) {
+      auto e=s->end();
+      if(s->find(u)!=e) {
+        outdegreesCount[f]--; // decrement
+        if(outdegreesCount[f]==0){
+          Q.push(f);
+        }
+      }
+    }
+    numVisitedNodes++;
+  }
+
+  for (auto [f,s]: outputEdgeList) {
+    delete s; // Delete the alocated set
+  }
+
+  if(numVisitedNodes!=numNodes){
+    order.clear(); // There's a cycle present in the Graph.
+  }
+  return order;
+}
+
 /// \brief SwplSSNumRegisters constructor
+/// \param [in] loop Loop information
+/// \param [in] ii initiation interval
+/// \param [in] slots Instruction placement slot information
 SwplSSNumRegisters::SwplSSNumRegisters(const SwplLoop &loop,
                                        unsigned ii,
                                        const SwplSlots *slots) {
@@ -4277,7 +4602,7 @@ SwplPlan* SwplPlan::construct(const SwplLoop& c_loop,
     = slots.calcNRenamingVersions(plan->loop, ii);
 
   plan->begin_slot = slots.findBeginSlot(plan->loop, ii);
-  plan->end_slot = SwplSlot::baseSlot(ii) + 1;
+  plan->end_slot = slots.findEndSlot(plan->loop, ii);
 
   plan->prolog_cycles = prolog_blocks * ii;
   plan->kernel_cycles = kernel_blocks * ii;
@@ -4653,6 +4978,26 @@ SwplSlot SwplSlots::findBeginSlot(const SwplLoop& c_loop,
   first_slot = findFirstSlot(c_loop);
   begin_block = first_slot.calcBlock(iteration_interval);
   return SwplSlot::constructFromBlock(begin_block, iteration_interval);
+}
+
+/// \brief Returns the slot next to the last slot of the block where the last Inst is placed
+/// \details Returns the slot next to the last slot of the block where the last Inst is placed.
+/// \param [in] c_loop Information about the instructions that make up the loop
+/// \param [in] iteration_interval II
+/// \return Slot number next to the last slot of the block where the last Inst is placed
+SwplSlot SwplSlots::findEndSlot(const SwplLoop& c_loop,
+                                unsigned iteration_interval) {
+  SwplSlot last_slot = findLastSlot(c_loop);
+  auto baseslot = SwplSlot::slotMax() / 2 + SwplSlot::slotMin () / 2;
+
+  if (baseslot>last_slot.slot_index) {
+    return SwplSlot::baseSlot(iteration_interval) + 1;
+  }
+  else {
+    auto last_block = last_slot.calcBlock(iteration_interval);
+    //  +1 because it is the end of the block where the last instruction exists
+    return SwplSlot::constructFromBlock(last_block+1, iteration_interval);
+  }
 }
 
 /// \brief icc が iteration_interval のブロックを跨って使用されていないかをチェックする

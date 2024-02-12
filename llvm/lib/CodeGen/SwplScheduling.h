@@ -25,6 +25,7 @@ using SwplInstPrioque = std::map<int, const SwplInst*>;
 using SwplInstSet = std::set<const SwplInst*>;
 
 class SwplSlot {
+public:
   unsigned slot_index;
 
 public:
@@ -72,6 +73,7 @@ public:
   size_t calcNRenamingVersions(const SwplLoop& c_loop, unsigned iteration_interval) const;
   SwplSlot findBeginSlot(const SwplLoop& c_loop, unsigned iteration_interval);
   SwplSlot findFirstSlot(const SwplLoop& c_loop);
+  SwplSlot findEndSlot(const SwplLoop& c_loop, unsigned iteration_interval);
   SwplSlot findLastSlot(const SwplLoop& c_loop);
   unsigned getRelativeInstSlot(const SwplInst& c_inst, const SwplSlot& begin_slot) const;
   void getMaxMinSlot(SwplSlot& max_slot, SwplSlot &min_slot);
@@ -364,13 +366,21 @@ private:
   static SwplMsResult * getModerateSchedule(std::unordered_set<SwplMsResult *>& ms_result_candidate);
 };
 
+
 class SwplSSEdge;
 class SwplSSEdges;
+class SwplSSCyclicInfo;
+using SwplSSCyclicNodes = llvm::SmallSet<const SwplInst*, 8>;
 using SwplSSMoveinfo = llvm::DenseMap<const SwplInst*, long>;
+using SwplSSUPOrder = llvm::MapVector<const SwplInst*, llvm::SmallSet<const SwplInst*, 8>>;
 
 /// \brief StageScheduling proccessing
 class SwplSSProc {
+  const SwplDdg &ddg; ///< DDG
+  unsigned II; ///< initiation interval
 public:
+  SwplSSProc(const SwplDdg &d,
+             unsigned ii) : ddg(d), II(ii) {}
   static SwplSlots* execute(const SwplDdg &ddg,
                       const SwplLoop &loop,
                       unsigned ii,
@@ -378,61 +388,72 @@ public:
                       raw_ostream &stream );
   static void dumpSSMoveinfo(raw_ostream &stream, const SwplSSMoveinfo &v);
   static bool adjustSlot(SwplSlots& slots, SwplSSMoveinfo &v);
+  unsigned getII() { return II;}
+  void collectPostInsts(const SwplSSEdge &edge, SwplSSMoveinfo &moveinfo, long amount);
+  void collectPreInsts(const SwplSSEdge &edge, SwplSSMoveinfo &moveinfo, long amount);
 };
 
+/// \brief Implement AC heuristics
 class SwplSSACProc {
-  const SwplDdg &ddg;
-  unsigned II;
-  SwplSSEdges &ssedges;
 public:
-  SwplSSACProc(const SwplDdg &d,
-               unsigned ii,
-               SwplSSEdges &e) : ddg(d), II(ii), ssedges(e) {}
-  static bool execute(const SwplDdg &d,
-                      unsigned ii,
-                      SwplSSEdges &e,
-                      SwplSSMoveinfo &v,
+  static bool execute(SwplSSProc &ssproc,
+                      SwplSSEdges &edges,
+                      SwplSSMoveinfo &moveinfo,
                       raw_ostream &stream );
 private:
-  unsigned getTargetEdges(llvm::SmallVector<SwplSSEdge*, 8> &v);
-  void collectPostInsts(const SwplSSEdge &e, SwplSSMoveinfo &v);
+  static unsigned getTargetEdges(SwplSSEdges &edges,
+                                 llvm::SmallVector<SwplSSEdge*, 8> &v);
+};
+
+/// \brief Implement UP/SS heuristics
+class SwplSSUPSSProc {
+public:
+  static bool execute(SwplSSProc &ssproc,
+                      const SwplSSCyclicInfo &CI,
+                      SwplSSEdges &edges,
+                      SwplSSMoveinfo &moveinfo,
+                      raw_ostream &stream );
+private:
+  static SwplSSUPOrder reverseTopologicalSort(const llvm::SmallSet<const SwplInst*, 8> &nodes,
+                                              const SwplSSEdges &ssedges);
 };
 
 /// \brief Information on the nodes(SwplInst*) group that will be the circulating part
 class SwplSSCyclicInfo {
-  std::vector<std::vector<const SwplInst*> *> cyclic_node_list;
+  llvm::SmallVector<SwplSSCyclicNodes*, 8> cyclic_nodes;
 public:
   SwplSSCyclicInfo(const SwplDdg& ddg, const SwplLoop& loop);
   virtual ~SwplSSCyclicInfo() {
-    for (auto *root: cyclic_node_list){
+    for (auto *root: cyclic_nodes){
       delete root;
     }
   }
+  const llvm::SmallVector<SwplSSCyclicNodes*, 8>& getList() const {return cyclic_nodes;}
   bool isInCyclic(const SwplInst *ini, const SwplInst *term) const;
   void dump(raw_ostream &stream) const;
-
 };
 
 /// \brief Edge info
 class SwplSSEdge {
-  int delay;
-  unsigned distance;
-  unsigned II;
-  bool inCyclic=false;
+  int delay; ///< delay between preceding and succeeding instructions
+  unsigned distance; ///< distance between preceding and succeeding instructions
+  unsigned II; ///< initiation interval
+  bool inCyclic=false; ///< if part of cyclic
 public:
-  const SwplInst *InitialVertex;  ///< Edge Preceding Instruction
-  unsigned InitialCycle;
-  const SwplInst *TerminalVertex; ///< Edge successor instruction
-  unsigned TerminalCycle;
-  long numSkipFactor;
-  SwplSSEdge(const SwplInst *ini, unsigned inicycle,
-             const SwplInst *term, unsigned termcycle,
+  const SwplInst *InitialVertex;  ///< preceding instruction
+  long InitialCycle; ///< placement cycle of preceding instruction
+  const SwplInst *TerminalVertex; ///< successor instruction
+  long TerminalCycle; ///< placement cycle of successor instruction
+  long numSkipFactor; ///< num of SkipFactor
+  SwplSSEdge(const SwplInst *ini, long inicycle,
+             const SwplInst *term, long termcycle,
              int delay_in, unsigned distance_in,
              unsigned ii);
   void setInCyclic(bool val) {
     inCyclic = val;
     return;
   }
+  void updateSkipFactor();
   bool isCyclic() {
     return inCyclic;
   }
@@ -443,7 +464,7 @@ public:
 class SwplSSEdges {
   unsigned II;
 public:
-  std::vector<SwplSSEdge *> Edges;
+  llvm::SmallVector<SwplSSEdge *, 8> Edges; ///< vector of SwplSSEdge
   SwplSSEdges(const SwplDdg &ddg,
               const SwplLoop &loop,
               unsigned ii,
@@ -456,7 +477,9 @@ public:
   void dump(raw_ostream &stream, StringRef fname) const;
   void updateInCyclic(const SwplSSCyclicInfo &);
   void updateCycles(const SwplSSMoveinfo &v);
-
+  SwplSSEdge* getEdge(const SwplInst* ini, const SwplInst* term);
+  llvm::SmallVector<SwplSSEdge *, 8> getEdgeByInitialVertex(const SwplInst* ini);
+  llvm::SmallVector<SwplSSEdge *, 8> getEdgeByTerminalVertex(const SwplInst* term);
 };
 
 /// \brief Estimate and maintain number of registers
