@@ -1852,6 +1852,10 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-fswp");
   }
+  if (Args.hasArg(options::OPT_fls)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-fls");
+  }
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,

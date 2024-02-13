@@ -49,6 +49,13 @@ class VectorType;
 bool enableSWP(const Loop*, bool ignoreMetadataOfRemainder);
 
 /**
+ * Returns whether or not the specified loop is a candidate for LS application from the options.
+ * @retval true Candidate for LS application
+ * @retval false SWP not applied
+ */
+bool enableLS();
+
+/**
  * Returns from Pragma whether the specified loop is memory-independent.
  * @param L Specify target Loop information
  * @retval true pipeline_nodep is specified

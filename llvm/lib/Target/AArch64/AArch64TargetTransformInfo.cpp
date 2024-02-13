@@ -33,6 +33,7 @@ using namespace llvm::PatternMatch;
 static cl::opt<bool> EnableSaveCmp("enable-savecmp",cl::init(false), cl::ReallyHidden);
 static cl::opt<unsigned> MaxSize("hwloop-max-size",cl::init(500), cl::ReallyHidden);
 static cl::opt<bool> EnableSWP("fswp",cl::init(false), cl::Hidden);
+static cl::opt<bool> EnableLS("fls",cl::init(false), cl::Hidden);
 static cl::opt<bool> DebugOutput("debug-aarch64tti",cl::init(false), cl::ReallyHidden);
 
 static cl::opt<bool> EnableFalkorHWPFUnrollFix("enable-falkor-hwpf-unroll-fix",
@@ -3787,9 +3788,8 @@ bool AArch64TTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                               TargetLibraryInfo *LibInfo,
                                               HardwareLoopInfo &HWLoopInfo) {
 
-  // optionのチェックは上位で行うことも考えられるが、本関数はCanSaveCmpでも利用されるため、ここでチェックをおこなう
-  if (L!=nullptr && !llvm::enableSWP(L, false)) {
-    printDebug(__func__, "enableSWP() is false", L);
+  if (L!=nullptr && !llvm::enableSWP(L, false) && !llvm::enableLS()) {
+    printDebug(__func__, "enableSWP() is false and enableLS() is false", L);
     return false;
   }
 
@@ -4010,6 +4010,9 @@ static int enableLoopSWP(const Loop* L, bool &exists, bool ignoreMetadataOfRemai
   // Metadata Search
   return isEnableSwp(L, LoopID, exists, ignoreMetadataOfRemainder);
 
+}
+bool llvm::enableLS() {
+  return EnableLS;
 }
 
 bool llvm::enableSWP(const Loop *L, bool ignoreMetadataOfRemainder) {
