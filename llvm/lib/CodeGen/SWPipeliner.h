@@ -984,7 +984,7 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  bool doInitialization (Module &) override;
+  bool doInitialization (MachineLoop &);
   bool doFinalization (Module &) override;
 
   /**

@@ -81,7 +81,24 @@ unsigned SWPipeliner::nOptionMaxIIBase() {
   return ::OptionMaxIIBase ? ::OptionMaxIIBase : DEFAULT_MAXII_BASE;
 }
 
-bool SWPipeliner::doInitialization(Module &m) {
+static void printDebug(const char *f, const StringRef &msg, const MachineLoop &L) {
+  if (!SWPipeliner::isDebugOutput()) return;
+  errs() << "DBG(" << f << ") " << msg << ":";
+  L.getStartLoc().print(errs());
+  errs() <<"\n";
+}
+
+bool SWPipeliner::doInitialization(MachineLoop &L) {
+  // Check when minii/maxii is specified in the option.
+  // When it becomes possible to specify minii/maxii for each loop by pragma etc., add consideration to that.
+  if( (SWPipeliner::nOptionMinIIBase() > 0) && (SWPipeliner::nOptionMaxIIBase() > 0) ) {
+    if( SWPipeliner::nOptionMinIIBase() >= SWPipeliner::nOptionMaxIIBase() ) {
+      printDebug(__func__, "[canPipelineLoop:NG] Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii) ", L);
+      remarkMissed("Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii)", L);
+      return false;
+    }
+  }
+
   if (isExportDDG()) {
     // Clear the contents of the file when initializing as additional dependency information will be written.）
     std::error_code EC;
@@ -233,13 +250,6 @@ bool SWPipeliner::doFinalization(Module &) {
   return false;
 }
 
-static void printDebug(const char *f, const StringRef &msg, const MachineLoop &L) {
-  if (!SWPipeliner::isDebugOutput()) return;
-  errs() << "DBG(" << f << ") " << msg << ":";
-  L.getStartLoc().print(errs());
-  errs() <<"\n";
-}
-
 void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {
   std::string msg1=msg;
   if (!SWPipeliner::Reason.empty()) {
@@ -309,16 +319,6 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   if (!shouldOptimize(BBLoop)) {
     printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
     return false;
-  }
-
-  // Check when minii/maxii is specified in the option.
-  // When it becomes possible to specify minii/maxii for each loop by pragma etc., add consideration to that.
-  if( (SWPipeliner::nOptionMinIIBase() > 0) && (SWPipeliner::nOptionMaxIIBase() > 0) ) {
-    if( SWPipeliner::nOptionMinIIBase() >= SWPipeliner::nOptionMaxIIBase() ) {
-      printDebug(__func__, "[canPipelineLoop:NG] Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii) ", L);
-      remarkMissed("Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii)", L);
-      return false;
-    }
   }
 
   if (!TII->canPipelineLoop(L)) {
