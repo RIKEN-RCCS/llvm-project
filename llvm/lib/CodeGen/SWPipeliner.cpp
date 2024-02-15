@@ -12,6 +12,7 @@
 
 
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -81,28 +82,38 @@ unsigned SWPipeliner::nOptionMaxIIBase() {
   return ::OptionMaxIIBase ? ::OptionMaxIIBase : DEFAULT_MAXII_BASE;
 }
 
-static void printDebug(const char *f, const StringRef &msg, const MachineLoop &L) {
+static void printDebugM(const char *f, const StringRef &msg) {
   if (!SWPipeliner::isDebugOutput()) return;
-  errs() << "DBG(" << f << ") " << msg << ":";
-  L.getStartLoc().print(errs());
-  errs() <<"\n";
+  errs() << "DBG(" << f << ") " << msg << "\n";
 }
-
-bool SWPipeliner::doInitialization(MachineLoop &L) {
-  // Check when minii/maxii is specified in the option.
-  // When it becomes possible to specify minii/maxii for each loop by pragma etc., add consideration to that.
-  if( (SWPipeliner::nOptionMinIIBase() > 0) && (SWPipeliner::nOptionMaxIIBase() > 0) ) {
-    if( SWPipeliner::nOptionMinIIBase() >= SWPipeliner::nOptionMaxIIBase() ) {
-      printDebug(__func__, "[canPipelineLoop:NG] Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii) ", L);
-      remarkMissed("Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii)", L);
-      return false;
-    }
-  }
-
+void SWPipeliner::remarkMissed(const char *msg, Module &m) {
+    ORE->emit([&]() {
+      DebugLoc Loc;
+      if (auto *SP = m.begin()->getSubprogram())
+        Loc = DILocation::get(SP->getContext(), SP->getLine(), 1, SP);
+      // MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+      // MachineFunction &MF = m.begin()->MMI.getOrCreateMachineFunction(F);
+      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "NotSoftwarePipleined", Loc,
+                                        nullptr);
+      R << msg;
+      return R;
+    });
+};
+bool SWPipeliner::doInitialization(Module &m) {
   if (isExportDDG()) {
     // Clear the contents of the file when initializing as additional dependency information will be written.）
     std::error_code EC;
     raw_fd_ostream OutStrm(SWPipeliner::getDDGFileName(), EC);
+  }
+  //Check when minii/maxii is specified in the option.
+  //When it becomes possible to specify minii/maxii for each loop by pragma etc., add consideration to that.
+  if ( (SWPipeliner::nOptionMinIIBase() > 0) && (SWPipeliner::nOptionMaxIIBase() > 0) ) {
+    if ( SWPipeliner::nOptionMinIIBase() >= SWPipeliner::nOptionMaxIIBase() ) {
+      printDebugM(__func__, "[canPipelineLoop:NG] Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii) ");
+      remarkMissed("Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii)", m);
+      DisableSwpl = true;
+      // printDebug(__func__, "DisableSwpl = true");
+    }
   }
   return false;
 }
@@ -248,6 +259,13 @@ bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
 
 bool SWPipeliner::doFinalization(Module &) {
   return false;
+}
+
+static void printDebug(const char *f, const StringRef &msg, const MachineLoop &L) {
+  if (!SWPipeliner::isDebugOutput()) return;
+  errs() << "DBG(" << f << ") " << msg << ":";
+  L.getStartLoc().print(errs());
+  errs() <<"\n";
 }
 
 void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {

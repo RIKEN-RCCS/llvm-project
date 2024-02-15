@@ -983,8 +983,8 @@ public:
     AU.addRequired<MachineOptimizationRemarkEmitterPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
-
-  bool doInitialization (MachineLoop &);
+  static void remarkMissed(const char *msg, Module &m);
+  bool doInitialization (Module &m) override;
   bool doFinalization (Module &) override;
 
   /**
