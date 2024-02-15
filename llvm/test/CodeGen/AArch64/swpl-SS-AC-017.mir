@@ -12,7 +12,7 @@
 
 #CHECK:*** dump SwplSSMoveinfo after AC ***
 #CHECK-NEXT:none...
-#CHECK-NEXT:*** after SS : dump SwplSSNumRegisters ***
+#CHECK:*** after SS : dump SwplSSNumRegisters ***
 #CHECK-NEXT:estimate VReg  Fp: 0, Int: 16, Pre: 1
 #CHECK-NEXT:*** after SS : dump SwplSSEdges ***
 #CHECK:[main] Edge:({{[A-Za-z0-9]+}}:ADDWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<1>, p_cycle:2, s_cycle:11, delay:1, distance:0, II:8

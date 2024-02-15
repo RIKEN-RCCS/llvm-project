@@ -8,13 +8,23 @@
 #CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:SUBWrr) to ({{[A-Za-z0-9]+}}:MADDWrrr), inCyclic:1, SkipFactor<3>, p_cycle:3, s_cycle:28, delay:1, distance:0, II:8
 #CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:MADDWrrr), inCyclic:0, SkipFactor<3>, p_cycle:3, s_cycle:28, delay:1, distance:0, II:8
 
+#CHECK:*** dump SwplSSMoveinfo after AC ***
+#CHECK-DAG:0x{{[A-Za-z0-9]+}}:SUBWrr : move val=-24
+#CHECK-DAG:0x{{[A-Za-z0-9]+}}:MADDWrrr : move val=-24
+#CHECK-DAG:0x{{[A-Za-z0-9]+}}:ADDWrr : move val=-24
+#CHECK:*** dump SwplSSMoveinfo after UP/SS ***
+#CHECK-DAG:0x{{[A-Za-z0-9]+}}:SUBWrr : move val=0
+#CHECK-DAG:0x{{[A-Za-z0-9]+}}:MADDWrrr : move val=-24
+#CHECK-DAG:0x{{[A-Za-z0-9]+}}:ADDWrr : move val=0
+
+
 #CHECK:*** after SS : dump SwplSSNumRegisters ***
-#CHECK-NEXT:estimate VReg  Fp: 1, Int: 21, Pre: 1
+#CHECK-NEXT:estimate VReg  Fp: 0, Int: 14, Pre: 1
 #CHECK-NEXT:*** after SS : dump SwplSSEdges ***
 #CHECK:[main] Edge:({{[A-Za-z0-9]+}}:ADDWrr) to ({{[A-Za-z0-9]+}}:SUBWrr), inCyclic:1, SkipFactor<0>, p_cycle:2, s_cycle:3, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ADDWrr) to ({{[A-Za-z0-9]+}}:MADDWrrr), inCyclic:1, SkipFactor<3>, p_cycle:2, s_cycle:28, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:SUBWrr) to ({{[A-Za-z0-9]+}}:MADDWrrr), inCyclic:1, SkipFactor<3>, p_cycle:3, s_cycle:28, delay:1, distance:0, II:8
-#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:MADDWrrr), inCyclic:0, SkipFactor<0>, p_cycle:27, s_cycle:28, delay:1, distance:0, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ADDWrr) to ({{[A-Za-z0-9]+}}:MADDWrrr), inCyclic:1, SkipFactor<0>, p_cycle:2, s_cycle:4, delay:1, distance:0, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:SUBWrr) to ({{[A-Za-z0-9]+}}:MADDWrrr), inCyclic:1, SkipFactor<0>, p_cycle:3, s_cycle:4, delay:1, distance:0, II:8
+#CHECK-NEXT:[main] Edge:({{[A-Za-z0-9]+}}:ORRWrr) to ({{[A-Za-z0-9]+}}:MADDWrrr), inCyclic:0, SkipFactor<0>, p_cycle:3, s_cycle:4, delay:1, distance:0, II:8
 
 --- |
   ; ModuleID = '/home/xxxx/swpl-SS-cyclic-xxx.c'
