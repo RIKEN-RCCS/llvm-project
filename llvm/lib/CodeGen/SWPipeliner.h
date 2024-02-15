@@ -53,6 +53,7 @@ using Register2SwplRegMap = llvm::DenseMap<Register, SwplReg *>;
 using SwplInstEdge2Distances = llvm::DenseMap<SwplInstEdge *, std::vector<unsigned>>;
 using SwplInstEdge2Delays = llvm::DenseMap<SwplInstEdge *, std::vector<int>>;
 using SwplInstEdge2ModuloDelay = std::map<SwplInstEdge *, int>;
+using SwplInstEdge2LsDelay = std::map<SwplInstEdge *, int>;
 using SwplInsts_iterator = SwplInsts::iterator;
 using SwplRegs_iterator = SwplRegs::iterator;
 using SwplMems_iterator = SwplMems::iterator;
@@ -922,6 +923,51 @@ private:
   /// Export yaml of DDG
   void exportYaml ();
 
+};
+
+/// \class LsDdg
+/// \brief Manage instruction dependency information for local scheduling
+class LsDdg {
+  SwplInstGraph *Graph;                
+  SwplLoop *Loop;                      
+  SwplInstEdge2LsDelay DelaysMap;  ///< Delay map between SwplInst
+
+public:
+  LsDdg() {};
+  LsDdg(SwplLoop &l) {
+    Graph = new SwplInstGraph();
+    Loop = &l;
+  }
+
+  SwplInstGraph *getGraph() { return Graph; }
+  const SwplInstGraph &getGraph() const { return *Graph; }
+  int getDelay(SwplInstEdge &edge) const { return DelaysMap.at(&edge); }
+  void setDelay(SwplInstEdge &edge, int delay) { DelaysMap[&edge] = delay; }
+
+  /// Convert DDG for SWPL to DDG for LS
+  /// \param[in]  swplddg SwplDdg
+  /// \return DDG for LS
+  static LsDdg *convertDdgForLS(SwplDdg *swplddg);
+
+  /// Output for debugging
+  void print(void) const;
+
+private:
+  /// Add Edge to Graph
+  /// If an edge already exists,
+  /// it is updated if the DELAY is greater than the existing edge.
+  /// \param[in]  former_inst former SwplInst
+  /// \param[in]  latter_inst latter SwplInst
+  /// \param[in]  delay delay
+  void addEdge(SwplInst &former_inst, SwplInst &latter_inst, const int delay);
+
+  /// Add a SwplDdg edge with distance:0
+  /// \param[in]  swplddg SwplDdg
+  void addEdgeNoDistance(SwplDdg *swplddg);
+  
+  /// Add register antidependence edges
+  /// \param[in]  insts SwplInsts
+  void addEdgeRegsAntiDependences(SwplInsts &insts);
 };
 
 /// SWPL pass
