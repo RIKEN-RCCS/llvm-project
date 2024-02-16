@@ -1,6 +1,6 @@
 #RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner  -swpl-maxii=9 -swpl-minii=10 -swpl-debug -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:DBG(doInitialization) [canPipelineLoop:NG] Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii) 
+#CHECK:DBG(runOnMachineFunction) [canPipelineLoop:NG] Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii) 
 --- |
   ; ModuleID = '/TEST/tp/testprg.ll'
   source_filename = "/TEST/tp/testprg.c"

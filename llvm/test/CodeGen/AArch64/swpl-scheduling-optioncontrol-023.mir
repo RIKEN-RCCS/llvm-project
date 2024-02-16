@@ -3,7 +3,7 @@
 #CHECK:--- !Missed
 #CHECK:Pass:            aarch64-swpipeliner
 #CHECK:Name:            NotSoftwarePipleined
-#CHECK:DebugLoc:        { File: 'tp/testprg.c', Line: 5, Column: 3 }
+#CHECK:DebugLoc:        { File: 'tp/testprg.c', Line: 4, Column: 1 }
 #CHECK:Function:        main
 #CHECK:Args:
 #CHECK:  - String:          'Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii)'
