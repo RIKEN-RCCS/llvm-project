@@ -82,6 +82,22 @@ unsigned SWPipeliner::nOptionMaxIIBase() {
   return ::OptionMaxIIBase ? ::OptionMaxIIBase : DEFAULT_MAXII_BASE;
 }
 
+static void printDebugM(const char *f, const StringRef &msg) {
+  if (!SWPipeliner::isDebugOutput()) return;
+  errs() << "DBG(" << f << ") " << msg << "\n";
+}
+void SWPipeliner::remarkMissed(const char *msg, MachineFunction &mf) {
+  auto &F=mf.getFunction();
+  auto &mbb=mf.front();
+    ORE->emit([&]() {
+      DebugLoc Loc;
+      if (auto *SP = F.getSubprogram())
+        Loc = DILocation::get(SP->getContext(), SP->getLine(), 1, SP);
+      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "NotSoftwarePipleined", Loc, &mbb);
+      R << msg;
+      return R;
+    });
+};
 bool SWPipeliner::doInitialization(Module &m) {
   if (isExportDDG()) {
     // Clear the contents of the file when initializing as additional dependency information will be written.）
@@ -218,6 +234,16 @@ bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   STM = TII->getSwplTargetMachine();
   Reason = "";
+  //Check when minii/maxii is specified in the option.
+  //When it becomes possible to specify minii/maxii for each loop by pragma etc., add consideration to that.
+  if ( !DisableSwpl && (SWPipeliner::nOptionMinIIBase() > 0) && (SWPipeliner::nOptionMaxIIBase() > 0) ) {
+    if ( SWPipeliner::nOptionMinIIBase() >= SWPipeliner::nOptionMaxIIBase() ) {
+      printDebugM(__func__, "[canPipelineLoop:NG] Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii) ");
+      remarkMissed("Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii)", mf);
+      DisableSwpl = true;
+      return false;
+    }
+  }
 
   STM->initialize(*MF);
 
@@ -310,16 +336,6 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   if (!shouldOptimize(BBLoop)) {
     printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
     return false;
-  }
-
-  // Check when minii/maxii is specified in the option.
-  // When it becomes possible to specify minii/maxii for each loop by pragma etc., add consideration to that.
-  if( (SWPipeliner::nOptionMinIIBase() > 0) && (SWPipeliner::nOptionMaxIIBase() > 0) ) {
-    if( SWPipeliner::nOptionMinIIBase() >= SWPipeliner::nOptionMaxIIBase() ) {
-      printDebug(__func__, "[canPipelineLoop:NG] Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii) ", L);
-      remarkMissed("Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii)", L);
-      return false;
-    }
   }
 
   if (!TII->canPipelineLoop(L)) {
