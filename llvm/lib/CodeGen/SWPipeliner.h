@@ -753,6 +753,7 @@ public:
     return PredecessorsMap.at(&inst);
   }
 
+  const SwplInsts &getVertices() const { return Vertices; }
   SwplInstEdges &getEdges() { return Edges; }
   const SwplInstEdges &getEdges() const { return Edges; }
 

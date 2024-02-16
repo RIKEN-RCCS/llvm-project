@@ -1820,6 +1820,9 @@ void LsDdg::print() const {
 
   const SwplInstGraph &graph = getGraph();
   const SwplInstEdges &edges = graph.getEdges();
+  const SwplInsts &v = graph.getVertices();
+
+  std::set<const SwplInst *> edge_less(v.begin(), v.end());
 
   for (auto *edge : edges) {
     const SwplInst *leading_inst = edge->getInitial();
@@ -1831,6 +1834,15 @@ void LsDdg::print() const {
     dbgs() << "### to  : " << *trailing_inst->getMI();
     dbgs() << "### distance:" << 0 << " delay:" << delay << "\n";
     dbgs() << "\n";
+
+    edge_less.erase(leading_inst);
+    edge_less.erase(trailing_inst);
+  }
+
+  if(edge_less.empty()) return;
+  dbgs() << "### Edge-less node\n";
+  for (auto *inst : edge_less){
+    dbgs() << "### node: " << *inst->getMI() << "\n";
   }
 }
 
