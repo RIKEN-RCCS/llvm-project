@@ -1751,6 +1751,7 @@ void SwplDdg::exportYaml() {
 
 LsDdg *LsDdg::convertDdgForLS(SwplDdg *swplddg) {
   LsDdg *lsddg = new LsDdg(*swplddg->getLoop());
+  lsddg->generateInstGraph();
   lsddg->addEdgeNoDistance(swplddg);
   lsddg->addEdgeRegsAntiDependences(swplddg->getLoopBodyInsts());
   return lsddg;
@@ -1785,9 +1786,10 @@ void LsDdg::addEdgeRegsAntiDependences(SwplInsts &insts) {
       auto latter_inst = insts[j];
       SwplInstEdge *edge = graph->findEdge(*former_inst, *latter_inst);
       if (edge != nullptr) continue;
-      for (auto *use_reg : former_inst->getUseRegs()) {
-        for (auto *def_reg : latter_inst->getDefRegs()) {
-          if (use_reg->getReg() == def_reg->getReg()) {
+      for (auto *use : former_inst->getUseRegs()) {
+        auto use_reg = use->getReg();
+        for (auto *def : latter_inst->getDefRegs()) {
+          if (use_reg == def->getReg()) {
             addEdge(*former_inst, *latter_inst, 1);
           }
         }

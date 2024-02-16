@@ -941,6 +941,7 @@ public:
 
   SwplInstGraph *getGraph() { return Graph; }
   const SwplInstGraph &getGraph() const { return *Graph; }
+  SwplInsts &getLoopBodyInsts() { return Loop->getBodyInsts(); }
   int getDelay(SwplInstEdge &edge) const { return DelaysMap.at(&edge); }
   void setDelay(SwplInstEdge &edge, int delay) { DelaysMap[&edge] = delay; }
 
@@ -953,6 +954,13 @@ public:
   void print(void) const;
 
 private:
+  /// Add loop body instructions to the graph as nodes
+  void generateInstGraph() {
+    for (auto *inst:getLoopBodyInsts()) {
+      getGraph()->appendVertices(*inst);
+    }
+  }
+
   /// Add Edge to Graph
   /// If an edge already exists,
   /// it is updated if the DELAY is greater than the existing edge.
