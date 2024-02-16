@@ -33,7 +33,6 @@ static cl::opt<bool> DebugStm("swpl-debug-tm",cl::init(false), cl::ReallyHidden)
 static cl::opt<int> OptionStoreLatency("swpl-store-latency",cl::init(6), cl::ReallyHidden);
 static cl::opt<int> OptionFlowDep("swpl-flow-dep",cl::init(10), cl::ReallyHidden);
 static cl::opt<bool> OptionCopyIsVirtual("swpl-copy-is-virtual",cl::init(false), cl::ReallyHidden);
-static cl::opt<bool> EnableSensitiveCheck("swpl-sensitive-check",cl::init(false), cl::ReallyHidden);
 static cl::opt<unsigned> MaxInstNum("swpl-max-inst-num",cl::init(500), cl::ReallyHidden);
 static cl::opt<unsigned> MaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyHidden);
 static cl::opt<bool> DisableRegAlloc("swpl-disable-reg-alloc",cl::init(false), cl::ReallyHidden);
@@ -219,21 +218,6 @@ static bool isNonTargetLoop(MachineLoop &L) {
       outputRemarkMissed(L, MsgID_swpl_not_covered_inst);
       return true;
     }
-    if (EnableSensitiveCheck && I->mayRaiseFPException()) {
-      printDebug(__func__, "pipeliner info:found mayRaiseFPException", L);
-      outputRemarkMissed(L, MsgID_swpl_not_covered_inst);
-      return true;
-    }
-    if (EnableSensitiveCheck && I->hasUnmodeledSideEffects()) {
-      printDebug(__func__, "pipeliner info:found hasUnmodeledSideEffects", L);
-      outputRemarkMissed(L, MsgID_swpl_not_covered_inst);
-      return true;
-    }
-    if (EnableSensitiveCheck && I->hasOrderedMemoryRef() &&  (!I->mayLoad() || !I->isDereferenceableInvariantLoad())) {
-      printDebug(__func__, "pipeliner info:found hasOrderedMemoryRef", L);
-      outputRemarkMissed(L, MsgID_swpl_not_covered_inst);
-      return true;
-    }
     // fenceもしくはgnuasm命令である
     if (SWPipeliner::TII->isNonTargetMI4SWPL(*I)) {
       printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
@@ -328,21 +312,6 @@ static bool isNonTargetLoopForInstDump(MachineLoop &L) {
     // Callである
     if (I->isCall()) {
       printDebug(__func__, "pipeliner info:found call", L);
-      outputRemarkMissed(L, MsgID_swpl_not_covered_inst);
-      return true; // 対象でない
-    }
-    if (EnableSensitiveCheck && I->mayRaiseFPException()) {
-      printDebug(__func__, "pipeliner info:found mayRaiseFPException", L);
-      outputRemarkMissed(L, MsgID_swpl_not_covered_inst);
-      return true; // 対象でない
-    }
-    if (EnableSensitiveCheck && I->hasUnmodeledSideEffects()) {
-      printDebug(__func__, "pipeliner info:found hasUnmodeledSideEffects", L);
-      outputRemarkMissed(L, MsgID_swpl_not_covered_inst);
-      return true; // 対象でない
-    }
-    if (EnableSensitiveCheck && I->hasOrderedMemoryRef() &&  (!I->mayLoad() || !I->isDereferenceableInvariantLoad())) {
-      printDebug(__func__, "pipeliner info:found hasOrderedMemoryRef", L);
       outputRemarkMissed(L, MsgID_swpl_not_covered_inst);
       return true; // 対象でない
     }
