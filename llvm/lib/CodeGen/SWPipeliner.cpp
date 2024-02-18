@@ -441,8 +441,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     p.epilog_cycles=0;
 
     SwplTransformMIR tran(*MF, p, liveOutReg);
-    Changed = tran.transformMIR();
-    dbgs() << "start LocalScheduler!\n";
+    Changed = tran.transformMIR4LS();
   }
 
   min_ii_for_retry = 0;

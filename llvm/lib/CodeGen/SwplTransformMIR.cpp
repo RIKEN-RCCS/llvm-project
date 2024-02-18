@@ -133,6 +133,81 @@ bool SwplTransformMIR::transformMIR() {
   return updated;
 }
 
+bool SwplTransformMIR::transformMIR4LS() {
+  bool updated = false;
+  size_t n_body_inst = Loop.getSizeBodyInsts();
+  size_t n_body_real_inst = Loop.getSizeBodyRealInsts();
+  SwplScr SCR(*(Loop.getML()));
+
+  if (DumpMIR & (int)BEFORE)
+    dumpMIR(BEFORE);
+  if (DumpMIR & (int)SLOT_BEFORE)
+    dumpMIR(SLOT_BEFORE);
+
+  /// (1) convertPlan2MIR()でSwplPlanの情報をTMIに移し変える
+  convertPlan2MIR();
+  updated = true;
+
+  /// (2) SwplTransformedMIRInfo::isNecessaryTransformMIR()であれば\n
+  /// (2-1) SwplScr::prepareCompensationLoop()でループの外を変形する
+  SCR.prepareCompensationLoop(TMI);
+  /// (2-2) transformKernel()でループの中を変形する
+  transformKernel();
+  /// (2-3) SwplLoop::deleteNewBodyMBB() データ抽出で生成したMBBを削除する
+  Loop.deleteNewBodyMBB();
+  /// TMI.misをリセットする(misで指しているMIRは削除済のため)
+  TMI.mis.clear();
+  /// (2-4) postTransformKernel() Check1,Check2合流点でPHIを生成する
+  postTransformKernel();
+  if (DumpMIR) {
+    dbgs() << "** SwplTransformedMIRInfo begin **\n";
+    TMI.print();
+    dbgs() << "** SwplTransformedMIRInfo end   **\n";
+    if (DumpMIR & (int)AFTER)
+      dumpMIR(AFTER);
+  }
+
+  /// (2-5) convert2SSA() SSA形式に変換する
+  convert2SSA();
+  if (DumpMIR & (int)AFTER_SSA)
+    dumpMIR(AFTER_SSA);
+
+  if (!DisableRemoveUnnecessaryBR) {
+    /// (2-6) SwplScr::postSSA() 不要な分岐を削除する("-swpl-disable-rm-br"が指定されていなければ)
+    SCR.postSSA(TMI);
+    if (DumpMIR & (int)LAST) dumpMIR(LAST);
+  }
+
+  /// (2-7) Count the number of COPY in the kernel loop
+  countKernelCOPY();
+
+  /// (2-8) outputLoopoptMessage() SWPL成功の最適化messageを出力する
+  outputLoopoptMessage(n_body_real_inst);
+
+  if (SWPipeliner::isDebugOutput()) {
+    /// (3) "-swpl-debug"が指定されている場合は、デバッグ情報を出力する
+    dbgs() << formatv(
+        "        :\n"
+        "        : Loop is software pipelined. (ii={0}, kernel={1} cycles, "
+        "prologue,epilogue ={2} cycles)\n"
+        "        :      IPC (initial={3}, real={4}, rate={5:P})\n"
+        "        :      = Instructions({6})/II({7})\n"
+        "        :      Virtual inst:({8})\n"
+        "        :\n",
+        /* 0 */ (int)TMI.iterationInterval,
+        /* 1 */ (int)(TMI.iterationInterval * TMI.nVersions),
+        /* 2 */ (int)(TMI.iterationInterval * (TMI.nCopies - TMI.nVersions)),
+        /* 3 */ (float)n_body_real_inst / (float)TMI.minimumIterationInterval,
+        /* 4 */ (float)n_body_real_inst / (float)TMI.iterationInterval,
+        /* 5 */ (float)TMI.minimumIterationInterval /
+            (float)TMI.iterationInterval,
+        /* 6 */ (int)n_body_real_inst,
+        /* 7 */ (int)TMI.iterationInterval,
+        /* 8 */ (int)(n_body_inst - n_body_real_inst));
+  }
+  return updated;
+}
+
 /// KERNELの分岐言の比較に用いる制御変数のversionを決定する
 /// \details
 /// - どの制御変数を選んでも構わないが,KERNELの最後にくるものを選択する.
@@ -514,10 +589,12 @@ void SwplTransformMIR::insertMIs(MachineBasicBlock& ins,
     if (SWPipeliner::STM->isEnableProEpiCopy()) {
       // Livein
       if (block == KERNEL) {
-        ins.push_back(TMI.kernel_livein_mi); // Add SWPLIVEIN
+        if (TMI.kernel_livein_mi!=nullptr)
+          ins.push_back(TMI.kernel_livein_mi); // Add SWPLIVEIN
       // Liveout
       } else if (block == EPILOGUE) {
-        ins.push_back(TMI.epilog_livein_mi); // Add SWPLIVEIN
+        if (TMI.epilog_livein_mi!=nullptr)
+          ins.push_back(TMI.epilog_livein_mi); // Add SWPLIVEIN
         for (auto *mi : TMI.liveout_copy_mis) { // Add COPY
           ins.push_back(mi);
         }
@@ -548,10 +625,12 @@ void SwplTransformMIR::insertMIs(MachineBasicBlock& ins,
         for (auto *mi : TMI.livein_copy_mis) { // Add COPY
           ins.push_back(mi);
         }
-        ins.push_back(TMI.prolog_liveout_mi); // Add SWPLIVEOUT
+        if (TMI.prolog_liveout_mi!=nullptr)
+          ins.push_back(TMI.prolog_liveout_mi); // Add SWPLIVEOUT
       // Liveout
       } else if (block == KERNEL) {
-        ins.push_back(TMI.kernel_liveout_mi); // Add SWPLIVEOUT
+        if (TMI.kernel_liveout_mi!=nullptr)
+          ins.push_back(TMI.kernel_liveout_mi); // Add SWPLIVEOUT
       }
     } else {
       // Liveout
@@ -744,7 +823,7 @@ void SwplTransformMIR::outputLoopoptMessage(int n_body_inst) {
 
 void SwplTransformMIR::transformKernel() {
   /// (1) Create instructions for SWPL
-  if (SWPipeliner::STM->isEnableRegAlloc() && SWPipeliner::STM->isEnableProEpiCopy()){
+  if (TMI.nCopies > 1 && SWPipeliner::STM->isEnableRegAlloc() && SWPipeliner::STM->isEnableProEpiCopy()){
     SWPipeliner::TII->createSwplPseudoMIs(&TMI, MF);
   }
 

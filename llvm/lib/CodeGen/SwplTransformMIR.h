@@ -186,6 +186,7 @@ public:
   /// \retval true MIRを更新した
   /// \retval false MIRを更新しなかった
   bool transformMIR();
+  bool transformMIR4LS();
 
   /// SwplPlan情報をファイルに出力する
   void exportPlan();
