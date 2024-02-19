@@ -434,7 +434,33 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
 
   if (SWPLApplicationFailure && llvm::enableLS()) {
     // LS
-    dbgs() << "start LocalScheduler!\n";
+    SwplPlan p(*currentLoop);
+
+    // begin create dummy plan
+    p.slots.resize(currentLoop->getSizeBodyInsts());
+    for (int i=0, e=currentLoop->getSizeBodyInsts(); i<e; i++) {
+      p.slots[i]=(i+1)*8;
+    }
+    p.iteration_interval=p.slots.size();
+    p.n_iteration_copies=1;
+    p.n_renaming_versions=1;
+    p.begin_slot=8;
+    p.end_slot=p.slots.size()*8+8;
+    p.total_cycles=p.iteration_interval;
+    p.prolog_cycles=0;
+    p.kernel_cycles=p.total_cycles;
+    p.epilog_cycles=0;
+    p.num_max_freg=32;
+    p.num_max_ireg=29;
+    p.num_max_preg=8;
+    p.num_necessary_freg=10;
+    p.num_necessary_ireg=10;
+    p.num_necessary_preg=1;
+    // end create dummy plan
+
+    SwplTransformMIR tran(*MF, p, liveOutReg);
+    tran.transformMIR4LS();
+    Changed = true;
   }
 
   min_ii_for_retry = 0;
