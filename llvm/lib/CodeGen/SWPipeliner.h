@@ -948,6 +948,9 @@ public:
   /// 制限抑止オプション指定の結果
   enum class SwplRestrictionsFlag {None, MultipleReg, MultipleDef, All};
 
+  /// 対象判定の結果
+  enum class TargetInfo {SWP_Target, LS1_Target, LS2_Target, LS3_Target, SWP_LS_NO_Target};
+
   /// 制限抑止オプション指定の問い合わせ
   static bool isDisableRestrictionsCheck(SwplRestrictionsFlag f);
 
@@ -1031,6 +1034,12 @@ private:
    * \retval false Swpl最適化対象指示がない。もしくは最適化抑止指示がある。
    */
   bool shouldOptimize(const Loop *BBLoop);
+
+  /**
+   * \brief isTargetLoops
+   *        対象ループ判定
+   */
+  TargetInfo isTargetLoops(MachineLoop &L, const Loop *BBLoop);
 };
 
 /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の行

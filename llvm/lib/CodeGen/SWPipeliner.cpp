@@ -310,6 +310,32 @@ void SWPipeliner::makeMissedMessage_RestrictionsDetected(const MachineInstr &tar
   Reason = msg;
 }
 
+SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L,  const Loop *BBLoop) {
+    /* 自ループが最内でなければ処理対象としない */
+  if (L.getSubLoops().size() != 0) {
+    return TargetInfo::SWP_LS_NO_Target;
+  }
+  // ローカルオプションによる機能抑止
+  if (DisableSwpl) {
+    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by local option. ", L);
+    return TargetInfo::SWP_LS_NO_Target;
+  }
+
+  // 最適化指示の判定
+  if (!shouldOptimize(BBLoop)) {
+    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
+    return TargetInfo::SWP_LS_NO_Target;
+  }
+
+  if (!TII->canPipelineLoop(L)) {
+    printDebug(__func__, "!!! Can not pipeline loop.", L);
+    remarkMissed("Failed to pipeline loop", L);
+
+    return TargetInfo::SWP_LS_NO_Target;
+  }
+  return TargetInfo::SWP_Target;
+}
+
 bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   bool Changed = false;
   Reason = "";
@@ -321,26 +347,9 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   for (auto &InnerLoop : L)
     Changed |= scheduleLoop(*InnerLoop);
 
-  /* 自ループが最内でなければ処理対象としない */
-  if (L.getSubLoops().size() != 0) {
-    return Changed;
-  }
-  // ローカルオプションによる機能抑止
-  if (DisableSwpl) {
-    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by local option. ", L);
-    return false;
-  }
+  auto target_level = isTargetLoops(L, BBLoop);
 
-  // 最適化指示の判定
-  if (!shouldOptimize(BBLoop)) {
-    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
-    return false;
-  }
-
-  if (!TII->canPipelineLoop(L)) {
-    printDebug(__func__, "!!! Can not pipeline loop.", L);
-    remarkMissed("Failed to pipeline loop", L);
-
+  if (target_level == TargetInfo::SWP_LS_NO_Target) {
     return Changed;
   }
 
