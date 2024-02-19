@@ -441,6 +441,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     if (LsDebugDumpDdg) {
       lsddg->print();
     }
+    LsDdg::destroy(lsddg);
   }
 
   min_ii_for_retry = 0;
@@ -1807,13 +1808,15 @@ void LsDdg::addEdgeRegsAntiDependences(SwplInsts &insts) {
   SwplInstGraph *graph = getGraph();
   for (unsigned i = 0; i < insts.size() - 1; i++) {
     auto former_inst = insts[i];
+    auto uses = former_inst->getUseRegs();
     for (unsigned j = i + 1; j < insts.size(); j++) {
       auto latter_inst = insts[j];
+      auto defs = latter_inst->getDefRegs();
       SwplInstEdge *edge = graph->findEdge(*former_inst, *latter_inst);
       if (edge != nullptr) continue;
-      for (auto *use : former_inst->getUseRegs()) {
+      for (auto *use : uses) {
         auto use_reg = use->getReg();
-        for (auto *def : latter_inst->getDefRegs()) {
+        for (auto *def : defs) {
           if (use_reg == def->getReg()) {
             addEdge(*former_inst, *latter_inst, 1);
           }

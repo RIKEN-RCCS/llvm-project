@@ -940,6 +940,12 @@ public:
     Loop = &l;
   }
 
+  /// destroy ddg object
+  static void destroy(LsDdg* ddg) {
+    delete ddg->Graph;
+    delete ddg;
+  }
+
   SwplInstGraph *getGraph() { return Graph; }
   const SwplInstGraph &getGraph() const { return *Graph; }
   SwplInsts &getLoopBodyInsts() { return Loop->getBodyInsts(); }
