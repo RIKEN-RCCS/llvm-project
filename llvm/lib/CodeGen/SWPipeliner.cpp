@@ -311,6 +311,32 @@ void SWPipeliner::makeMissedMessage_RestrictionsDetected(const MachineInstr &tar
   Reason = msg;
 }
 
+SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L,  const Loop *BBLoop) {
+    /* If the self-loop is not the innermost, it will not be processed. */
+  if (L.getSubLoops().size() != 0) {
+    return TargetInfo::SWP_LS_NO_Target;
+  }
+  // Function suppression using local options
+  if (DisableSwpl) {
+    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by local option. ", L);
+    return TargetInfo::SWP_LS_NO_Target;
+  }
+
+  // Judgment of optimization instructions
+  if (!shouldOptimize(BBLoop)) {
+    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
+    return TargetInfo::SWP_LS_NO_Target;
+  }
+
+  if (!TII->canPipelineLoop(L)) {
+    printDebug(__func__, "!!! Can not pipeline loop.", L);
+    remarkMissed("Failed to pipeline loop", L);
+
+    return TargetInfo::SWP_LS_NO_Target;
+  }
+  return TargetInfo::SWP_Target;
+}
+
 bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   bool Changed = false;
   Reason = "";
@@ -322,39 +348,22 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   for (auto &InnerLoop : L)
     Changed |= scheduleLoop(*InnerLoop);
 
-  /* 自ループが最内でなければ処理対象としない */
-  if (L.getSubLoops().size() != 0) {
-    return Changed;
-  }
-  // ローカルオプションによる機能抑止
-  if (DisableSwpl) {
-    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by local option. ", L);
-    return false;
-  }
+  auto target_level = isTargetLoops(L, BBLoop);
 
-  // 最適化指示の判定
-  if (!shouldOptimize(BBLoop)) {
-    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
-    return false;
-  }
-
-  if (!TII->canPipelineLoop(L)) {
-    printDebug(__func__, "!!! Can not pipeline loop.", L);
-    remarkMissed("Failed to pipeline loop", L);
-
+  if (target_level == TargetInfo::SWP_LS_NO_Target) {
     return Changed;
   }
 
   loop_number++;
   SwplScr swplScr(L);
   SwplScr::UseMap liveOutReg;
-  // SwplLoop::Initialize()でLoop複製されるため、その前に出口Busyレジスタ情報を収集する
+  // Since the Loop is duplicated in SwplLoop::Initialize(), collect the exit Busy register information before that.
   swplScr.collectLiveOut(liveOutReg);
 
-  // データ抽出
+  // Data extraction
   currentLoop = SwplLoop::Initialize(L, liveOutReg);
   if (!Reason.empty()) {
-    // 何かしらのエラーが発生した
+    // some error occurred
     remarkMissed("", *currentLoop->getML());
     if (SWPipeliner::isDebugOutput()) {
       printDebug(__func__, "!!! Can not pipeline loop. Loops with restricting MI", L);
@@ -371,7 +380,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   }
   SwplDdg *ddg = SwplDdg::Initialize(*currentLoop,Nodep);
 
-  // スケジューリング
+  // scheduling
   bool redo;
   bool SWPLApplicationFailure = false;
   do {
