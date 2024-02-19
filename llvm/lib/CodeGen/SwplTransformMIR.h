@@ -119,9 +119,12 @@ private:
   /// \param [in] newReg
   void setVReg(const SwplReg* orgReg, size_t version, llvm::Register newReg);
 
-  /// Swpl成功メッセージ出力
+  /// Swpl success message output
   /// \param [in] n_body_inst
   void outputLoopoptMessage(int n_body_inst);
+
+  /// Local scheduling success message output
+  void outputLoopoptMessage4LS();
 
   /// SWPL後の新しいKERNEL部分を構成する
   void transformKernel();
@@ -167,10 +170,10 @@ private:
   /// Count the number of COPY in the kernel loop
   void countKernelCOPY();
 public:
-  /// コストラクタ
-  /// \param [in] mf 対象MachineFunction
-  /// \param [in] plan スケジューリング計画
-  /// \param [in] liveOutReg 対象ループから出力Busyとなるレジスタ（スケジューリング結果反映時にレジスタ修正範囲を特定するために利用）
+  /// contructor
+  /// \param [in] mf Target MachineFunction
+  /// \param [in] plan result of scheduling
+  /// \param [in] liveOutReg LiveOut Register from target loop
   SwplTransformMIR(llvm::MachineFunction &mf, SwplPlan&plan, SwplScr::UseMap &liveOutReg)
   :Plan(plan),Slots(plan.getInstSlotMap()),Loop(plan.getLoop()),MF(mf),LiveOutReg(liveOutReg) {
     LoopLoc = Loop.getML()->getStartLoc();
@@ -182,10 +185,14 @@ public:
       p.second=nullptr;
     }
   }
-  /// Planに従い、対象ループをSWPL化する
-  /// \retval true MIRを更新した
-  /// \retval false MIRを更新しなかった
+
+  /// Convert the target loop to SWPL according to the plan
+  /// \retval true updated
+  /// \retval false no updates
   bool transformMIR();
+
+  /// Convert the target loop to Local Scheduling according to the plan
+  void transformMIR4LS();
 
   /// SwplPlan情報をファイルに出力する
   void exportPlan();
