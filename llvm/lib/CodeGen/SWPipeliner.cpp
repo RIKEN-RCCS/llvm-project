@@ -311,6 +311,46 @@ void SWPipeliner::makeMissedMessage_RestrictionsDetected(const MachineInstr &tar
 }
 
 SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L,  const Loop *BBLoop) {
+  // SWPL target loop determination
+  bool target_swpl = false;
+  // LocalScheduler target loop determination
+  bool target_ls = false;
+
+  if (!DisableSwpl && enableSWP) {
+    target_swpl = true;
+  }
+
+  if (!enableLS) {
+    if (!target_swpl) {
+      return TargetInfo::SWP_LS_NO_Target;
+    }
+    target_ls = false;
+  } else {
+    target_ls = true;
+  }
+
+  if (isTooManyNumOfInstruction(L) && target_ls) {
+    return TargetInfo::LS3_Target;
+  }
+
+  if (isNonScheduleInstr(L)) {
+    return TargetInfo::SWP_LS_NO_Target;
+  }
+
+  if (isNonMostInnerLoopMBB(L) && target_ls) {
+    return TargetInfo::LS1_Target;
+  }
+
+  if (isNonNormalizeLoop(L) && target_ls) {
+    return TargetInfo::LS2_Target;
+  } else {
+    if (target_ls) {
+      return TargetInfo::LS3_Target
+    } else {
+      return TargetInfo::SWP_Target
+    }
+  }
+
     /* If the self-loop is not the innermost, it will not be processed. */
   if (L.getSubLoops().size() != 0) {
     return TargetInfo::SWP_LS_NO_Target;
@@ -348,6 +388,13 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     Changed |= scheduleLoop(*InnerLoop);
 
   auto target_level = isTargetLoops(L, BBLoop);
+  switch(target_level) {
+    case SWP_LS_NO_Target:return false;
+    case SWP_Target:software_pipeliner(L);break;
+    case LS1_Target:localScheduler1(L);break;
+    case LS2_Target:localScheduler2(L);break;
+    case LS3_Target:localScheduler3(L);break;
+  }
 
   if (target_level == TargetInfo::SWP_LS_NO_Target) {
     return Changed;
