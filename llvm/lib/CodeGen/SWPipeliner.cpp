@@ -441,7 +441,8 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     p.epilog_cycles=0;
 
     SwplTransformMIR tran(*MF, p, liveOutReg);
-    Changed = tran.transformMIR4LS();
+    tran.transformMIR4LS();
+    Changed = true;
   }
 
   min_ii_for_retry = 0;

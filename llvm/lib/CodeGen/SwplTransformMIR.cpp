@@ -133,10 +133,7 @@ bool SwplTransformMIR::transformMIR() {
   return updated;
 }
 
-bool SwplTransformMIR::transformMIR4LS() {
-  bool updated = false;
-  size_t n_body_inst = Loop.getSizeBodyInsts();
-  size_t n_body_real_inst = Loop.getSizeBodyRealInsts();
+void SwplTransformMIR::transformMIR4LS() {
   SwplScr SCR(*(Loop.getML()));
 
   if (DumpMIR & (int)BEFORE)
@@ -144,20 +141,18 @@ bool SwplTransformMIR::transformMIR4LS() {
   if (DumpMIR & (int)SLOT_BEFORE)
     dumpMIR(SLOT_BEFORE);
 
-  /// (1) convertPlan2MIR()でSwplPlanの情報をTMIに移し変える
+  /// (1) convertPlan2MIR() SwplPlan to TMI
   convertPlan2MIR();
-  updated = true;
 
-  /// (2) SwplTransformedMIRInfo::isNecessaryTransformMIR()であれば\n
-  /// (2-1) SwplScr::prepareCompensationLoop()でループの外を変形する
+  /// (2-1) SwplScr::prepareCompensationLoop() Transform outside the loop
   SCR.prepareCompensationLoop(TMI);
-  /// (2-2) transformKernel()でループの中を変形する
+  /// (2-2) transformKernel()
   transformKernel();
-  /// (2-3) SwplLoop::deleteNewBodyMBB() データ抽出で生成したMBBを削除する
+  /// (2-3) SwplLoop::deleteNewBodyMBB() Delete the MBB generated for data extraction
   Loop.deleteNewBodyMBB();
-  /// TMI.misをリセットする(misで指しているMIRは削除済のため)
+  /// clear TMI.mis
   TMI.mis.clear();
-  /// (2-4) postTransformKernel() Check1,Check2合流点でPHIを生成する
+  /// (2-4) postTransformKernel() Generate PHI at the confluence
   postTransformKernel();
   if (DumpMIR) {
     dbgs() << "** SwplTransformedMIRInfo begin **\n";
@@ -167,45 +162,19 @@ bool SwplTransformMIR::transformMIR4LS() {
       dumpMIR(AFTER);
   }
 
-  /// (2-5) convert2SSA() SSA形式に変換する
+  /// (2-5) convert2SSA()
   convert2SSA();
   if (DumpMIR & (int)AFTER_SSA)
     dumpMIR(AFTER_SSA);
 
   if (!DisableRemoveUnnecessaryBR) {
-    /// (2-6) SwplScr::postSSA() 不要な分岐を削除する("-swpl-disable-rm-br"が指定されていなければ)
+    /// (2-6) SwplScr::postSSA(): Remove Unnecessary BR
     SCR.postSSA(TMI);
     if (DumpMIR & (int)LAST) dumpMIR(LAST);
   }
 
-  /// (2-7) Count the number of COPY in the kernel loop
-  countKernelCOPY();
-
-  /// (2-8) outputLoopoptMessage() SWPL成功の最適化messageを出力する
-  outputLoopoptMessage(n_body_real_inst);
-
-  if (SWPipeliner::isDebugOutput()) {
-    /// (3) "-swpl-debug"が指定されている場合は、デバッグ情報を出力する
-    dbgs() << formatv(
-        "        :\n"
-        "        : Loop is software pipelined. (ii={0}, kernel={1} cycles, "
-        "prologue,epilogue ={2} cycles)\n"
-        "        :      IPC (initial={3}, real={4}, rate={5:P})\n"
-        "        :      = Instructions({6})/II({7})\n"
-        "        :      Virtual inst:({8})\n"
-        "        :\n",
-        /* 0 */ (int)TMI.iterationInterval,
-        /* 1 */ (int)(TMI.iterationInterval * TMI.nVersions),
-        /* 2 */ (int)(TMI.iterationInterval * (TMI.nCopies - TMI.nVersions)),
-        /* 3 */ (float)n_body_real_inst / (float)TMI.minimumIterationInterval,
-        /* 4 */ (float)n_body_real_inst / (float)TMI.iterationInterval,
-        /* 5 */ (float)TMI.minimumIterationInterval /
-            (float)TMI.iterationInterval,
-        /* 6 */ (int)n_body_real_inst,
-        /* 7 */ (int)TMI.iterationInterval,
-        /* 8 */ (int)(n_body_inst - n_body_real_inst));
-  }
-  return updated;
+  /// (2-7) outputLoopoptMessage() SWPL成功の最適化messageを出力する
+  outputLoopoptMessage4LS();
 }
 
 /// KERNELの分岐言の比較に用いる制御変数のversionを決定する
@@ -818,6 +787,23 @@ void SwplTransformMIR::outputLoopoptMessage(int n_body_inst) {
     return MachineOptimizationRemark(DEBUG_TYPE, "SoftwarePipelined",
                                      LoopLoc, Loop.getML()->getHeader())
             << msg;
+  });
+}
+
+void SwplTransformMIR::outputLoopoptMessage4LS() {
+
+  std::string msg=formatv("local scheduling ("
+                            "VReg Fp: {0}/{1}, Int: {2}/{3}, Pred: {4}/{5})",
+                            Plan.getNecessaryFreg(), Plan.getMaxFreg(),
+                            Plan.getNecessaryIreg(), Plan.getMaxIreg(),
+                            Plan.getNecessaryPreg(), Plan.getMaxPreg()
+  );
+
+  SWPipeliner::Reason = "";
+  SWPipeliner::ORE->emit([&]() {
+    return MachineOptimizationRemark(DEBUG_TYPE, "LocalScheduled",
+                                     LoopLoc, Loop.getML()->getHeader())
+           << msg;
   });
 }
 
