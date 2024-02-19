@@ -945,10 +945,13 @@ public:
   /// the number of concurrent read instructions in the decode stage.
   static unsigned RealFetchBandwidth;
 
-  /// 制限抑止オプション指定の結果
+  /// Result of specifying limit suppression option
   enum class SwplRestrictionsFlag {None, MultipleReg, MultipleDef, All};
 
-  /// 制限抑止オプション指定の問い合わせ
+  /// Target determination result
+  enum class TargetInfo {SWP_Target, LS1_Target, LS2_Target, LS3_Target, SWP_LS_NO_Target};
+
+  /// Inquiry for specifying restriction suppression option
   static bool isDisableRestrictionsCheck(SwplRestrictionsFlag f);
 
   MachineFunction *MF = nullptr;
@@ -1031,6 +1034,12 @@ private:
    * \retval false Swpl最適化対象指示がない。もしくは最適化抑止指示がある。
    */
   bool shouldOptimize(const Loop *BBLoop);
+
+  /**
+   * \brief isTargetLoops
+   *        Target loop determination
+   */
+  TargetInfo isTargetLoops(MachineLoop &L, const Loop *BBLoop);
 };
 
 /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の行
