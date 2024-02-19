@@ -435,6 +435,8 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   if (SWPLApplicationFailure && llvm::enableLS()) {
     // LS
     SwplPlan p(*currentLoop);
+
+    // begin create dummy plan
     p.slots.resize(currentLoop->getSizeBodyInsts());
     for (int i=0, e=currentLoop->getSizeBodyInsts(); i<e; i++) {
       p.slots[i]=(i+1)*8;
@@ -448,6 +450,10 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     p.prolog_cycles=0;
     p.kernel_cycles=p.total_cycles;
     p.epilog_cycles=0;
+    p.num_max_freg=30;
+    p.num_max_ireg=20;
+    p.num_max_preg=7;
+    // end create dummy plan
 
     SwplTransformMIR tran(*MF, p, liveOutReg);
     tran.transformMIR4LS();
