@@ -133,6 +133,50 @@ bool SwplTransformMIR::transformMIR() {
   return updated;
 }
 
+void SwplTransformMIR::transformMIR4LS() {
+  SwplScr SCR(*(Loop.getML()));
+
+  if (DumpMIR & (int)BEFORE)
+    dumpMIR(BEFORE);
+  if (DumpMIR & (int)SLOT_BEFORE)
+    dumpMIR(SLOT_BEFORE);
+
+  /// (1) convertPlan2MIR() SwplPlan to TMI
+  convertPlan2MIR();
+
+  /// (2-1) SwplScr::prepareCompensationLoop() Transform outside the loop
+  SCR.prepareCompensationLoop(TMI);
+  /// (2-2) transformKernel()
+  transformKernel();
+  /// (2-3) SwplLoop::deleteNewBodyMBB() Delete the MBB generated for data extraction
+  Loop.deleteNewBodyMBB();
+  /// clear TMI.mis
+  TMI.mis.clear();
+  /// (2-4) postTransformKernel() Generate PHI at the confluence
+  postTransformKernel();
+  if (DumpMIR) {
+    dbgs() << "** SwplTransformedMIRInfo begin **\n";
+    TMI.print();
+    dbgs() << "** SwplTransformedMIRInfo end   **\n";
+    if (DumpMIR & (int)AFTER)
+      dumpMIR(AFTER);
+  }
+
+  /// (2-5) convert2SSA()
+  convert2SSA();
+  if (DumpMIR & (int)AFTER_SSA)
+    dumpMIR(AFTER_SSA);
+
+  if (!DisableRemoveUnnecessaryBR) {
+    /// (2-6) SwplScr::postSSA(): Remove Unnecessary BR
+    SCR.postSSA(TMI);
+    if (DumpMIR & (int)LAST) dumpMIR(LAST);
+  }
+
+  /// (2-7) outputLoopoptMessage() SWPL成功の最適化messageを出力する
+  outputLoopoptMessage4LS();
+}
+
 /// KERNELの分岐言の比較に用いる制御変数のversionを決定する
 /// \details
 /// - どの制御変数を選んでも構わないが,KERNELの最後にくるものを選択する.
@@ -514,10 +558,12 @@ void SwplTransformMIR::insertMIs(MachineBasicBlock& ins,
     if (SWPipeliner::STM->isEnableProEpiCopy()) {
       // Livein
       if (block == KERNEL) {
-        ins.push_back(TMI.kernel_livein_mi); // Add SWPLIVEIN
+        if (TMI.kernel_livein_mi!=nullptr)
+          ins.push_back(TMI.kernel_livein_mi); // Add SWPLIVEIN
       // Liveout
       } else if (block == EPILOGUE) {
-        ins.push_back(TMI.epilog_livein_mi); // Add SWPLIVEIN
+        if (TMI.epilog_livein_mi!=nullptr)
+          ins.push_back(TMI.epilog_livein_mi); // Add SWPLIVEIN
         for (auto *mi : TMI.liveout_copy_mis) { // Add COPY
           ins.push_back(mi);
         }
@@ -548,10 +594,12 @@ void SwplTransformMIR::insertMIs(MachineBasicBlock& ins,
         for (auto *mi : TMI.livein_copy_mis) { // Add COPY
           ins.push_back(mi);
         }
-        ins.push_back(TMI.prolog_liveout_mi); // Add SWPLIVEOUT
+        if (TMI.prolog_liveout_mi!=nullptr)
+          ins.push_back(TMI.prolog_liveout_mi); // Add SWPLIVEOUT
       // Liveout
       } else if (block == KERNEL) {
-        ins.push_back(TMI.kernel_liveout_mi); // Add SWPLIVEOUT
+        if (TMI.kernel_liveout_mi!=nullptr)
+          ins.push_back(TMI.kernel_liveout_mi); // Add SWPLIVEOUT
       }
     } else {
       // Liveout
@@ -742,9 +790,26 @@ void SwplTransformMIR::outputLoopoptMessage(int n_body_inst) {
   });
 }
 
+void SwplTransformMIR::outputLoopoptMessage4LS() {
+
+  std::string msg=formatv("local scheduling ("
+                            "VReg Fp: {0}/{1}, Int: {2}/{3}, Pred: {4}/{5})",
+                            Plan.getNecessaryFreg(), Plan.getMaxFreg(),
+                            Plan.getNecessaryIreg(), Plan.getMaxIreg(),
+                            Plan.getNecessaryPreg(), Plan.getMaxPreg()
+  );
+
+  SWPipeliner::Reason = "";
+  SWPipeliner::ORE->emit([&]() {
+    return MachineOptimizationRemark(DEBUG_TYPE, "LocalScheduled",
+                                     LoopLoc, Loop.getML()->getHeader())
+           << msg;
+  });
+}
+
 void SwplTransformMIR::transformKernel() {
   /// (1) Create instructions for SWPL
-  if (SWPipeliner::STM->isEnableRegAlloc() && SWPipeliner::STM->isEnableProEpiCopy()){
+  if (TMI.nCopies > 1 && SWPipeliner::STM->isEnableRegAlloc() && SWPipeliner::STM->isEnableProEpiCopy()){
     SWPipeliner::TII->createSwplPseudoMIs(&TMI, MF);
   }
 
