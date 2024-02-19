@@ -450,9 +450,12 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     p.prolog_cycles=0;
     p.kernel_cycles=p.total_cycles;
     p.epilog_cycles=0;
-    p.num_max_freg=30;
-    p.num_max_ireg=20;
-    p.num_max_preg=7;
+    p.num_max_freg=32;
+    p.num_max_ireg=29;
+    p.num_max_preg=8;
+    p.num_necessary_freg=10;
+    p.num_necessary_ireg=10;
+    p.num_necessary_preg=1;
     // end create dummy plan
 
     SwplTransformMIR tran(*MF, p, liveOutReg);
