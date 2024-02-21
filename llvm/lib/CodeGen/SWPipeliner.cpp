@@ -332,17 +332,32 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L,  const Loop *
   bool target_swpl = false;
   // LocalScheduler target loop determination
   bool target_ls = llvm::enableLS();
+  // If the self-loop is not the innermost, it will not be processed.
+  if (L.getSubLoops().size() != 0) {
+    return TargetInfo::SWP_LS_NO_Target;
+  }
 
   if (!DisableSwpl && enableSWP(BBLoop, false)) {
     target_swpl = true;
+  }
+
+  if (!enableSWP(BBLoop, false)) {
+    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
+    return TargetInfo::SWP_LS_NO_Target;
+  }
+
+  // Function suppression using local options
+  if (DisableSwpl && !target_swpl) {
+    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by local option. ", L);
+    return TargetInfo::SWP_LS_NO_Target;
   }
 
   if (!target_ls && !target_swpl) {
     return TargetInfo::SWP_LS_NO_Target;
   } 
  
-  if (isTooManyNumOfInstruction(L) && target_ls) {
-    return TargetInfo::LS3_Target;
+  if (isTooManyNumOfInstruction(L)) {
+    return (target_ls ? TargetInfo::LS3_Target : TargetInfo::SWP_LS_NO_Target);
   }
 
   if (isNonScheduleInstr(L)) {
@@ -350,25 +365,13 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L,  const Loop *
   }
 
   if (isNonMostInnerLoopMBB(L) && target_ls) {
-    return TargetInfo::LS1_Target;
+    return (target_ls ? TargetInfo::LS1_Target : TargetInfo::SWP_LS_NO_Target);
   }
 
-  if (isNonNormalizeLoop(L) && target_ls) {
-    return TargetInfo::LS2_Target;
-  } else {
-    if (target_ls) {
-      return TargetInfo::LS3_Target;
-    } 
-  }
-
-    /* If the self-loop is not the innermost, it will not be processed. */
-  if (L.getSubLoops().size() != 0) {
-    return TargetInfo::SWP_LS_NO_Target;
-  }
-  // Function suppression using local options
-  if (DisableSwpl) {
-    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by local option. ", L);
-    return TargetInfo::SWP_LS_NO_Target;
+  if (isNonNormalizeLoop(L)) {
+    return (target_ls ? TargetInfo::LS2_Target : TargetInfo::SWP_LS_NO_Target);
+  } else if (target_ls) {
+    return TargetInfo::LS3_Target;
   }
 
   // Judgment of optimization instructions
