@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner  -swpl-maxii=10 -swpl-minii=10 -swpl-debug -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O1  -start-before=aarch64-swpipeliner  -swpl-maxii=10 -swpl-minii=10 -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:error: Bypass SWPL processing. The specified minii/maxii is invalid. (It must be minii<maxii) 
 --- |
