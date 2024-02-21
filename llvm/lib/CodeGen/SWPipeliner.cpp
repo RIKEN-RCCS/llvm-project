@@ -310,25 +310,36 @@ void SWPipeliner::makeMissedMessage_RestrictionsDetected(const MachineInstr &tar
   Reason = msg;
 }
 
+bool SWPipeliner::isTooManyNumOfInstruction(MachineLoop &L) {
+  return false;
+}
+
+bool SWPipeliner::isNonMostInnerLoopMBB(MachineLoop &L) {
+  return false;
+}
+
+bool SWPipeliner::isNonScheduleInstr(MachineLoop &L) {
+  return false;
+}
+
+bool SWPipeliner::isNonNormalizeLoop(MachineLoop &L) {
+  return false;
+}
+
 SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L,  const Loop *BBLoop) {
   // SWPL target loop determination
   bool target_swpl = false;
   // LocalScheduler target loop determination
-  bool target_ls = false;
+  bool target_ls = llvm::enableLS();
 
-  if (!DisableSwpl && enableSWP) {
+  if (!DisableSwpl && enableSWP(BBLoop, false)) {
     target_swpl = true;
   }
 
-  if (!enableLS) {
-    if (!target_swpl) {
-      return TargetInfo::SWP_LS_NO_Target;
-    }
-    target_ls = false;
-  } else {
-    target_ls = true;
-  }
-
+  if (!target_ls && !target_swpl) {
+    return TargetInfo::SWP_LS_NO_Target;
+  } 
+ 
   if (isTooManyNumOfInstruction(L) && target_ls) {
     return TargetInfo::LS3_Target;
   }
@@ -345,10 +356,8 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L,  const Loop *
     return TargetInfo::LS2_Target;
   } else {
     if (target_ls) {
-      return TargetInfo::LS3_Target
-    } else {
-      return TargetInfo::SWP_Target
-    }
+      return TargetInfo::LS3_Target;
+    } 
   }
 
     /* If the self-loop is not the innermost, it will not be processed. */
@@ -388,13 +397,6 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     Changed |= scheduleLoop(*InnerLoop);
 
   auto target_level = isTargetLoops(L, BBLoop);
-  switch(target_level) {
-    case SWP_LS_NO_Target:return false;
-    case SWP_Target:software_pipeliner(L);break;
-    case LS1_Target:localScheduler1(L);break;
-    case LS2_Target:localScheduler2(L);break;
-    case LS3_Target:localScheduler3(L);break;
-  }
 
   if (target_level == TargetInfo::SWP_LS_NO_Target) {
     return Changed;
