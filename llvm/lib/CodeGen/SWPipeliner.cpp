@@ -89,7 +89,7 @@ bool SWPipeliner::doInitialization(Module &m) {
     std::error_code EC;
     raw_fd_ostream OutStrm(SWPipeliner::getDDGFileName(), EC);
   }
-  //Check when minii/maxii is specified in the option.
+//Check when minii/maxii is specified in the option.
   //When it becomes possible to specify minii/maxii for each loop by pragma etc., add consideration to that.
   if ( !DisableSwpl && (SWPipeliner::nOptionMinIIBase() > 0) && (SWPipeliner::nOptionMaxIIBase() > 0) ) {
     if ( SWPipeliner::nOptionMinIIBase() >= SWPipeliner::nOptionMaxIIBase() ) {
@@ -227,7 +227,7 @@ bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   STM = TII->getSwplTargetMachine();
   Reason = "";
-
+  
   STM->initialize(*MF);
 
   for (auto &L : *MLI) {
@@ -320,47 +320,40 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L,  const Loop *
     return TargetInfo::SWP_LS_NO_Target;
   }
 
-  if (!DisableSwpl && enableSWP(BBLoop, false)) {
-    target_swpl = true;
+  if (DisableSwpl) {
+    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by local option. ", L);
+    if (!target_swpl) {
+      return TargetInfo::SWP_LS_NO_Target;
+    }
   }
 
   if (!enableSWP(BBLoop, false)) {
     printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
-    return TargetInfo::SWP_LS_NO_Target;
-  }
-
-  // Function suppression using local options
-  if (DisableSwpl && !target_swpl) {
-    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by local option. ", L);
-    return TargetInfo::SWP_LS_NO_Target;
+    if (target_ls) {
+      return TargetInfo::SWP_LS_NO_Target;
+    }
+  } else {
+    target_swpl = true;
   }
 
   if (!target_ls && !target_swpl) {
     return TargetInfo::SWP_LS_NO_Target;
   } 
- 
-  if (isTooManyNumOfInstruction(L)) {
-    return (target_ls ? TargetInfo::LS3_Target : TargetInfo::SWP_LS_NO_Target);
-  }
 
-  if (isNonScheduleInstr(L)) {
-    return TargetInfo::SWP_LS_NO_Target;
-  }
-
-  if (isNonMostInnerLoopMBB(L) && target_ls) {
+  if (isNonMostInnerLoopMBB(L)) {
     return (target_ls ? TargetInfo::LS1_Target : TargetInfo::SWP_LS_NO_Target);
   }
 
   if (isNonNormalizeLoop(L)) {
     return (target_ls ? TargetInfo::LS2_Target : TargetInfo::SWP_LS_NO_Target);
-  } else if (target_ls) {
-    return TargetInfo::LS3_Target;
+  } 
+  
+  if (isTooManyNumOfInstruction(L)) {
+    return (target_ls ? TargetInfo::LS3_Target : TargetInfo::SWP_LS_NO_Target);
   }
 
-  // Judgment of optimization instructions
-  if (!shouldOptimize(BBLoop)) {
-    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
-    return TargetInfo::SWP_LS_NO_Target;
+  if (target_ls) {
+    return TargetInfo::LS3_Target;
   }
 
   if (!TII->canPipelineLoop(L)) {
