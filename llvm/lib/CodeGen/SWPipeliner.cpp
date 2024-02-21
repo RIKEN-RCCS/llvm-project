@@ -48,6 +48,7 @@ static cl::opt<bool> DisableSwpl("swpl-disable",cl::init(false), cl::ReallyHidde
 
 static cl::opt<bool> DebugOutput("swpl-debug",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DebugDdgOutput("swpl-debug-ddg",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> LsDebugDumpDdg("ls-debug-dump-ddg", cl::init(false), cl::ReallyHidden);
 
 static cl::opt<unsigned> OptionMinIIBase("swpl-minii",cl::init(0), cl::ReallyHidden);
 static cl::opt<unsigned> OptionMaxIIBase("swpl-maxii",cl::init(0), cl::ReallyHidden);
@@ -483,6 +484,14 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
 
   if (SWPLApplicationFailure && llvm::enableLS()) {
     // LS
+    
+    // Convert DDG
+    LsDdg *lsddg = LsDdg::convertDdgForLS(ddg);
+    if (LsDebugDumpDdg) {
+      lsddg->print();
+    }
+    LsDdg::destroy(lsddg);
+
     SwplPlan p(*currentLoop);
 
     // begin create dummy plan
@@ -1184,7 +1193,7 @@ void SwplScr::collectLiveOut(UseMap &usemap) {
   }
 }
 
-static cl::opt<bool> DebugDumpDdg("swpl-debug-dump-ddg",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> SwplDebugDumpDdg("swpl-debug-dump-ddg",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> EnableInstDep("swpl-enable-instdep",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableRegDep4tied("swpl-disable-regdep-4-tied",cl::init(false), cl::ReallyHidden);
 
@@ -1216,7 +1225,7 @@ SwplDdg *SwplDdg::Initialize (SwplLoop &loop, bool Nodep) {
   if (SWPipeliner::isExportDDG())
     ddg->exportYaml();
 
-  if (DebugDumpDdg) {
+  if (SwplDebugDumpDdg) {
     ddg->print();
   }  
   return ddg;
@@ -1841,6 +1850,105 @@ void SwplDdg::exportYaml() {
 
   yaml::Output yout(*OutStrm);
   yout << yamlddg;
+}
+
+LsDdg *LsDdg::convertDdgForLS(SwplDdg *swplddg) {
+  LsDdg *lsddg = new LsDdg(*swplddg->getLoop());
+  lsddg->generateInstGraph();
+  lsddg->addEdgeNoDistance(swplddg);
+  lsddg->addEdgeRegsAntiDependences(swplddg->getLoopBodyInsts());
+  return lsddg;
+}
+
+void LsDdg::addEdgeNoDistance(SwplDdg *swplddg) {
+  const SwplInstGraph &graph = *swplddg->getGraph();
+  const SwplInstEdges &edges = graph.getEdges();
+
+  for (auto *edge : edges) {
+    SwplInst *former_inst = const_cast<SwplInst *>(edge->getInitial());
+    SwplInst *latter_inst = const_cast<SwplInst *>(edge->getTerminal());
+
+    std::vector<unsigned> distances = swplddg->getDistancesFor(*edge);
+    std::vector<int> delays = swplddg->getDelaysFor(*edge);
+    auto distance = distances.begin();
+    auto distance_end = distances.end();
+    auto delay = delays.begin();
+    for (; distance != distance_end; ++distance, ++delay) {
+      if (*distance == 0) {
+        addEdge(*former_inst, *latter_inst, *delay);
+      }
+    }
+  }
+}
+
+void LsDdg::addEdgeRegsAntiDependences(SwplInsts &insts) {
+  SwplInstGraph *graph = getGraph();
+  for (unsigned i = 0; i < insts.size() - 1; i++) {
+    auto former_inst = insts[i];
+    auto uses = former_inst->getUseRegs();
+    for (unsigned j = i + 1; j < insts.size(); j++) {
+      auto latter_inst = insts[j];
+      auto defs = latter_inst->getDefRegs();
+      SwplInstEdge *edge = graph->findEdge(*former_inst, *latter_inst);
+      if (edge != nullptr) continue;
+      for (auto *use : uses) {
+        auto use_reg = use->getReg();
+        for (auto *def : defs) {
+          if (use_reg == def->getReg()) {
+            addEdge(*former_inst, *latter_inst, 1);
+          }
+        }
+      }
+    }
+  }
+}
+
+void LsDdg::print() const {
+  dbgs() << "DBG(LsDdg::print) LsDdg. \n";
+  dbgs() << "### LsDdg: " << this << "\n";
+
+  const SwplInstGraph &graph = getGraph();
+  const SwplInstEdges &edges = graph.getEdges();
+  const SwplInsts &v = graph.getVertices();
+
+  std::set<const SwplInst *> edge_less(v.begin(), v.end());
+
+  for (auto *edge : edges) {
+    const SwplInst *leading_inst = edge->getInitial();
+    const SwplInst *trailing_inst = edge->getTerminal();
+    auto delay = getDelay(*edge);
+
+    dbgs() << "### SwplEdge: " << edge << "\n";
+    dbgs() << "### from: " << *leading_inst->getMI();
+    dbgs() << "### to  : " << *trailing_inst->getMI();
+    dbgs() << "### distance:" << 0 << " delay:" << delay << "\n";
+    dbgs() << "\n";
+
+    edge_less.erase(leading_inst);
+    edge_less.erase(trailing_inst);
+  }
+
+  if(edge_less.empty()) return;
+  dbgs() << "### Edge-less node\n";
+  for (auto *inst : edge_less){
+    dbgs() << "### node: " << *inst->getMI() << "\n";
+  }
+}
+
+void LsDdg::addEdge(SwplInst &former_inst, SwplInst &latter_inst, const int delay) {
+  SwplInstGraph *graph = getGraph();
+
+  // Check if an edge exists
+  SwplInstEdge *edge = graph->findEdge(former_inst, latter_inst);
+  if (edge == nullptr) {
+    edge = graph->createEdge(former_inst, latter_inst);
+    setDelay(*edge, delay);
+  } else {
+    // Hold the one with the larger delay
+    if (delay > getDelay(*edge)) {
+      setDelay(*edge, delay);
+    }
+  }
 }
 
 static cl::opt<bool> DebugLoop("swpl-debug-loop",cl::init(false), cl::ReallyHidden);
