@@ -387,6 +387,8 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     return Changed;
   }
 
+  // This process is added because the LS function is not implemented. 
+  // Must be removed as soon as LS functionality is implemented.
   if (target_level != TargetInfo::SWP_Target) {
     return Changed;
   }
