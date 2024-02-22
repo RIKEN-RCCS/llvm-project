@@ -1101,6 +1101,14 @@ private:
    *        Target loop determination
    */
   TargetInfo isTargetLoops(MachineLoop &L, const Loop *BBLoop);
+
+  bool isTooManyNumOfInstruction(const MachineLoop &L) const;
+
+  bool isNonMostInnerLoopMBB(const MachineLoop &L) const;
+
+  bool isNonScheduleInstr(const MachineLoop &L) const;
+
+  bool isNonNormalizeLoop(const MachineLoop &L) const;
 };
 
 /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の行

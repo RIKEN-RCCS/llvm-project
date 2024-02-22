@@ -294,21 +294,71 @@ void SWPipeliner::makeMissedMessage_RestrictionsDetected(const MachineInstr &tar
   Reason = msg;
 }
 
+bool SWPipeliner::isTooManyNumOfInstruction(const MachineLoop &L) const {
+  return false;
+}
+
+bool SWPipeliner::isNonMostInnerLoopMBB(const MachineLoop &L) const {
+  return false;
+}
+
+bool SWPipeliner::isNonScheduleInstr(const MachineLoop &L) const {
+  return false;
+}
+
+bool SWPipeliner::isNonNormalizeLoop(const MachineLoop &L) const {
+  return false;
+}
+
 SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L,  const Loop *BBLoop) {
-    /* If the self-loop is not the innermost, it will not be processed. */
+  // If the self-loop is not the innermost, it will not be processed.
   if (L.getSubLoops().size() != 0) {
     return TargetInfo::SWP_LS_NO_Target;
   }
-  // Function suppression using local options
+
+  // SWPL target loop determination
+  bool target_swpl = false;
+  // LocalScheduler target loop determination
+  bool target_ls = llvm::enableLS();
+
   if (DisableSwpl) {
     printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by local option. ", L);
+    if (!target_swpl) {
+      return TargetInfo::SWP_LS_NO_Target;
+    }
+  }
+
+  if (!enableSWP(BBLoop, false)) {
+    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
+    if (!target_ls) {
+      return TargetInfo::SWP_LS_NO_Target;
+    }
+  } else {
+    target_swpl = true;
+  }
+
+  if (!target_ls && !target_swpl) {
+    return TargetInfo::SWP_LS_NO_Target;
+  } 
+
+  if (isNonScheduleInstr(L)) {
     return TargetInfo::SWP_LS_NO_Target;
   }
 
-  // Judgment of optimization instructions
-  if (!shouldOptimize(BBLoop)) {
-    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
-    return TargetInfo::SWP_LS_NO_Target;
+  if (isNonMostInnerLoopMBB(L)) {
+    return (target_ls ? TargetInfo::LS1_Target : TargetInfo::SWP_LS_NO_Target);
+  }
+
+  if (isNonNormalizeLoop(L)) {
+    return (target_ls ? TargetInfo::LS2_Target : TargetInfo::SWP_LS_NO_Target);
+  } 
+  
+  if (isTooManyNumOfInstruction(L)) {
+    return (target_ls ? TargetInfo::LS3_Target : TargetInfo::SWP_LS_NO_Target);
+  }
+
+  if (!target_swpl) {
+    return TargetInfo::LS3_Target;
   }
 
   if (!TII->canPipelineLoop(L)) {
@@ -334,6 +384,12 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   auto target_level = isTargetLoops(L, BBLoop);
 
   if (target_level == TargetInfo::SWP_LS_NO_Target) {
+    return Changed;
+  }
+
+  // @todo: This process is added because the LS function is not implemented.
+  // Must be removed as soon as LS functionality is implemented.
+  if (target_level != TargetInfo::SWP_Target) {
     return Changed;
   }
 
