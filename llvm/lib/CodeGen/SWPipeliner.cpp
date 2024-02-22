@@ -89,7 +89,7 @@ bool SWPipeliner::doInitialization(Module &m) {
     std::error_code EC;
     raw_fd_ostream OutStrm(SWPipeliner::getDDGFileName(), EC);
   }
-//Check when minii/maxii is specified in the option.
+  //Check when minii/maxii is specified in the option.
   //When it becomes possible to specify minii/maxii for each loop by pragma etc., add consideration to that.
   if ( !DisableSwpl && (SWPipeliner::nOptionMinIIBase() > 0) && (SWPipeliner::nOptionMaxIIBase() > 0) ) {
     if ( SWPipeliner::nOptionMinIIBase() >= SWPipeliner::nOptionMaxIIBase() ) {
@@ -227,7 +227,7 @@ bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   STM = TII->getSwplTargetMachine();
   Reason = "";
-  
+
   STM->initialize(*MF);
 
   for (auto &L : *MLI) {
@@ -294,31 +294,32 @@ void SWPipeliner::makeMissedMessage_RestrictionsDetected(const MachineInstr &tar
   Reason = msg;
 }
 
-bool SWPipeliner::isTooManyNumOfInstruction(MachineLoop &L) {
+bool SWPipeliner::isTooManyNumOfInstruction(const MachineLoop &L) const {
   return false;
 }
 
-bool SWPipeliner::isNonMostInnerLoopMBB(MachineLoop &L) {
+bool SWPipeliner::isNonMostInnerLoopMBB(const MachineLoop &L) const {
   return false;
 }
 
-bool SWPipeliner::isNonScheduleInstr(MachineLoop &L) {
+bool SWPipeliner::isNonScheduleInstr(const MachineLoop &L) const {
   return false;
 }
 
-bool SWPipeliner::isNonNormalizeLoop(MachineLoop &L) {
+bool SWPipeliner::isNonNormalizeLoop(const MachineLoop &L) const {
   return false;
 }
 
 SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L,  const Loop *BBLoop) {
-  // SWPL target loop determination
-  bool target_swpl = false;
-  // LocalScheduler target loop determination
-  bool target_ls = llvm::enableLS();
   // If the self-loop is not the innermost, it will not be processed.
   if (L.getSubLoops().size() != 0) {
     return TargetInfo::SWP_LS_NO_Target;
   }
+
+  // SWPL target loop determination
+  bool target_swpl = false;
+  // LocalScheduler target loop determination
+  bool target_ls = llvm::enableLS();
 
   if (DisableSwpl) {
     printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by local option. ", L);
@@ -329,7 +330,7 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L,  const Loop *
 
   if (!enableSWP(BBLoop, false)) {
     printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
-    if (target_ls) {
+    if (!target_ls) {
       return TargetInfo::SWP_LS_NO_Target;
     }
   } else {
@@ -339,6 +340,10 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L,  const Loop *
   if (!target_ls && !target_swpl) {
     return TargetInfo::SWP_LS_NO_Target;
   } 
+
+  if (isNonScheduleInstr(L)) {
+    return TargetInfo::SWP_LS_NO_Target;
+  }
 
   if (isNonMostInnerLoopMBB(L)) {
     return (target_ls ? TargetInfo::LS1_Target : TargetInfo::SWP_LS_NO_Target);
@@ -352,7 +357,7 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L,  const Loop *
     return (target_ls ? TargetInfo::LS3_Target : TargetInfo::SWP_LS_NO_Target);
   }
 
-  if (target_ls) {
+  if (!target_swpl) {
     return TargetInfo::LS3_Target;
   }
 

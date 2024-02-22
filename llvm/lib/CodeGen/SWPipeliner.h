@@ -1071,18 +1071,6 @@ public:
   static void
   makeMissedMessage_RestrictionsDetected(const MachineInstr &target);
 
-  /**
-  * Determine whether the target loop has a large number of instructions.
-  *
-  * \param[in] L MachineLoop
-  * \param[in] Opt ScheduleOption
-  * \retval true  The loop satisfies the following conditions.
-  *                        1.The number of instructions in the loop is greater than the maximum number
-  *                        2.The number of memory reference/update instructions is greater than the maximum value
-  * \retval false The loop is SWPL applied and not suppressed
-  */
-  static bool isTooManyNumOfInstruction(MachineLoop &L);
-
 private:
   /**
    * \brief scheduleLoop
@@ -1097,12 +1085,6 @@ private:
    * \retval false Swpl最適化を適用しなかった。
    */
   bool scheduleLoop(MachineLoop &L);
-
-  bool isNonMostInnerLoopMBB(MachineLoop &L);
-
-  bool isNonScheduleInstr(MachineLoop &L);
-
-  bool isNonNormalizeLoop(MachineLoop &L);
 
   /**
    * \brief shouldOptimize
@@ -1119,6 +1101,14 @@ private:
    *        Target loop determination
    */
   TargetInfo isTargetLoops(MachineLoop &L, const Loop *BBLoop);
+
+  bool isTooManyNumOfInstruction(const MachineLoop &L) const;
+
+  bool isNonMostInnerLoopMBB(const MachineLoop &L) const;
+
+  bool isNonScheduleInstr(const MachineLoop &L) const;
+
+  bool isNonNormalizeLoop(const MachineLoop &L) const;
 };
 
 /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の行
