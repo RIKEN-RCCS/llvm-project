@@ -387,6 +387,10 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     return Changed;
   }
 
+  if (target_level != TargetInfo::SWP_Target) {
+    return Changed;
+  }
+
   loop_number++;
   SwplScr swplScr(L);
   SwplScr::UseMap liveOutReg;
