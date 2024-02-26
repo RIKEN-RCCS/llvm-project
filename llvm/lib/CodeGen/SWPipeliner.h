@@ -1109,6 +1109,8 @@ private:
   bool isNonScheduleInstr(const MachineLoop &L) const;
 
   bool isNonNormalizeLoop(const MachineLoop &L) const;
+
+  bool software_pipeliner(MachineLoop &L, const Loop *BBLoop);
 };
 
 /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の行

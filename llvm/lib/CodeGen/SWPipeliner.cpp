@@ -310,89 +310,8 @@ bool SWPipeliner::isNonNormalizeLoop(const MachineLoop &L) const {
   return false;
 }
 
-SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L,  const Loop *BBLoop) {
-  // If the self-loop is not the innermost, it will not be processed.
-  if (L.getSubLoops().size() != 0) {
-    return TargetInfo::SWP_LS_NO_Target;
-  }
-
-  // SWPL target loop determination
-  bool target_swpl = false;
-  // LocalScheduler target loop determination
-  bool target_ls = llvm::enableLS();
-
-  if (DisableSwpl) {
-    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by local option. ", L);
-    if (!target_swpl) {
-      return TargetInfo::SWP_LS_NO_Target;
-    }
-  }
-
-  if (!enableSWP(BBLoop, false)) {
-    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
-    if (!target_ls) {
-      return TargetInfo::SWP_LS_NO_Target;
-    }
-  } else {
-    target_swpl = true;
-  }
-
-  if (!target_ls && !target_swpl) {
-    return TargetInfo::SWP_LS_NO_Target;
-  } 
-
-  if (isNonScheduleInstr(L)) {
-    return TargetInfo::SWP_LS_NO_Target;
-  }
-
-  if (isNonMostInnerLoopMBB(L)) {
-    return (target_ls ? TargetInfo::LS1_Target : TargetInfo::SWP_LS_NO_Target);
-  }
-
-  if (isNonNormalizeLoop(L)) {
-    return (target_ls ? TargetInfo::LS2_Target : TargetInfo::SWP_LS_NO_Target);
-  } 
-  
-  if (isTooManyNumOfInstruction(L)) {
-    return (target_ls ? TargetInfo::LS3_Target : TargetInfo::SWP_LS_NO_Target);
-  }
-
-  if (!target_swpl) {
-    return TargetInfo::LS3_Target;
-  }
-
-  if (!TII->canPipelineLoop(L)) {
-    printDebug(__func__, "!!! Can not pipeline loop.", L);
-    remarkMissed("Failed to pipeline loop", L);
-
-    return TargetInfo::SWP_LS_NO_Target;
-  }
-  return TargetInfo::SWP_Target;
-}
-
-bool SWPipeliner::scheduleLoop(MachineLoop &L) {
+bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
   bool Changed = false;
-  Reason = "";
-  MachineBasicBlock *MBB = L.getTopBlock();
-  const BasicBlock *BB = MBB->getBasicBlock();
-  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  const Loop *BBLoop = LI->getLoopFor(BB);
-
-  for (auto &InnerLoop : L)
-    Changed |= scheduleLoop(*InnerLoop);
-
-  auto target_level = isTargetLoops(L, BBLoop);
-
-  if (target_level == TargetInfo::SWP_LS_NO_Target) {
-    return Changed;
-  }
-
-  // @todo: This process is added because the LS function is not implemented.
-  // Must be removed as soon as LS functionality is implemented.
-  if (target_level != TargetInfo::SWP_Target) {
-    return Changed;
-  }
-
   loop_number++;
   SwplScr swplScr(L);
   SwplScr::UseMap liveOutReg;
@@ -409,7 +328,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     }
     delete currentLoop;
     currentLoop = nullptr;
-    return Changed;
+    return false;
   }
   bool Nodep = false;
   if (enableNodep(BBLoop) && enableSWP(BBLoop, false)){
@@ -515,6 +434,92 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   SwplDdg::destroy(ddg);
   delete currentLoop;
   currentLoop = nullptr;
+
+  return Changed;
+}
+
+SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *BBLoop) {
+  // If the self-loop is not the innermost, it will not be processed.
+  if (L.getSubLoops().size() != 0) {
+    return TargetInfo::SWP_LS_NO_Target;
+  }
+
+  // SWPL target loop determination
+  bool target_swpl = false;
+  // LocalScheduler target loop determination
+  bool target_ls = llvm::enableLS();
+
+  if (DisableSwpl) {
+    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by local option. ", L);
+    if (!target_swpl) {
+      return TargetInfo::SWP_LS_NO_Target;
+    }
+  }
+
+  if (!enableSWP(BBLoop, false)) {
+    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
+    if (!target_ls) {
+      return TargetInfo::SWP_LS_NO_Target;
+    }
+  } else {
+    target_swpl = true;
+  }
+
+  if (!target_ls && !target_swpl) {
+    return TargetInfo::SWP_LS_NO_Target;
+  } 
+
+  if (isNonScheduleInstr(L)) {
+    return TargetInfo::SWP_LS_NO_Target;
+  }
+
+  if (isNonMostInnerLoopMBB(L)) {
+    return (target_ls ? TargetInfo::LS1_Target : TargetInfo::SWP_LS_NO_Target);
+  }
+
+  if (isNonNormalizeLoop(L)) {
+    return (target_ls ? TargetInfo::LS2_Target : TargetInfo::SWP_LS_NO_Target);
+  } 
+  
+  if (isTooManyNumOfInstruction(L)) {
+    return (target_ls || !target_swpl ? TargetInfo::LS3_Target : TargetInfo::SWP_LS_NO_Target);
+  }
+
+  if (!TII->canPipelineLoop(L)) {
+    printDebug(__func__, "!!! Can not pipeline loop.", L);
+    remarkMissed("Failed to pipeline loop", L);
+
+    return TargetInfo::SWP_LS_NO_Target;
+  }
+  return TargetInfo::SWP_Target;
+}
+
+bool SWPipeliner::scheduleLoop(MachineLoop &L) {
+  bool Changed = false;
+  Reason = "";
+  MachineBasicBlock *MBB = L.getTopBlock();
+  const BasicBlock *BB = MBB->getBasicBlock();
+  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  const Loop *BBLoop = LI->getLoopFor(BB);
+
+  for (auto &InnerLoop : L)
+    Changed |= scheduleLoop(*InnerLoop);
+
+  auto target_level = isTargetLoops(L, BBLoop);
+
+  if (target_level == TargetInfo::SWP_LS_NO_Target) {
+    return Changed;
+  }
+
+  // @todo: This process is added because the LS function is not implemented.
+  // Must be removed as soon as LS functionality is implemented.
+  if (target_level != TargetInfo::SWP_Target) {
+    return Changed;
+  }
+
+  if (target_level == TargetInfo::SWP_Target) {
+    Changed = software_pipeliner(L, BBLoop);
+  }
 
   return Changed;
 }
