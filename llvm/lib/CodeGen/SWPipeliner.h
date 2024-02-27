@@ -1112,14 +1112,15 @@ private:
 
   /**
    * \brief software_pipeliner
-   *        Swpl最適化を実施する。
-   *        ・データ抽出
-   *        ・スケジューリング
-   *        ・スケジューリング結果反映
+   *        Perform Swpl optimization.
+   *        ・Data extraction
+   *        ・scheduling
+   *        ・Scheduling results reflected
    *
-   * \param[in] L 対象のMachineLoop
-   * \retval true  Swpl最適化対象指示がある
-   * \retval false Swpl最適化対象指示がない。もしくは最適化抑止指示がある。
+   * \param[in] L Target MachineLoop
+   * \param[in] BBLoop Target BasicBlock
+   * \retval true  SWPL applicable
+   * \retval false SWPL not applicable
    */
   bool software_pipeliner(MachineLoop &L, const Loop *BBLoop);
 };
