@@ -1110,6 +1110,17 @@ private:
 
   bool isNonNormalizeLoop(const MachineLoop &L) const;
 
+  /**
+   * \brief software_pipeliner
+   *        Swpl最適化を実施する。
+   *        ・データ抽出
+   *        ・スケジューリング
+   *        ・スケジューリング結果反映
+   *
+   * \param[in] L 対象のMachineLoop
+   * \retval true  Swpl最適化対象指示がある
+   * \retval false Swpl最適化対象指示がない。もしくは最適化抑止指示がある。
+   */
   bool software_pipeliner(MachineLoop &L, const Loop *BBLoop);
 };
 

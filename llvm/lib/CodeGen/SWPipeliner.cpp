@@ -353,10 +353,16 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *B
     return (target_ls ? TargetInfo::LS2_Target : TargetInfo::SWP_LS_NO_Target);
   } 
   
-  if (isTooManyNumOfInstruction(L)) {
-    return (target_ls || !target_swpl ? TargetInfo::LS3_Target : TargetInfo::SWP_LS_NO_Target);
+  if (!target_swpl) {
+    return TargetInfo::LS3_Target;
   }
 
+  if (isTooManyNumOfInstruction(L)) {
+    return TargetInfo::SWP_LS_NO_Target;
+  }
+
+  // @todo: It is left as the function to perform target judgment has not been created.
+  // Delete as soon as completed
   if (!TII->canPipelineLoop(L)) {
     printDebug(__func__, "!!! Can not pipeline loop.", L);
     remarkMissed("Failed to pipeline loop", L);
