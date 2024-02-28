@@ -323,7 +323,7 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *B
 
   if (DisableSwpl) {
     printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by local option. ", L);
-    if (!target_swpl) {
+    if (!target_ls) {
       return TargetInfo::SWP_LS_NO_Target;
     }
   }
@@ -336,10 +336,6 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *B
   } else {
     target_swpl = true;
   }
-
-  if (!target_ls && !target_swpl) {
-    return TargetInfo::SWP_LS_NO_Target;
-  } 
 
   if (isNonScheduleInstr(L)) {
     return TargetInfo::SWP_LS_NO_Target;
