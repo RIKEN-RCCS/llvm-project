@@ -496,15 +496,15 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
   return Changed;
 }
 
-bool SWPipeliner::localScheduler1(const MachineLoop &L) const {
+bool SWPipeliner::localScheduler1(const MachineLoop &L) {
   return false;
 }
 
-bool SWPipeliner::localScheduler2(const MachineLoop &L) const {
+bool SWPipeliner::localScheduler2(const MachineLoop &L) {
   return false;
 }
 
-bool SWPipeliner::localScheduler3(const MachineLoop &L) const {
+bool SWPipeliner::localScheduler3(const MachineLoop &L) {
   return false;
 }
 
@@ -528,11 +528,20 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   }
 
   switch(target_level) {
-    case TargetInfo::SWP_LS_NO_Target: return false;
-    case TargetInfo::SWP_Target: Changed |= software_pipeliner(L, BBLoop);break;
-    case TargetInfo::LS1_Target: Changed |= localScheduler1(L);break;
-    case TargetInfo::LS2_Target: Changed |= localScheduler2(L);break;
-    case TargetInfo::LS3_Target: Changed |= localScheduler3(L);break;
+    case TargetInfo::SWP_LS_NO_Target:
+      break;
+    case TargetInfo::SWP_Target:
+      Changed |= software_pipeliner(L, BBLoop);
+      break;
+    case TargetInfo::LS1_Target:
+      Changed |= localScheduler1(L);
+      break;
+    case TargetInfo::LS2_Target:
+      Changed |= localScheduler2(L);
+      break;
+    case TargetInfo::LS3_Target:
+      Changed |= localScheduler3(L);
+      break;
   }
 
   return Changed;
