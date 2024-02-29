@@ -1109,6 +1109,20 @@ private:
   bool isNonScheduleInstr(const MachineLoop &L) const;
 
   bool isNonNormalizeLoop(const MachineLoop &L) const;
+
+  /**
+   * \brief software_pipeliner
+   *        Perform Swpl optimization.
+   *        ・Data extraction
+   *        ・scheduling
+   *        ・Scheduling results reflected
+   *
+   * \param[in] L Target MachineLoop
+   * \param[in] BBLoop Target BasicBlock
+   * \retval true  SWPL applicable
+   * \retval false SWPL not applicable
+   */
+  bool software_pipeliner(MachineLoop &L, const Loop *BBLoop);
 };
 
 /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の行
