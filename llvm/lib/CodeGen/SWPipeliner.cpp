@@ -521,12 +521,6 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
 
   auto target_level = isTargetLoops(L, BBLoop);
 
-  // @todo: This process is added because the LS function is not implemented.
-  // Must be removed as soon as LS functionality is implemented.
-  if (target_level != TargetInfo::SWP_Target) {
-    return Changed;
-  }
-
   switch(target_level) {
     case TargetInfo::SWP_LS_NO_Target:
       break;
