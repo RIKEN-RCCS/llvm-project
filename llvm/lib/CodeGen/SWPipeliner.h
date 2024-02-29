@@ -1123,6 +1123,12 @@ private:
    * \retval false SWPL not applicable
    */
   bool software_pipeliner(MachineLoop &L, const Loop *BBLoop);
+
+  bool localScheduler1(const MachineLoop &L) const;
+
+  bool localScheduler2(const MachineLoop &L) const;
+
+  bool localScheduler3(const MachineLoop &L) const;
 };
 
 /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の行
