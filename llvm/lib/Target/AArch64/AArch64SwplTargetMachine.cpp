@@ -432,6 +432,57 @@ bool AArch64InstrInfo::canPipelineLoop(MachineLoop &L) const {
   return true;
 }
 
+bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
+    MachineBasicBlock *LoopBB = L.getTopBlock();
+
+  MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
+  MachineBasicBlock::iterator E = LoopBB->getFirstNonDebugInstr();
+  MachineInstr *BccMI = nullptr;
+  MachineInstr *CompMI = nullptr;
+
+  for (; I != E; --I) {
+    // Callである
+    if (I->isCall()) {
+      printDebug(__func__, "pipeliner info:found call", L);
+      outputRemarkMissed(L, MsgID_swpl_not_covered_inst);
+      return true;
+    }
+    // fenceもしくはgnuasm命令である
+    if (SWPipeliner::TII->isNonTargetMI4SWPL(*I)) {
+      printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
+      outputRemarkMissed(L, MsgID_swpl_not_covered_inst);
+      return true;
+    }
+    // volatile属性を含む命令である
+    for (MachineMemOperand *MMO : I->memoperands()) {
+      if (MMO->isVolatile()) {
+        printDebug(__func__, "pipeliner info:found volataile operand", L);
+        outputRemarkMissed(L, MsgID_swpl_not_covered_inst);
+        return true;
+      }
+    }
+    /* CCを更新する命令が複数出現した。 */
+    if (CompMI && hasRegisterImplicitDefOperand (&*I, AArch64::NZCV)) {
+      printDebug(__func__, "pipeliner info:multi-defoperand==NZCV", L);
+      outputRemarkMissed(L, MsgID_swpl_multiple_inst_update_CCR);
+      return true;
+    }
+    /* FPCRを更新する命令が出現した。 */
+    if (hasRegisterImplicitDefOperand (&*I, AArch64::FPCR)) {
+      printDebug(__func__, "pipeliner info:defoperand==FPCR", L);
+      outputRemarkMissed(L, MsgID_swpl_inst_update_FPCR);
+      return true;
+    }
+    /* CCを参照する命令が複数出現した。 */
+    if (BccMI && I->hasRegisterImplicitUseOperand(AArch64::NZCV)) {
+      printDebug(__func__, "pipeliner info:multi-refoperand==NZCV", L);
+      outputRemarkMissed(L, MsgID_swpl_multiple_inst_reference_CCR);
+      return true;
+    }  
+  }
+  return false;
+}
+
 int AArch64InstrInfo::calcEachRegIncrement(const SwplReg *r) const {
 //  SwplInst *def_inst = nullptr;
   const SwplInst *induction_inst = nullptr;

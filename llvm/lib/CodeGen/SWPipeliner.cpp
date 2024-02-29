@@ -303,7 +303,7 @@ bool SWPipeliner::isNonMostInnerLoopMBB(const MachineLoop &L) const {
 }
 
 bool SWPipeliner::isNonScheduleInstr(const MachineLoop &L) const {
-  return false;
+  return TII->isNonScheduleInstr(L);
 }
 
 bool SWPipeliner::isNonNormalizeLoop(const MachineLoop &L) const {
