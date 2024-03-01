@@ -322,14 +322,14 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *B
   bool target_ls = llvm::enableLS();
 
   if (DisableSwpl) {
-    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by local option. ", L);
+    printDebug(__func__, "Specified Swpl disable by local option. ", L);
     if (!target_ls) {
       return TargetInfo::SWP_LS_NO_Target;
     }
   }
 
   if (!enableSWP(BBLoop, false)) {
-    printDebug(__func__, "[canPipelineLoop:NG] Specified Swpl disable by option/pragma. ", L);
+    printDebug(__func__, "Specified Swpl disable by option/pragma. ", L);
     if (!target_ls) {
       return TargetInfo::SWP_LS_NO_Target;
     }
@@ -496,6 +496,18 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
   return Changed;
 }
 
+bool SWPipeliner::localScheduler1(const MachineLoop &L) {
+  return false;
+}
+
+bool SWPipeliner::localScheduler2(const MachineLoop &L) {
+  return false;
+}
+
+bool SWPipeliner::localScheduler3(const MachineLoop &L) {
+  return false;
+}
+
 bool SWPipeliner::scheduleLoop(MachineLoop &L) {
   bool Changed = false;
   Reason = "";
@@ -509,18 +521,21 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
 
   auto target_level = isTargetLoops(L, BBLoop);
 
-  if (target_level == TargetInfo::SWP_LS_NO_Target) {
-    return Changed;
-  }
-
-  // @todo: This process is added because the LS function is not implemented.
-  // Must be removed as soon as LS functionality is implemented.
-  if (target_level != TargetInfo::SWP_Target) {
-    return Changed;
-  }
-
-  if (target_level == TargetInfo::SWP_Target) {
-    Changed |= software_pipeliner(L, BBLoop);
+  switch(target_level) {
+    case TargetInfo::SWP_LS_NO_Target:
+      break;
+    case TargetInfo::SWP_Target:
+      Changed |= software_pipeliner(L, BBLoop);
+      break;
+    case TargetInfo::LS1_Target:
+      Changed |= localScheduler1(L);
+      break;
+    case TargetInfo::LS2_Target:
+      Changed |= localScheduler2(L);
+      break;
+    case TargetInfo::LS3_Target:
+      Changed |= localScheduler3(L);
+      break;
   }
 
   return Changed;
