@@ -1111,6 +1111,15 @@ private:
   bool isNonNormalizeLoop(const MachineLoop &L) const;
 
   /**
+   * \brief outputRemarkMissed
+   *        Output of messages not subject to scheduling      
+   *
+   * \param[in] is_swpl Specify output of messages not covered by SWPL
+   * \param[in] is_ls Specify output of messages not covered by LS
+   */
+  void outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop &L);
+
+  /**
    * \brief software_pipeliner
    *        Perform Swpl optimization.
    *        ・Data extraction
