@@ -1104,11 +1104,19 @@ private:
 
   bool isTooManyNumOfInstruction(const MachineLoop &L) const;
 
-  bool isNonMostInnerLoopMBB(const MachineLoop &L) const;
-
   bool isNonScheduleInstr(const MachineLoop &L) const;
 
   bool isNonNormalizeLoop(const MachineLoop &L) const;
+
+  /**
+   * Determine if the target loop is not the innermost loop.
+   *
+   * \param[in] L MachineLoop
+   * \param[in] Opt ScheduleOption
+   * \retval true  The loop is not the innermost or there is more than one BasicBlock
+   * \retval false The loop is the innermost and has one BasicBlock
+   */
+  bool isNonMostInnerLoopMBB(const MachineLoop &L) const;
 
   /**
    * \brief software_pipeliner

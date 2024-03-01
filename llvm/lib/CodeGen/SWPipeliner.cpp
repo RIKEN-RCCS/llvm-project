@@ -299,6 +299,12 @@ bool SWPipeliner::isTooManyNumOfInstruction(const MachineLoop &L) const {
 }
 
 bool SWPipeliner::isNonMostInnerLoopMBB(const MachineLoop &L) const {
+  // ループ内のBasicBlockが一つではない場合は最適化抑止
+  if (L.getNumBlocks() != 1) {
+    printDebug(__func__, "[canPipelineLoop:NG] Not a single basic block. ", L);
+    printDebug(__func__, "This loop cannot be software pipelined because the shape of the loop is not covered by software pipelining.", L);
+    return true;
+  }
   return false;
 }
 
