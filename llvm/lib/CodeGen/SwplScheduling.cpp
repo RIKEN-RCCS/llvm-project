@@ -4332,9 +4332,11 @@ SwplPlan* SwplPlan::generateLsPlan(const LsDdg& lsddg)
   lsplan->prolog_cycles=0;
   lsplan->kernel_cycles=total_cycles;
   lsplan->epilog_cycles=0;
-  lsplan->num_max_freg=32;
-  lsplan->num_max_ireg=29;
-  lsplan->num_max_preg=8;
+  auto *rk=SWPipeliner::TII->getRegKind(*SWPipeliner::MRI);
+  lsplan->num_max_freg =  (OptionMaxFreg > 0) ? OptionMaxFreg : rk->getNumFloatReg();
+  lsplan->num_max_ireg = (OptionMaxIreg > 0) ? OptionMaxIreg : rk->getNumIntReg();
+  lsplan->num_max_preg = (OptionMaxPreg > 0) ? OptionMaxPreg : rk->getNumPredicateReg();
+  delete rk;
   lsplan->num_necessary_freg=10;
   lsplan->num_necessary_ireg=10;
   lsplan->num_necessary_preg=1;
