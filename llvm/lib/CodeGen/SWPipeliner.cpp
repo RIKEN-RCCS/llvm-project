@@ -43,12 +43,13 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-swpipeliner"
 
 static cl::opt<bool> OptionDumpPlan("swpl-debug-dump-plan",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> OptionDumpLsPlan("ls-debug-dump-plan", cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableSwpl("swpl-disable",cl::init(false), cl::ReallyHidden);
 
 
 static cl::opt<bool> DebugOutput("swpl-debug",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DebugDdgOutput("swpl-debug-ddg",cl::init(false), cl::ReallyHidden);
-static cl::opt<bool> LsDebugDumpDdg("ls-debug-dump-ddg", cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> DebugDumpLsDdg("ls-debug-dump-ddg", cl::init(false), cl::ReallyHidden);
 
 static cl::opt<unsigned> OptionMinIIBase("swpl-minii",cl::init(0), cl::ReallyHidden);
 static cl::opt<unsigned> OptionMaxIIBase("swpl-maxii",cl::init(0), cl::ReallyHidden);
@@ -438,37 +439,18 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     
     // Convert DDG
     LsDdg *lsddg = LsDdg::convertDdgForLS(ddg);
-    if (LsDebugDumpDdg) {
+    if (DebugDumpLsDdg) {
       lsddg->print();
     }
-    LsDdg::destroy(lsddg);
+    SwplPlan* lsplan = SwplPlan::generateLsPlan(*lsddg);
 
-    SwplPlan p(*currentLoop);
-
-    // begin create dummy plan
-    p.slots.resize(currentLoop->getSizeBodyInsts());
-    for (int i=0, e=currentLoop->getSizeBodyInsts(); i<e; i++) {
-      p.slots[i]=(i+1)*8;
+    if ( OptionDumpLsPlan ) {
+      lsplan->dump( dbgs() );
     }
-    p.iteration_interval=p.slots.size();
-    p.n_iteration_copies=1;
-    p.n_renaming_versions=1;
-    p.begin_slot=8;
-    p.end_slot=p.slots.size()*8+8;
-    p.total_cycles=p.iteration_interval;
-    p.prolog_cycles=0;
-    p.kernel_cycles=p.total_cycles;
-    p.epilog_cycles=0;
-    p.num_max_freg=32;
-    p.num_max_ireg=29;
-    p.num_max_preg=8;
-    p.num_necessary_freg=10;
-    p.num_necessary_ireg=10;
-    p.num_necessary_preg=1;
-    // end create dummy plan
 
-    SwplTransformMIR tran(*MF, p, liveOutReg);
+    SwplTransformMIR tran(*MF, *lsplan, liveOutReg);
     tran.transformMIR4LS();
+    LsDdg::destroy(lsddg);
     Changed = true;
   }
 
