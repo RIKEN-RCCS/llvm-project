@@ -1,5 +1,4 @@
 ; RUN: llc < %s -mcpu=a64fx -swpl-debug -O1 --pass-remarks-missed=aarch64-swpipeliner --pass-remarks-filter=aarch64-swpipeliner --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck --allow-empty %s
-;CHECK: canPipelineLoop:NG
 ;CHECK: Specified Swpl disable by option/pragma.
 
 ; ModuleID = '2912.c'

@@ -1075,25 +1075,25 @@ public:
 private:
   /**
    * \brief scheduleLoop
-   *        Swpl最適化を実施する。
-   *        ・対象ループ判定
-   *        ・データ抽出
-   *        ・スケジューリング
-   *        ・スケジューリング結果反映
+   *        Perform Swpl optimization.
+   *        ・Target loop determination
+   *        ・Data extraction
+   *        ・scheduling
+   *        ・Scheduling results reflected
    *
-   * \param[in] L 対象のMachineLoop
-   * \retval true  Swpl最適化を適用した。
-   * \retval false Swpl最適化を適用しなかった。
+   * \param[in] L Target MachineLoop
+   * \retval true  Swpl optimization was applied.
+   * \retval false Swpl optimization was not applied.
    */
   bool scheduleLoop(MachineLoop &L);
 
   /**
    * \brief shouldOptimize
-   *        対象のループに対するSwpl最適化指示を判定する。
+   *        Determine the Swpl optimization instructions for the target loop.
    *
-   * \param[in] L 対象のMachineLoop
-   * \retval true  Swpl最適化対象指示がある
-   * \retval false Swpl最適化対象指示がない。もしくは最適化抑止指示がある。
+   * \param[in] L Target MachineLoop
+   * \retval true  Swpl optimization target instruction
+   * \retval false Swpl optimization target instruction or optimization suppression instruction
    */
   bool shouldOptimize(const Loop *BBLoop);
 
@@ -1102,6 +1102,34 @@ private:
    *        Target loop determination
    */
   TargetInfo isTargetLoops(MachineLoop &L, const Loop *BBLoop);
+
+  bool isTooManyNumOfInstruction(const MachineLoop &L) const;
+
+  bool isNonMostInnerLoopMBB(const MachineLoop &L) const;
+
+  bool isNonScheduleInstr(const MachineLoop &L) const;
+
+  bool isNonNormalizeLoop(const MachineLoop &L) const;
+
+  /**
+   * \brief software_pipeliner
+   *        Perform Swpl optimization.
+   *        ・Data extraction
+   *        ・scheduling
+   *        ・Scheduling results reflected
+   *
+   * \param[in] L Target MachineLoop
+   * \param[in] BBLoop Target BasicBlock
+   * \retval true  SWPL applicable
+   * \retval false SWPL not applicable
+   */
+  bool software_pipeliner(MachineLoop &L, const Loop *BBLoop);
+
+  bool localScheduler1(const MachineLoop &L);
+
+  bool localScheduler2(const MachineLoop &L);
+
+  bool localScheduler3(const MachineLoop &L);
 };
 
 /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の行
