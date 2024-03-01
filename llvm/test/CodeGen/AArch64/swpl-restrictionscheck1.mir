@@ -1,5 +1,5 @@
 #  RUN: llc -o /dev/null -mcpu=a64fx -swpl-disable-restrictions-check=0 -O1 %s -pass-remarks-missed=aarch64-swpipeliner -swpl-disable-convert-prepost -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner -fswp 2>&1 | FileCheck %s
-# CHECK: remark: <unknown>:0:0: This loop cannot be software pipelined because the shape of the loop is not covered by software pipelining.
+# CHECK: remark: <unknown>:0:0: This loop cannot be software pipelined because the shape of the loop is not covered.
 # CHECK: remark: <unknown>:0:0: SWPL is not performed because a restriction is detected. MI:early-clobber %95:gpr64sp, %96:fpr64 = LDRDpost %90:gpr64sp(tied-def 0), 8 :: (load (s64) from %ir.lsr.iv54, !tbaa !6)
 
 --- |
