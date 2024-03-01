@@ -61,7 +61,7 @@ tag:swpl-2023-1-llvm17_tag_20231222
       ログインノード上でリンクまで行い実行ファイルを生成するときは以下のオプションを付け加えてください。
 
       ```
-      fuse-ld=lld --sysroot=/opt/FJSVxos/devkit/aarch64/rfs
+      -fuse-ld=lld --sysroot=/opt/FJSVxos/devkit/aarch64/rfs
       ```
 
 ## MaxIIおよびbudgetの調整について
