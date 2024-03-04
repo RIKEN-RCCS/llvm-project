@@ -2248,6 +2248,18 @@ public:
   virtual bool canPipelineLoop(MachineLoop &L) const {
     return false;
   }
+
+  /**
+   * Determine if the target loop contains instructions that are not covered by SWPL, LS.
+   *
+   * \param[in] L MachineLoop
+   * \retval true  The loop contains instructions that are not covered by SWPL, LS
+   * \retval false The loop does not contain instructions that are not covered by SWPL, LS
+   */
+  virtual bool isNonScheduleInstr(MachineLoop &L) const {
+    return false;
+  }
+
   /// Calculate incremental value
   /// \return incremental value
   virtual int calcEachRegIncrement(const SwplReg *r) const {
