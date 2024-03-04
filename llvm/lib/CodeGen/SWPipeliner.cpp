@@ -310,7 +310,7 @@ bool SWPipeliner::isNonNormalizeLoop(const MachineLoop &L) const {
   return false;
 }
 
-void SWPipeliner::outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop &L) {
+void SWPipeliner::outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop &L) const {
   std::string swpl_msg = "This loop cannot be software pipelined";
   std::string ls_msg = "This loop cannot be local scheduled";
   
@@ -391,7 +391,6 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *B
   // Delete as soon as completed
   if (!TII->canPipelineLoop(L)) {
     printDebug(__func__, "!!! Can not pipeline loop.", L);
-    //remarkMissed("Failed to pipeline loop", L);
     return TargetInfo::SWP_LS_NO_Target;
   }
   return TargetInfo::SWP_Target;

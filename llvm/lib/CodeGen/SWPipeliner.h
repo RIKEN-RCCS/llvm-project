@@ -1116,8 +1116,9 @@ private:
    *
    * \param[in] is_swpl Specify output of messages not covered by SWPL
    * \param[in] is_ls Specify output of messages not covered by LS
+   * \param[in] L Target MachineLoop
    */
-  void outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop &L);
+  void outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop &L) const;
 
   /**
    * \brief software_pipeliner
