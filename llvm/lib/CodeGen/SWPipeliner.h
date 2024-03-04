@@ -1106,7 +1106,7 @@ private:
 
   bool isNonMostInnerLoopMBB(const MachineLoop &L) const;
 
-  bool isNonScheduleInstr(const MachineLoop &L) const;
+  bool isNonScheduleInstr(MachineLoop &L) const;
 
   bool isNonNormalizeLoop(const MachineLoop &L) const;
 
