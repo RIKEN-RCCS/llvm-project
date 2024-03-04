@@ -436,39 +436,39 @@ bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
     // Call
     if (I->isCall()) {
       printDebug(__func__, "pipeliner info:found call", L);
-      outputRemarkMissed(L, MsgID_swpl_not_covered_inst);
+      setRemarkMissedReason(MsgID_swpl_not_covered_inst);
       return true;
     }
     // fence or gnuasm command
     if (SWPipeliner::TII->isNonTargetMI4SWPL(*I)) {
       printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
-      outputRemarkMissed(L, MsgID_swpl_not_covered_inst);
+      setRemarkMissedReason(MsgID_swpl_not_covered_inst);
       return true;
     }
     // an instruction that includes volatile attribute
     for (MachineMemOperand *MMO : I->memoperands()) {
       if (MMO->isVolatile()) {
         printDebug(__func__, "pipeliner info:found volataile operand", L);
-        outputRemarkMissed(L, MsgID_swpl_not_covered_inst);
+        setRemarkMissedReason(MsgID_swpl_not_covered_inst);
         return true;
       }
     }
     /* Multiple instructions to update CC appeared */
     if (CompMI && hasRegisterImplicitDefOperand (&*I, AArch64::NZCV)) {
       printDebug(__func__, "pipeliner info:multi-defoperand==NZCV", L);
-      outputRemarkMissed(L, MsgID_swpl_multiple_inst_update_CCR);
+      setRemarkMissedReason(MsgID_swpl_multiple_inst_update_CCR);
       return true;
     }
     /* An instruction to update the FPCR has appeared */
     if (hasRegisterImplicitDefOperand (&*I, AArch64::FPCR)) {
       printDebug(__func__, "pipeliner info:defoperand==FPCR", L);
-      outputRemarkMissed(L, MsgID_swpl_inst_update_FPCR);
+      setRemarkMissedReason(MsgID_swpl_inst_update_FPCR);
       return true;
     }
     /* Multiple instructions that reference CC appeared */
     if (BccMI && I->hasRegisterImplicitUseOperand(AArch64::NZCV)) {
       printDebug(__func__, "pipeliner info:multi-refoperand==NZCV", L);
-      outputRemarkMissed(L, MsgID_swpl_multiple_inst_reference_CCR);
+      setRemarkMissedReason(MsgID_swpl_multiple_inst_reference_CCR);
       return true;
     }  
   }
