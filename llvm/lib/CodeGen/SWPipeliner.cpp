@@ -1198,7 +1198,7 @@ static cl::opt<bool> SwplDebugDumpDdg("swpl-debug-dump-ddg",cl::init(false), cl:
 static cl::opt<bool> EnableInstDep("swpl-enable-instdep",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableRegDep4tied("swpl-disable-regdep-4-tied",cl::init(false), cl::ReallyHidden);
 
-static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplInst &latter_inst, int distance, int delay);
+static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplInst &latter_inst, int distance, int delay, const SwplReg* reg);
 
 SwplDdg *SwplDdg::Initialize (SwplLoop &loop, bool Nodep) {
   SwplDdg *ddg = new SwplDdg(loop);
@@ -1389,7 +1389,7 @@ void SwplDdg::analysisInstDependence() {
                  << " delay:" << 1 << "\n";
         }
 
-        update_distance_and_delay(*this, *p, *q, 0, 1);
+        update_distance_and_delay(*this, *p, *q, 0, 1, nullptr);
       }
     }
   }
@@ -1454,7 +1454,7 @@ void SwplDdg::analysisRegDependence_for_tieddef() {
                  << " distance:" << distance << "\n"
                  << " delay:" << delay << "\n";
         }
-        update_distance_and_delay(*this, *p, *COPY, distance, delay);
+        update_distance_and_delay(*this, *p, *COPY, distance, delay, def_op);
       }
     }
   }
@@ -1481,7 +1481,7 @@ void SwplDdg::analysisRegsFlowDependence() {
                << " distance:" << distance << "\n"
                << " delay:" << delay << "\n";
       }
-      update_distance_and_delay(*this, *def_inst, *use_inst, distance, delay);
+      update_distance_and_delay(*this, *def_inst, *use_inst, distance, delay, reg);
     }
   }
 }
@@ -1513,7 +1513,7 @@ void SwplDdg::analysisRegsAntiDependence() {
                  << " distance:" << distance << "\n"
                  << " delay:" << delay << "\n";
         }
-        update_distance_and_delay(*this, *use_inst, *def_inst, distance, delay);
+        update_distance_and_delay(*this, *use_inst, *def_inst, distance, delay, reg);
       }
     }
   }
@@ -1545,7 +1545,7 @@ void SwplDdg::analysisRegsOutputDependence() {
                << " distance:" << distance << "\n"
                << " delay:" << delay << "\n";
       }
-      update_distance_and_delay(*this, *pred_def_inst, *def_inst, distance, delay);
+      update_distance_and_delay(*this, *pred_def_inst, *def_inst, distance, delay, reg);
     }
   }
 }
@@ -1642,7 +1642,7 @@ void SwplDdg::analysisMemDependence() {
         << " delay:" << delay << "\n";
       }
 
-      update_distance_and_delay(*this, *(former_mem->getInst()), *(latter_mem->getInst()), distance, delay);
+      update_distance_and_delay(*this, *(former_mem->getInst()), *(latter_mem->getInst()), distance, delay, nullptr);
     }
   }
 
@@ -1653,7 +1653,7 @@ void SwplDdg::analysisMemDependence() {
 /// \param [in] latter_inst SwplInst 後続の命令のSwplInst
 /// \param [in] distance    int      命令間で依存が問題にならない範囲の回転の数      
 /// \param [in] delay       int      命令間であける必要があるcycle数
-static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplInst &latter_inst, int distance, int delay) {
+static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplInst &latter_inst, int distance, int delay, const SwplReg* reg) {
   SwplInstGraph *graph = ddg.getGraph();
   SwplInstEdge *edge = graph->findEdge(former_inst, latter_inst);
 
@@ -1663,8 +1663,10 @@ static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplI
 
   auto &distances = ddg.getDistancesFor(*edge);
   auto &delays = ddg.getDelaysFor(*edge);
+  auto &regs = ddg.getRegFor(*edge);
   distances.push_back(distance);
   delays.push_back(delay);
+  regs.push_back(reg);
 }
 
 /// 命令の依存グラフ情報の SwplInstGraph::Edges 単位でModuloDelayMap情報を収集する。
@@ -1714,14 +1716,22 @@ void SwplDdg::print() const {
     dbgs() << "### SwplEdge: " << edge << "\n";
     dbgs() << "### from: " << *leading_inst->getMI() ;
     dbgs() << "### to  : " << *trailing_inst->getMI();
-    std::vector<unsigned> distances = getDistancesFor(*edge);
-    std::vector<int> delays = getDelaysFor(*edge);
+    auto& distances = getDistancesFor(*edge);
+    auto& delays = getDelaysFor(*edge);
+    auto& regs = getRegFor(*edge);
 
     auto distance = distances.begin();
     auto delay = delays.begin();
+    auto reg = regs.begin();
     auto distance_end = distances.end();
-    for(  ; distance != distance_end ; ++distance, ++delay) {
-      dbgs() << "### distance:" << *distance << " delay:" << *delay << "\n";
+    for(  ; distance != distance_end ; ++distance, ++delay, ++reg) {
+      dbgs() << "### distance:" << *distance << " delay:" << *delay;
+        if (*reg) {
+          dbgs() << " dep:reg(" << printReg((*reg)->getReg(), SWPipeliner::TRI) <<") regkind:" << (*reg)->getKind() << "\n";
+        } else {
+          dbgs() << " dep:memory\n";
+
+      }
     }  
     dbgs() << "\n";
   }
@@ -1869,14 +1879,16 @@ void LsDdg::addEdgeNoDistance(SwplDdg *swplddg) {
     SwplInst *former_inst = const_cast<SwplInst *>(edge->getInitial());
     SwplInst *latter_inst = const_cast<SwplInst *>(edge->getTerminal());
 
-    std::vector<unsigned> distances = swplddg->getDistancesFor(*edge);
-    std::vector<int> delays = swplddg->getDelaysFor(*edge);
+    auto &distances = swplddg->getDistancesFor(*edge);
+    auto &delays = swplddg->getDelaysFor(*edge);
+    auto &regs = swplddg->getRegFor(*edge);
     auto distance = distances.begin();
     auto distance_end = distances.end();
     auto delay = delays.begin();
-    for (; distance != distance_end; ++distance, ++delay) {
+    auto reg = regs.begin();
+    for (; distance != distance_end; ++distance, ++delay, ++reg) {
       if (*distance == 0) {
-        addEdge(*former_inst, *latter_inst, *delay);
+        addEdge(*former_inst, *latter_inst, *delay, *reg);
       }
     }
   }
@@ -1885,18 +1897,18 @@ void LsDdg::addEdgeNoDistance(SwplDdg *swplddg) {
 void LsDdg::addEdgeRegsAntiDependences(SwplInsts &insts) {
   SwplInstGraph *graph = getGraph();
   for (unsigned i = 0; i < insts.size() - 1; i++) {
-    auto former_inst = insts[i];
-    auto uses = former_inst->getUseRegs();
+    auto *former_inst = insts[i];
+    auto &uses = former_inst->getUseRegs();
     for (unsigned j = i + 1; j < insts.size(); j++) {
-      auto latter_inst = insts[j];
-      auto defs = latter_inst->getDefRegs();
+      auto *latter_inst = insts[j];
+      auto &defs = latter_inst->getDefRegs();
       SwplInstEdge *edge = graph->findEdge(*former_inst, *latter_inst);
       if (edge != nullptr) continue;
       for (auto *use : uses) {
         auto use_reg = use->getReg();
         for (auto *def : defs) {
           if (use_reg == def->getReg()) {
-            addEdge(*former_inst, *latter_inst, 1);
+            addEdge(*former_inst, *latter_inst, 1, def);
           }
         }
       }
@@ -1918,11 +1930,17 @@ void LsDdg::print() const {
     const SwplInst *leading_inst = edge->getInitial();
     const SwplInst *trailing_inst = edge->getTerminal();
     auto delay = getDelay(*edge);
+    auto *reg = getReg(*edge);
 
     dbgs() << "### SwplEdge: " << edge << "\n";
     dbgs() << "### from: " << *leading_inst->getMI();
     dbgs() << "### to  : " << *trailing_inst->getMI();
-    dbgs() << "### distance:" << 0 << " delay:" << delay << "\n";
+    dbgs() << "### distance:" << 0 << " delay:" << delay;
+    if (reg) {
+      dbgs() << " dep:reg(" << printReg(reg->getReg(), SWPipeliner::TRI) <<") regkind:" << reg->getKind() << "\n";
+    } else {
+      dbgs() << " dep:memory\n";
+    }
     dbgs() << "\n";
 
     edge_less.erase(leading_inst);
@@ -1936,7 +1954,7 @@ void LsDdg::print() const {
   }
 }
 
-void LsDdg::addEdge(SwplInst &former_inst, SwplInst &latter_inst, const int delay) {
+void LsDdg::addEdge(SwplInst &former_inst, SwplInst &latter_inst, const int delay, const SwplReg* reg) {
   SwplInstGraph *graph = getGraph();
 
   // Check if an edge exists
@@ -1944,6 +1962,7 @@ void LsDdg::addEdge(SwplInst &former_inst, SwplInst &latter_inst, const int dela
   if (edge == nullptr) {
     edge = graph->createEdge(former_inst, latter_inst);
     setDelay(*edge, delay);
+    setReg(*edge, reg);
   } else {
     // Hold the one with the larger delay
     if (delay > getDelay(*edge)) {
