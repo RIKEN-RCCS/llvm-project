@@ -310,6 +310,36 @@ bool SWPipeliner::isNonNormalizeLoop(const MachineLoop &L) const {
   return false;
 }
 
+void SWPipeliner::outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop &L) const {
+  std::string swpl_msg = "This loop cannot be software pipelined";
+  std::string ls_msg = "This loop cannot be local scheduled";
+  
+  if (SWPipeliner::Reason.empty()) {
+    return;
+  }
+
+  if (is_swpl) {
+    swpl_msg += SWPipeliner::Reason;
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipleined",
+                                           L.getStartLoc(), L.getHeader())
+             << swpl_msg;
+    });
+  }
+
+  if (is_ls) {
+    ls_msg += SWPipeliner::Reason;
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipleined",
+                                           L.getStartLoc(), L.getHeader())
+             << ls_msg;
+    });
+  }
+
+  SWPipeliner::Reason = "";
+  return;
+}
+
 SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *BBLoop) {
   // If the self-loop is not the innermost, it will not be processed.
   if (L.getSubLoops().size() != 0) {
@@ -361,8 +391,6 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *B
   // Delete as soon as completed
   if (!TII->canPipelineLoop(L)) {
     printDebug(__func__, "!!! Can not pipeline loop.", L);
-    remarkMissed("Failed to pipeline loop", L);
-
     return TargetInfo::SWP_LS_NO_Target;
   }
   return TargetInfo::SWP_Target;
@@ -520,20 +548,32 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     Changed |= scheduleLoop(*InnerLoop);
 
   auto target_level = isTargetLoops(L, BBLoop);
+  auto target_swpl = enableSWP(BBLoop, false);
+  auto target_ls = enableLS();
+  if (DisableSwpl) {
+    target_swpl = false;
+  }
 
   switch(target_level) {
     case TargetInfo::SWP_LS_NO_Target:
+      outputRemarkMissed(target_swpl, target_ls, L);
       break;
     case TargetInfo::SWP_Target:
       Changed |= software_pipeliner(L, BBLoop);
       break;
     case TargetInfo::LS1_Target:
+      // @attention: To be corrected when LS1 is supported.
+      outputRemarkMissed(target_swpl, target_ls, L);
       Changed |= localScheduler1(L);
       break;
     case TargetInfo::LS2_Target:
+      // @attention: To be corrected when LS2 is supported.
+      outputRemarkMissed(target_swpl, target_ls, L);
       Changed |= localScheduler2(L);
       break;
     case TargetInfo::LS3_Target:
+      // @todo: To be corrected when LS3 is supported.
+      outputRemarkMissed(target_swpl, target_ls, L);
       Changed |= localScheduler3(L);
       break;
   }

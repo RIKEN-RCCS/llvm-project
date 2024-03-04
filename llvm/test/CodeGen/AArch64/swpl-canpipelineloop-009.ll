@@ -1,7 +1,7 @@
 ; RUN: llc < %s -O1 -mcpu=a64fx  -fswp  -swpl-max-mem-num=10  -swpl-debug  --pass-remarks-filter=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner  --pass-remarks-output=-  -o /dev/null 2>&1 | FileCheck %s
 ;CHECK:over mem limit num
 ;CHECK:canPipelineLoop:NG
-;CHECK:This loop is not software pipelined because the loop contains too many instructions accessing memory.
+;CHECK:This loop cannot be software pipelined because the loop contains too many instructions accessing memory.
 ; ModuleID = '2912_inst_l.c'
 source_filename = "2912_inst_l.c"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
