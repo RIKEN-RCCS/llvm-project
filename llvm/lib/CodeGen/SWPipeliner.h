@@ -1104,19 +1104,21 @@ private:
 
   bool isTooManyNumOfInstruction(const MachineLoop &L) const;
 
-  bool isNonScheduleInstr(const MachineLoop &L) const;
+  bool isNonMostInnerLoopMBB(const MachineLoop &L) const;
+
+  bool isNonScheduleInstr(MachineLoop &L) const;
 
   bool isNonNormalizeLoop(const MachineLoop &L) const;
 
   /**
-   * Determine if the target loop is not the innermost loop.
-   *
-   * \param[in] L MachineLoop
-   * \param[in] Opt ScheduleOption
-   * \retval true  The loop is not the innermost or there is more than one BasicBlock
-   * \retval false The loop is the innermost and has one BasicBlock
-   */
-  bool isNonMostInnerLoopMBB(const MachineLoop &L) const;
+   * \brief outputRemarkMissed
+   *        Output of messages not subject to scheduling      
+   *
+   * \param[in] is_swpl Specify output of messages not covered by SWPL
+   * \param[in] is_ls Specify output of messages not covered by LS
+   * \param[in] L Target MachineLoop
+   */
+  void outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop &L) const;
 
   /**
    * \brief software_pipeliner
