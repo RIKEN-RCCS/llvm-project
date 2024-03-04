@@ -424,6 +424,57 @@ bool AArch64InstrInfo::canPipelineLoop(MachineLoop &L) const {
   return true;
 }
 
+bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
+    MachineBasicBlock *LoopBB = L.getTopBlock();
+
+  MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
+  MachineBasicBlock::iterator E = LoopBB->getFirstNonDebugInstr();
+  MachineInstr *BccMI = nullptr;
+  MachineInstr *CompMI = nullptr;
+
+  for (; I != E; --I) {
+    // Call
+    if (I->isCall()) {
+      printDebug(__func__, "pipeliner info:found call", L);
+      setRemarkMissedReason(MsgID_swpl_not_covered_inst);
+      return true;
+    }
+    // fence or gnuasm command
+    if (SWPipeliner::TII->isNonTargetMI4SWPL(*I)) {
+      printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
+      setRemarkMissedReason(MsgID_swpl_not_covered_inst);
+      return true;
+    }
+    // an instruction that includes volatile attribute
+    for (MachineMemOperand *MMO : I->memoperands()) {
+      if (MMO->isVolatile()) {
+        printDebug(__func__, "pipeliner info:found volataile operand", L);
+        setRemarkMissedReason(MsgID_swpl_not_covered_inst);
+        return true;
+      }
+    }
+    /* Multiple instructions to update CC appeared */
+    if (CompMI && hasRegisterImplicitDefOperand (&*I, AArch64::NZCV)) {
+      printDebug(__func__, "pipeliner info:multi-defoperand==NZCV", L);
+      setRemarkMissedReason(MsgID_swpl_multiple_inst_update_CCR);
+      return true;
+    }
+    /* An instruction to update the FPCR has appeared */
+    if (hasRegisterImplicitDefOperand (&*I, AArch64::FPCR)) {
+      printDebug(__func__, "pipeliner info:defoperand==FPCR", L);
+      setRemarkMissedReason(MsgID_swpl_inst_update_FPCR);
+      return true;
+    }
+    /* Multiple instructions that reference CC appeared */
+    if (BccMI && I->hasRegisterImplicitUseOperand(AArch64::NZCV)) {
+      printDebug(__func__, "pipeliner info:multi-refoperand==NZCV", L);
+      setRemarkMissedReason(MsgID_swpl_multiple_inst_reference_CCR);
+      return true;
+    }  
+  }
+  return false;
+}
+
 int AArch64InstrInfo::calcEachRegIncrement(const SwplReg *r) const {
 //  SwplInst *def_inst = nullptr;
   const SwplInst *induction_inst = nullptr;
