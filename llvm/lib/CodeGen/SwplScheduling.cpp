@@ -43,7 +43,7 @@ static cl::opt<unsigned> OptionMaxPreg("swpl-max-preg",cl::init(0), cl::ReallyHi
 static cl::opt<bool> OptionDumpEveryInst("swpl-debug-dump-scheduling-every-inst",cl::init(false), cl::ReallyHidden);
 
 
-static cl::opt<bool> OptionEnableStageScheduling("swpl-enable-stagescheduling",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> OptionEnableStageScheduling("swpl-enable-stagescheduling",cl::init(true), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpSSProgress("swpl-debug-dump-ss-progress",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpSSProgressDetail("swpl-debug-dump-ss-progress-detail",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpCyclicRoots("swpl-debug-dump-ss-cyclicroots",cl::init(false), cl::ReallyHidden);
