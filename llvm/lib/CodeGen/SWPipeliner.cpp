@@ -562,12 +562,12 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
       Changed |= software_pipeliner(L, BBLoop);
       break;
     case TargetInfo::LS1_Target:
-      // @todo: To be corrected when LS1 is supported.
+      // @attention: To be corrected when LS1 is supported.
       outputRemarkMissed(target_swpl, target_ls, L);
       Changed |= localScheduler1(L);
       break;
     case TargetInfo::LS2_Target:
-      // @todo: To be corrected when LS2 is supported.
+      // @attention: To be corrected when LS2 is supported.
       outputRemarkMissed(target_swpl, target_ls, L);
       Changed |= localScheduler2(L);
       break;
