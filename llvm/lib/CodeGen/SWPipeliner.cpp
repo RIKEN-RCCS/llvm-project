@@ -1778,7 +1778,7 @@ void SwplDdg::print() const {
     for(  ; distance != distance_end ; ++distance, ++delay, ++reg) {
       dbgs() << "### distance:" << *distance << " delay:" << *delay;
         if (*reg) {
-          dbgs() << " dep:reg(" << printReg((*reg)->getReg(), SWPipeliner::TRI) <<") regkind:" << (*reg)->getKind() << "\n";
+          dbgs() << " dep:reg(" << printReg((*reg)->getReg(), SWPipeliner::TRI) <<":" << (*reg)->getKind() << ")\n";
         } else {
           dbgs() << " dep:memory\n";
 
@@ -1988,7 +1988,7 @@ void LsDdg::print() const {
     dbgs() << "### to  : " << *trailing_inst->getMI();
     dbgs() << "### distance:" << 0 << " delay:" << delay;
     if (reg) {
-      dbgs() << " dep:reg(" << printReg(reg->getReg(), SWPipeliner::TRI) <<") regkind:" << reg->getKind() << "\n";
+      dbgs() << " dep:reg(" << printReg(reg->getReg(), SWPipeliner::TRI) <<":" << reg->getKind() << ")\n";
     } else {
       dbgs() << " dep:memory\n";
     }

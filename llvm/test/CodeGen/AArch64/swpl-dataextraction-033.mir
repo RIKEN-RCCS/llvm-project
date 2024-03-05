@@ -1,112 +1,112 @@
 #RUN: llc %s -mcpu=a64fx -fswp -start-before=aarch64-swpipeliner -swpl-debug-dump-ddg -o /dev/null 2>&1 | FileCheck %s
 # CHECK:### from: %25:gpr64common = nuw nsw ADDXri %25:gpr64common, 4, 0
 # CHECK-NEXT:### to  : %27:gpr32 = LDRWroX %14:gpr64common, %25:gpr64common, 0, 0 :: (load (s32) from %ir.uglygep67, !tbaa !1)
-# CHECK-NEXT:### distance:1 delay:1
+# CHECK-NEXT:### distance:1 delay:1 dep:reg(%25:Int)
 
 
 # CHECK:### from: %27:gpr32 = LDRWroX %14:gpr64common, %25:gpr64common, 0, 0 :: (load (s32) from %ir.uglygep67, !tbaa !1)
 # CHECK-NEXT:### to  : %28:gpr32 = nsw MADDWrrr %9:gpr32, killed %27:gpr32, $wzr
-# CHECK-NEXT:### distance:0 delay:5
+# CHECK-NEXT:### distance:0 delay:5 dep:reg(%27:Int)
 
 
 # CHECK:### from: %25:gpr64common = nuw nsw ADDXri %25:gpr64common, 4, 0
 # CHECK-NEXT:### to  : %29:gpr64common = ADDXrr %17:gpr64common, %25:gpr64common
-# CHECK-NEXT:### distance:1 delay:1
+# CHECK-NEXT:### distance:1 delay:1 dep:reg(%25:Int)
 
 
 # CHECK:### from: %28:gpr32 = nsw MADDWrrr %9:gpr32, killed %27:gpr32, $wzr
 # CHECK-NEXT:### to  : STRWui killed %28:gpr32, %29:gpr64common, 0 :: (store (s32) into %ir.uglygep45, !tbaa !1)
-# CHECK-NEXT:### distance:0 delay:5
+# CHECK-NEXT:### distance:0 delay:5 dep:reg(%28:Int)
 
 
 # CHECK:### from: %29:gpr64common = ADDXrr %17:gpr64common, %25:gpr64common
 # CHECK-NEXT:### to  : STRWui killed %28:gpr32, %29:gpr64common, 0 :: (store (s32) into %ir.uglygep45, !tbaa !1)
-# CHECK-NEXT:### distance:0 delay:1
+# CHECK-NEXT:### distance:0 delay:1 dep:reg(%29:Int)
 
 
 # CHECK:### from: %25:gpr64common = nuw nsw ADDXri %25:gpr64common, 4, 0
 # CHECK-NEXT:### to  : %30:gpr64common = ADDXrr %19:gpr64common, %25:gpr64common
-# CHECK-NEXT:### distance:1 delay:1
+# CHECK-NEXT:### distance:1 delay:1 dep:reg(%25:Int)
 
 
 # CHECK:### from: %30:gpr64common = ADDXrr %19:gpr64common, %25:gpr64common
 # CHECK-NEXT:### to  : %31:gpr32 = LDRWui killed %30:gpr64common, 1 :: (load (s32) from %ir.uglygep23, !tbaa !1)
-# CHECK-NEXT:### distance:0 delay:1
+# CHECK-NEXT:### distance:0 delay:1 dep:reg(%30:Int)
 
 
 # CHECK:### from: %31:gpr32 = LDRWui killed %30:gpr64common, 1 :: (load (s32) from %ir.uglygep23, !tbaa !1)
 # CHECK-NEXT:### to  : %32:gpr32 = nsw MADDWrrr killed %31:gpr32, %11:gpr32, $wzr
-# CHECK-NEXT:### distance:0 delay:5
+# CHECK-NEXT:### distance:0 delay:5 dep:reg(%31:Int)
 
 
 # CHECK:### from: %32:gpr32 = nsw MADDWrrr killed %31:gpr32, %11:gpr32, $wzr
 # CHECK-NEXT:### to  : STRWui killed %32:gpr32, %29:gpr64common, 1 :: (store (s32) into %ir.scevgep, !tbaa !1)
-# CHECK-NEXT:### distance:0 delay:5
+# CHECK-NEXT:### distance:0 delay:5 dep:reg(%32:Int)
 
 
 # CHECK:### from: %29:gpr64common = ADDXrr %17:gpr64common, %25:gpr64common
 # CHECK-NEXT:### to  : STRWui killed %32:gpr32, %29:gpr64common, 1 :: (store (s32) into %ir.scevgep, !tbaa !1)
-# CHECK-NEXT:### distance:0 delay:1
+# CHECK-NEXT:### distance:0 delay:1 dep:reg(%29:Int)
 
 
 # CHECK:### from: %25:gpr64common = nuw nsw ADDXri %25:gpr64common, 4, 0
 # CHECK-NEXT:### to  : %25:gpr64common = nuw nsw ADDXri %25:gpr64common, 4, 0
-# CHECK-NEXT:### distance:1 delay:1
+# CHECK-NEXT:### distance:1 delay:1 dep:reg(%25:Int)
 
 
 # CHECK:### from: %26:gpr64sp = SUBSXri %26:gpr64sp, 1, 0, implicit-def $nzcv
 # CHECK-NEXT:### to  : %26:gpr64sp = SUBSXri %26:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:### distance:1 delay:1
+# CHECK-NEXT:### distance:1 delay:1 dep:reg(%26:Int)
 
 
 # CHECK:### from: %27:gpr32 = LDRWroX %14:gpr64common, %25:gpr64common, 0, 0 :: (load (s32) from %ir.uglygep67, !tbaa !1)
 # CHECK-NEXT:### to  : STRWui killed %28:gpr32, %29:gpr64common, 0 :: (store (s32) into %ir.uglygep45, !tbaa !1)
-# CHECK-NEXT:### distance:20 delay:1
+# CHECK-NEXT:### distance:20 delay:1 dep:memory
 
 
 # CHECK:### from: %27:gpr32 = LDRWroX %14:gpr64common, %25:gpr64common, 0, 0 :: (load (s32) from %ir.uglygep67, !tbaa !1)
 # CHECK-NEXT:### to  : STRWui killed %32:gpr32, %29:gpr64common, 1 :: (store (s32) into %ir.scevgep, !tbaa !1)
-# CHECK-NEXT:### distance:20 delay:1
+# CHECK-NEXT:### distance:20 delay:1 dep:memory
 
 
 # CHECK:### from: STRWui killed %28:gpr32, %29:gpr64common, 0 :: (store (s32) into %ir.uglygep45, !tbaa !1)
 # CHECK-NEXT:### to  : %27:gpr32 = LDRWroX %14:gpr64common, %25:gpr64common, 0, 0 :: (load (s32) from %ir.uglygep67, !tbaa !1)
-# CHECK-NEXT:### distance:20 delay:6
+# CHECK-NEXT:### distance:20 delay:6 dep:memory
 
 
 # CHECK:### from: STRWui killed %28:gpr32, %29:gpr64common, 0 :: (store (s32) into %ir.uglygep45, !tbaa !1)
 # CHECK-NEXT:### to  : %31:gpr32 = LDRWui killed %30:gpr64common, 1 :: (load (s32) from %ir.uglygep23, !tbaa !1)
-# CHECK-NEXT:### distance:20 delay:6
+# CHECK-NEXT:### distance:20 delay:6 dep:memory
 
 
 # CHECK:### from: STRWui killed %28:gpr32, %29:gpr64common, 0 :: (store (s32) into %ir.uglygep45, !tbaa !1)
 # CHECK-NEXT:### to  : STRWui killed %32:gpr32, %29:gpr64common, 1 :: (store (s32) into %ir.scevgep, !tbaa !1)
-# CHECK-NEXT:### distance:20 delay:1
+# CHECK-NEXT:### distance:20 delay:1 dep:memory
 
 
 # CHECK:### from: %31:gpr32 = LDRWui killed %30:gpr64common, 1 :: (load (s32) from %ir.uglygep23, !tbaa !1)
 # CHECK-NEXT:### to  : STRWui killed %28:gpr32, %29:gpr64common, 0 :: (store (s32) into %ir.uglygep45, !tbaa !1)
-# CHECK-NEXT:### distance:20 delay:1
+# CHECK-NEXT:### distance:20 delay:1 dep:memory
 
 
 # CHECK:### from: %31:gpr32 = LDRWui killed %30:gpr64common, 1 :: (load (s32) from %ir.uglygep23, !tbaa !1)
 # CHECK-NEXT:### to  : STRWui killed %32:gpr32, %29:gpr64common, 1 :: (store (s32) into %ir.scevgep, !tbaa !1)
-# CHECK-NEXT:### distance:20 delay:1
+# CHECK-NEXT:### distance:20 delay:1 dep:memory
 
 
 # CHECK:### from: STRWui killed %32:gpr32, %29:gpr64common, 1 :: (store (s32) into %ir.scevgep, !tbaa !1)
 # CHECK-NEXT:### to  : %27:gpr32 = LDRWroX %14:gpr64common, %25:gpr64common, 0, 0 :: (load (s32) from %ir.uglygep67, !tbaa !1)
-# CHECK-NEXT:### distance:20 delay:6
+# CHECK-NEXT:### distance:20 delay:6 dep:memory
 
 
 # CHECK:### from: STRWui killed %32:gpr32, %29:gpr64common, 1 :: (store (s32) into %ir.scevgep, !tbaa !1)
 # CHECK-NEXT:### to  : STRWui killed %28:gpr32, %29:gpr64common, 0 :: (store (s32) into %ir.uglygep45, !tbaa !1)
-# CHECK-NEXT:### distance:1 delay:1
+# CHECK-NEXT:### distance:1 delay:1 dep:memory
 
 
 # CHECK:### from: STRWui killed %32:gpr32, %29:gpr64common, 1 :: (store (s32) into %ir.scevgep, !tbaa !1)
 # CHECK-NEXT:### to  : %31:gpr32 = LDRWui killed %30:gpr64common, 1 :: (load (s32) from %ir.uglygep23, !tbaa !1)
-# CHECK-NEXT:### distance:20 delay:6
+# CHECK-NEXT:### distance:20 delay:6 dep:memory
 
 --- |
   ; ModuleID = '2937-33.ll'
