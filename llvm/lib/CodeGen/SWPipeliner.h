@@ -1113,7 +1113,14 @@ private:
 
   bool isTooManyNumOfInstruction(const MachineLoop &L) const;
 
-  bool isNotSingleMBBInLoop(const MachineLoop &L) const;
+  /**
+   * Determine if the target loop is not the innermost loop.
+   *
+   * \param[in] L MachineLoop
+   * \retval true  The loop is not the innermost or there is more than one BasicBlock
+   * \retval false The loop is the innermost and has one BasicBlock
+   */
+  static bool isNotSingleMBBInLoop(const MachineLoop &L);
 
   bool isNonScheduleInstr(MachineLoop &L) const;
 

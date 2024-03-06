@@ -53,13 +53,6 @@ static void printDebug(const char *f, const StringRef &msg, const MachineLoop &L
   errs() <<"\n";
 }
 
-// /**
-//  * \brief setRemarkMissedReason
-//  *        Set the message for RemarkMissed to Reason.
-//  *
-//  * \param[in] msg_id ID corresponding to the reason
-//  * \return なし
-//  */
 enum MsgID {
   MsgID_swpl_branch_not_for_loop,
   MsgID_swpl_many_insts,
@@ -70,37 +63,6 @@ enum MsgID {
   MsgID_swpl_multiple_inst_reference_CCR,
   MsgID_swpl_inst_update_FPCR
 };
-// void SWPipeliner::setRemarkMissedReason(int msg_id) {
-//   switch (msg_id) {
-//   case MsgID_swpl_branch_not_for_loop:
-//     SWPipeliner::Reason = " because the loop contains a branch instruction.";
-//     break;
-//   case MsgID_swpl_many_insts:
-//     SWPipeliner::Reason = " because the loop contains too many instructions.";
-//     break;
-//   case MsgID_swpl_many_memory_insts:
-//     SWPipeliner::Reason = " because the loop contains too many instructions accessing memory.";
-//     break;
-//   case MsgID_swpl_not_covered_inst:
-//     SWPipeliner::Reason = " because the loop contains an instruction, such as function call,"
-//                           " which is not supported.";
-//     break;
-//   case MsgID_swpl_not_covered_loop_shape:
-//     SWPipeliner::Reason = " because the shape of the loop is not covered.";
-//     break;
-//   case MsgID_swpl_multiple_inst_update_CCR:
-//     SWPipeliner::Reason = " because multiple instructions to update CCR.";
-//     break;
-//   case MsgID_swpl_multiple_inst_reference_CCR:
-//     SWPipeliner::Reason = " because multiple instructions to reference CCR.";
-//     break;
-//   case MsgID_swpl_inst_update_FPCR:
-//     SWPipeliner::Reason = " because instruction to update FPCR.";
-//     break;
-//   }
-//   return;
-// }
-
 
 static bool hasRegisterImplicitDefOperand(MachineInstr *MI, unsigned Reg) {
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {

@@ -339,11 +339,10 @@ bool SWPipeliner::isTooManyNumOfInstruction(const MachineLoop &L) const {
   return false;
 }
 
-bool SWPipeliner::isNotSingleMBBInLoop(const MachineLoop &L) const {
-  // ループ内のBasicBlockが一つではない場合は最適化抑止
+bool SWPipeliner::isNotSingleMBBInLoop(const MachineLoop &L) {
+  // If there is more than one BasicBlock in the loop, optimization suppression
   if (L.getNumBlocks() != 1) {
     printDebug(__func__, "Not a single basic block. ", L);
-    // SWPipeliner::Reason = "because the shape of the loop is not covered.";
     setRemarkMissedReason(MsgID_swpl_not_covered_loop_shape);
     return true;
   }
