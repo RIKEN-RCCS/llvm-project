@@ -1698,12 +1698,13 @@ void SwplDdg::analysisMemDependence() {
   }
 
 }
-/// Swpl_Inst 間のDistanceとDelayを更新する
-/// \param [in,out] ddg     SwplDdg  処理対象のSwplDdg
-/// \param [in] former_inst SwplInst 先行の命令のSwplInst 
-/// \param [in] latter_inst SwplInst 後続の命令のSwplInst
-/// \param [in] distance    int      命令間で依存が問題にならない範囲の回転の数      
-/// \param [in] delay       int      命令間であける必要があるcycle数
+/// Update Distance, Delay and Reg between Swpl_Inst
+/// \param [in,out] ddg     SwplDdg  target SwplDdg
+/// \param [in] former_inst SwplInst preceding instruction
+/// \param [in] latter_inst SwplInst subsequent instructions
+/// \param [in] distance    int      Distance within the range where dependence between instructions is not a problem
+/// \param [in] delay       int      Number of cycles required between instructions
+/// \param [in] reg         SwplReg  Registers that cause dependence
 static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplInst &latter_inst, int distance, int delay, const SwplReg* reg) {
   SwplInstGraph *graph = ddg.getGraph();
   SwplInstEdge *edge = graph->findEdge(former_inst, latter_inst);
@@ -1722,7 +1723,7 @@ static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplI
 
 /// 命令の依存グラフ情報の SwplInstGraph::Edges 単位でModuloDelayMap情報を収集する。
 SwplInstEdge2ModuloDelay *SwplDdg::getModuloDelayMap(int ii) const {
-  SwplInstEdge2ModuloDelay *map =  new SwplInstEdge2ModuloDelay();
+  auto *map =  new SwplInstEdge2ModuloDelay();
 
   const SwplInstGraph &graph = getGraph();
   const SwplInstEdges &edges = graph.getEdges();
