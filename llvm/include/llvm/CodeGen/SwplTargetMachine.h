@@ -55,9 +55,9 @@ protected:
 public:
   /// constructor
 
-  StmRegKind():registerClassId(RegKindID::unknown),allocated(false)  {}
-  StmRegKind(const StmRegKind&s):registerClassId(s.registerClassId),allocated(s.allocated),unitNum(s.unitNum) {}
-  virtual ~StmRegKind() {}
+  StmRegKind()=default;
+  StmRegKind(const StmRegKind&s)=default;
+  virtual ~StmRegKind()=default;
 
   /// \param id register class id
   /// \param isAllocated  physical register
@@ -68,7 +68,7 @@ public:
   /// check Interger
   /// \retval true Interger
   /// \retval false not Integer
-  virtual bool isInteger(void) const {
+  virtual bool isInteger() const {
     return registerClassId == RegKindID::IntReg;
   }
   static bool isInteger(unsigned regclass) {
@@ -81,7 +81,7 @@ public:
   /// check Floating
   /// \retval true Floating
   /// \retval false not Floating
-  virtual bool isFloating(void) const {
+  virtual bool isFloating() const {
     return registerClassId == RegKindID::FloatReg;
   }
   static bool isFloating(unsigned regclass) {
@@ -94,7 +94,7 @@ public:
   /// check Predicate
   /// \retval true Predicate
   /// \retval false not Predicate
-  virtual bool isPredicate(void) const {
+  virtual bool isPredicate() const {
     return registerClassId == RegKindID::PredicateReg;
   }
   static bool isPredicate(unsigned regclass) {
@@ -107,7 +107,7 @@ public:
   /// check CC
   /// \retval true CC
   /// \retval false not CC
-  virtual bool isCCRegister(void) const {
+  virtual bool isCCRegister() const {
     return registerClassId == RegKindID::CCReg;
   }
   static bool isCC(unsigned regclass) {
@@ -120,7 +120,7 @@ public:
   /// check CC(for compatible)
   /// \retval true CC
   /// \retval false not CC
-  virtual bool isIntegerCCRegister(void) const {
+  virtual bool isIntegerCCRegister() const {
     return isCCRegister();
   }
 
@@ -204,7 +204,7 @@ public:
     return kind1.registerClassId == regclassid;
   }
   /// return unit number
-  unsigned getUnitNum() {return unitNum;}
+  unsigned getUnitNum() const {return unitNum;}
 };
 
 /// list of StmPipeline(for argument)
@@ -221,10 +221,9 @@ protected:
 
 public:
   /// constructor
-  SwplTargetMachine() {}
+  SwplTargetMachine()=default;
   /// destructor
-  virtual ~SwplTargetMachine() {
-  }
+  virtual ~SwplTargetMachine()=default;
 
   /// Initialize the SwpltargetMachine object.
   /// \details

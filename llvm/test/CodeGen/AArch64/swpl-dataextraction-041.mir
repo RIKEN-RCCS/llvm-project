@@ -3,20 +3,20 @@
 
 # CHECK: ### from: %26:zpr = COPY %33:zpr, debug-location !13; a.c:6:28
 # CHECK: ### to  : %39:zpr = COPY %26:zpr, debug-location !14; a.c:7:18
-# CHECK-NEXT: ### distance:1 delay:4
-# CHECK-NEXT: ### distance:1 delay:1
+# CHECK-NEXT: ### distance:1 delay:4 dep:reg(%26:Float)
+# CHECK-NEXT: ### distance:1 delay:1 dep:reg(%33:Float)
 
 # CHECK: ### from: %33:zpr = ADD_ZI_S %39:zpr(tied-def 0), 16, 0, debug-location !14; a.c:7:18
 # CHECK-NEXT: ### to  : %26:zpr = COPY %33:zpr, debug-location !13; a.c:6:28
-# CHECK-NEXT: ### distance:0 delay:4
+# CHECK-NEXT: ### distance:0 delay:4 dep:reg(%33:Float)
 
 # CHECK: ### from: %29:zpr = UMULH_ZPZZ_S_UNDEF %12:ppr_3b, %28:zpr, %14:zpr, debug-location !14; a.c:7:18
 # CHECK-NEXT: ### to  : %38:zpr = COPY %26:zpr, debug-location !14; a.c:7:18
-# CHECK-NEXT: ### distance:1 delay:1
+# CHECK-NEXT: ### distance:1 delay:1 dep:reg(%28:Float)
 
 # CHECK: ### from: %31:zpr = MLS_ZPZZZ_S_UNDEF %12:ppr_3b, %28:zpr, killed %30:zpr, %18:zpr, debug-location !14; a.c:7:18
 # CHECK-NEXT: ### to  : %38:zpr = COPY %26:zpr, debug-location !14; a.c:7:18
-# CHECK-NEXT: ### distance:1 delay:1
+# CHECK-NEXT: ### distance:1 delay:1 dep:reg(%28:Float)
 
 --- |
   ; ModuleID = 'a.c'
