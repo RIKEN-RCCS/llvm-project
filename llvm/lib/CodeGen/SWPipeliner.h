@@ -1076,8 +1076,18 @@ public:
   *        Set the message for RemarkMissed to Reason.
   *
   * \param[in] msg_id ID corresponding to the reason
-  * \return なし
+  * \return without
   */
+  enum MsgID {
+    MsgID_swpl_branch_not_for_loop,
+    MsgID_swpl_many_insts,
+    MsgID_swpl_many_memory_insts,
+    MsgID_swpl_not_covered_inst,
+    MsgID_swpl_not_covered_loop_shape,
+    MsgID_swpl_multiple_inst_update_CCR,
+    MsgID_swpl_multiple_inst_reference_CCR,
+    MsgID_swpl_inst_update_FPCR
+  };
   static void setRemarkMissedReason(int msg_id);
 
 private:
