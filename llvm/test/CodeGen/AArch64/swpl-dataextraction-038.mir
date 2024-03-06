@@ -1,48 +1,48 @@
 #RUN: llc %s -mcpu=a64fx -fswp -start-before=aarch64-swpipeliner -swpl-debug-dump-ddg -swpl-enable-instdep -o /dev/null 2>&1 | FileCheck %s
 # CHECK:### from: %17:gpr64sp = ADDXri %17:gpr64sp, 8, 0
 # CHECK-NEXT:### to  : %21:fpr64 = LDURDi %17:gpr64sp, 0
-# CHECK-NEXT:### distance:1 delay:1
+# CHECK-NEXT:### distance:1 delay:1 dep:reg(%17:Int)
 
 
 # CHECK:### from: %17:gpr64sp = ADDXri %17:gpr64sp, 8, 0
 # CHECK-NEXT:### to  : %17:gpr64sp = ADDXri %17:gpr64sp, 8, 0
-# CHECK-NEXT:### distance:1 delay:1
+# CHECK-NEXT:### distance:1 delay:1 dep:reg(%17:Int)
 
 
 # CHECK:### from: %21:fpr64 = LDURDi %17:gpr64sp, 0
 # CHECK-NEXT:### to  : %22:fpr64 = FMULDrr %21:fpr64, %21:fpr64, implicit $fpcr
-# CHECK-NEXT:### distance:0 delay:8
-# CHECK-NEXT:### distance:0 delay:8
+# CHECK-NEXT:### distance:0 delay:8 dep:reg(%21:Float)
+# CHECK-NEXT:### distance:0 delay:8 dep:reg(%21:Float)
 
 
 # CHECK:### from: %22:fpr64 = FMULDrr %21:fpr64, %21:fpr64, implicit $fpcr
 # CHECK-NEXT:### to  : STURDi %22:fpr64, %18:gpr64sp, 0 :: (store (s64) into %ir.lsr.iv1, !tbaa !1)
-# CHECK-NEXT:### distance:0 delay:9
+# CHECK-NEXT:### distance:0 delay:9 dep:reg(%22:Float)
 
 
 # CHECK:### from: %18:gpr64sp = ADDXri %18:gpr64sp, 8, 0
 # CHECK-NEXT:### to  : STURDi %22:fpr64, %18:gpr64sp, 0 :: (store (s64) into %ir.lsr.iv1, !tbaa !1)
-# CHECK-NEXT:### distance:1 delay:1
+# CHECK-NEXT:### distance:1 delay:1 dep:reg(%18:Int)
 
 
 # CHECK:### from: %18:gpr64sp = ADDXri %18:gpr64sp, 8, 0
 # CHECK-NEXT:### to  : %18:gpr64sp = ADDXri %18:gpr64sp, 8, 0
-# CHECK-NEXT:### distance:1 delay:1
+# CHECK-NEXT:### distance:1 delay:1 dep:reg(%18:Int)
 
 
 # CHECK:### from: %19:gpr64sp = SUBSXri %19:gpr64sp, 1, 0, implicit-def $nzcv
 # CHECK-NEXT:### to  : %19:gpr64sp = SUBSXri %19:gpr64sp, 1, 0, implicit-def $nzcv
-# CHECK-NEXT:### distance:1 delay:1
+# CHECK-NEXT:### distance:1 delay:1 dep:reg(%19:Int)
 
 
 # CHECK:### from: %21:fpr64 = LDURDi %17:gpr64sp, 0
 # CHECK-NEXT:### to  : STURDi %22:fpr64, %18:gpr64sp, 0 :: (store (s64) into %ir.lsr.iv1, !tbaa !1)
-# CHECK-NEXT:### distance:0 delay:1
+# CHECK-NEXT:### distance:0 delay:1 dep:memory
 
 
 # CHECK:### from: STURDi %22:fpr64, %18:gpr64sp, 0 :: (store (s64) into %ir.lsr.iv1, !tbaa !1)
 # CHECK-NEXT:### to  : %21:fpr64 = LDURDi %17:gpr64sp, 0
-# CHECK-NEXT:### distance:1 delay:6
+# CHECK-NEXT:### distance:1 delay:6 dep:memory
 
 --- |
   ; ModuleID = '2937-38.ll'
