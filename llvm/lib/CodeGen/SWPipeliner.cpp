@@ -329,7 +329,7 @@ bool SWPipeliner::isTooManyNumOfInstruction(const MachineLoop &L) const {
   return false;
 }
 
-bool SWPipeliner::isNotSingleMBBInLoop(const MachineLoop &L) {
+bool SWPipeliner::isNotSingleMBBInLoop(const MachineLoop &L) const{
   // If there is more than one BasicBlock in the loop, optimization suppression
   if (L.getNumBlocks() != 1) {
     printDebug(__func__, "Not a single basic block. ", L);
