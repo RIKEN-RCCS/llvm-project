@@ -1068,6 +1068,25 @@ public:
   static void
   makeMissedMessage_RestrictionsDetected(const MachineInstr &target);
 
+  enum MsgID {
+    MsgID_swpl_branch_not_for_loop,
+    MsgID_swpl_many_insts,
+    MsgID_swpl_many_memory_insts,
+    MsgID_swpl_not_covered_inst,
+    MsgID_swpl_not_covered_loop_shape,
+    MsgID_swpl_multiple_inst_update_CCR,
+    MsgID_swpl_multiple_inst_reference_CCR,
+    MsgID_swpl_inst_update_FPCR
+  };
+  /**
+  * \brief setRemarkMissedReason
+  *        Set the message for RemarkMissed to Reason.
+  *
+  * \param[in] msg_id ID corresponding to the reason
+  * \return without
+  */
+  static void setRemarkMissedReason(int msg_id);
+
 private:
   /**
    * \brief scheduleLoop
@@ -1101,7 +1120,14 @@ private:
 
   bool isTooManyNumOfInstruction(const MachineLoop &L) const;
 
-  bool isNonMostInnerLoopMBB(const MachineLoop &L) const;
+  /**
+   * Determine if the target loop is not the innermost loop.
+   *
+   * \param[in] L MachineLoop
+   * \retval true  The loop is not the innermost or there is more than one BasicBlock
+   * \retval false The loop is the innermost and has one BasicBlock
+   */
+  bool isNotSingleMBBInLoop(const MachineLoop &L) const;
 
   bool isNonScheduleInstr(MachineLoop &L) const;
 

@@ -294,11 +294,48 @@ void SWPipeliner::makeMissedMessage_RestrictionsDetected(const MachineInstr &tar
   Reason = msg;
 }
 
+void SWPipeliner::setRemarkMissedReason(int msg_id){
+  switch (msg_id) {
+  case SWPipeliner::MsgID_swpl_branch_not_for_loop:
+    SWPipeliner::Reason = " because the loop contains a branch instruction.";
+    break;
+  case SWPipeliner::MsgID_swpl_many_insts:
+    SWPipeliner::Reason = " because the loop contains too many instructions.";
+    break;
+  case SWPipeliner::MsgID_swpl_many_memory_insts:
+    SWPipeliner::Reason = " because the loop contains too many instructions accessing memory.";
+    break;
+  case SWPipeliner::MsgID_swpl_not_covered_inst:
+    SWPipeliner::Reason = " because the loop contains an instruction, such as function call,"
+                          " which is not supported.";
+    break;
+  case SWPipeliner::MsgID_swpl_not_covered_loop_shape:
+    Reason = " because the shape of the loop is not covered.";
+    break;
+  case SWPipeliner::MsgID_swpl_multiple_inst_update_CCR:
+    Reason = " because multiple instructions to update CCR.";
+    break;
+  case SWPipeliner::MsgID_swpl_multiple_inst_reference_CCR:
+    Reason = " because multiple instructions to reference CCR.";
+    break;
+  case SWPipeliner::MsgID_swpl_inst_update_FPCR:
+    Reason = " because instruction to update FPCR.";
+    break;
+  }
+  return;
+}
+
 bool SWPipeliner::isTooManyNumOfInstruction(const MachineLoop &L) const {
   return false;
 }
 
-bool SWPipeliner::isNonMostInnerLoopMBB(const MachineLoop &L) const {
+bool SWPipeliner::isNotSingleMBBInLoop(const MachineLoop &L) const{
+  // If there is more than one BasicBlock in the loop, optimization suppression
+  if (L.getNumBlocks() != 1) {
+    printDebug(__func__, "Not a single basic block. ", L);
+    setRemarkMissedReason(MsgID_swpl_not_covered_loop_shape);
+    return true;
+  }
   return false;
 }
 
@@ -371,7 +408,7 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *B
     return TargetInfo::SWP_LS_NO_Target;
   }
 
-  if (isNonMostInnerLoopMBB(L)) {
+  if (isNotSingleMBBInLoop(L)) {
     return (target_ls ? TargetInfo::LS1_Target : TargetInfo::SWP_LS_NO_Target);
   }
 
