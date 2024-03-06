@@ -53,13 +53,13 @@ static void printDebug(const char *f, const StringRef &msg, const MachineLoop &L
   errs() <<"\n";
 }
 
-/**
- * \brief setRemarkMissedReason
- *        Set the message for RemarkMissed to Reason.
- *
- * \param[in] msg_id ID corresponding to the reason
- * \return なし
- */
+// /**
+//  * \brief setRemarkMissedReason
+//  *        Set the message for RemarkMissed to Reason.
+//  *
+//  * \param[in] msg_id ID corresponding to the reason
+//  * \return なし
+//  */
 enum MsgID {
   MsgID_swpl_branch_not_for_loop,
   MsgID_swpl_many_insts,
@@ -70,36 +70,36 @@ enum MsgID {
   MsgID_swpl_multiple_inst_reference_CCR,
   MsgID_swpl_inst_update_FPCR
 };
-static void setRemarkMissedReason(int msg_id) {
-  switch (msg_id) {
-  case MsgID_swpl_branch_not_for_loop:
-    SWPipeliner::Reason = " because the loop contains a branch instruction.";
-    break;
-  case MsgID_swpl_many_insts:
-    SWPipeliner::Reason = " because the loop contains too many instructions.";
-    break;
-  case MsgID_swpl_many_memory_insts:
-    SWPipeliner::Reason = " because the loop contains too many instructions accessing memory.";
-    break;
-  case MsgID_swpl_not_covered_inst:
-    SWPipeliner::Reason = " because the loop contains an instruction, such as function call,"
-                          " which is not supported.";
-    break;
-  case MsgID_swpl_not_covered_loop_shape:
-    SWPipeliner::Reason = " because the shape of the loop is not covered.";
-    break;
-  case MsgID_swpl_multiple_inst_update_CCR:
-    SWPipeliner::Reason = " because multiple instructions to update CCR.";
-    break;
-  case MsgID_swpl_multiple_inst_reference_CCR:
-    SWPipeliner::Reason = " because multiple instructions to reference CCR.";
-    break;
-  case MsgID_swpl_inst_update_FPCR:
-    SWPipeliner::Reason = " because instruction to update FPCR.";
-    break;
-  }
-  return;
-}
+// void SWPipeliner::setRemarkMissedReason(int msg_id) {
+//   switch (msg_id) {
+//   case MsgID_swpl_branch_not_for_loop:
+//     SWPipeliner::Reason = " because the loop contains a branch instruction.";
+//     break;
+//   case MsgID_swpl_many_insts:
+//     SWPipeliner::Reason = " because the loop contains too many instructions.";
+//     break;
+//   case MsgID_swpl_many_memory_insts:
+//     SWPipeliner::Reason = " because the loop contains too many instructions accessing memory.";
+//     break;
+//   case MsgID_swpl_not_covered_inst:
+//     SWPipeliner::Reason = " because the loop contains an instruction, such as function call,"
+//                           " which is not supported.";
+//     break;
+//   case MsgID_swpl_not_covered_loop_shape:
+//     SWPipeliner::Reason = " because the shape of the loop is not covered.";
+//     break;
+//   case MsgID_swpl_multiple_inst_update_CCR:
+//     SWPipeliner::Reason = " because multiple instructions to update CCR.";
+//     break;
+//   case MsgID_swpl_multiple_inst_reference_CCR:
+//     SWPipeliner::Reason = " because multiple instructions to reference CCR.";
+//     break;
+//   case MsgID_swpl_inst_update_FPCR:
+//     SWPipeliner::Reason = " because instruction to update FPCR.";
+//     break;
+//   }
+//   return;
+// }
 
 
 static bool hasRegisterImplicitDefOperand(MachineInstr *MI, unsigned Reg) {
@@ -199,7 +199,7 @@ static bool isNonTargetLoop(MachineLoop &L) {
   //命令数はBasickBlockから取得できる
   if (LoopBB->size() > MaxInstNum) {
     printDebug(__func__, "pipeliner info:over inst limit num", L);
-    setRemarkMissedReason(MsgID_swpl_many_insts);
+    SWPipeliner::setRemarkMissedReason(MsgID_swpl_many_insts);
     return true;
   }
 
@@ -207,39 +207,39 @@ static bool isNonTargetLoop(MachineLoop &L) {
     // Callである
     if (I->isCall()) {
       printDebug(__func__, "pipeliner info:found call", L);
-      setRemarkMissedReason(MsgID_swpl_not_covered_inst);
+      SWPipeliner::setRemarkMissedReason(MsgID_swpl_not_covered_inst);
       return true;
     }
     // fenceもしくはgnuasm命令である
     if (SWPipeliner::TII->isNonTargetMI4SWPL(*I)) {
       printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
-      setRemarkMissedReason(MsgID_swpl_not_covered_inst);
+      SWPipeliner::setRemarkMissedReason(MsgID_swpl_not_covered_inst);
       return true;
     }
     // volatile属性を含む命令である
     for (MachineMemOperand *MMO : I->memoperands()) {
       if (MMO->isVolatile()) {
         printDebug(__func__, "pipeliner info:found volataile operand", L);
-        setRemarkMissedReason(MsgID_swpl_not_covered_inst);
+        SWPipeliner::setRemarkMissedReason(MsgID_swpl_not_covered_inst);
         return true;
       }
     }
     /* CCを更新する命令が複数出現した。 */
     if (CompMI && hasRegisterImplicitDefOperand (&*I, AArch64::NZCV)) {
       printDebug(__func__, "pipeliner info:multi-defoperand==NZCV", L);
-      setRemarkMissedReason(MsgID_swpl_multiple_inst_update_CCR);
+      SWPipeliner::setRemarkMissedReason(MsgID_swpl_multiple_inst_update_CCR);
       return true;
     }
     /* FPCRを更新する命令が出現した。 */
     if (hasRegisterImplicitDefOperand (&*I, AArch64::FPCR)) {
       printDebug(__func__, "pipeliner info:defoperand==FPCR", L);
-      setRemarkMissedReason(MsgID_swpl_inst_update_FPCR);
+      SWPipeliner::setRemarkMissedReason(MsgID_swpl_inst_update_FPCR);
       return true;
     }
     /* CCを参照する命令が複数出現した。 */
     if (BccMI && I->hasRegisterImplicitUseOperand(AArch64::NZCV)) {
       printDebug(__func__, "pipeliner info:multi-refoperand==NZCV", L);
-      setRemarkMissedReason(MsgID_swpl_multiple_inst_reference_CCR);
+      SWPipeliner::setRemarkMissedReason(MsgID_swpl_multiple_inst_reference_CCR);
       return true;
     }
     /* ループ分岐命令を捕捉 */
@@ -250,7 +250,7 @@ static bool isNonTargetLoop(MachineLoop &L) {
       /* CCの比較種別が対象外 */
       if (CC != _NE && CC != _GE) {
         printDebug(__func__, "pipeliner info:BCC condition!=NE && GE", L);
-        setRemarkMissedReason(MsgID_swpl_not_covered_loop_shape);
+        SWPipeliner::setRemarkMissedReason(MsgID_swpl_not_covered_loop_shape);
         return true;
       }
     } else if (BccMI && isCompMI(&*I, CC)) {
@@ -258,27 +258,27 @@ static bool isNonTargetLoop(MachineLoop &L) {
       if (CompMI) {
         /* ループ終了条件比較命令が複数見つかった。 */
         printDebug(__func__, "pipeliner info:not found SUBSXri", L);
-        setRemarkMissedReason(MsgID_swpl_branch_not_for_loop);
+        SWPipeliner::setRemarkMissedReason(MsgID_swpl_branch_not_for_loop);
         return true;
       }
       const auto phiIter=SWPipeliner::MRI->def_instr_begin(I->getOperand(1).getReg());
       if (!phiIter->isPHI()) {
         /* 正規化されたループ制御変数がない（PHIとSUBの間に命令が存在する）。 */
         printDebug(__func__, "pipeliner info:not found induction var", L);
-        setRemarkMissedReason(MsgID_swpl_not_covered_loop_shape);
+        SWPipeliner::setRemarkMissedReason(MsgID_swpl_not_covered_loop_shape);
         return true;
       }
       CompMI = &*I;
     }
     if ((!I->memoperands_empty()) && (--mem_counter)<=0) {
       printDebug(__func__, "pipeliner info:over mem limit num", L);
-      setRemarkMissedReason(MsgID_swpl_many_memory_insts);
+      SWPipeliner::setRemarkMissedReason(MsgID_swpl_many_memory_insts);
       return true;
     }
   }
   if (!(BccMI && CompMI)) {
     printDebug(__func__, "pipeliner info:not found (BCC || SUBSXri)", L);
-    setRemarkMissedReason(MsgID_swpl_not_covered_loop_shape);
+    SWPipeliner::setRemarkMissedReason(MsgID_swpl_not_covered_loop_shape);
     return true;
   }
   return false;
@@ -304,20 +304,20 @@ static bool isNonTargetLoopForInstDump(MachineLoop &L) {
     // Callである
     if (I->isCall()) {
       printDebug(__func__, "pipeliner info:found call", L);
-      setRemarkMissedReason(MsgID_swpl_not_covered_inst);
+      SWPipeliner::setRemarkMissedReason(MsgID_swpl_not_covered_inst);
       return true; // 対象でない
     }
     // fenceもしくはgnuasm命令である
     if (SWPipeliner::TII->isNonTargetMI4SWPL(*I)) {
       printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
-      setRemarkMissedReason(MsgID_swpl_not_covered_inst);
+      SWPipeliner::setRemarkMissedReason(MsgID_swpl_not_covered_inst);
       return true; // 対象でない
     }
     // volatile属性を含む命令である
     for (MachineMemOperand *MMO : I->memoperands()) {
       if (MMO->isVolatile()) {
         printDebug(__func__, "pipeliner info:found volataile operand", L);
-        setRemarkMissedReason(MsgID_swpl_not_covered_inst);
+        SWPipeliner::setRemarkMissedReason(MsgID_swpl_not_covered_inst);
         return true; // 対象でない
       }
     }
@@ -399,7 +399,7 @@ bool AArch64InstrInfo::canPipelineLoop(MachineLoop &L) const {
   // ループ内のBasicBlockが一つではない場合は最適化抑止
   if (L.getNumBlocks() != 1) {
     printDebug(__func__, "[canPipelineLoop:NG] Not a single basic block. ", L);
-    setRemarkMissedReason(MsgID_swpl_not_covered_loop_shape);
+    SWPipeliner::setRemarkMissedReason(MsgID_swpl_not_covered_loop_shape);
     return false;
   }
 
@@ -436,39 +436,39 @@ bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
     // Call
     if (I->isCall()) {
       printDebug(__func__, "pipeliner info:found call", L);
-      setRemarkMissedReason(MsgID_swpl_not_covered_inst);
+      SWPipeliner::setRemarkMissedReason(MsgID_swpl_not_covered_inst);
       return true;
     }
     // fence or gnuasm command
     if (SWPipeliner::TII->isNonTargetMI4SWPL(*I)) {
       printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
-      setRemarkMissedReason(MsgID_swpl_not_covered_inst);
+      SWPipeliner::setRemarkMissedReason(MsgID_swpl_not_covered_inst);
       return true;
     }
     // an instruction that includes volatile attribute
     for (MachineMemOperand *MMO : I->memoperands()) {
       if (MMO->isVolatile()) {
         printDebug(__func__, "pipeliner info:found volataile operand", L);
-        setRemarkMissedReason(MsgID_swpl_not_covered_inst);
+        SWPipeliner::setRemarkMissedReason(MsgID_swpl_not_covered_inst);
         return true;
       }
     }
     /* Multiple instructions to update CC appeared */
     if (CompMI && hasRegisterImplicitDefOperand (&*I, AArch64::NZCV)) {
       printDebug(__func__, "pipeliner info:multi-defoperand==NZCV", L);
-      setRemarkMissedReason(MsgID_swpl_multiple_inst_update_CCR);
+      SWPipeliner::setRemarkMissedReason(MsgID_swpl_multiple_inst_update_CCR);
       return true;
     }
     /* An instruction to update the FPCR has appeared */
     if (hasRegisterImplicitDefOperand (&*I, AArch64::FPCR)) {
       printDebug(__func__, "pipeliner info:defoperand==FPCR", L);
-      setRemarkMissedReason(MsgID_swpl_inst_update_FPCR);
+      SWPipeliner::setRemarkMissedReason(MsgID_swpl_inst_update_FPCR);
       return true;
     }
     /* Multiple instructions that reference CC appeared */
     if (BccMI && I->hasRegisterImplicitUseOperand(AArch64::NZCV)) {
       printDebug(__func__, "pipeliner info:multi-refoperand==NZCV", L);
-      setRemarkMissedReason(MsgID_swpl_multiple_inst_reference_CCR);
+      SWPipeliner::setRemarkMissedReason(MsgID_swpl_multiple_inst_reference_CCR);
       return true;
     }  
   }

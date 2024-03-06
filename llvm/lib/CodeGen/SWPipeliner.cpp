@@ -294,15 +294,57 @@ void SWPipeliner::makeMissedMessage_RestrictionsDetected(const MachineInstr &tar
   Reason = msg;
 }
 
+enum MsgID {
+  MsgID_swpl_branch_not_for_loop,
+  MsgID_swpl_many_insts,
+  MsgID_swpl_many_memory_insts,
+  MsgID_swpl_not_covered_inst,
+  MsgID_swpl_not_covered_loop_shape,
+  MsgID_swpl_multiple_inst_update_CCR,
+  MsgID_swpl_multiple_inst_reference_CCR,
+  MsgID_swpl_inst_update_FPCR
+};
+void SWPipeliner::setRemarkMissedReason(int msg_id){
+  switch (msg_id) {
+  case MsgID_swpl_branch_not_for_loop:
+    SWPipeliner::Reason = " because the loop contains a branch instruction.";
+    break;
+  case MsgID_swpl_many_insts:
+    SWPipeliner::Reason = " because the loop contains too many instructions.";
+    break;
+  case MsgID_swpl_many_memory_insts:
+    SWPipeliner::Reason = " because the loop contains too many instructions accessing memory.";
+    break;
+  case MsgID_swpl_not_covered_inst:
+    SWPipeliner::Reason = " because the loop contains an instruction, such as function call,"
+                          " which is not supported.";
+    break;
+  case MsgID_swpl_not_covered_loop_shape:
+    SWPipeliner::Reason = " because the shape of the loop is not covered.";
+    break;
+  case MsgID_swpl_multiple_inst_update_CCR:
+    SWPipeliner::Reason = " because multiple instructions to update CCR.";
+    break;
+  case MsgID_swpl_multiple_inst_reference_CCR:
+    SWPipeliner::Reason = " because multiple instructions to reference CCR.";
+    break;
+  case MsgID_swpl_inst_update_FPCR:
+    SWPipeliner::Reason = " because instruction to update FPCR.";
+    break;
+  }
+  return;
+}
+
 bool SWPipeliner::isTooManyNumOfInstruction(const MachineLoop &L) const {
   return false;
 }
 
-bool SWPipeliner::isNonMostInnerLoopMBB(const MachineLoop &L) const {
+bool SWPipeliner::isNotSingleMBBInLoop(const MachineLoop &L) const {
   // ループ内のBasicBlockが一つではない場合は最適化抑止
   if (L.getNumBlocks() != 1) {
-    printDebug(__func__, "[canPipelineLoop:NG] Not a single basic block. ", L);
-    printDebug(__func__, "This loop cannot be software pipelined because the shape of the loop is not covered by software pipelining.", L);
+    printDebug(__func__, "Not a single basic block. ", L);
+    // SWPipeliner::Reason = "because the shape of the loop is not covered.";
+    setRemarkMissedReason(MsgID_swpl_not_covered_loop_shape);
     return true;
   }
   return false;
@@ -377,7 +419,7 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *B
     return TargetInfo::SWP_LS_NO_Target;
   }
 
-  if (isNonMostInnerLoopMBB(L)) {
+  if (isNotSingleMBBInLoop(L)) {
     return (target_ls ? TargetInfo::LS1_Target : TargetInfo::SWP_LS_NO_Target);
   }
 

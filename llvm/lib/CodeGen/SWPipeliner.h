@@ -1071,6 +1071,15 @@ public:
   static void
   makeMissedMessage_RestrictionsDetected(const MachineInstr &target);
 
+  /**
+  * \brief setRemarkMissedReason
+  *        Set the message for RemarkMissed to Reason.
+  *
+  * \param[in] msg_id ID corresponding to the reason
+  * \return なし
+  */
+  static void setRemarkMissedReason(int msg_id);
+
 private:
   /**
    * \brief scheduleLoop
@@ -1104,7 +1113,7 @@ private:
 
   bool isTooManyNumOfInstruction(const MachineLoop &L) const;
 
-  bool isNonMostInnerLoopMBB(const MachineLoop &L) const;
+  bool isNotSingleMBBInLoop(const MachineLoop &L) const;
 
   bool isNonScheduleInstr(MachineLoop &L) const;
 
