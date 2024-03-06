@@ -296,31 +296,31 @@ void SWPipeliner::makeMissedMessage_RestrictionsDetected(const MachineInstr &tar
 
 void SWPipeliner::setRemarkMissedReason(int msg_id){
   switch (msg_id) {
-    case SWPipeliner::MsgID_swpl_branch_not_for_loop:
-      SWPipeliner::Reason = " because the loop contains a branch instruction.";
-      break;
-    case SWPipeliner::MsgID_swpl_many_insts:
-      SWPipeliner::Reason = " because the loop contains too many instructions.";
-      break;
-    case SWPipeliner::MsgID_swpl_many_memory_insts:
-      SWPipeliner::Reason = " because the loop contains too many instructions accessing memory.";
-      break;
-    case SWPipeliner::MsgID_swpl_not_covered_inst:
-      SWPipeliner::Reason = " because the loop contains an instruction, such as function call,"
-                            " which is not supported.";
-      break;
-    case SWPipeliner::MsgID_swpl_not_covered_loop_shape:
-      Reason = " because the shape of the loop is not covered.";
-      break;
-    case SWPipeliner::MsgID_swpl_multiple_inst_update_CCR:
-      Reason = " because multiple instructions to update CCR.";
-      break;
-    case SWPipeliner::MsgID_swpl_multiple_inst_reference_CCR:
-      Reason = " because multiple instructions to reference CCR.";
-      break;
-    case SWPipeliner::MsgID_swpl_inst_update_FPCR:
-      Reason = " because instruction to update FPCR.";
-      break;
+  case SWPipeliner::MsgID_swpl_branch_not_for_loop:
+    SWPipeliner::Reason = " because the loop contains a branch instruction.";
+    break;
+  case SWPipeliner::MsgID_swpl_many_insts:
+    SWPipeliner::Reason = " because the loop contains too many instructions.";
+    break;
+  case SWPipeliner::MsgID_swpl_many_memory_insts:
+    SWPipeliner::Reason = " because the loop contains too many instructions accessing memory.";
+    break;
+  case SWPipeliner::MsgID_swpl_not_covered_inst:
+    SWPipeliner::Reason = " because the loop contains an instruction, such as function call,"
+                          " which is not supported.";
+    break;
+  case SWPipeliner::MsgID_swpl_not_covered_loop_shape:
+    Reason = " because the shape of the loop is not covered.";
+    break;
+  case SWPipeliner::MsgID_swpl_multiple_inst_update_CCR:
+    Reason = " because multiple instructions to update CCR.";
+    break;
+  case SWPipeliner::MsgID_swpl_multiple_inst_reference_CCR:
+    Reason = " because multiple instructions to reference CCR.";
+    break;
+  case SWPipeliner::MsgID_swpl_inst_update_FPCR:
+    Reason = " because instruction to update FPCR.";
+    break;
   }
   return;
 }

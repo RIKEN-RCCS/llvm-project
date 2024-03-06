@@ -1071,13 +1071,6 @@ public:
   static void
   makeMissedMessage_RestrictionsDetected(const MachineInstr &target);
 
-  /**
-  * \brief setRemarkMissedReason
-  *        Set the message for RemarkMissed to Reason.
-  *
-  * \param[in] msg_id ID corresponding to the reason
-  * \return without
-  */
   enum MsgID {
     MsgID_swpl_branch_not_for_loop,
     MsgID_swpl_many_insts,
@@ -1088,6 +1081,13 @@ public:
     MsgID_swpl_multiple_inst_reference_CCR,
     MsgID_swpl_inst_update_FPCR
   };
+  /**
+  * \brief setRemarkMissedReason
+  *        Set the message for RemarkMissed to Reason.
+  *
+  * \param[in] msg_id ID corresponding to the reason
+  * \return without
+  */
   static void setRemarkMissedReason(int msg_id);
 
 private:
