@@ -386,6 +386,7 @@ public:
   bool isFPCR(Register reg) const override;
   bool canPipelineLoop(MachineLoop &L) const override;
   bool isNonScheduleInstr(MachineLoop &L) const override;
+  bool isNonNormalizeLoop(MachineLoop &L) const override;
   int calcEachRegIncrement(const SwplReg *r) const override;
   SwplTargetMachine *getSwplTargetMachine() const override;
   bool SwplRegAlloc(SwplTransformedMIRInfo *tmi, MachineFunction &MF) const override;

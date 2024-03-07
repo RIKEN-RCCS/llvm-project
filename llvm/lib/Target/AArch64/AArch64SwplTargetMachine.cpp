@@ -433,6 +433,55 @@ bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
   return false;
 }
 
+bool AArch64InstrInfo::isNonNormalizeLoop(MachineLoop &L) const{
+  MachineBasicBlock *LoopMBB = L.getTopBlock();
+
+  AArch64CC::CondCode _NE = AArch64CC::NE;
+  AArch64CC::CondCode _GE = AArch64CC::GE;
+  MachineBasicBlock::iterator I = LoopMBB->getFirstTerminator();
+  MachineBasicBlock::iterator E = LoopMBB->getFirstNonDebugInstr();
+  MachineInstr *BccMI = nullptr;
+  MachineInstr *CompMI = nullptr;
+  AArch64CC::CondCode CC;
+
+  for (; I != E; --I) {
+    /* Capture loop branch instructions */
+    if (I->getOpcode() == AArch64::Bcc
+        && I->hasRegisterImplicitUseOperand(AArch64::NZCV)) {
+      BccMI = &*I;
+      CC = (AArch64CC::CondCode)BccMI->getOperand(0).getImm();
+      /* CC comparison type is not applicable */
+      if (CC != _NE && CC != _GE) {
+        printDebug(__func__, "pipeliner info:BCC condition!=NE && GE", L);
+        SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_not_covered_loop_shape);
+        return true;
+      }
+    } else if (BccMI && isCompMI(&*I, CC)) {
+      /* Bcc was found first, and the loop end condition comparison instruction was found */
+      if (CompMI) {
+        /* Multiple loop termination condition comparison instructions were found */
+        printDebug(__func__, "pipeliner info:not found SUBSXri", L);
+        SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_branch_not_for_loop);
+        return true;
+      }
+      const auto phiIter=SWPipeliner::MRI->def_instr_begin(I->getOperand(1).getReg());
+      if (!phiIter->isPHI()) {
+        /* No normalized loop control variables (instruction exists between PHI and SUB */
+        printDebug(__func__, "pipeliner info:not found induction var", L);
+        SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_not_covered_loop_shape);
+        return true;
+      }
+      CompMI = &*I;
+    }    
+  }
+  if (!(BccMI && CompMI)) {
+    printDebug(__func__, "pipeliner info:not found (BCC || SUBSXri)", L);
+    SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_not_covered_loop_shape);
+    return true;
+  }
+  return false;
+}
+
 int AArch64InstrInfo::calcEachRegIncrement(const SwplReg *r) const {
 //  SwplInst *def_inst = nullptr;
   const SwplInst *induction_inst = nullptr;
