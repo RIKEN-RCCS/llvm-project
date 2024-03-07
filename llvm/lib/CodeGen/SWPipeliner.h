@@ -37,7 +37,6 @@ class SwplInstEdge;
 class SwplInstGraph;
 class SwplDdg;
 class SwplTransformMIR;
-class SwplRegAllocInfo;
 class SwplRegAllocInfoTbl;
 class SwplExcKernelRegInfoTbl;
 
@@ -52,8 +51,10 @@ using SwplInst2InstEdgesMap = llvm::DenseMap<SwplInst *, SwplInstEdges>;
 using Register2SwplRegMap = llvm::DenseMap<Register, SwplReg *>;
 using SwplInstEdge2Distances = llvm::DenseMap<SwplInstEdge *, std::vector<unsigned>>;
 using SwplInstEdge2Delays = llvm::DenseMap<SwplInstEdge *, std::vector<int>>;
+using SwplInstEdge2Reg = llvm::DenseMap<SwplInstEdge *, std::vector<const SwplReg*>>;
 using SwplInstEdge2ModuloDelay = std::map<SwplInstEdge *, int>;
 using SwplInstEdge2LsDelay = std::map<SwplInstEdge *, int>;
+using SwplInstEdge2LsReg = std::map<SwplInstEdge *, const SwplReg*>;
 using SwplInsts_iterator = SwplInsts::iterator;
 using SwplRegs_iterator = SwplRegs::iterator;
 using SwplMems_iterator = SwplMems::iterator;
@@ -181,7 +182,7 @@ class SwplLoop {
   SmallSet<Register, 30> liveOuts; ///< A collection to check whether the virtual registers that appear after applying SWPL are LiveOut
 
 public:
-  SwplLoop(){}
+  SwplLoop()=default;
   SwplLoop(MachineLoop &l) {
     ML = &l;
   }
@@ -209,7 +210,7 @@ public:
   /// Return preMBB of SwplLoop::NewBodyMBB
   MachineBasicBlock *getNewBodyPreMBB(MachineBasicBlock *bodyMBB) {
     assert(bodyMBB->pred_size() == 1);
-    MachineBasicBlock *preMBB;
+    MachineBasicBlock *preMBB=nullptr;
     for (auto *MBB:bodyMBB->predecessors()) {
       preMBB = MBB;
     }
@@ -354,7 +355,7 @@ private:
   /// SwplLoop::MemIncrementMap を生成する
   void makeMemIncrementMap();
   /// SwplLoop をダンプする
-  void print(void) ;
+  void print() ;
 
   /// ２つの引数の SwplMem が SwplLoop::Mems においてfirst,secondの順番に現れるかどうか
   /// \param[in] first SwplMem
@@ -397,7 +398,7 @@ private:
   void removeCopy(MachineBasicBlock *body);
 
   /// SwplLoop::OrgMI2NewMI の命令列を走査し、SwplLoop::OrgReg2NewReg に登録されているレジスタへのリネーミングを行う
-  void renameReg(void);
+  void renameReg();
 
   /// tied-defオペランドに対して定義前参照がある場合はCOPYを生成する
   /// \param[in,out]  body ループボディの MachineBasicBlock
@@ -431,12 +432,9 @@ class SwplInst {
   std::map<int,int> UseOpMap; ///< usesとMachineOperand位置のMap
 
 public:
-  SwplInst() {};
+  SwplInst()=default;
   /// MI や SwplLoop はnullがあり得るのでアドレス渡し
-  SwplInst(MachineInstr *i, SwplLoop *l) {
-    MI = i;
-    Loop = l;
-  }
+  SwplInst(MachineInstr *i, SwplLoop *l):MI(i), Loop(l) {}
 
   // getter
   const MachineInstr *getMI() const { return MI; }
@@ -464,13 +462,13 @@ public:
                             SwplInsts &insts, SwplMems *mems, SwplMems *memsOtherBody);
 
   /// ループ内の命令かどうかの判定
-  bool isInLoop() const { return (Loop != NULL); }
+  bool isInLoop() const { return (Loop != nullptr); }
 
   /// 生成済みかどうかの判定
-  bool isCreate() const { return (!isInLoop() && MI == NULL); }
+  bool isCreate() const { return (!isInLoop() && MI == nullptr); }
 
   /// ループボディ内の命令かどうかの判定
-  bool isBodyInst() const { return (isInLoop() && MI != NULL); }
+  bool isBodyInst() const { return (isInLoop() && MI != nullptr); }
 
   /// SwplInst::UseRegs へaddする
   void addUseRegs(SwplReg *reg) { getUseRegs().push_back(reg); }
@@ -495,7 +493,7 @@ public:
   bool isEqual(SwplInst *inst) { return this == inst; }
 
   /// SwplInst をダンプする
-  void print(void);
+  void print();
 
   /// Phi命令かどうかの判定
   bool isPhi() const { return (isInLoop() && getMI() == nullptr); }
@@ -505,7 +503,7 @@ public:
 
   /// 指定PHIの SwplInst::UseReg のうち、Loop内で更新しているレジスタを持つ SwplReg を返す
   /// \return Registers being updated within Loop
-  const SwplReg &getPhiUseRegFromIn(void) const;
+  const SwplReg &getPhiUseRegFromIn() const;
 
   /// \brief 自身の命令の定義レジスタをPhiをまたいで自身で参照するかどうかを判定する
   /// \retval true  refer to definition registers
@@ -558,7 +556,7 @@ class SwplReg {
   unsigned units=1;          ///< レジスタを構成するユニット数.defaultは１
 
 public:
-  SwplReg() {};
+  SwplReg()=default;
   SwplReg(const SwplReg &s);
   SwplReg(Register r, SwplInst &i, size_t def_index, bool earlyclober=false);
   virtual ~SwplReg() {if (rk) delete rk;}
@@ -600,27 +598,34 @@ public:
     }
     return false;
   }
-  /// SwplReg の継承
+  /// Inheritance
   /// \param [in,out] former_reg
   /// \param [in,out] latter_reg
   void inheritReg( SwplReg *former_reg, SwplReg *latter_reg);
-  /// SwplReg の比較
-  /// \attention 内包している Register が同じかどうかは見ていない。
-  bool isEqual(SwplReg *reg) { return (this == reg) ? true : false; }
+  /// Compare SwplReg
+  /// \attention It does not check whether the included Registers are the same.
+  bool isEqual(SwplReg *reg) { return (this == reg); }
 
-  /// SwplReg::UseInsts の追加
+  /// Added SwplReg::UseInsts
   void addUseInsts(SwplInst *inst) { getUseInsts().push_back(inst); }
 
-  /// SwplReg をdumpする
-  void print(void);
+  /// Dump SwplReg
+  void print();
 
 
   SwplInstList_iterator useinsts_begin() { return UseInsts.begin(); }
   SwplInstList_iterator useinsts_end() { return UseInsts.end(); }
 
-  void printDefInst(void);
+  void printDefInst();
 
-
+  /// Return register type as string
+  StringRef getKind() const {
+    if (rk->isCCRegister()) return "CCR";
+    if (rk->isFloating()) return "Float";
+    if (rk->isInteger()) return "Int";
+    if (rk->isPredicate()) return "Predicate";
+    return "other";
+  }
   bool isSameKind(unsigned id) const {
     return rk->isSameKind(id);
   }
@@ -656,12 +661,8 @@ class SwplMem {
   size_t Size;                   ///< メモリアクセスするサイズ
 
 public:
-  SwplMem() {};
-  SwplMem(const MachineMemOperand *op, SwplInst &i, size_t s) {
-    MO = op;
-    Inst = &i;
-    Size = s;
-  }
+  SwplMem()=default;
+  SwplMem(const MachineMemOperand *op, SwplInst &i, size_t s):MO(op), Inst(&i), Size(s) {}
 
   // getter
   const MachineMemOperand *getMO() const { return MO; }
@@ -689,7 +690,7 @@ public:
   bool isMemDef() { return Inst->getMI()->mayStore(); }
 
   /// デバッグ用情報出力
-  void printInst(void);
+  void printInst();
 
   const static int MAX_LOOP_DISTANCE=20; ///< Max possible iteration-parallelism.
 };
@@ -702,11 +703,8 @@ class SwplInstEdge {
 
 public:
   // constructor
-  SwplInstEdge() {};
-  SwplInstEdge(const SwplInst &ini, const SwplInst &term) {
-    InitialVertex = &ini;
-    TerminalVertex = &term;
-  }
+  SwplInstEdge()=default;
+  SwplInstEdge(const SwplInst &ini, const SwplInst &term):InitialVertex(&ini),TerminalVertex(&term)  {}
   // getter
   const SwplInst *getInitial() const { return InitialVertex; }
   const SwplInst *getTerminal() const { return TerminalVertex; }
@@ -724,9 +722,7 @@ class SwplInstGraph {
 
 public:
   // constructor
-  SwplInstGraph() {
-    emptyInsts.clear();
-  };
+  SwplInstGraph()=default;
 
   // destructor
   ~SwplInstGraph() {
@@ -800,25 +796,22 @@ public:
 };
 
 /// \class SwplDdg
-/// \brief ループ内の命令の依存情報を管理する
+/// \brief Manage dependency information for instructions within a loop
 class SwplDdg {
-  SwplInstGraph *Graph;                ///< 命令間の依存グラフを表現するclass
-  SwplLoop *Loop;                      ///< ループ内の命令情報を管理するclass
-  SwplInstEdge2Distances DistanceMap;  ///< SwplInst 間のDistanceマップ
-  SwplInstEdge2Delays DelaysMap;       ///< SwplInst 間のDelayマップ
+  SwplInstGraph *Graph;                ///< A class that represents the dependency graph between instructions
+  SwplLoop *Loop;                      ///< A class that manages instruction information within the loop
+  SwplInstEdge2Distances DistanceMap;  ///< Distance between SwplInst
+  SwplInstEdge2Delays DelaysMap;       ///< Delay between SwplInst
+  SwplInstEdge2Reg RegMap;         ///< Reg between SwplInst
 
 public:
-  static const int UNKNOWN_MEM_DIFF = INT_MIN;        /* 0 の正反対 */
+  static const int UNKNOWN_MEM_DIFF = INT_MIN;
 
-  SwplDdg() {};
-  SwplDdg(SwplLoop &l) {
-    Graph = new SwplInstGraph();
-    Loop = &l;
-  }
+  SwplDdg()=default;
+  explicit SwplDdg(SwplLoop &l):Graph(new SwplInstGraph()), Loop(&l) {}
 
   /// destructor. Use destroy() to also delete the Graph area.
-  virtual ~SwplDdg() {
-  }
+  virtual ~SwplDdg()=default;
 
   /// destroy ddg object
   static void destroy(SwplDdg* ddg) {
@@ -826,13 +819,9 @@ public:
     delete ddg;
   }
   
-  /// SwplLoop::BodyInsts のiterator-beginを返す
   SwplInsts_iterator loop_bodyinsts_begin() { return Loop->bodyinsts_begin(); }
-  /// SwplLoop::BodyInsts のiterator-endを返す
   SwplInsts_iterator loop_bodyinsts_end() { return Loop->bodyinsts_end(); }
-  /// SwplLoop::Mems のiterator-beginを返す
   SwplMems_iterator loop_mems_begin() { return Loop->mems_begin(); }
-  /// SwplLoop::Mems のiterator-endを返す
   SwplMems_iterator loop_mems_end() { return Loop->mems_end(); }
 
   // getter
@@ -842,39 +831,47 @@ public:
   const SwplInstGraph& getGraph() const { return *Graph; }
   SwplInstEdge2Distances &getDistanceMap() { return DistanceMap; }
   SwplInstEdge2Delays &getDelaysMap() { return DelaysMap; }
+  SwplInstEdge2Reg &getRegMap() { return RegMap; }
 
-  /// 引数の SwplInstEdge をkeyに SwplDdg::DistanceMap のvalueを取り出す
+  /// Get the value of SwplDdg::DistanceMap using the argument SwplInstEdge as the key
   const std::vector<unsigned> &getDistancesFor(SwplInstEdge &edge) const { return DistanceMap.at(&edge); }
-  /// 引数の SwplInstEdge をkeyに SwplDdg::DistanceMap のvalueを取り出す
-  /// 該当するkeyが存在しない場合は、対応する空のvalue(std::vector<unsigned>)を生成し、これを返す
+  /// Get the value of SwplDdg::DistanceMap using the argument SwplInstEdge as the key
+  /// \note If the corresponding key does not exist, generate a corresponding empty value (std::vector<unsigned>) and return it.
   std::vector<unsigned> &getDistancesFor(SwplInstEdge &edge) { return DistanceMap[&edge]; }
-  /// 引数の SwplInstEdge をkeyに SwplDdg::DelaysMap のvalueを取り出す
+
+  /// Get the value of SwplDdg::DelaysMap using the argument SwplInstEdge as the key
   const std::vector<int> &getDelaysFor(SwplInstEdge &edge) const { return DelaysMap.at(&edge); }
-  /// 引数の SwplInstEdge をkeyに SwplDdg::DelaysMap のvalueを取り出す
-  /// \note 該当するkeyが存在しない場合は、対応する空のvalue(std::vector<int>)を生成し、これを返す
+  /// Get the value of SwplDdg::DelaysMap using the argument SwplInstEdge as the key
+  /// \note If the corresponding key does not exist, generate a corresponding empty value (std::vector<unsigned>) and return it.
   std::vector<int> &getDelaysFor(SwplInstEdge &edge) { return DelaysMap[&edge]; }
 
-  /// SwplLoop::BodyInsts の命令数を返す
+  /// Get the value of SwplDdg::RegMap using the argument SwplInstEdge as the key
+  const std::vector<const SwplReg*> &getRegFor(SwplInstEdge &edge) const { return RegMap.at(&edge); }
+  /// Get the value of SwplDdg::RegMap using the argument SwplInstEdge as the key
+  /// \note If the corresponding key does not exist, generate a corresponding empty value (std::vector<unsigned>) and return it.
+  std::vector<const SwplReg*> &getRegFor(SwplInstEdge &edge) { return RegMap[&edge]; }
+
+  /// Returns the number of instructions in SwplLoop::BodyInsts
   size_t getLoopBody_ninsts() const { return Loop->getSizeBodyInsts(); }
-  /// SwplLoop::BodyInsts を取得する
+  /// return SwplLoop::BodyInsts
   SwplInsts &getLoopBodyInsts() { return getLoop()->getBodyInsts(); }
 
-  /// SwplLoop::Mems を取得する
+  /// Get SwplLoop::Mems
   SwplMems &getLoopMems() { return getLoop()->getMems(); }
 
-  /// SwplDdg を生成し SwplLoop の命令の依存情報を設定し復帰する
+  /// Generate SwplDdg from instruction dependency information of SwplLoop
   /// \param[in,out]  loop SwplLoop
-  /// \return     ループ内の命令の依存情報
+  /// \return     DDG
   static SwplDdg *Initialize(SwplLoop &loop,bool Nodep);
 
-  /// iiを考慮したDelayのMapを生成する
-  /// \param[in] ii スケジューリング時のiteration intervalの値
-  /// \return 生成したModuloDelayMapのポインタ
-  /// \attention 生成したmapの領域は利用者が開放する
+  /// Generate a Delay Map considering II
+  /// \param[in] ii iteration interval when scheduling
+  /// \return Pointer to generated ModuloDelayMap
+  /// \attention The generated map area is released by the user.
   SwplInstEdge2ModuloDelay *getModuloDelayMap(int ii) const;
 
-  /// デバッグ用情報出力
-  void print(void) const;
+  /// for debug
+  void print() const;
 
   struct IOmi {
     unsigned id;
@@ -899,9 +896,8 @@ public:
   void importYaml();
 
 private:
-  /// 命令単位に SwplInstGraph を生成する
+  /// Generate SwplInstGraph
   void generateInstGraph() {
-    /// SwplLoop::BodyInsts から命令単位に SwplInstGraph を用意する
     for (auto *inst:getLoopBodyInsts()) {
       getGraph()->appendVertices(*inst);
     }
@@ -932,13 +928,11 @@ class LsDdg {
   SwplInstGraph *Graph;                
   SwplLoop *Loop;                      
   SwplInstEdge2LsDelay DelaysMap;  ///< Delay map between SwplInst
+  SwplInstEdge2LsReg RegMap;     ///< Reg between SwplInst
 
 public:
-  LsDdg() {};
-  LsDdg(SwplLoop &l) {
-    Graph = new SwplInstGraph();
-    Loop = &l;
-  }
+  LsDdg()=default;
+  explicit LsDdg(SwplLoop &l):Graph(new SwplInstGraph()), Loop(&l) {}
 
   /// destroy ddg object
   static void destroy(LsDdg* ddg) {
@@ -952,6 +946,8 @@ public:
   const SwplLoop &getLoop() const { return *Loop; }
   int getDelay(SwplInstEdge &edge) const { return DelaysMap.at(&edge); }
   void setDelay(SwplInstEdge &edge, int delay) { DelaysMap[&edge] = delay; }
+  const SwplReg* getReg(SwplInstEdge &edge) const { return RegMap.at(&edge); }
+  void setReg(SwplInstEdge &edge, const SwplReg* reg) { RegMap[&edge] = reg; }
 
   /// Convert DDG for SWPL to DDG for LS
   /// \param[in]  swplddg SwplDdg
@@ -959,7 +955,7 @@ public:
   static LsDdg *convertDdgForLS(SwplDdg *swplddg);
 
   /// Output for debugging
-  void print(void) const;
+  void print() const;
 
 private:
   /// Add loop body instructions to the graph as nodes
@@ -975,7 +971,8 @@ private:
   /// \param[in]  former_inst former SwplInst
   /// \param[in]  latter_inst latter SwplInst
   /// \param[in]  delay delay
-  void addEdge(SwplInst &former_inst, SwplInst &latter_inst, const int delay);
+  /// \param[in]  reg register
+  void addEdge(SwplInst &former_inst, SwplInst &latter_inst, const int delay, const SwplReg* reg);
 
   /// Add a SwplDdg edge with distance:0
   /// \param[in]  swplddg SwplDdg
@@ -1072,6 +1069,25 @@ public:
   static void
   makeMissedMessage_RestrictionsDetected(const MachineInstr &target);
 
+  enum MsgID {
+    MsgID_swpl_branch_not_for_loop,
+    MsgID_swpl_many_insts,
+    MsgID_swpl_many_memory_insts,
+    MsgID_swpl_not_covered_inst,
+    MsgID_swpl_not_covered_loop_shape,
+    MsgID_swpl_multiple_inst_update_CCR,
+    MsgID_swpl_multiple_inst_reference_CCR,
+    MsgID_swpl_inst_update_FPCR
+  };
+  /**
+  * \brief setRemarkMissedReason
+  *        Set the message for RemarkMissed to Reason.
+  *
+  * \param[in] msg_id ID corresponding to the reason
+  * \return without
+  */
+  static void setRemarkMissedReason(int msg_id);
+
 private:
   /**
    * \brief scheduleLoop
@@ -1105,11 +1121,28 @@ private:
 
   bool isTooManyNumOfInstruction(const MachineLoop &L) const;
 
-  bool isNonMostInnerLoopMBB(const MachineLoop &L) const;
+  /**
+   * Determine if the target loop is not the innermost loop.
+   *
+   * \param[in] L MachineLoop
+   * \retval true  The loop is not the innermost or there is more than one BasicBlock
+   * \retval false The loop is the innermost and has one BasicBlock
+   */
+  bool isNotSingleMBBInLoop(const MachineLoop &L) const;
 
-  bool isNonScheduleInstr(const MachineLoop &L) const;
+  bool isNonScheduleInstr(MachineLoop &L) const;
 
   bool isNonNormalizeLoop(const MachineLoop &L) const;
+
+  /**
+   * \brief outputRemarkMissed
+   *        Output of messages not subject to scheduling      
+   *
+   * \param[in] is_swpl Specify output of messages not covered by SWPL
+   * \param[in] is_ls Specify output of messages not covered by LS
+   * \param[in] L Target MachineLoop
+   */
+  void outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop &L) const;
 
   /**
    * \brief software_pipeliner

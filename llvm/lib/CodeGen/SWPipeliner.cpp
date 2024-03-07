@@ -295,20 +295,87 @@ void SWPipeliner::makeMissedMessage_RestrictionsDetected(const MachineInstr &tar
   Reason = msg;
 }
 
+void SWPipeliner::setRemarkMissedReason(int msg_id){
+  switch (msg_id) {
+  case SWPipeliner::MsgID_swpl_branch_not_for_loop:
+    SWPipeliner::Reason = " because the loop contains a branch instruction.";
+    break;
+  case SWPipeliner::MsgID_swpl_many_insts:
+    SWPipeliner::Reason = " because the loop contains too many instructions.";
+    break;
+  case SWPipeliner::MsgID_swpl_many_memory_insts:
+    SWPipeliner::Reason = " because the loop contains too many instructions accessing memory.";
+    break;
+  case SWPipeliner::MsgID_swpl_not_covered_inst:
+    SWPipeliner::Reason = " because the loop contains an instruction, such as function call,"
+                          " which is not supported.";
+    break;
+  case SWPipeliner::MsgID_swpl_not_covered_loop_shape:
+    Reason = " because the shape of the loop is not covered.";
+    break;
+  case SWPipeliner::MsgID_swpl_multiple_inst_update_CCR:
+    Reason = " because multiple instructions to update CCR.";
+    break;
+  case SWPipeliner::MsgID_swpl_multiple_inst_reference_CCR:
+    Reason = " because multiple instructions to reference CCR.";
+    break;
+  case SWPipeliner::MsgID_swpl_inst_update_FPCR:
+    Reason = " because instruction to update FPCR.";
+    break;
+  }
+  return;
+}
+
 bool SWPipeliner::isTooManyNumOfInstruction(const MachineLoop &L) const {
   return false;
 }
 
-bool SWPipeliner::isNonMostInnerLoopMBB(const MachineLoop &L) const {
+bool SWPipeliner::isNotSingleMBBInLoop(const MachineLoop &L) const{
+  // If there is more than one BasicBlock in the loop, optimization suppression
+  if (L.getNumBlocks() != 1) {
+    printDebug(__func__, "Not a single basic block. ", L);
+    setRemarkMissedReason(MsgID_swpl_not_covered_loop_shape);
+    return true;
+  }
   return false;
 }
 
-bool SWPipeliner::isNonScheduleInstr(const MachineLoop &L) const {
-  return false;
+bool SWPipeliner::isNonScheduleInstr(MachineLoop &L) const {
+  return TII->isNonScheduleInstr(L);
 }
 
 bool SWPipeliner::isNonNormalizeLoop(const MachineLoop &L) const {
   return false;
+}
+
+void SWPipeliner::outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop &L) const {
+  std::string swpl_msg = "This loop cannot be software pipelined";
+  std::string ls_msg = "This loop cannot be local scheduled";
+  
+  if (SWPipeliner::Reason.empty()) {
+    return;
+  }
+
+  if (is_swpl) {
+    swpl_msg += SWPipeliner::Reason;
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipleined",
+                                           L.getStartLoc(), L.getHeader())
+             << swpl_msg;
+    });
+  }
+
+  if (is_ls) {
+    ls_msg += SWPipeliner::Reason;
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipleined",
+                                           L.getStartLoc(), L.getHeader())
+             << ls_msg;
+    });
+  }
+
+  SWPipeliner::Reason = "";
+  return;
 }
 
 SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *BBLoop) {
@@ -342,7 +409,7 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *B
     return TargetInfo::SWP_LS_NO_Target;
   }
 
-  if (isNonMostInnerLoopMBB(L)) {
+  if (isNotSingleMBBInLoop(L)) {
     return (target_ls ? TargetInfo::LS1_Target : TargetInfo::SWP_LS_NO_Target);
   }
 
@@ -362,8 +429,6 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *B
   // Delete as soon as completed
   if (!TII->canPipelineLoop(L)) {
     printDebug(__func__, "!!! Can not pipeline loop.", L);
-    remarkMissed("Failed to pipeline loop", L);
-
     return TargetInfo::SWP_LS_NO_Target;
   }
   return TargetInfo::SWP_Target;
@@ -502,20 +567,32 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
     Changed |= scheduleLoop(*InnerLoop);
 
   auto target_level = isTargetLoops(L, BBLoop);
+  auto target_swpl = enableSWP(BBLoop, false);
+  auto target_ls = enableLS();
+  if (DisableSwpl) {
+    target_swpl = false;
+  }
 
   switch(target_level) {
     case TargetInfo::SWP_LS_NO_Target:
+      outputRemarkMissed(target_swpl, target_ls, L);
       break;
     case TargetInfo::SWP_Target:
       Changed |= software_pipeliner(L, BBLoop);
       break;
     case TargetInfo::LS1_Target:
+      // @attention: To be corrected when LS1 is supported.
+      outputRemarkMissed(target_swpl, target_ls, L);
       Changed |= localScheduler1(L);
       break;
     case TargetInfo::LS2_Target:
+      // @attention: To be corrected when LS2 is supported.
+      outputRemarkMissed(target_swpl, target_ls, L);
       Changed |= localScheduler2(L);
       break;
     case TargetInfo::LS3_Target:
+      // @todo: To be corrected when LS3 is supported.
+      outputRemarkMissed(target_swpl, target_ls, L);
       Changed |= localScheduler3(L);
       break;
   }
@@ -1191,7 +1268,7 @@ static cl::opt<bool> SwplDebugDumpDdg("swpl-debug-dump-ddg",cl::init(false), cl:
 static cl::opt<bool> EnableInstDep("swpl-enable-instdep",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableRegDep4tied("swpl-disable-regdep-4-tied",cl::init(false), cl::ReallyHidden);
 
-static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplInst &latter_inst, int distance, int delay);
+static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplInst &latter_inst, int distance, int delay, const SwplReg* reg);
 
 SwplDdg *SwplDdg::Initialize (SwplLoop &loop, bool Nodep) {
   SwplDdg *ddg = new SwplDdg(loop);
@@ -1382,7 +1459,7 @@ void SwplDdg::analysisInstDependence() {
                  << " delay:" << 1 << "\n";
         }
 
-        update_distance_and_delay(*this, *p, *q, 0, 1);
+        update_distance_and_delay(*this, *p, *q, 0, 1, nullptr);
       }
     }
   }
@@ -1447,7 +1524,7 @@ void SwplDdg::analysisRegDependence_for_tieddef() {
                  << " distance:" << distance << "\n"
                  << " delay:" << delay << "\n";
         }
-        update_distance_and_delay(*this, *p, *COPY, distance, delay);
+        update_distance_and_delay(*this, *p, *COPY, distance, delay, def_op);
       }
     }
   }
@@ -1474,7 +1551,7 @@ void SwplDdg::analysisRegsFlowDependence() {
                << " distance:" << distance << "\n"
                << " delay:" << delay << "\n";
       }
-      update_distance_and_delay(*this, *def_inst, *use_inst, distance, delay);
+      update_distance_and_delay(*this, *def_inst, *use_inst, distance, delay, reg);
     }
   }
 }
@@ -1506,7 +1583,7 @@ void SwplDdg::analysisRegsAntiDependence() {
                  << " distance:" << distance << "\n"
                  << " delay:" << delay << "\n";
         }
-        update_distance_and_delay(*this, *use_inst, *def_inst, distance, delay);
+        update_distance_and_delay(*this, *use_inst, *def_inst, distance, delay, reg);
       }
     }
   }
@@ -1538,7 +1615,7 @@ void SwplDdg::analysisRegsOutputDependence() {
                << " distance:" << distance << "\n"
                << " delay:" << delay << "\n";
       }
-      update_distance_and_delay(*this, *pred_def_inst, *def_inst, distance, delay);
+      update_distance_and_delay(*this, *pred_def_inst, *def_inst, distance, delay, reg);
     }
   }
 }
@@ -1635,18 +1712,19 @@ void SwplDdg::analysisMemDependence() {
         << " delay:" << delay << "\n";
       }
 
-      update_distance_and_delay(*this, *(former_mem->getInst()), *(latter_mem->getInst()), distance, delay);
+      update_distance_and_delay(*this, *(former_mem->getInst()), *(latter_mem->getInst()), distance, delay, nullptr);
     }
   }
 
 }
-/// Swpl_Inst 間のDistanceとDelayを更新する
-/// \param [in,out] ddg     SwplDdg  処理対象のSwplDdg
-/// \param [in] former_inst SwplInst 先行の命令のSwplInst 
-/// \param [in] latter_inst SwplInst 後続の命令のSwplInst
-/// \param [in] distance    int      命令間で依存が問題にならない範囲の回転の数      
-/// \param [in] delay       int      命令間であける必要があるcycle数
-static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplInst &latter_inst, int distance, int delay) {
+/// Update Distance, Delay and Reg between Swpl_Inst
+/// \param [in,out] ddg     SwplDdg  target SwplDdg
+/// \param [in] former_inst SwplInst preceding instruction
+/// \param [in] latter_inst SwplInst subsequent instructions
+/// \param [in] distance    int      Distance within the range where dependence between instructions is not a problem
+/// \param [in] delay       int      Number of cycles required between instructions
+/// \param [in] reg         SwplReg  Registers that cause dependence
+static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplInst &latter_inst, int distance, int delay, const SwplReg* reg) {
   SwplInstGraph *graph = ddg.getGraph();
   SwplInstEdge *edge = graph->findEdge(former_inst, latter_inst);
 
@@ -1656,13 +1734,15 @@ static void update_distance_and_delay(SwplDdg &ddg, SwplInst &former_inst, SwplI
 
   auto &distances = ddg.getDistancesFor(*edge);
   auto &delays = ddg.getDelaysFor(*edge);
+  auto &regs = ddg.getRegFor(*edge);
   distances.push_back(distance);
   delays.push_back(delay);
+  regs.push_back(reg);
 }
 
 /// 命令の依存グラフ情報の SwplInstGraph::Edges 単位でModuloDelayMap情報を収集する。
 SwplInstEdge2ModuloDelay *SwplDdg::getModuloDelayMap(int ii) const {
-  SwplInstEdge2ModuloDelay *map =  new SwplInstEdge2ModuloDelay();
+  auto *map =  new SwplInstEdge2ModuloDelay();
 
   const SwplInstGraph &graph = getGraph();
   const SwplInstEdges &edges = graph.getEdges();
@@ -1707,14 +1787,22 @@ void SwplDdg::print() const {
     dbgs() << "### SwplEdge: " << edge << "\n";
     dbgs() << "### from: " << *leading_inst->getMI() ;
     dbgs() << "### to  : " << *trailing_inst->getMI();
-    std::vector<unsigned> distances = getDistancesFor(*edge);
-    std::vector<int> delays = getDelaysFor(*edge);
+    auto& distances = getDistancesFor(*edge);
+    auto& delays = getDelaysFor(*edge);
+    auto& regs = getRegFor(*edge);
 
     auto distance = distances.begin();
     auto delay = delays.begin();
+    auto reg = regs.begin();
     auto distance_end = distances.end();
-    for(  ; distance != distance_end ; ++distance, ++delay) {
-      dbgs() << "### distance:" << *distance << " delay:" << *delay << "\n";
+    for(  ; distance != distance_end ; ++distance, ++delay, ++reg) {
+      dbgs() << "### distance:" << *distance << " delay:" << *delay;
+        if (*reg) {
+          dbgs() << " dep:reg(" << printReg((*reg)->getReg(), SWPipeliner::TRI) <<":" << (*reg)->getKind() << ")\n";
+        } else {
+          dbgs() << " dep:memory\n";
+
+      }
     }  
     dbgs() << "\n";
   }
@@ -1862,14 +1950,16 @@ void LsDdg::addEdgeNoDistance(SwplDdg *swplddg) {
     SwplInst *former_inst = const_cast<SwplInst *>(edge->getInitial());
     SwplInst *latter_inst = const_cast<SwplInst *>(edge->getTerminal());
 
-    std::vector<unsigned> distances = swplddg->getDistancesFor(*edge);
-    std::vector<int> delays = swplddg->getDelaysFor(*edge);
+    auto &distances = swplddg->getDistancesFor(*edge);
+    auto &delays = swplddg->getDelaysFor(*edge);
+    auto &regs = swplddg->getRegFor(*edge);
     auto distance = distances.begin();
     auto distance_end = distances.end();
     auto delay = delays.begin();
-    for (; distance != distance_end; ++distance, ++delay) {
+    auto reg = regs.begin();
+    for (; distance != distance_end; ++distance, ++delay, ++reg) {
       if (*distance == 0) {
-        addEdge(*former_inst, *latter_inst, *delay);
+        addEdge(*former_inst, *latter_inst, *delay, *reg);
       }
     }
   }
@@ -1878,18 +1968,18 @@ void LsDdg::addEdgeNoDistance(SwplDdg *swplddg) {
 void LsDdg::addEdgeRegsAntiDependences(SwplInsts &insts) {
   SwplInstGraph *graph = getGraph();
   for (unsigned i = 0; i < insts.size() - 1; i++) {
-    auto former_inst = insts[i];
-    auto uses = former_inst->getUseRegs();
+    auto *former_inst = insts[i];
+    auto &uses = former_inst->getUseRegs();
     for (unsigned j = i + 1; j < insts.size(); j++) {
-      auto latter_inst = insts[j];
-      auto defs = latter_inst->getDefRegs();
+      auto *latter_inst = insts[j];
+      auto &defs = latter_inst->getDefRegs();
       SwplInstEdge *edge = graph->findEdge(*former_inst, *latter_inst);
       if (edge != nullptr) continue;
       for (auto *use : uses) {
         auto use_reg = use->getReg();
         for (auto *def : defs) {
           if (use_reg == def->getReg()) {
-            addEdge(*former_inst, *latter_inst, 1);
+            addEdge(*former_inst, *latter_inst, 1, def);
           }
         }
       }
@@ -1911,11 +2001,17 @@ void LsDdg::print() const {
     const SwplInst *leading_inst = edge->getInitial();
     const SwplInst *trailing_inst = edge->getTerminal();
     auto delay = getDelay(*edge);
+    auto *reg = getReg(*edge);
 
     dbgs() << "### SwplEdge: " << edge << "\n";
     dbgs() << "### from: " << *leading_inst->getMI();
     dbgs() << "### to  : " << *trailing_inst->getMI();
-    dbgs() << "### distance:" << 0 << " delay:" << delay << "\n";
+    dbgs() << "### distance:" << 0 << " delay:" << delay;
+    if (reg) {
+      dbgs() << " dep:reg(" << printReg(reg->getReg(), SWPipeliner::TRI) <<":" << reg->getKind() << ")\n";
+    } else {
+      dbgs() << " dep:memory\n";
+    }
     dbgs() << "\n";
 
     edge_less.erase(leading_inst);
@@ -1929,7 +2025,7 @@ void LsDdg::print() const {
   }
 }
 
-void LsDdg::addEdge(SwplInst &former_inst, SwplInst &latter_inst, const int delay) {
+void LsDdg::addEdge(SwplInst &former_inst, SwplInst &latter_inst, const int delay, const SwplReg* reg) {
   SwplInstGraph *graph = getGraph();
 
   // Check if an edge exists
@@ -1937,6 +2033,7 @@ void LsDdg::addEdge(SwplInst &former_inst, SwplInst &latter_inst, const int dela
   if (edge == nullptr) {
     edge = graph->createEdge(former_inst, latter_inst);
     setDelay(*edge, delay);
+    setReg(*edge, reg);
   } else {
     // Hold the one with the larger delay
     if (delay > getDelay(*edge)) {
