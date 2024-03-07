@@ -13,6 +13,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Debug.h"
 #include "LS_DDG_change_for_regs.h"
+#include "SWPipeliner.h"
 
 static double rho(LS::DataType Dt, LS::Graph &Gk, LS::BipartieGraph &Cb, LS::VertexList &X,
                   LS::VertexList &Y, LS::Vertex *tx) {
@@ -929,7 +930,7 @@ void LS::SimpleGraph::show(llvm::StringRef Tag) {
   llvm::dbgs() << "}\n";
 }
 
-bool isMember(const LS::EdgeList &Edges, LS::Vertex *U, LS::Vertex *V) {
+bool LS::isMember(const LS::EdgeList &Edges, LS::Vertex *U, LS::Vertex *V) {
   for (const auto &P : Edges) {
     if (P.first == U && P.second == V)
       return true;
@@ -937,7 +938,7 @@ bool isMember(const LS::EdgeList &Edges, LS::Vertex *U, LS::Vertex *V) {
   return false;
 }
 
-bool SetEqual(const LS::VertexList &S0, const LS::VertexList &S1) {
+bool LS::SetEqual(const LS::VertexList &S0, const LS::VertexList &S1) {
   if (S0.size() != S1.size())
     return false;
   for (auto *x : S0) {
@@ -948,7 +949,7 @@ bool SetEqual(const LS::VertexList &S0, const LS::VertexList &S1) {
   return true;
 }
 
-LS::VertexList SetUnion(const LS::VertexList &S0, const LS::VertexList &S1) {
+LS::VertexList LS::SetUnion(const LS::VertexList &S0, const LS::VertexList &S1) {
   auto Result = S0;
   for (auto *x : S1) {
     if (Result.end() == find(Result.begin(), Result.end(), x)) {
@@ -958,7 +959,7 @@ LS::VertexList SetUnion(const LS::VertexList &S0, const LS::VertexList &S1) {
   return Result;
 }
 
-LS::VertexList SetAnd(const LS::VertexList &S0, const LS::VertexList &S1) {
+LS::VertexList LS::SetAnd(const LS::VertexList &S0, const LS::VertexList &S1) {
   LS::VertexList Result;
   for (auto *x : S0) {
     if (S1.end() != find(S1.begin(), S1.end(), x)) {
@@ -968,7 +969,7 @@ LS::VertexList SetAnd(const LS::VertexList &S0, const LS::VertexList &S1) {
   return Result;
 }
 
-LS::VertexList SetMinus(const LS::VertexList &S0, const LS::VertexList &S1) {
+LS::VertexList LS::SetMinus(const LS::VertexList &S0, const LS::VertexList &S1) {
   LS::VertexList Result;
   for (auto *x : S0) {
     if (S1.end() == find(S1.begin(), S1.end(), x)) {
@@ -978,7 +979,7 @@ LS::VertexList SetMinus(const LS::VertexList &S0, const LS::VertexList &S1) {
   return Result;
 }
 
-void printVList(const LS::VertexList &Arg) {
+void LS::printVList(const LS::VertexList &Arg) {
   int Size = Arg.size();
   if (Size == 0) {
     llvm::dbgs() << "NIL";
@@ -996,7 +997,7 @@ void printVList(const LS::VertexList &Arg) {
   llvm::dbgs() << ")";
 }
 
-void printEList(const LS::EdgeList &Arg) {
+void LS::printEList(const LS::EdgeList &Arg) {
   int Size = Arg.size();
   if (Size == 0) {
     llvm::dbgs() << "NIL";
@@ -1016,7 +1017,7 @@ void printEList(const LS::EdgeList &Arg) {
   llvm::dbgs() << ")";
 }
 
-bool getEdgeIntInfoValue(LS::EdgeIntInfo &AnyInfo, LS::Vertex *U, LS::Vertex *V,
+bool LS::getEdgeIntInfoValue(LS::EdgeIntInfo &AnyInfo, LS::Vertex *U, LS::Vertex *V,
                          int &Value) {
   if (AnyInfo.end() == AnyInfo.find(U)) {
     return false;
@@ -1032,7 +1033,7 @@ bool getEdgeIntInfoValue(LS::EdgeIntInfo &AnyInfo, LS::Vertex *U, LS::Vertex *V,
   return false;
 }
 
-void setEdgeIntInfo(LS::EdgeIntInfo &AnyInfo, LS::Vertex *U, LS::Vertex *V, int Value) {
+void LS::setEdgeIntInfo(LS::EdgeIntInfo &AnyInfo, LS::Vertex *U, LS::Vertex *V, int Value) {
   if (AnyInfo.end() == AnyInfo.find(U)) {
     std::list<std::pair<LS::Vertex *, int>> Tmp;
     Tmp.emplace_front(V, Value);
@@ -1050,7 +1051,7 @@ void setEdgeIntInfo(LS::EdgeIntInfo &AnyInfo, LS::Vertex *U, LS::Vertex *V, int 
   }
 }
 
-void addEdgeIntInfo(LS::EdgeIntInfo &AnyInfo, LS::Vertex *U, LS::Vertex *V, int Value) {
+void LS::addEdgeIntInfo(LS::EdgeIntInfo &AnyInfo, LS::Vertex *U, LS::Vertex *V, int Value) {
   assert(AnyInfo.end() != AnyInfo.find(U));
   auto &Tmp = AnyInfo[U];
   for (auto &P : Tmp) {
@@ -1063,7 +1064,7 @@ void addEdgeIntInfo(LS::EdgeIntInfo &AnyInfo, LS::Vertex *U, LS::Vertex *V, int 
   assert(false);
 }
 
-extern LS::EdgeList getEdgePairList(const LS::VertexList &Vertices, LS::EdgeInfo &Edges) {
+extern LS::EdgeList LS::getEdgePairList(const LS::VertexList &Vertices, LS::EdgeInfo &Edges) {
   LS::EdgeList Result;
   for (auto *U : Vertices) {
     auto &VList = Edges[U];
@@ -1072,4 +1073,10 @@ extern LS::EdgeList getEdgePairList(const LS::VertexList &Vertices, LS::EdgeInfo
     }
   }
   return Result;
+}
+
+LS::Graph::Graph(const llvm::LsDdg& LsDdg) {
+  const auto &graph=LsDdg.getGraph();
+  // graph.getVerticesでノードを複写
+  // graph.getEdgesでエッジを複写
 }

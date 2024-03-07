@@ -38,6 +38,7 @@
 
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "LS_DDG_change_for_regs.h"
 
 using namespace llvm;
 
@@ -522,6 +523,17 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
     if (LsDebugDumpDdg) {
       lsddg->print();
     }
+
+    LS::Graph G(*lsddg);
+    G.show("G");
+    LS::VtoV KStar;
+    G.greedyK(LS::FLOAT_TYPE, KStar);
+    LS::EdgeList AddEdges;
+    bool Result = G.serialize(LS::FLOAT_TYPE, KStar, 4, AddEdges);
+    G.show("G_bar");
+    std::cout << "RESULT: " << Result << " ";
+    printEList(AddEdges);
+
     LsDdg::destroy(lsddg);
 
     SwplPlan p(*currentLoop);

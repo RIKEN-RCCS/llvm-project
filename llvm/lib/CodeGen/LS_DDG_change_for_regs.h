@@ -17,6 +17,11 @@
 #include <unordered_map>
 #include "llvm/ADT/StringRef.h"
 
+namespace llvm {
+class MachineInstr;
+class LsDdg;
+} // namespace llvm
+
 namespace LS {
 
 class Vertex;
@@ -98,7 +103,7 @@ private:
 
 class Vertex {
 public:
-  explicit Vertex(std::string n) : Name(n) {}
+  explicit Vertex(llvm::StringRef n) : Name(n) {}
 
   explicit Vertex(int id) : Name(std::to_string(id)) {}
 
@@ -111,9 +116,12 @@ public:
   Vertex(Vertex &) = delete;
 
   const std::string &getName() const { return Name; }
+  void set(const llvm::MachineInstr *mi) {MI=mi;}
+  const llvm::MachineInstr* get() {return MI;}
 
 private:
   std::string Name;
+  const llvm::MachineInstr *MI=nullptr;
 };
 
 
@@ -171,6 +179,11 @@ public:
   // Graph& operator=(Graph&) = delete;
 
   // Graph(Graph&) = delete;
+
+  Graph()=default;
+  virtual ~Graph()=default;
+
+  explicit Graph(const llvm::LsDdg& LsDdg);
 
   void addEdge(Vertex *U, Vertex *V, DataType Dt, int Latency) {
     Edges[U].push_front(V);
