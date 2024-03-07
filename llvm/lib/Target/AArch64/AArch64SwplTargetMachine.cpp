@@ -381,8 +381,8 @@ bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
 
   MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
   MachineBasicBlock::iterator E = LoopBB->getFirstNonDebugInstr();
-  bool BccMI = false;
-  bool CompMI = false;
+  bool DefMI = false;
+  bool UseMI = false;
 
   for (; I != E; --I) {
     // Call
@@ -407,12 +407,12 @@ bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
     }
     /* Multiple instructions to update CC appeared */
     if (hasRegisterImplicitDefOperand (&*I, AArch64::NZCV)) {
-      if (CompMI) {
+      if (DefMI) {
         printDebug(__func__, "pipeliner info:multi-defoperand==NZCV", L);
         SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_multiple_inst_update_CCR);
         return true;
       }
-      CompMI = true;
+      DefMI = true;
     }
     /* An instruction to update the FPCR has appeared */
     if (hasRegisterImplicitDefOperand (&*I, AArch64::FPCR)) {
@@ -422,12 +422,12 @@ bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
     }
     /* Multiple instructions that reference CC appeared */
     if (I->hasRegisterImplicitUseOperand(AArch64::NZCV)) {
-      if (BccMI) {
+      if (UseMI) {
         printDebug(__func__, "pipeliner info:multi-refoperand==NZCV", L);
         SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_multiple_inst_reference_CCR);
         return true;
       }
-      BccMI = true;
+      UseMI = true;
     }  
   }
   return false;
