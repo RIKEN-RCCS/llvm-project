@@ -377,28 +377,26 @@ bool AArch64InstrInfo::canPipelineLoop(MachineLoop &L) const {
 }
 
 bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
-  MachineBasicBlock *LoopBB = L.getTopBlock();
+  MachineBasicBlock *LoopMBB = L.getTopBlock();
 
-  MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
-  MachineBasicBlock::iterator E = LoopBB->getFirstNonDebugInstr();
   bool DefMI = false;
   bool UseMI = false;
 
-  for (; I != E; --I) {
+  for (auto &mi:*LoopMBB) {
     // Call
-    if (I->isCall()) {
+    if (mi.isCall()) {
       printDebug(__func__, "pipeliner info:found call", L);
       SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_not_covered_inst);
       return true;
     }
     // fence or gnuasm command
-    if (SWPipeliner::TII->isNonTargetMI4SWPL(*I)) {
+    if (SWPipeliner::TII->isNonTargetMI4SWPL(mi)) {
       printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
       SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_not_covered_inst);
       return true;
     }
     // an instruction that includes volatile attribute
-    for (MachineMemOperand *MMO : I->memoperands()) {
+    for (MachineMemOperand *MMO : mi.memoperands()) {
       if (MMO->isVolatile()) {
         printDebug(__func__, "pipeliner info:found volataile operand", L);
         SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_not_covered_inst);
@@ -406,7 +404,7 @@ bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
       }
     }
     /* Multiple instructions to update CC appeared */
-    if (hasRegisterImplicitDefOperand (&*I, AArch64::NZCV)) {
+    if (hasRegisterImplicitDefOperand (&mi, AArch64::NZCV)) {
       if (DefMI) {
         printDebug(__func__, "pipeliner info:multi-defoperand==NZCV", L);
         SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_multiple_inst_update_CCR);
@@ -415,13 +413,13 @@ bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
       DefMI = true;
     }
     /* An instruction to update the FPCR has appeared */
-    if (hasRegisterImplicitDefOperand (&*I, AArch64::FPCR)) {
+    if (hasRegisterImplicitDefOperand (&mi, AArch64::FPCR)) {
       printDebug(__func__, "pipeliner info:defoperand==FPCR", L);
       SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_inst_update_FPCR);
       return true;
     }
     /* Multiple instructions that reference CC appeared */
-    if (I->hasRegisterImplicitUseOperand(AArch64::NZCV)) {
+    if (mi.hasRegisterImplicitUseOperand(AArch64::NZCV)) {
       if (UseMI) {
         printDebug(__func__, "pipeliner info:multi-refoperand==NZCV", L);
         SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_multiple_inst_reference_CCR);
@@ -429,6 +427,55 @@ bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
       }
       UseMI = true;
     }  
+  }
+  return false;
+}
+
+bool AArch64InstrInfo::isNonNormalizeLoop(MachineLoop &L) const{
+  MachineBasicBlock *LoopMBB = L.getTopBlock();
+
+  AArch64CC::CondCode _NE = AArch64CC::NE;
+  AArch64CC::CondCode _GE = AArch64CC::GE;
+  MachineBasicBlock::iterator I = LoopMBB->getFirstTerminator();
+  MachineBasicBlock::iterator E = LoopMBB->getFirstNonDebugInstr();
+  MachineInstr *BccMI = nullptr;
+  MachineInstr *CompMI = nullptr;
+  AArch64CC::CondCode CC;
+
+  for (; I != E; --I) {
+    /* Capture loop branch instructions */
+    if (I->getOpcode() == AArch64::Bcc
+        && I->hasRegisterImplicitUseOperand(AArch64::NZCV)) {
+      BccMI = &*I;
+      CC = (AArch64CC::CondCode)BccMI->getOperand(0).getImm();
+      /* CC comparison type is not applicable */
+      if (CC != _NE && CC != _GE) {
+        printDebug(__func__, "pipeliner info:BCC condition!=NE && GE", L);
+        SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_not_covered_loop_shape);
+        return true;
+      }
+    } else if (BccMI && isCompMI(&*I, CC)) {
+      /* Bcc was found first, and the loop end condition comparison instruction was found */
+      if (CompMI) {
+        /* Multiple loop termination condition comparison instructions were found */
+        printDebug(__func__, "pipeliner info:not found SUBSXri", L);
+        SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_branch_not_for_loop);
+        return true;
+      }
+      const auto phiIter=SWPipeliner::MRI->def_instr_begin(I->getOperand(1).getReg());
+      if (!phiIter->isPHI()) {
+        /* No normalized loop control variables (instruction exists between PHI and SUB */
+        printDebug(__func__, "pipeliner info:not found induction var", L);
+        SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_not_covered_loop_shape);
+        return true;
+      }
+      CompMI = &*I;
+    }    
+  }
+  if (!(BccMI && CompMI)) {
+    printDebug(__func__, "pipeliner info:not found (BCC || SUBSXri)", L);
+    SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_not_covered_loop_shape);
+    return true;
   }
   return false;
 }

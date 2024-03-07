@@ -2260,6 +2260,17 @@ public:
     return false;
   }
 
+  /**
+   * Determine if the target loop is a non-normalized loop.
+   *
+   * \param[in] L MachineLoop
+   * \retval true  The loop is not normalized
+   * \retval false The loop is normalized
+   */
+  virtual bool isNonNormalizeLoop(MachineLoop &L) const {
+    return false;
+  }
+
   /// Calculate incremental value
   /// \return incremental value
   virtual int calcEachRegIncrement(const SwplReg *r) const {
