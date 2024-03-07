@@ -377,28 +377,26 @@ bool AArch64InstrInfo::canPipelineLoop(MachineLoop &L) const {
 }
 
 bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
-  MachineBasicBlock *LoopBB = L.getTopBlock();
+  MachineBasicBlock *LoopMBB = L.getTopBlock();
 
-  MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
-  MachineBasicBlock::iterator E = LoopBB->getFirstNonDebugInstr();
   bool DefMI = false;
   bool UseMI = false;
 
-  for (; I != E; --I) {
+  for (auto &mi:*LoopMBB) {
     // Call
-    if (I->isCall()) {
+    if (mi.isCall()) {
       printDebug(__func__, "pipeliner info:found call", L);
       SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_not_covered_inst);
       return true;
     }
     // fence or gnuasm command
-    if (SWPipeliner::TII->isNonTargetMI4SWPL(*I)) {
+    if (SWPipeliner::TII->isNonTargetMI4SWPL(mi)) {
       printDebug(__func__, "pipeliner info:found non-target-inst or gnuasm", L);
       SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_not_covered_inst);
       return true;
     }
     // an instruction that includes volatile attribute
-    for (MachineMemOperand *MMO : I->memoperands()) {
+    for (MachineMemOperand *MMO : mi.memoperands()) {
       if (MMO->isVolatile()) {
         printDebug(__func__, "pipeliner info:found volataile operand", L);
         SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_not_covered_inst);
@@ -406,7 +404,7 @@ bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
       }
     }
     /* Multiple instructions to update CC appeared */
-    if (hasRegisterImplicitDefOperand (&*I, AArch64::NZCV)) {
+    if (hasRegisterImplicitDefOperand (&mi, AArch64::NZCV)) {
       if (DefMI) {
         printDebug(__func__, "pipeliner info:multi-defoperand==NZCV", L);
         SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_multiple_inst_update_CCR);
@@ -415,13 +413,13 @@ bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
       DefMI = true;
     }
     /* An instruction to update the FPCR has appeared */
-    if (hasRegisterImplicitDefOperand (&*I, AArch64::FPCR)) {
+    if (hasRegisterImplicitDefOperand (&mi, AArch64::FPCR)) {
       printDebug(__func__, "pipeliner info:defoperand==FPCR", L);
       SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_inst_update_FPCR);
       return true;
     }
     /* Multiple instructions that reference CC appeared */
-    if (I->hasRegisterImplicitUseOperand(AArch64::NZCV)) {
+    if (mi.hasRegisterImplicitUseOperand(AArch64::NZCV)) {
       if (UseMI) {
         printDebug(__func__, "pipeliner info:multi-refoperand==NZCV", L);
         SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_multiple_inst_reference_CCR);
