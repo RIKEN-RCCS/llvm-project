@@ -5062,6 +5062,10 @@ SwplSlot LSListScheduling::getPlacementSlot(const SwplInst* inst, SwplInstEdges 
     auto s = (*slots)[edge->getInitial()->inst_ix];
     auto ini_cycle = s.calcCycle();
     auto d = lsddg.getDelay(*edge);
+    if (d == 0) {
+      assert(SWPipeliner::STM->computeRegFlowDependence(edge->getInitial()->getMI(), nullptr) == 0);
+      d = 1;
+    }
     earliest_cycle = std::max(earliest_cycle, ini_cycle + d);
   }
 
@@ -5103,6 +5107,10 @@ SwplSlot LSListScheduling::getPlacementSlot(const SwplInst* inst, SwplInstEdges 
         auto s = (*slots)[edge->getInitial()->inst_ix];
         auto ini_cycle = s.calcCycle();
         auto d = lsddg.getDelay(*edge);
+        if (d == 0) {
+          assert(SWPipeliner::STM->computeRegFlowDependence(edge->getInitial()->getMI(), nullptr) == 0);
+          d = 1;
+        }
         dbgs() << "pred : " << edge->getInitial()->getName() << "(placed=" <<  ini_cycle << ", delay=" << d << ")\n";
       }
     }
