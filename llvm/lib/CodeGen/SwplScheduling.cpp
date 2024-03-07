@@ -5057,6 +5057,14 @@ void LSListScheduling::setPriorityOrder(llvm::MapVector<const SwplInst*, SwplIns
 SwplSlot LSListScheduling::getPlacementSlot(const SwplInst* inst, SwplInstEdges &edges) {
   unsigned earliest_cycle = min_cycle;  // Earliest cycle that can be placed
 
+  if (OptionDumpLsEveryInst) {
+    dbgs() << "=========================================\n";
+    inst->getMI()->print(dbgs());
+    if (edges.size() == 0) {
+      dbgs() << "pred : none\n";
+    }
+  }
+
   // Find the cycle that can be placed fastest from multiple edges
   for (auto edge : edges) {
     auto s = (*slots)[edge->getInitial()->inst_ix];
@@ -5065,6 +5073,9 @@ SwplSlot LSListScheduling::getPlacementSlot(const SwplInst* inst, SwplInstEdges 
     if (d == 0) {
       assert(SWPipeliner::STM->computeRegFlowDependence(edge->getInitial()->getMI(), nullptr) == 0);
       d = 1;
+    }
+    if (OptionDumpLsEveryInst) {
+      dbgs() << "pred : " << edge->getInitial()->getName() << "(placed=" <<  ini_cycle << ", delay=" << d << ")\n";
     }
     earliest_cycle = std::max(earliest_cycle, ini_cycle + d);
   }
@@ -5098,22 +5109,6 @@ SwplSlot LSListScheduling::getPlacementSlot(const SwplInst* inst, SwplInstEdges 
     lsmrt->reserveResourcesForInst(attempted_cycle - min_cycle, *inst, *pipeline);
 
   if (OptionDumpLsEveryInst) {
-    dbgs() << "=========================================\n";
-    inst->getMI()->print(dbgs());
-    if (edges.size() == 0) {
-      dbgs() << "pred : none\n";
-    } else {
-      for (auto edge : edges) {
-        auto s = (*slots)[edge->getInitial()->inst_ix];
-        auto ini_cycle = s.calcCycle();
-        auto d = lsddg.getDelay(*edge);
-        if (d == 0) {
-          assert(SWPipeliner::STM->computeRegFlowDependence(edge->getInitial()->getMI(), nullptr) == 0);
-          d = 1;
-        }
-        dbgs() << "pred : " << edge->getInitial()->getName() << "(placed=" <<  ini_cycle << ", delay=" << d << ")\n";
-      }
-    }
     dbgs() << "earliest cycle : " << earliest_cycle << "\n";
     dbgs() << "placed cycle   : " << attempted_cycle << "\n";
     dbgs() << "placed slot    : " << placeable_slot << "\n";
@@ -5128,7 +5123,9 @@ SwplMrt* LSListScheduling::createLsMrt() {
   unsigned length_mrt = 0;  /// MRT length.
   for (auto i : insts) {
     // Get instruction latency
-    int latency = SWPipeliner::STM->computeRegFlowDependence(i->getMI(), nullptr);
+    int latency_R = SWPipeliner::STM->computeRegFlowDependence(i->getMI(), nullptr);
+    int latency_M = SWPipeliner::STM->computeMemFlowDependence(i->getMI(), nullptr);
+    int latency = std::max(latency_R, latency_M);
     assert(latency >= 0);
     if (latency == 0) {
       latency += 1;   // Zero is pseudo. Pseudo are treated as latency=1.
