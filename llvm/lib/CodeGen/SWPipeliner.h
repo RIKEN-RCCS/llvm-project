@@ -1118,7 +1118,17 @@ private:
    */
   TargetInfo isTargetLoops(MachineLoop &L, const Loop *BBLoop);
 
-  bool isTooManyNumOfInstruction(const MachineLoop &L) const;
+
+  /**
+   * Determine whether the target loop has a large number of instructions.
+   *
+   * \param[in] L MachineLoop
+   * \retval true  The loop satisfies the following conditions.
+   *                        1.The number of instructions in the loop is greater than the maximum number
+   *                        2.The number of memory reference/update instructions is greater than the maximum value
+   * \retval false The loop is SWPL applied and not suppressed
+   */
+  bool isTooManyNumOfInstruction(MachineLoop &L) const;
 
   /**
    * Determine if the target loop is not the innermost loop.

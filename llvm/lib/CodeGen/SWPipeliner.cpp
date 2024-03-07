@@ -60,6 +60,9 @@ static cl::opt<std::string> OptionImportDDG("import-swpl-dep-mi",cl::init(""), c
 static cl::opt<int> OptionRealFetchWidth("swpl-real-fetch-width",cl::init(4), cl::ReallyHidden);
 static cl::opt<int> OptionVirtualFetchWidth("swpl-virtual-fetch-width",cl::init(4), cl::ReallyHidden);
 
+static cl::opt<unsigned> MaxInstNum("swpl-max-inst-num",cl::init(500), cl::ReallyHidden);
+static cl::opt<unsigned> MaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyHidden);
+
 namespace llvm {
 
 bool SWPipeliner::isDebugOutput() {
@@ -325,7 +328,28 @@ void SWPipeliner::setRemarkMissedReason(int msg_id){
   return;
 }
 
-bool SWPipeliner::isTooManyNumOfInstruction(const MachineLoop &L) const {
+bool SWPipeliner::isTooManyNumOfInstruction(MachineLoop &L) const {
+  MachineBasicBlock *LoopMBB = L.getTopBlock();
+  int mem_counter=MaxMemNum;
+
+  // The number of instructions can be obtained from BasicBlock
+  if (LoopMBB->size() > MaxInstNum) {
+    printDebug(__func__, "pipeliner info:over inst limit num", L);
+    setRemarkMissedReason(MsgID_swpl_many_insts);
+    return true;
+  }
+  // Count the number of modified and referenced instructions
+  for (auto &MI : *LoopMBB) {
+    if (MI.mayLoad() || MI.mayStore()) {
+      mem_counter--;
+    }
+  }
+  // If the number of modified or referenced instructions is 400 or more
+  if (mem_counter <= 0) {
+    printDebug(__func__, "pipeliner info:over mem limit num", L);
+    setRemarkMissedReason(MsgID_swpl_many_memory_insts);
+    return true;
+  }
   return false;
 }
 
@@ -421,7 +445,7 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *B
   }
 
   if (isTooManyNumOfInstruction(L)) {
-    return TargetInfo::SWP_LS_NO_Target;
+    return (target_ls ? TargetInfo::LS3_Target : TargetInfo::SWP_LS_NO_Target);
   }
 
   // @todo: It is left as the function to perform target judgment has not been created.
