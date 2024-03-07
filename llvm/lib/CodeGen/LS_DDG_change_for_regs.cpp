@@ -1076,7 +1076,11 @@ extern LS::EdgeList LS::getEdgePairList(const LS::VertexList &Vertices, LS::Edge
 }
 
 LS::Graph::Graph(const llvm::LsDdg& LsDdg) {
-  const auto &graph=LsDdg.getGraph();
-  // graph.getVerticesでノードを複写
-  // graph.getEdgesでエッジを複写
+  const auto &G=LsDdg.getGraph();
+  for (const auto &V:G.getVertices()) {
+
+  }
+  for (const auto &E:G.getEdges()) {
+
+  }
 }
