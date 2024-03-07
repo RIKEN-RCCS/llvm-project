@@ -377,12 +377,12 @@ bool AArch64InstrInfo::canPipelineLoop(MachineLoop &L) const {
 }
 
 bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
-    MachineBasicBlock *LoopBB = L.getTopBlock();
+  MachineBasicBlock *LoopBB = L.getTopBlock();
 
   MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
   MachineBasicBlock::iterator E = LoopBB->getFirstNonDebugInstr();
-  MachineInstr *BccMI = nullptr;
-  MachineInstr *CompMI = nullptr;
+  bool DefMI = false;
+  bool UseMI = false;
 
   for (; I != E; --I) {
     // Call
@@ -406,10 +406,13 @@ bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
       }
     }
     /* Multiple instructions to update CC appeared */
-    if (CompMI && hasRegisterImplicitDefOperand (&*I, AArch64::NZCV)) {
-      printDebug(__func__, "pipeliner info:multi-defoperand==NZCV", L);
-      SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_multiple_inst_update_CCR);
-      return true;
+    if (hasRegisterImplicitDefOperand (&*I, AArch64::NZCV)) {
+      if (DefMI) {
+        printDebug(__func__, "pipeliner info:multi-defoperand==NZCV", L);
+        SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_multiple_inst_update_CCR);
+        return true;
+      }
+      DefMI = true;
     }
     /* An instruction to update the FPCR has appeared */
     if (hasRegisterImplicitDefOperand (&*I, AArch64::FPCR)) {
@@ -418,10 +421,13 @@ bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
       return true;
     }
     /* Multiple instructions that reference CC appeared */
-    if (BccMI && I->hasRegisterImplicitUseOperand(AArch64::NZCV)) {
-      printDebug(__func__, "pipeliner info:multi-refoperand==NZCV", L);
-      SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_multiple_inst_reference_CCR);
-      return true;
+    if (I->hasRegisterImplicitUseOperand(AArch64::NZCV)) {
+      if (UseMI) {
+        printDebug(__func__, "pipeliner info:multi-refoperand==NZCV", L);
+        SWPipeliner::setRemarkMissedReason(SWPipeliner::MsgID_swpl_multiple_inst_reference_CCR);
+        return true;
+      }
+      UseMI = true;
     }  
   }
   return false;
