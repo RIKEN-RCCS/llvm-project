@@ -2238,16 +2238,6 @@ public:
     return false;
   }
 
-  /**
-   * Determines whether the target loop is subject to Swpl optimization.
-   *
-   * \param[in] L MachineLoop
-   * \retval true  The loop is subject to Swpl optimization。
-   * \retval false The loop isnot subject to Swpl optimization
-   */
-  virtual bool canPipelineLoop(MachineLoop &L) const {
-    return false;
-  }
 
   /**
    * Determine if the target loop contains instructions that are not covered by SWPL, LS.
