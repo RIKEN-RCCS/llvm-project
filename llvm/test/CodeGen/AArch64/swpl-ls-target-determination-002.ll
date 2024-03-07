@@ -1,6 +1,6 @@
-; RUN: llc < %s -O1 -fswp -fls -swpl-max-inst-num=100  -mcpu=a64fx  -swpl-debug --pass-remarks=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
-;CHECK:remark: <unknown>:0:0: This loop cannot be software pipelined because the loop contains too many instructions.
-;CHECK:remark: <unknown>:0:0: This loop cannot be local scheduled because the loop contains too many instructions.
+; RUN: llc < %s -O1 -fswp -fls -swpl-max-inst-num=100  -mcpu=a64fx  --pass-remarks=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+;CHECK: remark: <unknown>:0:0: This loop cannot be software pipelined because the loop contains too many instructions.
+;CHECK: remark: <unknown>:0:0: remark: local scheduling
 ; ModuleID = '2912_inst_l.c'
 source_filename = "2912_inst_l.c"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
