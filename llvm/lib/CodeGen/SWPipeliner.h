@@ -1130,7 +1130,7 @@ private:
 
   bool isNonScheduleInstr(MachineLoop &L) const;
 
-  bool isNonNormalizeLoop(const MachineLoop &L) const;
+  bool isNonNormalizeLoop(MachineLoop &L) const;
 
   /**
    * \brief outputRemarkMissed
