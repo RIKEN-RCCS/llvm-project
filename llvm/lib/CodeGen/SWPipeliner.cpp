@@ -343,8 +343,8 @@ bool SWPipeliner::isNonScheduleInstr(MachineLoop &L) const {
   return TII->isNonScheduleInstr(L);
 }
 
-bool SWPipeliner::isNonNormalizeLoop(const MachineLoop &L) const {
-  return false;
+bool SWPipeliner::isNonNormalizeLoop(MachineLoop &L) const {
+  return TII->isNonNormalizeLoop(L);
 }
 
 void SWPipeliner::outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop &L) const {
