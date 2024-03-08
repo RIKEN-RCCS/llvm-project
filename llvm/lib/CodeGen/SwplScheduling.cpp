@@ -18,12 +18,14 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/CodeGen/SwplTargetMachine.h"
 #include <cmath>
+#include <queue>
 
 using namespace llvm;
 using namespace ore; // for NV
 #define DEBUG_TYPE "aarch64-swpipeliner"
 
 static cl::opt<bool> OptionDumpMrt("swpl-debug-dump-mrt",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> OptionDumpLsMrt("ls-debug-dump-mrt",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> OptionBsearch("swpl-ii-by-Bsearch",cl::init(true), cl::ReallyHidden);
 
 static cl::opt<unsigned> OptionMveLimit("swpl-mve-limit",cl::init(30), cl::ReallyHidden);
@@ -40,63 +42,52 @@ static cl::opt<unsigned> OptionMaxFreg("swpl-max-freg",cl::init(0), cl::ReallyHi
 static cl::opt<unsigned> OptionMaxPreg("swpl-max-preg",cl::init(0), cl::ReallyHidden);
 
 static cl::opt<bool> OptionDumpEveryInst("swpl-debug-dump-scheduling-every-inst",cl::init(false), cl::ReallyHidden);
-
+static cl::opt<bool> OptionDumpLsEveryInst("ls-debug-dump-scheduling-every-inst",cl::init(false), cl::ReallyHidden);
 
 static cl::opt<bool> OptionEnableStageScheduling("swpl-enable-stagescheduling",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpSSProgress("swpl-debug-dump-ss-progress",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpCyclicRoots("swpl-debug-dump-ss-cyclicroots",cl::init(false), cl::ReallyHidden);
 
-/// \brief 命令が使用する資源を予約する
-/// \details 命令が使用する資源をMrtに記録する。
-///          疑似命令など資源を使用しない命令の場合は、Mrtでの予約はしない。
-/// \param[in] cycle 命令を配置するcycle
-/// \param[in] inst
-/// \param[in] pipeline instが使用する資源情報
-/// \return なし
-///
-/// \note どの資源使用パターンかわからないと、Mrtの埋めようが無い。
-///       資源使用パターンを引数に追加しても、本関数で資源情報の問い合わせが
-///       発生するため、引数で資源情報を貰うこととした。
-/// \note 引数pipelineは、資源使用パターンに応じたTmPipeline情報
 void SwplMrt::reserveResourcesForInst(unsigned cycle,
                                       const SwplInst& inst,
                                       const StmPipeline & pipeline ) {
   // cycle:1, stage:{ 1, 5, 9 }, resources:{ ID1, ID2, ID3 }
-  //   ->     resource ID1  ID2  ID3  ID4
-  //      cycle   :  1 予約
+  //   ->     resource ID1     ID2      ID3    ID4
+  //      cycle   :  1 reserve
   //                 2
   //                 3
   //                 4
-  //                 5      予約
+  //                 5         reserve
   //                 6
   //                 7
   //                 8
-  //                 9           予約
+  //                 9                  reserve
 
   // cycle:1, stage:{ 1, 2, 3 }, resources:{ ID1, ID1, ID1 }
-  //   ->     resource ID1  ID2  ID3  ID4
-  //      cycle   :  1 予約
-  //                 2      予約
-  //                 3           予約
+  //   ->     resource ID1     ID2     ID3    ID4
+  //      cycle   :  1 reserve
+  //                 2         reserve
+  //                 3                 reserve
 
   // cycle:1, stage:{ 1, 1, 4 }, resources:{ ID1, ID2, ID3 }
-  //   ->     resource ID1  ID2  ID3  ID4
-  //      cycle   :  1 予約 予約
+  //   ->     resource ID1     ID2     ID3    ID4
+  //      cycle   :  1 reserve reserve
   //                 2
   //                 3
-  //                 4           予約
+  //                 4                 reserve
 
   // cycle:1, stage:{ 1, 1, 4, 5 }, resources:{ ID1, ID2, ID3, ID3 }
-  //   ->     resource ID1  ID2  ID3  ID4
-  //      cycle   :  1 予約 予約
+  //   ->     resource ID1     ID2     ID3    ID4
+  //      cycle   :  1 reserve reserve
   //                 2
   //                 3
-  //                 4           予約
-  //                 5           予約
+  //                 4                 reserve
+  //                 5                 reserve
 
   assert( (pipeline.resources.size()==pipeline.stages.size()) && "Unexpected resource information.");
 
-  // 疑似命令など資源を使用しない命令の場合は、Mrtでの予約はしない。
+  // Instructions that do not use resources,
+  // such as pseudo-instructions, are not reserved using Mrt.
   if( pipeline.resources.size() == 0 ) {
     return;
   }
@@ -105,7 +96,11 @@ void SwplMrt::reserveResourcesForInst(unsigned cycle,
   unsigned modulo_cycle;
   for(unsigned i=0; i<pipeline.resources.size(); i++) {
 
-    modulo_cycle = (start_cycle+pipeline.stages[i]) % iteration_interval;
+    if (iteration_interval == 0) {
+      modulo_cycle = (start_cycle+pipeline.stages[i]);
+    } else {
+      modulo_cycle = (start_cycle+pipeline.stages[i]) % iteration_interval;
+    }
 
     // check already been reserved.
     if( table[modulo_cycle]->count(pipeline.resources[i]) != 0 &&
@@ -118,21 +113,6 @@ void SwplMrt::reserveResourcesForInst(unsigned cycle,
   return;
 }
 
-/// \brief 配置に支障のある命令を探す
-/// \details 第１引数のslotに第２引数のinstructionが入った場合に、
-///          sheduleの支障となるscheduling済みinstructionのSetを返す。
-/// \param[in] cycle 命令を配置しようとしているcycle
-/// \param[in] inst 配置しようとしている命令
-/// \param[in] pipeline 命令が使用する資源情報
-/// \return 支障となるInstructionのSet
-///
-/// \note 返却するポインタの領域は呼出し元で解放する必要がある。
-/// \note どの資源使用パターンかわからないとチェックできないため、
-///       引数で資源情報を貰うこととした。
-/// \note 引数の資源パターンに競合する配置済み命令を探すため、引数instは冗長である。
-///       （現在のところ使い道なし）
-/// \note ロジックはreserveResourcesForInstとほぼ同じ。
-///       予約するのではなく、すでに予約されていれば、そのInstを記録していく。
 SwplInstSet* SwplMrt::findBlockingInsts(unsigned cycle,
                                         const SwplInst& inst,
                                         const StmPipeline & pipeline)
@@ -144,7 +124,11 @@ SwplInstSet* SwplMrt::findBlockingInsts(unsigned cycle,
   unsigned modulo_cycle;
   for(unsigned i=0; i<pipeline.resources.size(); i++) {
 
-    modulo_cycle = (start_cycle+pipeline.stages[i]) % iteration_interval;
+    if (iteration_interval == 0) {
+      modulo_cycle = (start_cycle+pipeline.stages[i]);
+    } else {
+      modulo_cycle = (start_cycle+pipeline.stages[i]) % iteration_interval;
+    }
 
     // 既にリソースを使用している命令があればblocking_instに保持
     if( table[modulo_cycle]->count(pipeline.resources[i]) != 0 ) {
@@ -197,35 +181,20 @@ void SwplMrt::cancelResourcesForInst(const SwplInst& inst) {
   return;
 }
 
-/// \brief スケジューリング結果をMRTの枠組で表示する
-///
-/// ```
-///   下記のようなループを例とする
-///   DO I=1,1024
-///   A(I) =  A(I) + B(I)
-///   ENDDO
-///
-///   例として-Kfast,nosimd,nounroll -W0,-zswpl=dump-mrtで翻訳すると,
-///   下記のようにMRT結果が表示される.
-///   縦軸はcycle,横軸が命令発行Slotを表しており,左上の命令から順に発行される。
-///   命令の括弧内数字は,もとのループの何回転目の命令を利用したかを表示している。
-///   これから,A(4) + B(4)のfaddがA(1)=のstoreと同じcycleに発行されている事がわかる.
-///
-///   0  0  0  0  ffload (6)  0           ffload (6)  add    (6)
-///   0  0  0  0  ffstore(1)  ffadd  (4)  add    (6)  sub    (1)
-/// ```
-/// \param [in] inst_slot_map
-/// \param [in] stream 出力stream
-/// \return なし
 void SwplMrt::dump(const SwplSlots& slots, raw_ostream &stream) {
   unsigned modulo_cycle;
   StmResourceId resource_id;
   unsigned res_max_length = 0;
   unsigned word_width, inst_gen_width, inst_rotation_width;
-  unsigned ii = iteration_interval;
+  unsigned ii;
   unsigned numresource = SWPipeliner::STM->getNumResource();
 
-  assert(ii==table.size());
+  if (iteration_interval != 0) {
+    ii = iteration_interval;
+    assert(ii==table.size());
+  } else {
+    ii = size;
+  }
 
   // Resource名の最大長の取得
   // resource_idはA64FXRes::PortKindのenum値に対応する。
@@ -236,7 +205,7 @@ void SwplMrt::dump(const SwplSlots& slots, raw_ostream &stream) {
   }
 
   inst_gen_width = std::max( getMaxOpcodeNameLength()+1, res_max_length);  // 1 = 'p|f' の分
-  inst_rotation_width = ( slots.size() > 0 ) ? 4 : 0;              // 4 = '(n) 'の分
+  inst_rotation_width = ( iteration_interval!=0 && slots.size()>0 ) ? 4 : 0;  // 4 = '(n) 'の分
   word_width = inst_gen_width+inst_rotation_width;
 
   // Resource名の出力
@@ -316,6 +285,15 @@ SwplMrt* SwplMrt::construct (unsigned iteration_interval) {
   return mrt;
 }
 
+SwplMrt* SwplMrt::constructForLs (unsigned size_input) {
+  SwplMrt*  mrt = new SwplMrt(0);
+  mrt->setSize(size_input);
+  for(unsigned i=0; i<mrt->getSize(); i++) {
+    mrt->table.push_back( (new llvm::DenseMap<StmResourceId, const SwplInst*>()) );
+  }
+  return mrt;
+}
+
 /// \brief MRTを解放する
 /// \param[in] mrt 解放するSwplMrtのポインタ
 /// \return なし
@@ -355,12 +333,6 @@ void SwplMrt::printInstMI(raw_ostream &stream,
   return;
 }
 
-/// \brief instの回転数を出力する
-/// \param [in] stream 出力stream
-/// \param [in] inst_slot_map
-/// \param [in] inst 対象の命令
-/// \param [in] ii iteration interval
-/// \detaile  Instの回転数を '(n) 'の形式で出力する。
 void SwplMrt::printInstRotation(raw_ostream &stream,
                                 const SwplSlots& slots,
                                 const SwplInst* inst, unsigned ii) {
@@ -4164,10 +4136,6 @@ void SwplPlan::dump(raw_ostream &stream) {
   return;
 }
 
-/// \brief SwplPlanの命令配置状態をダンプする
-/// \detail 命令ごとにMachineInstr*とOpcode名を出力する。
-/// \param [in] stream 出力stream
-/// \return なし
 void SwplPlan::dumpInstTable(raw_ostream &stream) {
   size_t table_size = (size_t)end_slot - (size_t)begin_slot;
   std::vector<SwplInst*> table(table_size, nullptr);
@@ -4187,8 +4155,10 @@ void SwplPlan::dumpInstTable(raw_ostream &stream) {
     if(slot.calcFetchSlot() == 0) {
       stream << "\n";
     }
-    if(i!=0 && i%(SWPipeliner::FetchBandwidth * iteration_interval) == 0 ) { // IIごとに改行
-      stream << "\n";
+    if (prolog_cycles != 0) {
+      if(i!=0 && i%(SWPipeliner::FetchBandwidth * iteration_interval) == 0 ) { // new line by II
+        stream << "\n";
+      }
     }
 
     inst = table[i];
@@ -4338,6 +4308,39 @@ SwplPlan* SwplPlan::generatePlan(SwplDdg& ddg)
   }
   llvm_unreachable("select_plan returned an unknown state.");
   return nullptr;
+}
+
+SwplPlan* SwplPlan::generateLsPlan(const LsDdg& lsddg)
+{
+  LSListScheduling lsproc(lsddg);
+  SwplSlots* slots = lsproc.getScheduleResult();
+
+  // Generate a plan and set information such as scheduling results.
+  const SwplLoop &currentLoop = lsddg.getLoop();
+  auto lsplan = new SwplPlan(currentLoop);
+  lsplan->slots = *slots;
+  lsplan->n_iteration_copies=1;
+  lsplan->n_renaming_versions=1;
+  unsigned min_index = SwplSlot::slotMin().slot_index;
+  unsigned fb = SWPipeliner::FetchBandwidth;
+  SwplSlot slot(min_index+(fb - (min_index % fb)));
+  lsplan->begin_slot=lsproc.getEarliestSlot();
+  lsplan->end_slot= (slots->findLastSlot(currentLoop) / fb + 1) * fb;
+  auto total_cycles = (lsplan->end_slot.calcCycle()) - (lsplan->begin_slot.calcCycle());
+  lsplan->total_cycles=total_cycles;
+  lsplan->iteration_interval=total_cycles;
+  lsplan->prolog_cycles=0;
+  lsplan->kernel_cycles=total_cycles;
+  lsplan->epilog_cycles=0;
+  auto *rk=SWPipeliner::TII->getRegKind(*SWPipeliner::MRI);
+  lsplan->num_max_freg =  (OptionMaxFreg > 0) ? OptionMaxFreg : rk->getNumFloatReg();
+  lsplan->num_max_ireg = (OptionMaxIreg > 0) ? OptionMaxIreg : rk->getNumIntReg();
+  lsplan->num_max_preg = (OptionMaxPreg > 0) ? OptionMaxPreg : rk->getNumPredicateReg();
+  delete rk;
+  lsplan->num_necessary_freg=10;
+  lsplan->num_necessary_ireg=10;
+  lsplan->num_necessary_preg=1;
+  return lsplan;
 }
 
 
@@ -4832,6 +4835,34 @@ SwplSlot SwplSlots::getEmptySlotInCycle( unsigned cycle,
   return SWPL_ILLEGAL_SLOT;
 }
 
+
+SwplSlot SwplSlots::getLsEmptySlotInCycle( unsigned cycle, bool isvirtual ) {
+  // getEmptySlotInCycle modified for LS.
+  // See comment of getEmptySlotInCycle about slot configuration.
+
+  unsigned bandwidth = SWPipeliner::FetchBandwidth;
+  unsigned realbandwidth = SWPipeliner::RealFetchBandwidth;
+
+  std::vector<bool> openslot(bandwidth);
+  for(unsigned i=0; i<bandwidth; i++) {
+    openslot[i] = (i<(bandwidth - realbandwidth)) ? isvirtual : !isvirtual;
+  }
+
+  for (auto& mp : *this) {
+    if (mp == SwplSlot::UNCONFIGURED_SLOT) continue;
+    unsigned placed_cycle = mp.calcCycle();
+    if(cycle == placed_cycle) {
+      openslot[mp.calcFetchSlot()] = false; // used
+    }
+  }
+  for( unsigned idx=0; idx<bandwidth; idx++) {
+    if( openslot[idx] == true ) {
+      return SwplSlot::construct(cycle, 0) + idx;
+    }
+  }
+  return SWPL_ILLEGAL_SLOT;
+}
+
 /// \brief デバッグ用ダンプ
 void SwplSlots::dump(const SwplLoop& c_loop) {
   if( this->size() == 0 ) {
@@ -4949,3 +4980,170 @@ SwplSlot SwplSlot::slotMax() { return 1500000; }
 /// \brief slotの最小を返す
 /// \return 最小slot
 SwplSlot SwplSlot::slotMin() { return  500000; }
+
+SwplSlots* LSListScheduling::getScheduleResult() {
+  setPriorityOrder(READY);
+
+  slots->resize(READY.size());
+
+  lsmrt = createLsMrt();
+
+  // Scheduling in READY order.
+  for (auto [inst, edges] : READY) {
+    SwplSlot slot = getPlacementSlot(inst, edges);
+    (*slots)[inst->inst_ix].slot_index = slot.slot_index;
+
+    if (OptionDumpLsEveryInst) {
+      lsmrt->dump(*slots, dbgs());
+      slots->dump(lsddg.getLoop());
+    }
+  }
+
+  if (OptionDumpLsMrt) {
+    lsmrt->dump(*slots, dbgs());
+  }
+  return slots;
+}
+
+void LSListScheduling::setPriorityOrder(llvm::MapVector<const SwplInst*, SwplInstEdges> &READY) {
+  SwplInstEdges edges = lsddg.getGraph().getEdges();
+  const SwplInsts insts = lsddg.getGraph().getVertices();
+  llvm::DenseMap<const SwplInst*, unsigned> inst_pre_map; // set of SwplInst and num of pre-insts
+  llvm::DenseMap<const SwplInst*, SwplInstEdges*> wREADY;
+
+  // set of SwplInst and SwplInstEdges.
+  for (auto i : insts) {
+    auto es = new SwplInstEdges;
+    wREADY.insert(std::make_pair(i, es));
+  }
+  // Insert edge when there is a preceding instruction.
+  for (auto e : edges) {
+    wREADY[e->getTerminal()]->push_back(e);
+  }
+
+  // Count the number of preceding instructions.
+  for (auto [f, s] : wREADY) {
+    inst_pre_map.insert(std::make_pair(f,s->size()));
+  }
+
+  // topological sort.
+  std::queue<const SwplInst*> Q;
+  for (auto [f, s] : inst_pre_map) {
+    if (s == 0) {
+      Q.push(f);
+    }
+  }
+  while (!Q.empty()) {
+    auto q = Q.front();
+    Q.pop();
+    READY.insert(std::make_pair(q, *(wREADY[q])));
+    for (auto [f, s] : wREADY) {
+      for (auto edge : *s) {
+        if (edge->getInitial() == q) {
+          inst_pre_map[f] -= 1;
+          if (inst_pre_map[f] == 0) {
+            Q.push(f);
+          }
+        }
+      }
+    }
+  }
+
+  for (auto [f, s] : wREADY) {
+    delete s;
+  }
+}
+
+SwplSlot LSListScheduling::getPlacementSlot(const SwplInst* inst, SwplInstEdges &edges) {
+  unsigned earliest_cycle = min_cycle;  // Earliest cycle that can be placed
+
+  if (OptionDumpLsEveryInst) {
+    dbgs() << "=========================================\n";
+    inst->getMI()->print(dbgs());
+    if (edges.size() == 0) {
+      dbgs() << "pred : none\n";
+    }
+  }
+
+  // Find the cycle that can be placed fastest from multiple edges
+  for (auto edge : edges) {
+    auto s = (*slots)[edge->getInitial()->inst_ix];
+    auto ini_cycle = s.calcCycle();
+    auto d = lsddg.getDelay(*edge);
+    if (d == 0)
+      d = 1;  // It should be a pseudo-instruction
+      
+    if (OptionDumpLsEveryInst) {
+      dbgs() << "pred : " << edge->getInitial()->getName() << "(placed=" <<  ini_cycle << ", delay=" << d << ")\n";
+    }
+    earliest_cycle = std::max(earliest_cycle, ini_cycle + d);
+  }
+
+  unsigned attempted_cycle = earliest_cycle;
+  bool ispseudo = SWPipeliner::STM->isPseudo(*(inst->getMI()));
+  SwplSlot placeable_slot;
+  const StmPipeline *pipeline;
+  while (1) {
+    // Check if cycle slot is free.
+    placeable_slot = slots->getLsEmptySlotInCycle(attempted_cycle, ispseudo);
+    if (placeable_slot != SWPL_ILLEGAL_SLOT) {
+      // Check for resource contention.
+      if (ispseudo) {
+        pipeline = nullptr;
+        break;
+      }
+
+      const StmPipeline *pl = findPlacablePipeline(inst, attempted_cycle);
+      if (pl != nullptr) {
+        pipeline = pl;
+        break;
+      }
+    }
+
+    attempted_cycle += 1;
+  }
+
+  // Make a resource reservation.
+  if (pipeline != nullptr)
+    lsmrt->reserveResourcesForInst(attempted_cycle - min_cycle, *inst, *pipeline);
+
+  if (OptionDumpLsEveryInst) {
+    dbgs() << "earliest cycle : " << earliest_cycle << "\n";
+    dbgs() << "placed cycle   : " << attempted_cycle << "\n";
+    dbgs() << "placed slot    : " << placeable_slot << "\n";
+  }
+
+  return placeable_slot;
+}
+
+SwplMrt* LSListScheduling::createLsMrt() {
+  const SwplInsts insts = lsddg.getGraph().getVertices();
+
+  unsigned length_mrt = 0;  /// MRT length.
+  for (auto i : insts) {
+    // Get instruction latency
+    int latency_R = SWPipeliner::STM->computeRegFlowDependence(i->getMI(), nullptr);
+    int latency_M = SWPipeliner::STM->computeMemFlowDependence(i->getMI(), nullptr);
+    int latency = std::max(latency_R, latency_M);
+    assert(latency >= 0);
+    if (latency == 0) {
+      latency += 1;   // Zero is pseudo. Pseudo are treated as latency=1.
+    }
+    length_mrt += (unsigned)latency;
+  }
+
+  // Create LsMRT
+  return SwplMrt::constructForLs(length_mrt);
+}
+
+const StmPipeline* LSListScheduling::findPlacablePipeline(const SwplInst* inst, unsigned cycle) {
+  const MachineInstr& mi = *(inst->getMI());
+
+  // Check for resource contention when placed in a cycle.
+  for (auto *pl : *(SWPipeliner::STM->getPipelines(mi))) {
+    if (lsmrt->isOpenForInst(cycle - min_cycle, *inst, *pl))
+      return pl;
+  }
+
+  return nullptr; // not found
+}
