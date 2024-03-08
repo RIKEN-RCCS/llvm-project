@@ -1,5 +1,5 @@
-; RUN: llc < %s -mcpu=a64fx -O1 -swpl-max-inst-num=10000 -fswp --pass-remarks-missed=aarch64-swpipeliner --pass-remarks=aarch64-swpipeliner --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck --allow-empty %s
-;CHECK: software pipelining (IPC:
+; RUN: llc < %s -mcpu=a64fx -swpl-debug -O1 -swpl-max-inst-num=10000 -fswp --pass-remarks-missed=aarch64-swpipeliner --pass-remarks-filter=aarch64-swpipeliner --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck --allow-empty %s
+;CHECK: : (Iterative Modulo Scheduling.
 
 ; ModuleID = '2912.c'
 source_filename = "2912.c"

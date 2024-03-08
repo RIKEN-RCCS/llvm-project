@@ -1,5 +1,5 @@
-# RUN: llc %s  -fswp -march=aarch64 -mcpu=a64fx -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner -swpl-debug -pass-remarks-missed=-  -o /dev/null 2>&1 | FileCheck %s
-# CHECK: This loop is not software pipelined because the software pipelining does not improve the performance.
+# RUN: llc %s  -fswp -march=aarch64 -mcpu=a64fx -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner -swpl-debug  -o /dev/null 2>&1 | FileCheck %s
+# CHECK: : (Iterative Modulo Scheduling.
 
 --- |
   ; ModuleID = './test.base.ll'

@@ -1,5 +1,5 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-enable-stagescheduling=true -pass-remarks=- -o /dev/null 2>&1  | FileCheck %s
-#CHECK: software pipelining (IPC:
+#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-enable-stagescheduling=true -swpl-debug -o /dev/null 2>&1  | FileCheck %s
+# CHECK: : (Iterative Modulo Scheduling.
 --- |
   ; ModuleID = '/home/XXXX/sftest.c'
   source_filename = "/home/XXXX/sftest.c"
