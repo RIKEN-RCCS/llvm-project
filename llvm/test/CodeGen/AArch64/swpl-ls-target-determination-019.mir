@@ -1,4 +1,4 @@
-# RUN: llc -mcpu=a64fx -march=aarch64 -fswp -fls -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner -o /dev/null -pass-remarks-missed=aarch64-swpipeliner %s 2>&1 | FileCheck %s
+# RUN: llc -mcpu=a64fx -march=aarch64 -fswp -fls -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner -o /dev/null -pass-remarks-missed=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner %s 2>&1 | FileCheck %s
 
 #CHECK: remark: <unknown>:0:0: This loop cannot be software pipelined because multiple instructions to update CCR.
 #CHECK: remark: <unknown>:0:0: This loop cannot be local scheduled because multiple instructions to update CCR.

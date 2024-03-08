@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=a64fx -O1  -fswp -fls --pass-remarks=aarch64-swp -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -mcpu=a64fx -O1  -fswp -fls -pass-remarks-missed=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 ;CHECK: remark: <unknown>:0:0: This loop cannot be software pipelined because the shape of the loop is not covered.
 ;CHECK: remark: <unknown>:0:0: This loop cannot be local scheduled because the shape of the loop is not covered.
 

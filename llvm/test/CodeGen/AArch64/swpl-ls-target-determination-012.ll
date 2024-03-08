@@ -1,4 +1,4 @@
-; RUN: llc < %s -O1 -mcpu=a64fx  -fswp -fls --pass-remarks=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -O1 -mcpu=a64fx  -fswp -fls -pass-remarks=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 ;CHECK: remark: <unknown>:0:0: This loop cannot be software pipelined because the loop contains an instruction, such as function call, which is not supported.
 ;CHECK: remark: <unknown>:0:0: This loop cannot be local scheduled because the loop contains an instruction, such as function call, which is not supported.
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -O1 -mcpu=a64fx  -fswp -fls -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -O1 -mcpu=a64fx  -fswp -fls -pass-remarks-missed=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 ;CHECK: remark: <unknown>:0:0: software pipelining
 
 ; ModuleID = '2912.c'
