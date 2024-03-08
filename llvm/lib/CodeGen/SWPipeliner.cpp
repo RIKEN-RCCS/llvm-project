@@ -2304,7 +2304,7 @@ void SwplInst::InitializeWithDefUse(llvm::MachineInstr *MI, SwplLoop *loop, Regi
     }
   }
 
-  if ((MI->mayLoad() || MI->mayStore() || MI->mayLoadOrStore()) && MI->memoperands_empty()) {
+  if (MI->mayLoadOrStore() && MI->memoperands_empty()) {
     // load/store命令でMI->memoperands_empty()の場合、MayAliasとして動作する必要がある
     if (SWPipeliner::isDebugDdgOutput()) {
       dbgs() << "DBG(SwplInst::InitializeWithDefUse): memoperands_empty mi=" << *MI;
