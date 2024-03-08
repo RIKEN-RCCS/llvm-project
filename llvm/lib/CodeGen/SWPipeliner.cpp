@@ -524,15 +524,18 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
       lsddg->print();
     }
 
-    LS::Graph G(*lsddg);
+    LS::VertexMap forDelete;
+
+    LS::Graph G(*lsddg, forDelete);
     G.show("G");
     LS::VtoV KStar;
     G.greedyK(LS::FLOAT_TYPE, KStar);
     LS::EdgeList AddEdges;
-    bool Result = G.serialize(LS::FLOAT_TYPE, KStar, 4, AddEdges);
+    bool Result = G.serialize(LS::FLOAT_TYPE, KStar, 32, AddEdges);
     G.show("G_bar");
     std::cout << "RESULT: " << Result << " ";
     printEList(AddEdges);
+    for (auto &T:forDelete) delete T.second;
 
     LsDdg::destroy(lsddg);
 

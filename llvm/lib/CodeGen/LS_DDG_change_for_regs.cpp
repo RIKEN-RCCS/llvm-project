@@ -1075,12 +1075,24 @@ extern LS::EdgeList LS::getEdgePairList(const LS::VertexList &Vertices, LS::Edge
   return Result;
 }
 
-LS::Graph::Graph(const llvm::LsDdg& LsDdg) {
+LS::Graph::Graph(const llvm::LsDdg& LsDdg, VertexMap& forDelete) {
   const auto &G=LsDdg.getGraph();
+  VertexList &Vlist = this->getVertices();
+  int id=0;
   for (const auto &V:G.getVertices()) {
-
+    auto* newV=new Vertex(id++);
+    forDelete[V]=newV;
+    Vlist.push_back(newV);
   }
-  for (const auto &E:G.getEdges()) {
-
+  for (auto *E:G.getEdges()) {
+    DataType Ty=NO_TYPE;
+    const auto *Reg=LsDdg.getReg(*E);
+    auto Latency=LsDdg.getDelay(*E);
+    if (Reg) {
+      if (Reg->isIntReg()) Ty=INT_TYPE;
+      else if (Reg->isFloatReg()) Ty=FLOAT_TYPE;
+      else if (Reg->isPredReg()) Ty=PREDICATE_TYPE;
+    }
+    this->addEdge(forDelete.at(E->getInitial()), forDelete.at(E->getTerminal()), Ty, Latency);
   }
 }

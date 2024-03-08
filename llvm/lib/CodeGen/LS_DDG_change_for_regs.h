@@ -16,10 +16,12 @@
 #include <string>
 #include <unordered_map>
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace llvm {
 class MachineInstr;
 class LsDdg;
+class SwplInst;
 } // namespace llvm
 
 namespace LS {
@@ -29,6 +31,7 @@ class Vertex;
 enum DataType { FLOAT_TYPE, INT_TYPE, PREDICATE_TYPE, NO_TYPE };
 
 using VertexList = std::list<Vertex *>;
+using VertexMap = llvm::DenseMap<llvm::SwplInst*,Vertex *>;
 using EdgeList = std::list<std::pair<Vertex *, Vertex *>>;
 
 using VertexInfo = std::unordered_map<Vertex *, int>;
@@ -116,12 +119,9 @@ public:
   Vertex(Vertex &) = delete;
 
   const std::string &getName() const { return Name; }
-  void set(const llvm::MachineInstr *mi) {MI=mi;}
-  const llvm::MachineInstr* get() {return MI;}
 
 private:
   std::string Name;
-  const llvm::MachineInstr *MI=nullptr;
 };
 
 
@@ -183,7 +183,7 @@ public:
   Graph()=default;
   virtual ~Graph()=default;
 
-  explicit Graph(const llvm::LsDdg& LsDdg);
+  explicit Graph(const llvm::LsDdg& LsDdg, VertexMap& forDelete);
 
   void addEdge(Vertex *U, Vertex *V, DataType Dt, int Latency) {
     Edges[U].push_front(V);
