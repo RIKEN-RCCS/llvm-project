@@ -1,6 +1,6 @@
 ; RUN: llc < %s -O1 -mcpu=a64fx  -fswp  -swpl-debug -pass-remarks-missed=-  -o /dev/null 2>&1 | FileCheck %s
-;CHECK:DBG(isNonNormalizeLoop) pipeliner info:not found (BCC || SUBSXri)
-;CHECK:This loop cannot be software pipelined because the shape of the loop is not covered.
+;CHECK: pipeliner info:not found (BCC || SUBSXri)
+;CHECK: This loop cannot be software pipelined because the shape of the loop is not covered.
 ; ModuleID = '2912_inf_loop.c'
 source_filename = "2912_inf_loop.c"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
