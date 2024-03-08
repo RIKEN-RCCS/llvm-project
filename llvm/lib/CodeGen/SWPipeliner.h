@@ -943,6 +943,7 @@ public:
   SwplInstGraph *getGraph() { return Graph; }
   const SwplInstGraph &getGraph() const { return *Graph; }
   SwplInsts &getLoopBodyInsts() { return Loop->getBodyInsts(); }
+  const SwplLoop &getLoop() const { return *Loop; }
   int getDelay(SwplInstEdge &edge) const { return DelaysMap.at(&edge); }
   void setDelay(SwplInstEdge &edge, int delay) { DelaysMap[&edge] = delay; }
   const SwplReg* getReg(SwplInstEdge &edge) const { return RegMap.at(&edge); }
