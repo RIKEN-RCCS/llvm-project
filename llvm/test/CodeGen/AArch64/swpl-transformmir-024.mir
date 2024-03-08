@@ -1,8 +1,7 @@
 #RUN: llc %s -mcpu=a64fx -fswp -O3 -swpl-debug -swpl-plan-import=%S/Inputs/3044-24.yaml -start-before=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
 
 
-# CHECK:DBG(canPipelineLoop) [canPipelineLoop:OK] Passed all checks. :
-# CHECK-NEXT:        : (Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 7. Budget 350. Minimum II = 3.)
+# CHECK:        : (Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 7. Budget 350. Minimum II = 3.)
 # CHECK-NEXT:DBG(SwplTrialState::tryNext) gave up scheduling because it was arranged across more than 20 stages.(II=3)
 # CHECK-NEXT:        :  (x) Run out of budget      at estimation.          : (II: 3 in [ 3,1000]) MVE: 0 Last inst: 2. (Itr Org: 5, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
 # CHECK-NEXT:DBG(SwplTrialState::tryNext) gave up scheduling because it was arranged across more than 20 stages.(II=4)

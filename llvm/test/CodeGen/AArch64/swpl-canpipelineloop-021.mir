@@ -1,5 +1,5 @@
-# RUN: llc -mcpu=a64fx -march=aarch64 -fswp -start-after=aarch64-dead-defs -pass-remarks-missed=aarch64-swpipeliner -o /dev/null  %s 2>&1 | FileCheck %s
-
+# RUN: llc -mcpu=a64fx -march=aarch64 -fswp -swpl-debug -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner -o /dev/null  %s 2>&1 | FileCheck %s
+#CHECK: pipeliner info:multi-refoperand==NZCV
 #CHECK: This loop cannot be software pipelined because multiple instructions to reference CCR.
 
 --- |

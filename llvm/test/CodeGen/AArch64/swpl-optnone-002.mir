@@ -1,6 +1,6 @@
 # RUN: llc -o /dev/null -mcpu=a64fx -fswp  -swpl-debug -start-before=aarch64-swpipeliner  %s 2>&1 | FileCheck %s
 
-# CHECK: [canPipelineLoop:OK] Passed all checks.
+# CHECK: (Iterative Modulo Scheduling. 
 
 --- |
   ; ModuleID = 'b.cpp'

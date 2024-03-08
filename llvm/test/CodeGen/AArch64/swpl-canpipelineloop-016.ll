@@ -1,5 +1,7 @@
-; RUN: llc < %s -mcpu=a64fx -O1 -fswp  --pass-remarks-filter=hardware-loop  --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck %s
-;CHECK: hardware-loop(reason=CALL
+; RUN: llc < %s -mcpu=a64fx -O1 -fswp -swpl-debug --pass-remarks=hardware-loop  --pass-remarks-missed=- --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck %s
+;CHECK: hardware-loop not created: it's not profitable to create a hardware-loop(reason=CALL or ASM exists)
+;CHECK: pipeliner info:found non-target-inst or gnuasm
+;CHECK: This loop cannot be software pipelined because the loop contains an instruction, such as function call, which is not supported.
 
 ; ModuleID = '2912_10.c'
 source_filename = "2912_10.c"
