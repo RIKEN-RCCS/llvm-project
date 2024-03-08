@@ -1,5 +1,5 @@
-; RUN: llc < %s -O1 -mcpu=a64fx  -fswp  -swpl-debug  --pass-remarks-filter=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
-;CHECK:canPipelineLoop:OK
+; RUN: llc < %s -O1 -mcpu=a64fx  -fswp  --pass-remarks=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
+;CHECK:software pipelining (IPC: 3.00, ITR: 19, MVE: 10, II: 2, Stage: 10, (VReg Fp: 16/32, Int: 25/29, Pred: 1/8)), SRA(PReg Fp: 15/32, Int: 14/29, Pred: 0/8)
 ; ModuleID = '2912_2.c'
 source_filename = "2912_2.c"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

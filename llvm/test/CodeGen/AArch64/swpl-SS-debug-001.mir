@@ -1,5 +1,5 @@
 #RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-enable-stagescheduling=true -swpl-debug -o /dev/null 2>&1  | FileCheck %s
-#CHECK:DBG(canPipelineLoop) [canPipelineLoop:OK] Passed all checks. :
+
 #CHECK:        : (Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 8. Budget 400. Minimum II = 3.)
 #CHECK:                                                                Estimated num of vregs was changed by StageScheduling : (VReg  Fp: 17, Int: 7, Pre: 1) -> (VReg  Fp: 10, Int: 7, Pre: 1)
 #CHECK:        :  (O) Scheduling succeeds    at estimation.          : (II: 3 in [ 3,1000]) MVE: 4 Last inst: 0. (Itr Org: 0, Req: 11) (VReg Fp: 10/32, Int: 7/29, Pre: 1/8) Eval:0.000000e+00.

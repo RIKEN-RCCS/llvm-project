@@ -1,6 +1,14 @@
 # RUN: llc -o /dev/null -mcpu=a64fx -fswp  -swpl-debug -start-before=aarch64-swpipeliner  %s 2>&1 | FileCheck %s
 
-# CHECK: [canPipelineLoop:OK] Passed all checks.
+# CHECK: (Iterative Modulo Scheduling. ResMII 4. NumOfBodyInsts 6. Budget 300. Minimum II = 4.)
+# CHECK-NEXT: DBG(SwplTrialState::tryNext) gave up scheduling because it was arranged across more than 20 stages.(II=4)
+# CHECK-NEXT: :  (x) Run out of budget      at estimation.          : (II: 4 in [ 4,1000]) MVE: 0 Last inst: 1. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+# CHECK-NEXT: DBG(SwplTrialState::tryNext) gave up scheduling because it was arranged across more than 20 stages.(II=5)
+# CHECK-NEXT: :  (x) Run out of budget      at estimation.          : (II: 5 in [ 4,1000]) MVE: 0 Last inst: 1. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+# CHECK-NEXT: :  (O) Scheduling succeeds    at estimation.          : (II: 9 in [ 4,1000]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 7/29, Pre: 1/8) Eval:0.000000e+00.
+# CHECK-NEXT: :  (x) Run out of budget      at binary search.       : (II: 7 in [ 5,9]) MVE: 0 Last inst: 1. (Itr Org: 0, Req: 0) (VReg Fp: 0/0, Int: 0/0, Pre: 0/0) Eval:0.000000e+00.
+# CHECK-NEXT: :  (O) Scheduling succeeds    at binary search.       : (II: 8 in [ 7,9]) MVE: 2 Last inst: 0. (Itr Org: 0, Req: 2) (VReg Fp: 0/32, Int: 7/29, Pre: 1/8) Eval:0.000000e+00.
+# CHECK-NEXT: : Loop isn't software pipelined because prologue is 0 cycle.
 
 --- |
   ; ModuleID = 'b.cpp'

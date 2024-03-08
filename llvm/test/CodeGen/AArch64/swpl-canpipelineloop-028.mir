@@ -1,5 +1,5 @@
-# RUN: llc %s -mcpu=a64fx -march=aarch64 -fswp -start-after=aarch64-dead-defs -o /dev/null  -swpl-debug  2>&1 | FileCheck %s
-# CHECK: canPipelineLoop:OK
+# RUN: llc %s -mcpu=a64fx -march=aarch64 -fswp -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner -pass-remarks-missed=- -o /dev/null   2>&1 | FileCheck %s
+# CHECK: This loop is not software pipelined because the software pipelining does not improve the performance.
 --- |
   ; ModuleID = './test.base.ll'
   source_filename = "2912.c"

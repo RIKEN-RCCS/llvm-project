@@ -1,5 +1,5 @@
-; RUN: llc < %s -mcpu=a64fx -swpl-debug -O1 -swpl-max-mem-num=10 -fswp --pass-remarks-missed=aarch64-swpipeliner --pass-remarks-filter=aarch64-swpipeliner --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck --allow-empty %s
-;CHECK: canPipelineLoop:OK
+; RUN: llc < %s -mcpu=a64fx -O1 -swpl-max-mem-num=10 -fswp --pass-remarks-missed=aarch64-swpipeliner --pass-remarks=aarch64-swpipeliner --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck --allow-empty %s
+;CHECK: software pipelining (IPC: 2.66, ITR: 10, MVE: 4, II: 3, Stage: 7, (VReg Fp: 13/32, Int: 7/29, Pred: 1/8)), SRA(PReg Fp: 9/32, Int: 5/29, Pred: 0/8)
 
 ; ModuleID = '2912.c'
 source_filename = "2912.c"
