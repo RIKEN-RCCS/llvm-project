@@ -45,12 +45,13 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-swpipeliner"
 
 static cl::opt<bool> OptionDumpPlan("swpl-debug-dump-plan",cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> OptionDumpLsPlan("ls-debug-dump-plan", cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableSwpl("swpl-disable",cl::init(false), cl::ReallyHidden);
 
 
 static cl::opt<bool> DebugOutput("swpl-debug",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DebugDdgOutput("swpl-debug-ddg",cl::init(false), cl::ReallyHidden);
-static cl::opt<bool> LsDebugDumpDdg("ls-debug-dump-ddg", cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> DebugDumpLsDdg("ls-debug-dump-ddg", cl::init(false), cl::ReallyHidden);
 
 static cl::opt<unsigned> OptionMinIIBase("swpl-minii",cl::init(0), cl::ReallyHidden);
 static cl::opt<unsigned> OptionMaxIIBase("swpl-maxii",cl::init(0), cl::ReallyHidden);
@@ -60,6 +61,9 @@ static cl::opt<std::string> OptionImportDDG("import-swpl-dep-mi",cl::init(""), c
 
 static cl::opt<int> OptionRealFetchWidth("swpl-real-fetch-width",cl::init(4), cl::ReallyHidden);
 static cl::opt<int> OptionVirtualFetchWidth("swpl-virtual-fetch-width",cl::init(4), cl::ReallyHidden);
+
+static cl::opt<unsigned> OptionMaxInstNum("swpl-max-inst-num",cl::init(500), cl::ReallyHidden);
+static cl::opt<unsigned> OptionMaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyHidden);
 
 static cl::opt<bool> OptionLSRegAdjustment("ls-reg-adjustment", cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> LsDebugRegAdjustment("ls-debug-reg-adjustment", cl::init(false), cl::ReallyHidden);
@@ -331,7 +335,28 @@ void SWPipeliner::setRemarkMissedReason(int msg_id){
   return;
 }
 
-bool SWPipeliner::isTooManyNumOfInstruction(const MachineLoop &L) const {
+bool SWPipeliner::isTooManyNumOfInstruction(MachineLoop &L) const {
+  MachineBasicBlock *LoopMBB = L.getTopBlock();
+  int mem_counter=OptionMaxMemNum;
+
+  // The number of instructions can be obtained from BasicBlock
+  if (LoopMBB->size() > OptionMaxInstNum) {
+    printDebug(__func__, "pipeliner info:over inst limit num", L);
+    setRemarkMissedReason(MsgID_swpl_many_insts);
+    return true;
+  }
+  // Count the number of modified and referenced instructions
+  for (auto &MI : *LoopMBB) {
+    if (MI.mayLoadOrStore()) {
+      mem_counter--;
+    }
+  }
+  // If the number of modified or referenced instructions is 400 or more
+  if (mem_counter <= 0) {
+    printDebug(__func__, "pipeliner info:over mem limit num", L);
+    setRemarkMissedReason(MsgID_swpl_many_memory_insts);
+    return true;
+  }
   return false;
 }
 
@@ -427,15 +452,9 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *B
   }
 
   if (isTooManyNumOfInstruction(L)) {
-    return TargetInfo::SWP_LS_NO_Target;
+    return (target_ls ? TargetInfo::LS3_Target : TargetInfo::SWP_LS_NO_Target);
   }
 
-  // @todo: It is left as the function to perform target judgment has not been created.
-  // Delete as soon as completed
-  if (!TII->canPipelineLoop(L)) {
-    printDebug(__func__, "!!! Can not pipeline loop.", L);
-    return TargetInfo::SWP_LS_NO_Target;
-  }
   return TargetInfo::SWP_Target;
 }
 
@@ -525,9 +544,15 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
     
     // Convert DDG
     LsDdg *lsddg = LsDdg::convertDdgForLS(ddg);
-    if (LsDebugDumpDdg) {
+    if (DebugDumpLsDdg) {
       lsddg->print();
     }
+    SwplPlan* lsplan = SwplPlan::generateLsPlan(*lsddg);
+
+    if ( OptionDumpLsPlan ) {
+      lsplan->dump( dbgs() );
+    }
+
     if (OptionLSRegAdjustment) {
       LS::VertexMap forDelete;
       LS::Graph G(*lsddg, forDelete);
@@ -553,35 +578,10 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
       for (auto &T:forDelete) delete T.second;
     }
 
+    SwplTransformMIR tran(*MF, *lsplan, liveOutReg);
+    tran.transformMIR4LS();
 
     LsDdg::destroy(lsddg);
-
-    SwplPlan p(*currentLoop);
-
-    // begin create dummy plan
-    p.slots.resize(currentLoop->getSizeBodyInsts());
-    for (int i=0, e=currentLoop->getSizeBodyInsts(); i<e; i++) {
-      p.slots[i]=(i+1)*8;
-    }
-    p.iteration_interval=p.slots.size();
-    p.n_iteration_copies=1;
-    p.n_renaming_versions=1;
-    p.begin_slot=8;
-    p.end_slot=p.slots.size()*8+8;
-    p.total_cycles=p.iteration_interval;
-    p.prolog_cycles=0;
-    p.kernel_cycles=p.total_cycles;
-    p.epilog_cycles=0;
-    p.num_max_freg=32;
-    p.num_max_ireg=29;
-    p.num_max_preg=8;
-    p.num_necessary_freg=10;
-    p.num_necessary_ireg=10;
-    p.num_necessary_preg=1;
-    // end create dummy plan
-
-    SwplTransformMIR tran(*MF, p, liveOutReg);
-    tran.transformMIR4LS();
     Changed = true;
   }
 
@@ -2336,7 +2336,7 @@ void SwplInst::InitializeWithDefUse(llvm::MachineInstr *MI, SwplLoop *loop, Regi
     }
   }
 
-  if ((MI->mayLoad() || MI->mayStore() || MI->mayLoadOrStore()) && MI->memoperands_empty()) {
+  if (MI->mayLoadOrStore() && MI->memoperands_empty()) {
     // load/store命令でMI->memoperands_empty()の場合、MayAliasとして動作する必要がある
     if (SWPipeliner::isDebugDdgOutput()) {
       dbgs() << "DBG(SwplInst::InitializeWithDefUse): memoperands_empty mi=" << *MI;

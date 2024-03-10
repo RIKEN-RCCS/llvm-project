@@ -24,10 +24,11 @@ using SwplInstIntMap = llvm::DenseMap<const SwplInst*, int>;
 using SwplInstPrioque = std::map<int, const SwplInst*>;
 using SwplInstSet = std::set<const SwplInst*>;
 
+/// \brief Slot to place instructions.
 class SwplSlot {
+public:
   unsigned slot_index;
 
-public:
   /// constructor
   constexpr SwplSlot(unsigned val = 0): slot_index(val) {}
   constexpr operator unsigned() const {
@@ -35,7 +36,7 @@ public:
   }
 
   ///////////////
-  // オブジェクトの比較にならないように
+  // Avoid comparing objects.
 
   /// Comparisons between SwplSlot objects
   bool operator==(const SwplSlot &Other) const { return slot_index == Other.slot_index; }
@@ -47,12 +48,14 @@ public:
   bool operator==(int Other) const { return slot_index == unsigned(Other); }
   bool operator!=(int Other) const { return slot_index != unsigned(Other); }
 
+  bool operator<(const SwplSlot &Other) const { return slot_index < Other.slot_index; }
+
   unsigned calcBlock(unsigned iteration_interval);
   unsigned calcCycle();
   unsigned calcFetchSlot();
-  /// \brief change SlotIndex
-  /// \param [in] v amount of change
-  /// \return Nothing
+
+  /// \brief change SlotIndex.
+  /// \param [in] v amount of change.
   void moveSlotIndex(long v) {slot_index=slot_index+v; return;}
 
   static SwplSlot baseSlot(unsigned iteration_interval);
@@ -79,6 +82,12 @@ public:
   unsigned calcLastUseCycleInBodyWithInheritance(const SwplReg& reg, unsigned iteration_interval) const;
   unsigned calcLastUseCycleInBody(const SwplReg& reg, unsigned iteration_interval) const;
   SwplSlot getEmptySlotInCycle( unsigned cycle, unsigned iteration_interval, bool isvirtual );
+
+  /// \brief Returns free slot in cycle (for LS)
+  /// \param [in] cycle Cycle to search for.
+  /// \param [in] isvirtual true if searching for an empty slot for a virtual instruction.
+  /// \return slot in the cycle where no instruction is placed.
+  SwplSlot getLsEmptySlotInCycle( unsigned cycle, bool isvirtual );
   size_t size() const {
     size_t s = 0;
     for (auto& t : *this) {
@@ -98,6 +107,7 @@ public:
   }
   void dump(const SwplLoop& c_loop);
 };
+
 /// \brief represents MRT
 /// \details represents MRT
 ///          MRT can handle cases where ResourceID cannot be treated as an element number, so
@@ -110,26 +120,94 @@ public:
 ///          cycle5: { ID1:inst4,                       ... } ↓
 ///
 class SwplMrt {
-  unsigned iteration_interval; ///< II
+  unsigned iteration_interval; ///< II (if LS then 0)
+  unsigned size; ///< size of MRT (use LS only)
   std::vector<llvm::DenseMap<StmResourceId, const SwplInst*>*> table; //< Mrt
 
 public:
   SwplMrt(unsigned ii) : iteration_interval(ii) {} ///< constructor
 
+  /// \brief Reserve resources used by instructions.
+  /// \details Record the resources used by the instruction in Mrt.
+  ///          Instructions that do not use resources, such as pseudo-instructions,
+  ///          are not reserved using Mrt.
+  /// \param[in] cycle cycle to place instructions.
+  /// \param[in] inst
+  /// \param[in] pipeline Resource information used by inst.
+  /// \note If you don't know which resource usage patterns, there's no way to fill Mrt.
+  ///       Even if you add the resource usage pattern as an argument,
+  ///       this function will still ask for resource information,
+  ///       so we decided to get the resource information as an argument.
+  /// \note The argument pipeline is TmPipeline information according to the resource usage pattern.
   void reserveResourcesForInst(unsigned cycle, const SwplInst& inst, const StmPipeline & pipeline );
+
+  /// \brief Find instructions that are problematic for placement
+  /// \details If the second argument instruction is placed in the first argument slot,
+  ///          returns a set of scheduled instructions that will interfere with shedule.
+  /// \param[in] cycle The cycle in which the instruction is to be placed.
+  /// \param[in] inst instruction to be placed.
+  /// \param[in] pipeline information used by the pipeline instruction.
+  /// \return Set of instruction that causes trouble.
+  ///
+  /// \note The area of the pointer to be returned must be released by the caller.
+  /// \note Since it is impossible to check without knowing which resource usage pattern,
+  ///       we decided to get resource information as an argument.
+  /// \note The argument inst is redundant because it looks for placed instructions that
+  ///       conflict with the argument's resource pattern.
+  ///       (Currently has no use)
+  /// \note The logic is almost the same as reserveResourcesForInst. Rather than making a
+  ///       reservation, if it has already been reserved, that Inst will be recorded.
   SwplInstSet* findBlockingInsts(unsigned cycle, const SwplInst& inst, const StmPipeline & pipeline );
   bool isOpenForInst(unsigned cycle, const SwplInst& inst, const StmPipeline & pipeline);
   void cancelResourcesForInst(const SwplInst& inst);
+
+  /// \brief Display scheduling results in MRT framework
+  ///
+  /// ```
+  ///   Take the following loop as an example
+  ///   DO I=1,1024
+  ///   A(I) =  A(I) + B(I)
+  ///   ENDDO
+  ///
+  /// For example, if you translate with -Kfast,nosimd,nounroll -W0,-zswpl=dump-mrt,
+  /// the MRT result will be displayed as shown below.
+  /// The vertical axis represents cycles, and the horizontal axis represents instruction
+  /// issue slots, which are issued in order starting from the top left instruction.
+  /// The number in parentheses of the instruction indicates which rotation
+  /// of the original loop the instruction was used.
+  /// From this, we can see that the fadd of A(4) + B(4) is issued in the same cycle as
+  /// the store of A(1).
+  ///
+  ///   0  0  0  0  ffload (6)  0           ffload (6)  add    (6)
+  ///   0  0  0  0  ffstore(1)  ffadd  (4)  add    (6)  sub    (1)
+  /// ```
+  /// \param [in] slots scheduling result.
+  /// \param [in] stream output stream.
   void dump(const SwplSlots& slots, raw_ostream &stream);
   void dump();
 
   static SwplMrt* construct(unsigned iteration_interval);
+
+  /// \brief Prepare MRT for LS.
+  /// \details Prepare MRT from the argument size and return the SwplMrt pointer.
+  /// \param[in] size_input Size of MRT to generate.
+  /// \return SwplMrt pointer.
+  static SwplMrt* constructForLs(unsigned size_input);
+  void setSize(unsigned s) { size = s; }
+  unsigned getSize() { return size; }
   static void destroy(SwplMrt* mrt);
 
 private:
   unsigned getMaxOpcodeNameLength();
   void printInstMI(raw_ostream &stream,
                     const SwplInst* inst, unsigned width);
+
+  /// \brief Output the rotation speed of inst.
+  /// \param [in] stream output stream.
+  /// \param [in] c_slots scheduling result.
+  /// \param [in] inst Target instruction.
+  /// \param [in] ii initiation interval.
+  /// \details  Output the rotation speed of Inst in '(n)' format.
   void printInstRotation(raw_ostream &stream,
                          const SwplSlots& c_slots,
                          const SwplInst* inst, unsigned ii);
@@ -561,6 +639,10 @@ public:
   int getTotalSlotCycles();
   void printInstTable();
   void dump(raw_ostream &stream);
+
+  /// \brief Dump the instruction placement state of SwplPlan.
+  /// \details Output MachineInstr* and Opcode name for each instruction.
+  /// \param [in] stream output stream.
   void dumpInstTable(raw_ostream &stream);
 
   static bool isSufficientWithRenamingVersions(const SwplLoop& c_loop,
@@ -574,6 +656,11 @@ public:
                              const SwplMsResourceResult& resource);
   static void destroy(SwplPlan* plan);
   static SwplPlan* generatePlan(SwplDdg& ddg);
+
+  /// \brief Generate a plan with ListScheduler.
+  /// \param [in] ddg Dependency information for list scheduling.
+  /// \return ListScheduling results.
+  static SwplPlan* generateLsPlan(const LsDdg& ddg);
 
 private:
   static unsigned calculateResourceII(const SwplLoop& c_loop);
@@ -685,6 +772,62 @@ public:
   static bool preCheckIterationCount(const SwplPlanSpec & spec, unsigned int *required_itr);
   static bool checkIterationCountVariable(const SwplPlanSpec & spec, const SwplMsResult & ms);
   static bool checkIterationCountConstant(const SwplPlanSpec & spec, const SwplMsResult & ms);
+};
+
+/// \brief Class that handles list scheduling.
+class LSListScheduling {
+public:
+  const LsDdg& lsddg; ///< ddg for LS.
+  SwplSlots* slots;   ///< Collection of scheduled slots.
+  SwplMrt* lsmrt;     ///< MRT for LS.
+  llvm::MapVector<const SwplInst*, SwplInstEdges> READY;  ///< MapVector for store instructions in the order of scheduling.
+  SwplSlot earliest_slot; ///< First slot when scheduling.
+  unsigned min_cycle;     ///< First cycle when scheduling.
+
+public:
+  LSListScheduling(const LsDdg& lsddg_input) : lsddg(lsddg_input) {
+    unsigned min_slot_index = SwplSlot::slotMin().slot_index;
+    unsigned fb = SWPipeliner::FetchBandwidth;
+    // Find the earliest available slot.
+    earliest_slot = SwplSlot(min_slot_index+(fb - (min_slot_index % fb)));
+    min_cycle = earliest_slot.calcCycle();
+    slots = new SwplSlots();
+  } ///< constructor
+  virtual ~LSListScheduling() {
+    delete lsmrt;
+  }
+
+  /// \brief Perform scheduling.
+  /// \return Returns the results of scheduling. (SwplSlots)
+  SwplSlots* getScheduleResult();
+
+  /// \brief Returns the first slot of scheduling.
+  /// \return First slot when scheduling.
+  SwplSlot getEarliestSlot() { return earliest_slot; }
+
+private:
+  /// \brief Get the slot number to place the instruction.
+  /// \param [in] inst instruction to place.
+  /// \param [in] edges vector of edges between instructions.
+  /// \return placeable slot.
+  SwplSlot getPlacementSlot(const SwplInst* inst, SwplInstEdges &edges);
+
+  /// \brief Decide the order in which instructions are placed.
+  /// \details The order is topological order.
+  /// \param [in/out] READY Vector of edges when there is a placement instruction and a preceding instruction.
+  void setPriorityOrder(llvm::MapVector<const SwplInst*, SwplInstEdges> &READY);
+
+  /// \brief Create MRT for ListScheduling.
+  /// \note Create MRT by adding the latencies of all instructions.
+  /// \return MRT
+  SwplMrt* createLsMrt();
+
+  /// \brief Get resource patterns that can be placed in a specified cycle
+  /// \param [in] inst Instructions to be placed.
+  /// \param [in] cycle Cycle to check if it can be placed.
+  /// \return resource pattern that can be placed.
+  ///         If there is nothing that can be placed, return nullptr.
+  const StmPipeline* findPlacablePipeline(const SwplInst* inst, unsigned cycle);
 };
 
 }
