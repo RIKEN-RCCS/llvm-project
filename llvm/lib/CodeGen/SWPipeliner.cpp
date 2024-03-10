@@ -61,6 +61,11 @@ static cl::opt<std::string> OptionImportDDG("import-swpl-dep-mi",cl::init(""), c
 static cl::opt<int> OptionRealFetchWidth("swpl-real-fetch-width",cl::init(4), cl::ReallyHidden);
 static cl::opt<int> OptionVirtualFetchWidth("swpl-virtual-fetch-width",cl::init(4), cl::ReallyHidden);
 
+static cl::opt<bool> OptionLSRegAdjustment("ls-reg-adjustment", cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> LsDebugRegAdjustment("ls-debug-reg-adjustment", cl::init(false), cl::ReallyHidden);
+static cl::opt<int> LsMaxIReg("ls-max-ireg", cl::init(29), cl::ReallyHidden);
+static cl::opt<int> LsMaxFReg("ls-max-freg", cl::init(32), cl::ReallyHidden);
+
 namespace llvm {
 
 bool SWPipeliner::isDebugOutput() {
@@ -523,19 +528,31 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
     if (LsDebugDumpDdg) {
       lsddg->print();
     }
+    if (OptionLSRegAdjustment) {
+      LS::VertexMap forDelete;
+      LS::Graph G(*lsddg, forDelete);
+      LS::VtoV KStar;
+      G.greedyK(LS::FLOAT_TYPE, KStar);
+      LS::EdgeList AddEdges;
+      bool Result = G.serialize(LS::FLOAT_TYPE, KStar, LsMaxFReg, AddEdges);
+      if (LsDebugRegAdjustment) {
+        dbgs() << "LSRegAdjustmen:" << Result << " addedges:" << AddEdges.size() <<  "\n";
+      }
+      if (Result || AddEdges.size()) {
+        auto* ddgG=lsddg->getGraph();
+        for (auto& P:AddEdges) {
+          auto *E=ddgG->createEdge(*(P.first->get()), *(P.second->get()));
+          lsddg->setDelay(*E, 1);
+          if (LsDebugRegAdjustment) {
+            dbgs() << "add edge for reg-adjustment:\n"
+                   << "### from:" << *(P.first->get()->getMI())
+                   << "### tp  :" << *(P.second->get()->getMI());
+          }
+        }
+      }
+      for (auto &T:forDelete) delete T.second;
+    }
 
-    LS::VertexMap forDelete;
-
-    LS::Graph G(*lsddg, forDelete);
-    G.show("G");
-    LS::VtoV KStar;
-    G.greedyK(LS::FLOAT_TYPE, KStar);
-    LS::EdgeList AddEdges;
-    bool Result = G.serialize(LS::FLOAT_TYPE, KStar, 32, AddEdges);
-    G.show("G_bar");
-    std::cout << "RESULT: " << Result << " ";
-    printEList(AddEdges);
-    for (auto &T:forDelete) delete T.second;
 
     LsDdg::destroy(lsddg);
 

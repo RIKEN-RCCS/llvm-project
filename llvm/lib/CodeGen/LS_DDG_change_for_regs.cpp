@@ -447,7 +447,7 @@ void LS::Graph::serializePair(DataType Dt, Vertex *U, Vertex *V,
                           EdgeList &AddEdges) {
   VertexList &&UpList = getPKill(Dt, U);
   for (auto *Up : UpList) {
-    std::pair<Vertex *, Vertex *> P = std::make_pair(Up, V);
+    auto P = std::make_pair(Up, V);
     Edges[Up].push_front(V);
     Delta[Up].emplace_front(V, 0);
     AddEdges.push_back(P);
@@ -1081,6 +1081,7 @@ LS::Graph::Graph(const llvm::LsDdg& LsDdg, VertexMap& forDelete) {
   int id=0;
   for (const auto &V:G.getVertices()) {
     auto* newV=new Vertex(id++);
+    newV->set(V);
     forDelete[V]=newV;
     Vlist.push_back(newV);
   }

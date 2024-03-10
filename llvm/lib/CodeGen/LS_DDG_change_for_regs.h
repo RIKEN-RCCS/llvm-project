@@ -119,9 +119,12 @@ public:
   Vertex(Vertex &) = delete;
 
   const std::string &getName() const { return Name; }
+  void set(llvm::SwplInst* Inst) {this->Inst=Inst;}
+  llvm::SwplInst* get() const {return this->Inst;}
 
 private:
   std::string Name;
+  llvm::SwplInst* Inst=nullptr;
 };
 
 
