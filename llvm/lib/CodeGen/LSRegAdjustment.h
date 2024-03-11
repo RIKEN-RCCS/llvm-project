@@ -1,4 +1,4 @@
-//=- LS_DDG_change_for_regs.h - SWPL(Local Scheduler) Pass -*- c++ -*--------=//
+//=- LSRegAdjustment.h - SWPL(Local Scheduler) Pass -*- c++ -*---------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

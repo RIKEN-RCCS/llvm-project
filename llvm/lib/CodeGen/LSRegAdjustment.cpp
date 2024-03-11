@@ -1,4 +1,4 @@
-//=- LS_DDG_change_for_regs.cpp - SWPL(Local Scheduler) Pass -*- c++ -*------=//
+//=- LSRegAdjustment.cpp - SWPL(Local Scheduler) Pass -*- c++ -*-------------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/Debug.h"
-#include "LS_DDG_change_for_regs.h"
+#include "LSRegAdjustment.h"
 #include "SWPipeliner.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 
 static double rho(LS::DataType Dt, LS::Graph &Gk, LS::BipartieGraph &Cb, LS::VertexList &X,
                   LS::VertexList &Y, LS::Vertex *tx) {

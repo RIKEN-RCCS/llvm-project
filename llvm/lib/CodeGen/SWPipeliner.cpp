@@ -36,9 +36,9 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include <iostream>
 
-#include "llvm/Support/MemoryBuffer.h"
+#include "LSRegAdjustment.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "LS_DDG_change_for_regs.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
 
@@ -69,6 +69,7 @@ static cl::opt<bool> OptionLSRegAdjustment("ls-reg-adjustment", cl::init(false),
 static cl::opt<bool> LsDebugRegAdjustment("ls-debug-reg-adjustment", cl::init(false), cl::ReallyHidden);
 static cl::opt<int> LsMaxIReg("ls-max-ireg", cl::init(29), cl::ReallyHidden);
 static cl::opt<int> LsMaxFReg("ls-max-freg", cl::init(32), cl::ReallyHidden);
+static cl::opt<int> LsMaxPReg("ls-max-preg", cl::init(8), cl::ReallyHidden);
 
 namespace llvm {
 
@@ -573,7 +574,7 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
           if (LsDebugRegAdjustment) {
             dbgs() << "add edge for reg-adjustment:\n"
                    << "### from:" << *(P.first->get()->getMI())
-                   << "### tp  :" << *(P.second->get()->getMI());
+                   << "### to  :" << *(P.second->get()->getMI());
           }
         }
       }
