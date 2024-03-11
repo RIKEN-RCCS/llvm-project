@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mcpu=a64fx -swpl-debug -O1  -fswp -o /dev/null 2>&1 | FileCheck %s
-;CHECK: canPipelineLoop:OK
+;CHECK: : (Iterative Modulo Scheduling.
 
 ; ModuleID = '2912.c'
 source_filename = "2912.c"

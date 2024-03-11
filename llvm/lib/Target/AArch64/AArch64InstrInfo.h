@@ -384,7 +384,6 @@ public:
   std::tuple<unsigned, unsigned> getRegKindId(const MachineRegisterInfo &MRI, Register r) const override;
   bool isNonTargetMI4SWPL(MachineInstr &inst) const override;
   bool isFPCR(Register reg) const override;
-  bool canPipelineLoop(MachineLoop &L) const override;
   bool isNonScheduleInstr(MachineLoop &L) const override;
   bool isNonNormalizeLoop(MachineLoop &L) const override;
   int calcEachRegIncrement(const SwplReg *r) const override;

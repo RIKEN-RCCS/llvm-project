@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mcpu=a64fx -O0 -swpl-debug -fswp --pass-remarks-missed=aarch64-swpipeliner --pass-remarks-filter=aarch64-swpipeliner --pass-remarks-output=- -debug-aarch64tti -o /dev/null 2>&1 | FileCheck --allow-empty %s
-;CHECK-NOT: canPipelineLoop
+;CHECK-NOT: : (Iterative Modulo Scheduling.
 
 ; ModuleID = '2912.c'
 source_filename = "2912.c"

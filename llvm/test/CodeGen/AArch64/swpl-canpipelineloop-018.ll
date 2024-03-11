@@ -1,4 +1,5 @@
-; RUN: llc < %s -mcpu=a64fx -swpl-debug -O1  -fswp --pass-remarks-missed=aarch64-swpipeliner --pass-remarks-filter=aarch64-swpipeliner --pass-remarks-output=- -o /dev/null | FileCheck %s
+;RUN: llc < %s -mcpu=a64fx -swpl-debug -O1  -fswp --pass-remarks-missed=aarch64-swpipeliner --pass-remarks-filter=aarch64-swpipeliner --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck %s
+;CHECK: pipeliner info:found volataile operand
 ;CHECK: This loop cannot be software pipelined because the loop contains an instruction, such as function call, which is not supported.
 
 ; ModuleID = '2912_5.c'
