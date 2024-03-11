@@ -1,11 +1,11 @@
 #RUN: llc %s -mcpu=a64fx -fswp -fls -O3 -start-before=aarch64-swpipeliner -swpl-maxii=2 -ls-debug-dump-scheduling-every-inst -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:%40:fpr64 = nofpexcept FMSUBDrrr killed %37:fpr64, killed %38:fpr64, killed %39:fpr64, implicit $fpcr
-#CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
-#CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
-#CHECK-NEXT:pred : FADDDrr(placed=62502, delay=9)
-#CHECK-NEXT:earliest cycle : 62511
-#CHECK-NEXT:placed cycle   : 62511
+#CHECK:%48:gpr32common = MSUBWrrr %45:gpr32common, %46:gpr32common, %47:gpr32common
+#CHECK-DAG:pred : ADDWrr(placed={{[0-9]+}}, delay=1)
+#CHECK-DAG:pred : ADDWrr(placed={{[0-9]+}}, delay=1)
+#CHECK-DAG:pred : ADDWrr(placed={{[0-9]+}}, delay=1)
+#CHECK-NEXT:earliest cycle : 62505
+#CHECK-NEXT:placed cycle   : 62505
 
 --- |
   ; ModuleID = 'schedule.cpp'
@@ -182,10 +182,14 @@ body:             |
     %4:gpr64sp = PHI %0, %bb.1, %8, %bb.3
     %110:gpr32 = PHI %12, %bb.1, %120, %bb.3
     %120:gpr32 = COPY %110
-    %130:fpr64 = INSERT_SUBREG %100, %110, %subreg.ssub
-    %131:fpr64 = INSERT_SUBREG %101, %110, %subreg.ssub
-    %132:fpr64 = nofpexcept FADDDrr %130, %131, implicit $fpcr
-    %133:fpr64 = nofpexcept FMSUBDrrr killed %130:fpr64, killed %131:fpr64, killed %132:fpr64, implicit $fpcr
+    %121:gpr32 = COPY %110
+    %122:gpr32common = ADDWrr %120:gpr32, %121:gpr32
+    %123:gpr32common = ADDWrr %120:gpr32, %122:gpr32common
+    %124:gpr32common = ADDWrr %122:gpr32common, %123:gpr32common
+    %125:gpr32common = ADDWrr %123:gpr32common, %124:gpr32common
+    %126:gpr32common = ADDWrr %122:gpr32common, %123:gpr32common
+    %127:gpr32common = ADDWrr %122:gpr32common, %123:gpr32common
+    %130:gpr32common = MSUBWrrr %125:gpr32common, %126:gpr32common, %127:gpr32common
     early-clobber %15:gpr64sp, %16:fpr32 = LDRSpost %1, 4 :: (load (s32) from %ir.lsr.iv16, !tbaa !6)
     early-clobber %17:gpr64sp, %18:fpr32 = LDRSpost %2, 4 :: (load (s32) from %ir.lsr.iv14, !tbaa !6)
     %19:fpr32 = nofpexcept FADDSrr killed %16, killed %18, implicit $fpcr
@@ -199,4 +203,5 @@ body:             |
     B %bb.2
 
 ...
+
 

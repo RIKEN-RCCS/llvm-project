@@ -1,11 +1,11 @@
 #RUN: llc %s -mcpu=a64fx -fswp -fls -O3 -start-before=aarch64-swpipeliner -swpl-maxii=2 -ls-debug-dump-scheduling-every-inst -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:%40:fpr64 = nofpexcept FMSUBDrrr killed %37:fpr64, killed %38:fpr64, killed %39:fpr64, implicit $fpcr
-#CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
-#CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
-#CHECK-NEXT:pred : FADDDrr(placed=62502, delay=9)
-#CHECK-NEXT:earliest cycle : 62511
-#CHECK-NEXT:placed cycle   : 62511
+#CHECK:%52:qqq = REG_SEQUENCE %49:fpr128, %subreg.qsub0, killed %50:fpr128, %subreg.qsub1, killed %51:fpr128, %subreg.qsub2
+#CHECK-DAG:pred : FMLAv4f32(placed={{[0-9]+}}, delay=9)
+#CHECK-DAG:pred : FMLAv4f32(placed={{[0-9]+}}, delay=9)
+#CHECK-DAG:pred : FMLAv4f32(placed={{[0-9]+}}, delay=9)
+#CHECK-NEXT:earliest cycle : 62516
+#CHECK-NEXT:placed cycle   : 62516
 
 --- |
   ; ModuleID = 'schedule.cpp'
@@ -155,8 +155,10 @@ body:             |
     %11:gpr64 = COPY $x2
     %10:gpr64 = COPY $x1
     %9:gpr64common = COPY $x0
-    %100:fpr64 = IMPLICIT_DEF
-    %101:fpr64 = IMPLICIT_DEF
+    %100:fpr128 = IMPLICIT_DEF
+    %101:fpr128 = IMPLICIT_DEF
+    %102:fpr128 = IMPLICIT_DEF
+    %103:fpr64 = IMPLICIT_DEF
     dead $wzr = SUBSWri %12, 1, 0, implicit-def $nzcv
     Bcc 11, %bb.2, implicit $nzcv
     B %bb.1
@@ -182,10 +184,15 @@ body:             |
     %4:gpr64sp = PHI %0, %bb.1, %8, %bb.3
     %110:gpr32 = PHI %12, %bb.1, %120, %bb.3
     %120:gpr32 = COPY %110
-    %130:fpr64 = INSERT_SUBREG %100, %110, %subreg.ssub
-    %131:fpr64 = INSERT_SUBREG %101, %110, %subreg.ssub
-    %132:fpr64 = nofpexcept FADDDrr %130, %131, implicit $fpcr
-    %133:fpr64 = nofpexcept FMSUBDrrr killed %130:fpr64, killed %131:fpr64, killed %132:fpr64, implicit $fpcr
+    %130:fpr128 = INSERT_SUBREG %100, %110, %subreg.ssub
+    %131:fpr128 = INSERT_SUBREG %101, %110, %subreg.ssub
+    %132:fpr128 = INSERT_SUBREG %102, %110, %subreg.ssub
+    %133:fpr64 = INSERT_SUBREG %103, %110, %subreg.ssub
+    %134:fpr128 = SUBREG_TO_REG 0, killed %133, %subreg.dsub
+    %135:fpr128 = FMLAv4f32 %130, %131, %132, implicit $fpcr
+    %136:fpr128 = FMLAv4f32 %130, %131, %132, implicit $fpcr
+    %137:fpr128 = FMLAv4f32 %130, %131, %134, implicit $fpcr
+    %138:qqq = REG_SEQUENCE %135, %subreg.qsub0, killed %136, %subreg.qsub1, killed %137, %subreg.qsub2
     early-clobber %15:gpr64sp, %16:fpr32 = LDRSpost %1, 4 :: (load (s32) from %ir.lsr.iv16, !tbaa !6)
     early-clobber %17:gpr64sp, %18:fpr32 = LDRSpost %2, 4 :: (load (s32) from %ir.lsr.iv14, !tbaa !6)
     %19:fpr32 = nofpexcept FADDSrr killed %16, killed %18, implicit $fpcr
@@ -199,4 +206,5 @@ body:             |
     B %bb.2
 
 ...
+
 

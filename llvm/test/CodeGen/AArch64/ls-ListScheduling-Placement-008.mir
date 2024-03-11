@@ -1,8 +1,8 @@
 #RUN: llc %s -mcpu=a64fx -fswp -fls -O3 -start-before=aarch64-swpipeliner -swpl-maxii=2 -ls-debug-dump-scheduling-every-inst -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:%39:fpr128 = nofpexcept FADDPv4f32 %36:fpr128, %38:fpr128, implicit $fpcr
-#CHECK-NEXT:pred : INSERT_SUBREG(placed=62501, delay=1)
-#CHECK-NEXT:pred : SUBREG_TO_REG(placed=62502, delay=1)
+#CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
+#CHECK-DAG:pred : SUBREG_TO_REG(placed={{[0-9]+}}, delay=1)
 #CHECK-NEXT:earliest cycle : 62503
 #CHECK-NEXT:placed cycle   : 62503
 

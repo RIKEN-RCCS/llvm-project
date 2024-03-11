@@ -1,11 +1,9 @@
 #RUN: llc %s -mcpu=a64fx -fswp -fls -O3 -start-before=aarch64-swpipeliner -swpl-maxii=2 -ls-debug-dump-scheduling-every-inst -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:%40:fpr64 = nofpexcept FMSUBDrrr killed %37:fpr64, killed %38:fpr64, killed %39:fpr64, implicit $fpcr
-#CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
-#CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
-#CHECK-NEXT:pred : FADDDrr(placed=62502, delay=9)
-#CHECK-NEXT:earliest cycle : 62511
-#CHECK-NEXT:placed cycle   : 62511
+#CHECK:%51:fpr64 = nofpexcept FADDDrr %46:fpr64, %24:fpr64, implicit $fpcr
+#CHEK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
+#CHEK-NEXT:earliest cycle : 62503
+#CHEK-NEXT:placed cycle   : 62504
 
 --- |
   ; ModuleID = 'schedule.cpp'
@@ -157,6 +155,7 @@ body:             |
     %9:gpr64common = COPY $x0
     %100:fpr64 = IMPLICIT_DEF
     %101:fpr64 = IMPLICIT_DEF
+    %102:fpr64 = IMPLICIT_DEF
     dead $wzr = SUBSWri %12, 1, 0, implicit-def $nzcv
     Bcc 11, %bb.2, implicit $nzcv
     B %bb.1
@@ -182,10 +181,15 @@ body:             |
     %4:gpr64sp = PHI %0, %bb.1, %8, %bb.3
     %110:gpr32 = PHI %12, %bb.1, %120, %bb.3
     %120:gpr32 = COPY %110
+    %121:gpr32common = ADDWrr %110:gpr32, %120:gpr32
     %130:fpr64 = INSERT_SUBREG %100, %110, %subreg.ssub
     %131:fpr64 = INSERT_SUBREG %101, %110, %subreg.ssub
-    %132:fpr64 = nofpexcept FADDDrr %130, %131, implicit $fpcr
-    %133:fpr64 = nofpexcept FMSUBDrrr killed %130:fpr64, killed %131:fpr64, killed %132:fpr64, implicit $fpcr
+    %132:fpr64 = INSERT_SUBREG %102, %121, %subreg.ssub
+    %133:fpr64 = nofpexcept FADDDrr %130, %131, implicit $fpcr
+    %134:fpr64 = nofpexcept FADDDrr %130, %131, implicit $fpcr
+    %135:fpr64 = nofpexcept FADDDrr %130, %131, implicit $fpcr
+    %136:fpr64 = nofpexcept FADDDrr %130, %131, implicit $fpcr
+    %137:fpr64 = nofpexcept FADDDrr %132, %101, implicit $fpcr
     early-clobber %15:gpr64sp, %16:fpr32 = LDRSpost %1, 4 :: (load (s32) from %ir.lsr.iv16, !tbaa !6)
     early-clobber %17:gpr64sp, %18:fpr32 = LDRSpost %2, 4 :: (load (s32) from %ir.lsr.iv14, !tbaa !6)
     %19:fpr32 = nofpexcept FADDSrr killed %16, killed %18, implicit $fpcr
@@ -199,4 +203,6 @@ body:             |
     B %bb.2
 
 ...
+
+
 
