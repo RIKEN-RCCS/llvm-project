@@ -560,10 +560,12 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
       G.greedyK(LS::FLOAT_TYPE, KStar);
       LS::EdgeList AddEdges;
       bool Result = G.serialize(LS::FLOAT_TYPE, KStar, LsMaxFReg, AddEdges);
-      if (LsDebugRegAdjustment) {
-        dbgs() << "LSRegAdjustmen:" << Result << " addedges:" << AddEdges.size() <<  "\n";
-      }
-      if (Result || AddEdges.size()) {
+      ORE->emit([&]() {
+        return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "LocalScheduler", L.getStartLoc(), L.getHeader())
+               << "Adding " << ore::NV("Edges", AddEdges.size()) << " dependencies as a result of adjusting registers.";
+      });
+      if (LsDebugRegAdjustment) dbgs() << "ls-reg-adjustment:" << Result << ", add edges:" << AddEdges.size() << "\n";
+      if (AddEdges.size()) {
         auto* ddgG=lsddg->getGraph();
         for (auto& P:AddEdges) {
           auto *E=ddgG->createEdge(*(P.first->get()), *(P.second->get()));
