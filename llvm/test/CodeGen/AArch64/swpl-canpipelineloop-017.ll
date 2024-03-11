@@ -1,4 +1,5 @@
 ; RUN: llc < %s -O1 -mcpu=a64fx  -fswp  -swpl-debug  --pass-remarks-filter=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner  --pass-remarks-output=-  -o /dev/null 2>&1 | FileCheck %s
+;CHECK:pipeliner info:found non-target-inst or gnuasm
 ;CHECK:This loop cannot be software pipelined because the loop contains an instruction, such as function call, which is not supported.
 
 ; ModuleID = '2912_4.c'

@@ -1,4 +1,5 @@
-# RUN: llc -fswp -O1 -mcpu=a64fx -start-before=aarch64-swpipeliner -o /dev/null -pass-remarks-missed=aarch64-swpipeliner  %s 2>&1 | FileCheck %s
+# RUN: llc -fswp -O1 -mcpu=a64fx -start-before=aarch64-swpipeliner -o /dev/null -pass-remarks-missed=aarch64-swpipeliner -swpl-debug  %s 2>&1 | FileCheck %s
+# CHECK: pipeliner info:defoperand==FPCR
 # CHECK: This loop cannot be software pipelined because instruction to update FPCR.
 --- |
   ; ModuleID = './test.base.ll'

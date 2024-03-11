@@ -36,8 +36,9 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include <iostream>
 
-#include "llvm/Support/MemoryBuffer.h"
+#include "LSRegAdjustment.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
 
@@ -60,6 +61,15 @@ static cl::opt<std::string> OptionImportDDG("import-swpl-dep-mi",cl::init(""), c
 
 static cl::opt<int> OptionRealFetchWidth("swpl-real-fetch-width",cl::init(4), cl::ReallyHidden);
 static cl::opt<int> OptionVirtualFetchWidth("swpl-virtual-fetch-width",cl::init(4), cl::ReallyHidden);
+
+static cl::opt<unsigned> OptionMaxInstNum("swpl-max-inst-num",cl::init(500), cl::ReallyHidden);
+static cl::opt<unsigned> OptionMaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyHidden);
+
+static cl::opt<bool> OptionLSRegAdjustment("ls-reg-adjustment", cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> LsDebugRegAdjustment("ls-debug-reg-adjustment", cl::init(false), cl::ReallyHidden);
+static cl::opt<int> LsMaxIReg("ls-max-ireg", cl::init(29), cl::ReallyHidden);
+static cl::opt<int> LsMaxFReg("ls-max-freg", cl::init(32), cl::ReallyHidden);
+static cl::opt<int> LsMaxPReg("ls-max-preg", cl::init(8), cl::ReallyHidden);
 
 namespace llvm {
 
@@ -326,7 +336,28 @@ void SWPipeliner::setRemarkMissedReason(int msg_id){
   return;
 }
 
-bool SWPipeliner::isTooManyNumOfInstruction(const MachineLoop &L) const {
+bool SWPipeliner::isTooManyNumOfInstruction(MachineLoop &L) const {
+  MachineBasicBlock *LoopMBB = L.getTopBlock();
+  int mem_counter=OptionMaxMemNum;
+
+  // The number of instructions can be obtained from BasicBlock
+  if (LoopMBB->size() > OptionMaxInstNum) {
+    printDebug(__func__, "pipeliner info:over inst limit num", L);
+    setRemarkMissedReason(MsgID_swpl_many_insts);
+    return true;
+  }
+  // Count the number of modified and referenced instructions
+  for (auto &MI : *LoopMBB) {
+    if (MI.mayLoadOrStore()) {
+      mem_counter--;
+    }
+  }
+  // If the number of modified or referenced instructions is 400 or more
+  if (mem_counter <= 0) {
+    printDebug(__func__, "pipeliner info:over mem limit num", L);
+    setRemarkMissedReason(MsgID_swpl_many_memory_insts);
+    return true;
+  }
   return false;
 }
 
@@ -422,15 +453,9 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *B
   }
 
   if (isTooManyNumOfInstruction(L)) {
-    return TargetInfo::SWP_LS_NO_Target;
+    return (target_ls ? TargetInfo::LS3_Target : TargetInfo::SWP_LS_NO_Target);
   }
 
-  // @todo: It is left as the function to perform target judgment has not been created.
-  // Delete as soon as completed
-  if (!TII->canPipelineLoop(L)) {
-    printDebug(__func__, "!!! Can not pipeline loop.", L);
-    return TargetInfo::SWP_LS_NO_Target;
-  }
   return TargetInfo::SWP_Target;
 }
 
@@ -529,8 +554,36 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
       lsplan->dump( dbgs() );
     }
 
+    if (OptionLSRegAdjustment) {
+      LS::VertexMap forDelete;
+      LS::Graph G(*lsddg, forDelete);
+      LS::VtoV KStar;
+      G.greedyK(LS::FLOAT_TYPE, KStar);
+      LS::EdgeList AddEdges;
+      bool Result = G.serialize(LS::FLOAT_TYPE, KStar, LsMaxFReg, AddEdges);
+      ORE->emit([&]() {
+        return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "LocalScheduler", L.getStartLoc(), L.getHeader())
+               << "Adding " << ore::NV("Edges", AddEdges.size()) << " dependencies as a result of adjusting registers.";
+      });
+      if (LsDebugRegAdjustment) dbgs() << "ls-reg-adjustment:" << Result << ", add edges:" << AddEdges.size() << "\n";
+      if (AddEdges.size()) {
+        auto* ddgG=lsddg->getGraph();
+        for (auto& P:AddEdges) {
+          auto *E=ddgG->createEdge(*(P.first->get()), *(P.second->get()));
+          lsddg->setDelay(*E, 1);
+          if (LsDebugRegAdjustment) {
+            dbgs() << "add edge for reg-adjustment:\n"
+                   << "### from:" << *(P.first->get()->getMI())
+                   << "### to  :" << *(P.second->get()->getMI());
+          }
+        }
+      }
+      for (auto &T:forDelete) delete T.second;
+    }
+
     SwplTransformMIR tran(*MF, *lsplan, liveOutReg);
     tran.transformMIR4LS();
+
     LsDdg::destroy(lsddg);
     Changed = true;
   }
@@ -552,6 +605,12 @@ bool SWPipeliner::localScheduler2(const MachineLoop &L) {
 }
 
 bool SWPipeliner::localScheduler3(const MachineLoop &L) {
+  std::string msg = "local scheduling";
+  ORE->emit([&]() {
+    return MachineOptimizationRemark(DEBUG_TYPE, "LocalScheduling",
+                                           L.getStartLoc(), L.getHeader())
+           << msg;
+  });
   return false;
 }
 
@@ -592,7 +651,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
       break;
     case TargetInfo::LS3_Target:
       // @todo: To be corrected when LS3 is supported.
-      outputRemarkMissed(target_swpl, target_ls, L);
+      outputRemarkMissed(target_swpl, false, L);
       Changed |= localScheduler3(L);
       break;
   }
@@ -2286,7 +2345,7 @@ void SwplInst::InitializeWithDefUse(llvm::MachineInstr *MI, SwplLoop *loop, Regi
     }
   }
 
-  if ((MI->mayLoad() || MI->mayStore() || MI->mayLoadOrStore()) && MI->memoperands_empty()) {
+  if (MI->mayLoadOrStore() && MI->memoperands_empty()) {
     // load/store命令でMI->memoperands_empty()の場合、MayAliasとして動作する必要がある
     if (SWPipeliner::isDebugDdgOutput()) {
       dbgs() << "DBG(SwplInst::InitializeWithDefUse): memoperands_empty mi=" << *MI;
