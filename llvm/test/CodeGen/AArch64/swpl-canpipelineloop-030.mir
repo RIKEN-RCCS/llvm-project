@@ -1,5 +1,6 @@
-# RUN: llc %s -mcpu=a64fx  -fswp -start-after=aarch64-dead-defs -o /dev/null  -swpl-debug  2>&1 | FileCheck %s
-# CHECK: not found (BCC || SUBSXri)
+# RUN: llc %s -mcpu=a64fx  -fswp -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner -o /dev/null  -swpl-debug -pass-remarks-missed=-  2>&1 | FileCheck %s
+# CHECK: pipeliner info:not found (BCC || SUBSXri)
+# CHECK: This loop cannot be software pipelined because the shape of the loop is not covered.
 --- |
   ; ModuleID = 'test.029.base.ll'
   source_filename = "2912_step_n.c"

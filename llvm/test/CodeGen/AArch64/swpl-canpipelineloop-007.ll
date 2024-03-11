@@ -1,6 +1,5 @@
 ; RUN: llc < %s -O1 -fswp  -swpl-max-inst-num=100  -mcpu=a64fx  -swpl-debug --pass-remarks-filter=aarch64-swpipeliner  -pass-remarks-missed= --pass-remarks-output=- -o /dev/null 2>&1 | FileCheck %s
 ;CHECK:over inst limit num
-;CHECK:canPipelineLoop:NG
 ;CHECK:This loop cannot be software pipelined because the loop contains too many instructions
 ; ModuleID = '2912_inst_l.c'
 source_filename = "2912_inst_l.c"

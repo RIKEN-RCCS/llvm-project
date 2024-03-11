@@ -1,5 +1,6 @@
-#RUN: llc %s -fswp -swpl-debug -march=aarch64 -mcpu=a64fx -start-after=aarch64-dead-defs -o /dev/null 2>&1 | FileCheck %s
-#CHECK:BCC condition!=NE && GE
+#RUN: llc %s -fswp -swpl-debug -pass-remarks-missed=- -march=aarch64 -mcpu=a64fx -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
+# CHECK: pipeliner info:BCC condition!=NE && GE
+# CHECK: This loop cannot be software pipelined because the shape of the loop is not covered.
 --- |
   ; ModuleID = './test.base.ll'
   source_filename = "2912.c"
