@@ -1,6 +1,8 @@
 ; RUN: llc < %s -O1 -mcpu=a64fx  -fswp -fls -swpl-max-mem-num=10 --pass-remarks=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 ;CHECK: remark: <unknown>:0:0: This loop cannot be software pipelined because the loop contains too many instructions accessing memory.
 ;CHECK: remark: <unknown>:0:0: local scheduling
+;CHECK-NOT: remark: <unknown>:0:0: This loop cannot be local
+
 ; ModuleID = '2912_inst_l.c'
 source_filename = "2912_inst_l.c"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

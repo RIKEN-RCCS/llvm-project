@@ -2,6 +2,7 @@
 ;CHECK: remark: <unknown>:0:0: software pipelining
 ;CHECK-NOT: remark: <unknown>:0:0: This loop cannot be software pipelined
 ;CHECK-NOT: remark: <unknown>:0:0: local scheduling
+;CHECK-NOT: remark: <unknown>:0:0: This loop cannot be local
 
 ; ModuleID = '2912_2.c'
 source_filename = "2912_2.c"
