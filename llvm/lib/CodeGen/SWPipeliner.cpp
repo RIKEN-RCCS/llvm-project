@@ -589,51 +589,7 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
   } while ( redo );
 
   if (SWPLApplicationFailure && llvm::enableLS()) {
-    // LS
-    
-    // Convert DDG
-    LsDdg *lsddg = LsDdg::convertDdgForLS(ddg);
-    if (DebugDumpLsDdg) {
-      lsddg->print();
-    }
-    SwplPlan* lsplan = SwplPlan::generateLsPlan(*lsddg);
-
-    if ( OptionDumpLsPlan ) {
-      lsplan->dump( dbgs() );
-    }
-
-    if (OptionLSRegAdjustment) {
-      LS::VertexMap forDelete;
-      LS::Graph G(*lsddg, forDelete);
-      LS::VtoV KStar;
-      G.greedyK(LS::FLOAT_TYPE, KStar);
-      LS::EdgeList AddEdges;
-      bool Result = G.serialize(LS::FLOAT_TYPE, KStar, LsMaxFReg, AddEdges);
-      ORE->emit([&]() {
-        return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "LocalScheduler", L.getStartLoc(), L.getHeader())
-               << "Adding " << ore::NV("Edges", AddEdges.size()) << " dependencies as a result of adjusting registers.";
-      });
-      if (LsDebugRegAdjustment) dbgs() << "ls-reg-adjustment:" << Result << ", add edges:" << AddEdges.size() << "\n";
-      if (AddEdges.size()) {
-        auto* ddgG=lsddg->getGraph();
-        for (auto& P:AddEdges) {
-          auto *E=ddgG->createEdge(*(P.first->get()), *(P.second->get()));
-          lsddg->setDelay(*E, 1);
-          if (LsDebugRegAdjustment) {
-            dbgs() << "add edge for reg-adjustment:\n"
-                   << "### from:" << *(P.first->get()->getMI())
-                   << "### to  :" << *(P.second->get()->getMI());
-          }
-        }
-      }
-      for (auto &T:forDelete) delete T.second;
-    }
-
-    SwplTransformMIR tran(*MF, *lsplan, liveOutReg);
-    tran.transformMIR4LS();
-
-    LsDdg::destroy(lsddg);
-    Changed = true;
+    Changed = localscheduler(L,liveOutReg,ddg);
   }
 
   min_ii_for_retry = 0;
@@ -719,7 +675,6 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
       Changed |= localScheduler2(L);
       break;
     case TargetInfo::LS3_Target:
-      // @todo: To be corrected when LS3 is supported.
       outputRemarkMissed(target_swpl, false, L);
       Changed |= localScheduler3(L,BBLoop);
       break;

@@ -1153,6 +1153,19 @@ private:
    */
   void outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop &L) const;
 
+  /**
+   * \brief software_pipeliner
+   *        Perform Swpl optimization.
+   *        ・Data extraction
+   *        ・scheduling
+   *        ・Scheduling results reflected
+   *
+   * \param[in] L Target MachineLoop
+   * \param[in] usemap UseReg
+   * \param[in] swplddg SwplDdg
+   * \retval true  LS applicable
+   * \retval false LS not applicable
+   */
   bool localscheduler(MachineLoop &L, SwplScr::UseMap &usemap, SwplDdg *swplddg);
 
   /**
