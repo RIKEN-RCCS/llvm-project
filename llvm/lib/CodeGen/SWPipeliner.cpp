@@ -36,8 +36,9 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include <iostream>
 
-#include "llvm/Support/MemoryBuffer.h"
+#include "LSRegAdjustment.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
 
@@ -63,6 +64,12 @@ static cl::opt<int> OptionVirtualFetchWidth("swpl-virtual-fetch-width",cl::init(
 
 static cl::opt<unsigned> OptionMaxInstNum("swpl-max-inst-num",cl::init(500), cl::ReallyHidden);
 static cl::opt<unsigned> OptionMaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyHidden);
+
+static cl::opt<bool> OptionLSRegAdjustment("ls-reg-adjustment", cl::init(false), cl::ReallyHidden);
+static cl::opt<bool> LsDebugRegAdjustment("ls-debug-reg-adjustment", cl::init(false), cl::ReallyHidden);
+static cl::opt<int> LsMaxIReg("ls-max-ireg", cl::init(29), cl::ReallyHidden);
+static cl::opt<int> LsMaxFReg("ls-max-freg", cl::init(32), cl::ReallyHidden);
+static cl::opt<int> LsMaxPReg("ls-max-preg", cl::init(8), cl::ReallyHidden);
 
 namespace llvm {
 
@@ -547,8 +554,36 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
       lsplan->dump( dbgs() );
     }
 
+    if (OptionLSRegAdjustment) {
+      LS::VertexMap forDelete;
+      LS::Graph G(*lsddg, forDelete);
+      LS::VtoV KStar;
+      G.greedyK(LS::FLOAT_TYPE, KStar);
+      LS::EdgeList AddEdges;
+      bool Result = G.serialize(LS::FLOAT_TYPE, KStar, LsMaxFReg, AddEdges);
+      ORE->emit([&]() {
+        return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "LocalScheduler", L.getStartLoc(), L.getHeader())
+               << "Adding " << ore::NV("Edges", AddEdges.size()) << " dependencies as a result of adjusting registers.";
+      });
+      if (LsDebugRegAdjustment) dbgs() << "ls-reg-adjustment:" << Result << ", add edges:" << AddEdges.size() << "\n";
+      if (AddEdges.size()) {
+        auto* ddgG=lsddg->getGraph();
+        for (auto& P:AddEdges) {
+          auto *E=ddgG->createEdge(*(P.first->get()), *(P.second->get()));
+          lsddg->setDelay(*E, 1);
+          if (LsDebugRegAdjustment) {
+            dbgs() << "add edge for reg-adjustment:\n"
+                   << "### from:" << *(P.first->get()->getMI())
+                   << "### to  :" << *(P.second->get()->getMI());
+          }
+        }
+      }
+      for (auto &T:forDelete) delete T.second;
+    }
+
     SwplTransformMIR tran(*MF, *lsplan, liveOutReg);
     tran.transformMIR4LS();
+
     LsDdg::destroy(lsddg);
     Changed = true;
   }
@@ -570,6 +605,12 @@ bool SWPipeliner::localScheduler2(const MachineLoop &L) {
 }
 
 bool SWPipeliner::localScheduler3(const MachineLoop &L) {
+  std::string msg = "local scheduling";
+  ORE->emit([&]() {
+    return MachineOptimizationRemark(DEBUG_TYPE, "LocalScheduling",
+                                           L.getStartLoc(), L.getHeader())
+           << msg;
+  });
   return false;
 }
 
@@ -610,7 +651,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
       break;
     case TargetInfo::LS3_Target:
       // @todo: To be corrected when LS3 is supported.
-      outputRemarkMissed(target_swpl, target_ls, L);
+      outputRemarkMissed(target_swpl, false, L);
       Changed |= localScheduler3(L);
       break;
   }
