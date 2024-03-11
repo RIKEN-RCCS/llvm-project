@@ -1,4 +1,5 @@
-; RUN: llc < %s -O1 -mcpu=a64fx  -fswp  -swpl-max-mem-num=10  --pass-remarks-filter=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner  --pass-remarks-output=-  -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -O1 -mcpu=a64fx  -fswp -swpl-debug  -swpl-max-mem-num=10  --pass-remarks-filter=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner  --pass-remarks-output=-  -o /dev/null 2>&1 | FileCheck %s
+;CHECK:pipeliner info:over mem limit num
 ;CHECK:This loop cannot be software pipelined because the loop contains too many instructions accessing memory.
 ; ModuleID = '2912_inst_l.c'
 source_filename = "2912_inst_l.c"
