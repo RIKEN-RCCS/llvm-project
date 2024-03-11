@@ -1154,11 +1154,8 @@ private:
   void outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop &L) const;
 
   /**
-   * \brief software_pipeliner
-   *        Perform Swpl optimization.
-   *        ・Data extraction
-   *        ・scheduling
-   *        ・Scheduling results reflected
+   * \brief localscheduler
+   *        Perform LS optimization.
    *
    * \param[in] L Target MachineLoop
    * \param[in] usemap UseReg
