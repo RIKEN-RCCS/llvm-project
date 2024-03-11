@@ -224,6 +224,7 @@ public:
   const MachineInstr *getOrgMI(const MachineInstr *newMI) { return NewMI2OrgMI.at(newMI); };
   /// Return SwplLoop::OrgReg2NewReg
   std::map<Register, Register> &getOrgReg2NewReg() { return OrgReg2NewReg; };
+  const std::map<Register, Register> &getOrgReg2NewReg() const { return OrgReg2NewReg; };
   /// Return SwplLoop::Copies
   std::vector<MachineInstr *> &getCopies() { return Copies; };
   /// Return SwplLoop::Regs
@@ -943,6 +944,8 @@ public:
   SwplInstGraph *getGraph() { return Graph; }
   const SwplInstGraph &getGraph() const { return *Graph; }
   SwplInsts &getLoopBodyInsts() { return Loop->getBodyInsts(); }
+  const SwplInsts &getLoopBodyInsts() const { return Loop->getBodyInsts(); }
+  SwplLoop &getLoop() { return *Loop; }
   const SwplLoop &getLoop() const { return *Loop; }
   int getDelay(SwplInstEdge &edge) const { return DelaysMap.at(&edge); }
   void setDelay(SwplInstEdge &edge, int delay) { DelaysMap[&edge] = delay; }
@@ -1015,6 +1018,10 @@ public:
 
   MachineFunction *MF = nullptr;
   const MachineLoopInfo *MLI = nullptr;
+
+  static unsigned LsMaxIReg; ///< max ireg for LS
+  static unsigned LsMaxFReg; ///< max freg for LS
+  static unsigned LsMaxPReg; ///< max preg for LS
 
   /// -swpl-debug指定されているか
   static bool isDebugOutput();

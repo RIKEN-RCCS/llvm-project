@@ -66,10 +66,10 @@ static cl::opt<unsigned> OptionMaxInstNum("swpl-max-inst-num",cl::init(500), cl:
 static cl::opt<unsigned> OptionMaxMemNum("swpl-max-mem-num",cl::init(400), cl::ReallyHidden);
 
 static cl::opt<bool> OptionLSRegAdjustment("ls-reg-adjustment", cl::init(false), cl::ReallyHidden);
-static cl::opt<bool> LsDebugRegAdjustment("ls-debug-reg-adjustment", cl::init(false), cl::ReallyHidden);
-static cl::opt<int> LsMaxIReg("ls-max-ireg", cl::init(29), cl::ReallyHidden);
-static cl::opt<int> LsMaxFReg("ls-max-freg", cl::init(32), cl::ReallyHidden);
-static cl::opt<int> LsMaxPReg("ls-max-preg", cl::init(8), cl::ReallyHidden);
+static cl::opt<bool> OptionLsDebugRegAdjustment("ls-debug-reg-adjustment", cl::init(false), cl::ReallyHidden);
+static cl::opt<int> OptionLsMaxIReg("ls-max-ireg", cl::init(0), cl::ReallyHidden);
+static cl::opt<int> OptionLsMaxFReg("ls-max-freg", cl::init(0), cl::ReallyHidden);
+static cl::opt<int> OptionLsMaxPReg("ls-max-preg", cl::init(0), cl::ReallyHidden);
 
 namespace llvm {
 
@@ -136,6 +136,9 @@ std::string SWPipeliner::Reason;
 SwplLoop *SWPipeliner::currentLoop = nullptr;
 unsigned SWPipeliner::FetchBandwidth = 0;
 unsigned SWPipeliner::RealFetchBandwidth = 0;
+unsigned SWPipeliner::LsMaxIReg = 0;
+unsigned SWPipeliner::LsMaxFReg = 0;
+unsigned SWPipeliner::LsMaxPReg = 0;
 
 /// loop normalization pass for SWPL
 struct SWPipelinerPre : public MachineFunctionPass {
@@ -240,6 +243,12 @@ bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
   Reason = "";
 
   STM->initialize(*MF);
+
+  auto *rk=TII->getRegKind(*SWPipeliner::MRI);
+  LsMaxIReg = (OptionLsMaxIReg > 0) ? OptionLsMaxIReg : rk->getNumIntReg();
+  LsMaxFReg = (OptionLsMaxFReg > 0) ? OptionLsMaxFReg : rk->getNumFloatReg();
+  LsMaxPReg = (OptionLsMaxPReg > 0) ? OptionLsMaxPReg : rk->getNumPredicateReg();
+  delete rk;
 
   for (auto &L : *MLI) {
     scheduleLoop(*L);
@@ -548,7 +557,8 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
     if (DebugDumpLsDdg) {
       lsddg->print();
     }
-    SwplPlan* lsplan = SwplPlan::generateLsPlan(*lsddg);
+
+    SwplPlan* lsplan = SwplPlan::generateLsPlan(*lsddg, liveOutReg);
 
     if ( OptionDumpLsPlan ) {
       lsplan->dump( dbgs() );
@@ -560,18 +570,18 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
       LS::VtoV KStar;
       G.greedyK(LS::FLOAT_TYPE, KStar);
       LS::EdgeList AddEdges;
-      bool Result = G.serialize(LS::FLOAT_TYPE, KStar, LsMaxFReg, AddEdges);
+      bool Result = G.serialize(LS::FLOAT_TYPE, KStar, SWPipeliner::LsMaxFReg, AddEdges);
       ORE->emit([&]() {
         return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "LocalScheduler", L.getStartLoc(), L.getHeader())
                << "Adding " << ore::NV("Edges", AddEdges.size()) << " dependencies as a result of adjusting registers.";
       });
-      if (LsDebugRegAdjustment) dbgs() << "ls-reg-adjustment:" << Result << ", add edges:" << AddEdges.size() << "\n";
+      if (OptionLsDebugRegAdjustment) dbgs() << "ls-reg-adjustment:" << Result << ", add edges:" << AddEdges.size() << "\n";
       if (AddEdges.size()) {
         auto* ddgG=lsddg->getGraph();
         for (auto& P:AddEdges) {
           auto *E=ddgG->createEdge(*(P.first->get()), *(P.second->get()));
           lsddg->setDelay(*E, 1);
-          if (LsDebugRegAdjustment) {
+          if (OptionLsDebugRegAdjustment) {
             dbgs() << "add edge for reg-adjustment:\n"
                    << "### from:" << *(P.first->get()->getMI())
                    << "### to  :" << *(P.second->get()->getMI());
@@ -584,6 +594,7 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
     SwplTransformMIR tran(*MF, *lsplan, liveOutReg);
     tran.transformMIR4LS();
 
+    SwplPlan::destroy(lsplan);
     LsDdg::destroy(lsddg);
     Changed = true;
   }
