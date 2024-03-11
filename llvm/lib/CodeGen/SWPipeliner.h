@@ -1153,6 +1153,8 @@ private:
    */
   void outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop &L) const;
 
+  bool localscheduler(MachineLoop &L, SwplScr::UseMap &usemap, SwplDdg *swplddg);
+
   /**
    * \brief software_pipeliner
    *        Perform Swpl optimization.
@@ -1171,7 +1173,7 @@ private:
 
   bool localScheduler2(const MachineLoop &L);
 
-  bool localScheduler3(const MachineLoop &L);
+  bool localScheduler3(MachineLoop &L, const Loop *BBLoop);
 };
 
 /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の行
