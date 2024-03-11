@@ -1,5 +1,7 @@
 ; RUN: llc < %s -mcpu=a64fx -O1 -swpl-max-mem-num=10 -fswp -fls --pass-remarks-missed=aarch64-swpipeliner --pass-remarks=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck --allow-empty %s
 ;CHECK: remark: <unknown>:0:0: software pipelining
+;CHECK-NOT: remark: <unknown>:0:0: This loop cannot be software pipelined
+;CHECK-NOT: remark: <unknown>:0:0: local scheduling
 
 ; ModuleID = '2912.c'
 source_filename = "2912.c"

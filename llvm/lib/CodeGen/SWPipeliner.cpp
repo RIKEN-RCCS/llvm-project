@@ -570,6 +570,12 @@ bool SWPipeliner::localScheduler2(const MachineLoop &L) {
 }
 
 bool SWPipeliner::localScheduler3(const MachineLoop &L) {
+  std::string msg = "local scheduling";
+  ORE->emit([&]() {
+    return MachineOptimizationRemark(DEBUG_TYPE, "LocalScheduling",
+                                           L.getStartLoc(), L.getHeader())
+           << msg;
+  });
   return false;
 }
 
@@ -610,7 +616,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
       break;
     case TargetInfo::LS3_Target:
       // @todo: To be corrected when LS3 is supported.
-      outputRemarkMissed(target_swpl, target_ls, L);
+      outputRemarkMissed(target_swpl, false, L);
       Changed |= localScheduler3(L);
       break;
   }
