@@ -4120,7 +4120,7 @@ int SwplPlan::getTotalSlotCycles() {
 /// \param [in] stream 出力stream
 /// \return なし
 void SwplPlan::dump(raw_ostream &stream) {
-  stream << "(plan " << format("0x%p",this) <<":\n";
+  stream << "(plan " << format("%p",this) <<":\n";
   stream << "  iteration_interval  = " << iteration_interval <<"\n";
   stream << "  n_iteration_copies  = " << n_iteration_copies << "\n";;
   stream << "  n_renaming_versions = " << n_renaming_versions <<"\n";
@@ -5000,7 +5000,12 @@ SwplSlots* LSListScheduling::getScheduleResult() {
   }
 
   if (OptionDumpLsMrt) {
+    dbgs() << "!ls-msg: line ";
+    lsddg.getLoop().getML()->getStartLoc().print(dbgs());
+    dbgs() <<":\n";
+    dbgs() << "(mrt\n";
     lsmrt->dump(*slots, dbgs());
+    dbgs() <<  ")\n";  
   }
   return slots;
 }
