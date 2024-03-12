@@ -589,7 +589,7 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
   } while ( redo );
 
   if (SWPLApplicationFailure && llvm::enableLS()) {
-    Changed = localscheduler(L,liveOutReg,ddg);
+    Changed = localscheduler(L, liveOutReg, ddg);
   }
 
   min_ii_for_retry = 0;
@@ -622,7 +622,7 @@ bool SWPipeliner::localScheduler3(MachineLoop &L, const Loop *BBLoop) {
     // some error occurred
     remarkMissed("", *currentLoop->getML());
     if (SWPipeliner::isDebugOutput()) {
-      printDebug(__func__, "!!! Can not pipeline loop. Loops with restricting MI", L);
+      printDebug(__func__, "!!! Can not local scheduled loop. Loops with restricting MI", L);
     }
     delete currentLoop;
     currentLoop = nullptr;
@@ -635,7 +635,10 @@ bool SWPipeliner::localScheduler3(MachineLoop &L, const Loop *BBLoop) {
     Nodep = true;
   }
   SwplDdg *ddg = SwplDdg::Initialize(*currentLoop,Nodep);
-  Changed = localscheduler(L,liveOutReg,ddg);
+  Changed = localscheduler(L, liveOutReg, ddg);
+  SwplDdg::destroy(ddg);
+  delete currentLoop;
+  currentLoop = nullptr;
   return Changed;
 }
 
@@ -676,7 +679,7 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
       break;
     case TargetInfo::LS3_Target:
       outputRemarkMissed(target_swpl, false, L);
-      Changed |= localScheduler3(L,BBLoop);
+      Changed |= localScheduler3(L, BBLoop);
       break;
   }
 

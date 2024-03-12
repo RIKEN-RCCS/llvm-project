@@ -1179,10 +1179,31 @@ private:
    */
   bool software_pipeliner(MachineLoop &L, const Loop *BBLoop);
 
+  /**
+   * \brief localscheduler1
+   *        Perform LS1.
+   *
+   * \@attention: To be corrected when LS1 is supported.
+   */
   bool localScheduler1(const MachineLoop &L);
 
+  /**
+   * \brief localscheduler2
+   *        Perform LS2.
+   *
+   * \@attention: To be corrected when LS2 is supported.
+   */
   bool localScheduler2(const MachineLoop &L);
 
+  /**
+   * \brief localscheduler3
+   *        Perform LS3.
+   *
+   * \param[in] L Target MachineLoop
+   * \param[in] BBLoop Target BasicBlock
+   * \retval true  LS3 applicable
+   * \retval false LS3 not applicable
+   */
   bool localScheduler3(MachineLoop &L, const Loop *BBLoop);
 };
 
