@@ -1,8 +1,9 @@
 # RUN: llc %s  -fswp -fls -march=aarch64 -mcpu=a64fx -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 # CHECK: remark: <unknown>:0:0: This loop is not software pipelined because the software pipelining does not improve the performance.
+# CHECK-NOT: remark: <unknown>:0:0: This loop cannot be local
 # CHECK-NOT: remark: <unknown>:0:0: software pipelining
 # CHECK: remark: <unknown>:0:0: local scheduling
-# CHECK-NOT: remark: <unknown>:0:0: This loop cannot be local
+
 
 --- |
   ; ModuleID = './test.base.ll'
