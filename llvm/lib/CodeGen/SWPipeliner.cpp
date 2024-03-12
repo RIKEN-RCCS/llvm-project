@@ -622,7 +622,8 @@ bool SWPipeliner::localScheduler3(MachineLoop &L, const Loop *BBLoop) {
     // some error occurred
     remarkMissed("", *currentLoop->getML());
     if (SWPipeliner::isDebugOutput()) {
-      printDebug(__func__, "!!! Can not local scheduled loop. Loops with restricting MI", L);
+      // Prints a message when the restraction option is specified
+      printDebug(__func__, "!!! Can not local schedule loop. Loops with restricting MI", L);
     }
     delete currentLoop;
     currentLoop = nullptr;
