@@ -103,14 +103,14 @@ attributes #1 = { nocallback nofree nosync nounwind readnone willreturn }
 !llvm.module.flags = !{!2, !3, !4, !5, !6}
 !llvm.ident = !{!7}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 15.0.4 (git@172.16.1.70:a64fx-swpl/llvm-project.git 69cde8a4ef2dde77486223557abc5942772c96f6)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 15.0.4", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "pragma-loop-pipeline-007.cpp", directory: "/home/xxxx", checksumkind: CSK_MD5, checksum: "e842b0c32bef3ad1d801362fd8347284")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 7, !"uwtable", i32 2}
 !6 = !{i32 7, !"frame-pointer", i32 1}
-!7 = !{!"clang version 15.0.4 (git@172.16.1.70:a64fx-swpl/llvm-project.git 69cde8a4ef2dde77486223557abc5942772c96f6)"}
+!7 = !{!"clang version 15.0.4"}
 !8 = distinct !DISubprogram(name: "for_test", scope: !9, file: !9, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
 !9 = !DIFile(filename: "./pragma-loop-pipeline-007.cpp", directory: "/home/xxxx", checksumkind: CSK_MD5, checksum: "e842b0c32bef3ad1d801362fd8347284")
 !10 = !DISubroutineType(types: !11)
