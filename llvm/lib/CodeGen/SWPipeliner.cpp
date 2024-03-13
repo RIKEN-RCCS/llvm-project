@@ -278,7 +278,7 @@ void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {
   }
 
   ORE->emit([&]() {
-    return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipleined",
+    return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipelined",
                                            L.getStartLoc(), L.getHeader())
            << msg1;
   });
@@ -399,7 +399,7 @@ void SWPipeliner::outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop
   if (is_swpl) {
     swpl_msg += SWPipeliner::Reason;
     ORE->emit([&]() {
-      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipleined",
+      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipelined",
                                            L.getStartLoc(), L.getHeader())
              << swpl_msg;
     });
@@ -408,7 +408,7 @@ void SWPipeliner::outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop
   if (is_ls) {
     ls_msg += SWPipeliner::Reason;
     ORE->emit([&]() {
-      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipleined",
+      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotLocalScheduled",
                                            L.getStartLoc(), L.getHeader())
              << ls_msg;
     });
@@ -491,7 +491,7 @@ bool SWPipeliner::localscheduler(MachineLoop &L, SwplScr::UseMap &usemap, SwplDd
     LS::EdgeList AddEdges;
     bool Result = G.serialize(LS::FLOAT_TYPE, KStar, SWPipeliner::LsMaxFReg, AddEdges);
     ORE->emit([&]() {
-      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "LocalScheduler", L.getStartLoc(), L.getHeader())
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "AddingEdges", L.getStartLoc(), L.getHeader())
              << "Adding " << ore::NV("Edges", AddEdges.size()) << " dependencies as a result of adjusting registers.";
     });
     if (OptionLsDebugRegAdjustment) dbgs() << "ls-reg-adjustment:" << Result << ", add edges:" << AddEdges.size() << "\n";

@@ -3,7 +3,7 @@
 
 #CHECK:--- !Missed
 #CHECK:Pass:            aarch64-swpipeliner
-#CHECK:Name:            NotSoftwarePipleined
+#CHECK:Name:            NotSoftwarePipelined
 #CHECK:Function:        s3111
 #CHECK:Args:
 #CHECK:  - String:          'Trial at iteration-interval=94. This loop cannot be software pipelined because of shortage of predicate registers.'
