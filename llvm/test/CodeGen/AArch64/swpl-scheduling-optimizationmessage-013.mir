@@ -3,7 +3,7 @@
 
 #CHECK:--- !Missed
 #CHECK:Pass:            aarch64-swpipeliner
-#CHECK:Name:            NotSoftwarePipleined
+#CHECK:Name:            NotSoftwarePipelined
 #CHECK:DebugLoc:        { File: 'tp/testprg.c', Line: 5, Column: 3 }
 #CHECK:Function:        test
 #CHECK:Args:
@@ -11,7 +11,7 @@
 #CHECK:...
 #CHECK:--- !Missed
 #CHECK:Pass:            aarch64-swpipeliner
-#CHECK:Name:            NotSoftwarePipleined
+#CHECK:Name:            NotSoftwarePipelined
 #CHECK:DebugLoc:        { File: 'tp/testprg.c', Line: 5, Column: 3 }
 #CHECK:Function:        test
 #CHECK:Args:
