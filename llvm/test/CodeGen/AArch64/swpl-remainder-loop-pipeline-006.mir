@@ -135,14 +135,14 @@
   !llvm.module.flags = !{!2, !3, !4, !5, !6}
   !llvm.ident = !{!7}
   
-  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 16.0.6 (git@172.16.1.70:a64fx-swpl/llvm-project.git 454793307a16e6baf9e53a69ef030aa6a1b450f9)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 16.0.6", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "/test/swpl-remainder-loop-pipeline-006.cpp", directory: "/test", checksumkind: CSK_MD5, checksum: "97f95afc1d2c347afc1abcb8479f9791")
   !2 = !{i32 7, !"Dwarf Version", i32 5}
   !3 = !{i32 2, !"Debug Info Version", i32 3}
   !4 = !{i32 1, !"wchar_size", i32 4}
   !5 = !{i32 7, !"uwtable", i32 2}
   !6 = !{i32 7, !"frame-pointer", i32 1}
-  !7 = !{!"clang version 16.0.6 (git@172.16.1.70:a64fx-swpl/llvm-project.git 454793307a16e6baf9e53a69ef030aa6a1b450f9)"}
+  !7 = !{!"clang version 16.0.6"}
   !8 = distinct !DISubprogram(name: "remainder_loop", scope: !9, file: !9, line: 3, type: !10, scopeLine: 3, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
   !9 = !DIFile(filename: "swpl-remainder-loop-pipeline-006.cpp", directory: "/test", checksumkind: CSK_MD5, checksum: "97f95afc1d2c347afc1abcb8479f9791")
   !10 = !DISubroutineType(types: !11)
