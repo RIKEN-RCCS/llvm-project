@@ -1,8 +1,8 @@
 #RUN: llc %s -mcpu=a64fx -fswp -fls -O3 -start-before=aarch64-swpipeliner -swpl-maxii=2 -ls-debug-dump-scheduling-every-inst -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:%35:fpr32 = nofpexcept FADDSrr %33:fpr32, killed %34:fpr32, implicit $fpcr
-#CHECK-DAG:pred : FADDSrr(placed={{[0-9]+}}, delay=9)
-#CHECK-DAG:pred : FADDSrr(placed={{[0-9]+}}, delay=9)
+#CHECK-NEXT:pred : FADDSrr(placed=62509, delay=9)
+#CHECK-NEXT:pred : FADDSrr(placed=62509, delay=9)
 #CHECK-NEXT:earliest cycle : 62518
 #CHECK-NEXT:placed cycle   : 62518
 

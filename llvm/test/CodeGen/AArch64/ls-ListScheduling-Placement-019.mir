@@ -1,9 +1,9 @@
 #RUN: llc %s -mcpu=a64fx -fswp -fls -O3 -start-before=aarch64-swpipeliner -swpl-maxii=2 -ls-debug-dump-scheduling-every-inst -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:%46:gpr32common = MSUBWrrr %43:gpr32common, %44:gpr32common, %45:gpr32common
-#CHECK-DAG:pred : ADDWrr(placed={{[0-9]+}}, delay=1)
-#CHECK-DAG:pred : ADDWrr(placed={{[0-9]+}}, delay=1)
-#CHECK-DAG:pred : ADDWrr(placed={{[0-9]+}}, delay=1)
+#CHECK-NEXT:pred : ADDWrr(placed=62503, delay=1)
+#CHECK-NEXT:pred : ADDWrr(placed=62503, delay=1)
+#CHECK-NEXT:pred : ADDWrr(placed=62503, delay=1)
 #CHECK-NEXT:earliest cycle : 62504
 #CHECK-NEXT:placed cycle   : 62504
 

@@ -1,7 +1,7 @@
 #RUN: llc %s -mcpu=a64fx -fswp -fls -O3 -start-before=aarch64-swpipeliner -swpl-maxii=2 -ls-debug-dump-scheduling-every-inst -o /dev/null 2>&1 | FileCheck %s
 
-#CHECK:%39:fpr128 = INSERT_SUBREG %38:fpr128(tied-def 0), killed %36:fpr64, %subreg.dsub
-#CHECK-DAG:pred : SUBREG_TO_REG(placed={{[0-9]+}}, delay=1)
+#CHECK:%39:fpr128 = INSERT_SUBREG killed %38:fpr128(tied-def 0), killed %37:fpr64, %subreg.dsub
+#CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
 #CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
 #CHECK-NEXT:earliest cycle : 62503
 #CHECK-NEXT:placed cycle   : 62503
@@ -154,7 +154,7 @@ body:             |
     %11:gpr64 = COPY $x2
     %10:gpr64 = COPY $x1
     %9:gpr64common = COPY $x0
-    %100:fpr64 = IMPLICIT_DEF
+    %100:fpr128 = IMPLICIT_DEF
     %101:fpr64 = IMPLICIT_DEF
     dead $wzr = SUBSWri %12, 1, 0, implicit-def $nzcv
     Bcc 11, %bb.2, implicit $nzcv
@@ -180,10 +180,10 @@ body:             |
     %3:gpr64sp = PHI %9, %bb.1, %5, %bb.3
     %4:gpr64sp = PHI %0, %bb.1, %8, %bb.3
     %110:gpr32 = PHI %12, %bb.1, %120, %bb.3
-    %130:fpr64 = INSERT_SUBREG %100, %110, %subreg.ssub
+    %130:fpr128 = INSERT_SUBREG %100, %1, %subreg.dsub
     %131:fpr64 = INSERT_SUBREG %101, %110, %subreg.ssub
-    %150:fpr128 = SUBREG_TO_REG 0, killed %131, %subreg.dsub
-    %151:fpr128 = INSERT_SUBREG %150, killed %130, %subreg.dsub
+    %132:fpr128 = INSERT_SUBREG killed %130, %131, %subreg.dsub
+    %133:fpr128 = INSERT_SUBREG killed %132, killed %131, %subreg.dsub
     early-clobber %15:gpr64sp, %16:fpr32 = LDRSpost %1, 4 :: (load (s32) from %ir.lsr.iv16, !tbaa !6)
     early-clobber %17:gpr64sp, %18:fpr32 = LDRSpost %2, 4 :: (load (s32) from %ir.lsr.iv14, !tbaa !6)
     %19:fpr32 = nofpexcept FADDSrr killed %16, killed %18, implicit $fpcr

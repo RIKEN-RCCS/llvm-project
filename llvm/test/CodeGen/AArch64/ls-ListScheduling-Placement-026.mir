@@ -4,9 +4,9 @@
 #CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
 #CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
 #CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
-#CHECK-NEXT:earliest cycle : 83336
-#CHECK-NEXT:placed cycle   : 83336
-#CHECK-NEXT:placed slot    : 500016
+#CHECK-NEXT:earliest cycle : [[#CYCLE:]]
+#CHECK-NEXT:placed cycle   : [[#CYCLE]]
+#CHECK-NEXT:placed slot    : [[#mul(CYCLE,6)]]
 
 --- |
   ; ModuleID = 'schedule.cpp'

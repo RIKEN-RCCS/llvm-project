@@ -1,9 +1,9 @@
 #RUN: llc %s -mcpu=a64fx -fswp -fls -O3 -start-before=aarch64-swpipeliner -swpl-maxii=2 -ls-debug-dump-scheduling-every-inst -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:%51:fpr64 = nofpexcept FADDDrr %46:fpr64, %24:fpr64, implicit $fpcr
-#CHEK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
-#CHEK-NEXT:earliest cycle : 62503
-#CHEK-NEXT:placed cycle   : 62504
+#CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
+#CHECK-NEXT:earliest cycle : 62503
+#CHECK-NEXT:placed cycle   : 62504
 
 --- |
   ; ModuleID = 'schedule.cpp'

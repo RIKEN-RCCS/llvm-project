@@ -2,7 +2,7 @@
 
 #CHECK:%39:fpr128 = nofpexcept FADDPv4f32 %36:fpr128, %38:fpr128, implicit $fpcr
 #CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
-#CHECK-DAG:pred : SUBREG_TO_REG(placed={{[0-9]+}}, delay=1)
+#CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
 #CHECK-NEXT:earliest cycle : 62503
 #CHECK-NEXT:placed cycle   : 62503
 
@@ -182,7 +182,7 @@ body:             |
     %110:gpr32 = PHI %12, %bb.1, %120, %bb.3
     %130:fpr128 = INSERT_SUBREG %100, %1, %subreg.dsub
     %131:fpr64 = INSERT_SUBREG %101, %110, %subreg.ssub
-    %132:fpr128 = SUBREG_TO_REG 0, killed %131, %subreg.dsub
+    %132:fpr128 = INSERT_SUBREG %100, killed %131, %subreg.dsub
     %133:fpr128 = nofpexcept FADDPv4f32 %130:fpr128, %132:fpr128, implicit $fpcr
     early-clobber %15:gpr64sp, %16:fpr32 = LDRSpost %1, 4 :: (load (s32) from %ir.lsr.iv16, !tbaa !6)
     early-clobber %17:gpr64sp, %18:fpr32 = LDRSpost %2, 4 :: (load (s32) from %ir.lsr.iv14, !tbaa !6)

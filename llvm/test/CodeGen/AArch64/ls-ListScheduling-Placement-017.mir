@@ -1,9 +1,9 @@
 #RUN: llc %s -mcpu=a64fx -fswp -fls -O3 -start-before=aarch64-swpipeliner -swpl-maxii=2 -ls-debug-dump-scheduling-every-inst -o /dev/null 2>&1 | FileCheck %s
 
 #CHECK:%41:qqq = REG_SEQUENCE %38:fpr128, %subreg.qsub0, killed %39:fpr128, %subreg.qsub1, killed %40:fpr128, %subreg.qsub2
-#CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
-#CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
-#CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
+#CHECK-NEXT:pred : INSERT_SUBREG(placed=62501, delay=1)
+#CHECK-NEXT:pred : INSERT_SUBREG(placed=62501, delay=1)
+#CHECK-NEXT:pred : INSERT_SUBREG(placed=62501, delay=1)
 #CHECK-NEXT:earliest cycle : 62502
 #CHECK-NEXT:placed cycle   : 62502
 

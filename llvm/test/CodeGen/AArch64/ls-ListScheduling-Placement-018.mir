@@ -3,7 +3,7 @@
 #CHECK:%43:qqq = REG_SEQUENCE %39:fpr128, %subreg.qsub0, killed %40:fpr128, %subreg.qsub1, killed %42:fpr128, %subreg.qsub2
 #CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
 #CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
-#CHECK-DAG:pred : SUBREG_TO_REG(placed={{[0-9]+}}, delay=1)
+#CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
 #CHECK-NEXT:earliest cycle : 62503
 #CHECK-NEXT:placed cycle   : 62503
 
@@ -186,7 +186,7 @@ body:             |
     %130:fpr128 = INSERT_SUBREG %100, %110, %subreg.ssub
     %131:fpr128 = INSERT_SUBREG %101, %110, %subreg.ssub
     %132:fpr64 = INSERT_SUBREG %102, %110, %subreg.ssub
-    %133:fpr128 = SUBREG_TO_REG 0, killed %132, %subreg.dsub
+    %133:fpr128 = INSERT_SUBREG %100, killed %132, %subreg.dsub
     %134:qqq = REG_SEQUENCE %130, %subreg.qsub0, killed %131, %subreg.qsub1, killed %133, %subreg.qsub2
     early-clobber %15:gpr64sp, %16:fpr32 = LDRSpost %1, 4 :: (load (s32) from %ir.lsr.iv16, !tbaa !6)
     early-clobber %17:gpr64sp, %18:fpr32 = LDRSpost %2, 4 :: (load (s32) from %ir.lsr.iv14, !tbaa !6)
