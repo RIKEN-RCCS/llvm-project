@@ -1,6 +1,8 @@
-# RUN: llc -mcpu=a64fx -march=aarch64 -fls -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner -o /dev/null %s 2>&1 | FileCheck %s
-# CHECK-NOT: remark: <unknown>:0:0: local scheduling 
+# RUN: llc -mcpu=a64fx -fls -start-before=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner -o /dev/null %s 2>&1 | FileCheck %s
+# CHECK-NOT: remark: <unknown>:0:0: This loop cannot be software
+# CHECK-NOT: remark: <unknown>:0:0: softwere pipelining
 # CHECK: remark: <unknown>:0:0: This loop cannot be local scheduled because the shape of the loop is not covered.
+# CHECK-NOT: remark: <unknown>:0:0: local scheduling 
 --- |
   ; ModuleID = './test.base.ll'
   source_filename = "2912.c"

@@ -1,6 +1,8 @@
 # RUN: llc -fls -O1 -mcpu=a64fx -start-before=aarch64-swpipeliner -o /dev/null -pass-remarks-missed=aarch64-swpipeliner %s 2>&1 | FileCheck %s
-# CHECK-NOT: remark: <unknown>:0:0: local scheduling 
+# CHECK-NOT: remark: <unknown>:0:0: This loop cannot be software
+# CHECK-NOT: remark: <unknown>:0:0: softwere pipelining
 # CHECK: This loop cannot be local scheduled because instruction to update FPCR.
+# CHECK-NOT: remark: <unknown>:0:0: local scheduling 
 --- |
   ; ModuleID = './test.base.ll'
   source_filename = "2912.c"
