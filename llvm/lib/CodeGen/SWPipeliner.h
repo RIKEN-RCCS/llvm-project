@@ -1154,6 +1154,18 @@ private:
   void outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop &L) const;
 
   /**
+   * \brief localscheduler
+   *        Perform LS optimization.
+   *
+   * \param[in] L Target MachineLoop
+   * \param[in] usemap UseReg
+   * \param[in] swplddg SwplDdg
+   * \retval true  LS applicable
+   * \retval false LS not applicable
+   */
+  bool localscheduler(MachineLoop &L, SwplScr::UseMap &usemap, SwplDdg *swplddg);
+
+  /**
    * \brief software_pipeliner
    *        Perform Swpl optimization.
    *        ・Data extraction
@@ -1167,11 +1179,32 @@ private:
    */
   bool software_pipeliner(MachineLoop &L, const Loop *BBLoop);
 
+  /**
+   * \brief localscheduler1
+   *        Perform LS1.
+   *
+   * \@attention: To be corrected when LS1 is supported.
+   */
   bool localScheduler1(const MachineLoop &L);
 
+  /**
+   * \brief localscheduler2
+   *        Perform LS2.
+   *
+   * \@attention: To be corrected when LS2 is supported.
+   */
   bool localScheduler2(const MachineLoop &L);
 
-  bool localScheduler3(const MachineLoop &L);
+  /**
+   * \brief localscheduler3
+   *        Perform LS3.
+   *
+   * \param[in] L Target MachineLoop
+   * \param[in] BBLoop Target BasicBlock
+   * \retval true  LS3 applicable
+   * \retval false LS3 not applicable
+   */
+  bool localScheduler3(MachineLoop &L, const Loop *BBLoop);
 };
 
 /// Swpl-RAで使用する、カーネルループ外のレジスタ情報の行

@@ -459,6 +459,54 @@ SWPipeliner::TargetInfo SWPipeliner::isTargetLoops(MachineLoop &L, const Loop *B
   return TargetInfo::SWP_Target;
 }
 
+bool SWPipeliner::localscheduler(MachineLoop &L, SwplScr::UseMap &usemap, SwplDdg *swplddg){
+  // LS
+  SwplDdg *ddg = swplddg;
+  SwplScr::UseMap liveOutReg = usemap;
+  // Convert DDG
+  LsDdg *lsddg = LsDdg::convertDdgForLS(ddg);
+  if (DebugDumpLsDdg) {
+    lsddg->print();
+  }
+  SwplPlan* lsplan = SwplPlan::generateLsPlan(*lsddg);
+
+  if ( OptionDumpLsPlan ) {
+    lsplan->dump( dbgs() );
+  }
+
+  if (OptionLSRegAdjustment) {
+    LS::VertexMap forDelete;
+    LS::Graph G(*lsddg, forDelete);
+    LS::VtoV KStar;
+    G.greedyK(LS::FLOAT_TYPE, KStar);
+    LS::EdgeList AddEdges;
+    bool Result = G.serialize(LS::FLOAT_TYPE, KStar, LsMaxFReg, AddEdges);
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "LocalScheduler", L.getStartLoc(), L.getHeader())
+             << "Adding " << ore::NV("Edges", AddEdges.size()) << " dependencies as a result of adjusting registers.";
+    });
+    if (LsDebugRegAdjustment) dbgs() << "ls-reg-adjustment:" << Result << ", add edges:" << AddEdges.size() << "\n";
+    if (AddEdges.size()) {
+      auto* ddgG=lsddg->getGraph();
+      for (auto& P:AddEdges) {
+        auto *E=ddgG->createEdge(*(P.first->get()), *(P.second->get()));
+        lsddg->setDelay(*E, 1);
+        if (LsDebugRegAdjustment) {
+          dbgs() << "add edge for reg-adjustment:\n"
+                 << "### from:" << *(P.first->get()->getMI())
+                 << "### to  :" << *(P.second->get()->getMI());
+        }
+      }
+    }
+    for (auto &T:forDelete) delete T.second;
+  }
+
+  SwplTransformMIR tran(*MF, *lsplan, liveOutReg);
+  tran.transformMIR4LS();
+  LsDdg::destroy(lsddg);
+  return true;
+}
+
 bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
   bool Changed = false;
   loop_number++;
@@ -541,51 +589,7 @@ bool SWPipeliner::software_pipeliner(MachineLoop &L, const Loop *BBLoop) {
   } while ( redo );
 
   if (SWPLApplicationFailure && llvm::enableLS()) {
-    // LS
-    
-    // Convert DDG
-    LsDdg *lsddg = LsDdg::convertDdgForLS(ddg);
-    if (DebugDumpLsDdg) {
-      lsddg->print();
-    }
-    SwplPlan* lsplan = SwplPlan::generateLsPlan(*lsddg);
-
-    if ( OptionDumpLsPlan ) {
-      lsplan->dump( dbgs() );
-    }
-
-    if (OptionLSRegAdjustment) {
-      LS::VertexMap forDelete;
-      LS::Graph G(*lsddg, forDelete);
-      LS::VtoV KStar;
-      G.greedyK(LS::FLOAT_TYPE, KStar);
-      LS::EdgeList AddEdges;
-      bool Result = G.serialize(LS::FLOAT_TYPE, KStar, LsMaxFReg, AddEdges);
-      ORE->emit([&]() {
-        return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "LocalScheduler", L.getStartLoc(), L.getHeader())
-               << "Adding " << ore::NV("Edges", AddEdges.size()) << " dependencies as a result of adjusting registers.";
-      });
-      if (LsDebugRegAdjustment) dbgs() << "ls-reg-adjustment:" << Result << ", add edges:" << AddEdges.size() << "\n";
-      if (AddEdges.size()) {
-        auto* ddgG=lsddg->getGraph();
-        for (auto& P:AddEdges) {
-          auto *E=ddgG->createEdge(*(P.first->get()), *(P.second->get()));
-          lsddg->setDelay(*E, 1);
-          if (LsDebugRegAdjustment) {
-            dbgs() << "add edge for reg-adjustment:\n"
-                   << "### from:" << *(P.first->get()->getMI())
-                   << "### to  :" << *(P.second->get()->getMI());
-          }
-        }
-      }
-      for (auto &T:forDelete) delete T.second;
-    }
-
-    SwplTransformMIR tran(*MF, *lsplan, liveOutReg);
-    tran.transformMIR4LS();
-
-    LsDdg::destroy(lsddg);
-    Changed = true;
+    Changed = localscheduler(L, liveOutReg, ddg);
   }
 
   min_ii_for_retry = 0;
@@ -604,14 +608,39 @@ bool SWPipeliner::localScheduler2(const MachineLoop &L) {
   return false;
 }
 
-bool SWPipeliner::localScheduler3(const MachineLoop &L) {
-  std::string msg = "local scheduling";
-  ORE->emit([&]() {
-    return MachineOptimizationRemark(DEBUG_TYPE, "LocalScheduling",
-                                           L.getStartLoc(), L.getHeader())
-           << msg;
-  });
-  return false;
+bool SWPipeliner::localScheduler3(MachineLoop &L, const Loop *BBLoop) {
+  bool Changed = false;
+  loop_number++;
+  SwplScr swplScr(L);
+  SwplScr::UseMap liveOutReg;
+  // Since the Loop is duplicated in SwplLoop::Initialize(), collect the exit Busy register information before that.
+  swplScr.collectLiveOut(liveOutReg);
+
+  // Data extraction
+  currentLoop = SwplLoop::Initialize(L, liveOutReg);
+  if (!Reason.empty()) {
+    // some error occurred
+    remarkMissed("", *currentLoop->getML());
+    if (SWPipeliner::isDebugOutput()) {
+      // Prints a message when the restraction option is specified
+      printDebug(__func__, "!!! Can not local schedule loop. Loops with restricting MI", L);
+    }
+    delete currentLoop;
+    currentLoop = nullptr;
+    return false;
+  }
+  bool Nodep = false;
+  if (enableNodep(BBLoop) && enableSWP(BBLoop, false)){
+    remarkAnalysis("Since the pragma pipeline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.",
+                   *currentLoop->getML(), "scheduleLoop");
+    Nodep = true;
+  }
+  SwplDdg *ddg = SwplDdg::Initialize(*currentLoop,Nodep);
+  Changed = localscheduler(L, liveOutReg, ddg);
+  SwplDdg::destroy(ddg);
+  delete currentLoop;
+  currentLoop = nullptr;
+  return Changed;
 }
 
 bool SWPipeliner::scheduleLoop(MachineLoop &L) {
@@ -650,9 +679,8 @@ bool SWPipeliner::scheduleLoop(MachineLoop &L) {
       Changed |= localScheduler2(L);
       break;
     case TargetInfo::LS3_Target:
-      // @todo: To be corrected when LS3 is supported.
       outputRemarkMissed(target_swpl, false, L);
-      Changed |= localScheduler3(L);
+      Changed |= localScheduler3(L, BBLoop);
       break;
   }
 
