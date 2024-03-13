@@ -5275,7 +5275,7 @@ void LSListScheduling::calcVregs() {
           liveoutconsiders.erase(r);
         }
         else {
-          long c=-1;
+          int c=-1;
           for (unsigned j=0; j<i; j++) {
             if (regs_placement_order[j][1].count(r)>0)
               c = j;
@@ -5309,8 +5309,8 @@ void LSListScheduling::calcVregs() {
 
       if (alldefs.count(r)==0) {
         // このuseをdefしている命令が存在しない
-        long c=-1;
-        for (long j=i; j>=0; j--) {
+        int c=-1;
+        for (int j=i; j>=0; j--) {
           if (regs_placement_order[j][0].count(r)>0)
             c = j;
         }
