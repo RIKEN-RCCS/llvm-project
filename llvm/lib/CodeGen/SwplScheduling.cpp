@@ -48,6 +48,10 @@ static cl::opt<bool> OptionEnableStageScheduling("swpl-enable-stagescheduling",c
 static cl::opt<bool> OptionDumpSSProgress("swpl-debug-dump-ss-progress",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> OptionDumpCyclicRoots("swpl-debug-dump-ss-cyclicroots",cl::init(false), cl::ReallyHidden);
 
+static llvm::cl::opt<bool> OptionDumpReg("swpl-debug-dump-estimate-reg",llvm::cl::init(false), llvm::cl::ReallyHidden);
+static llvm::cl::opt<bool> OptionDumpLsReg("ls-debug-dump-estimate-reg",llvm::cl::init(false), llvm::cl::ReallyHidden);
+
+
 void SwplMrt::reserveResourcesForInst(unsigned cycle,
                                       const SwplInst& inst,
                                       const StmPipeline & pipeline ) {
@@ -3170,7 +3174,6 @@ bool SwplCalclIterations::preCheckIterationCount(const SwplPlanSpec & spec, unsi
   return true;
 }
 
-static llvm::cl::opt<bool> OptionDumpReg("swpl-debug-dump-estimate-reg",llvm::cl::init(false), llvm::cl::ReallyHidden);
 
 /// \brief scheduling結果に対して指定したレジスタがいくつ必要であるかを数える処理
 /// \note 必要なレジスタ数を正確に計算する事は、RAでなければできないため、
@@ -4310,9 +4313,9 @@ SwplPlan* SwplPlan::generatePlan(SwplDdg& ddg)
   return nullptr;
 }
 
-SwplPlan* SwplPlan::generateLsPlan(const LsDdg& lsddg)
+SwplPlan* SwplPlan::generateLsPlan(const LsDdg& lsddg, const SwplScr::UseMap &LiveOutReg)
 {
-  LSListScheduling lsproc(lsddg);
+  LSListScheduling lsproc(lsddg, LiveOutReg);
   SwplSlots* slots = lsproc.getScheduleResult();
 
   // Generate a plan and set information such as scheduling results.
@@ -4332,14 +4335,12 @@ SwplPlan* SwplPlan::generateLsPlan(const LsDdg& lsddg)
   lsplan->prolog_cycles=0;
   lsplan->kernel_cycles=total_cycles;
   lsplan->epilog_cycles=0;
-  auto *rk=SWPipeliner::TII->getRegKind(*SWPipeliner::MRI);
-  lsplan->num_max_freg =  (OptionMaxFreg > 0) ? OptionMaxFreg : rk->getNumFloatReg();
-  lsplan->num_max_ireg = (OptionMaxIreg > 0) ? OptionMaxIreg : rk->getNumIntReg();
-  lsplan->num_max_preg = (OptionMaxPreg > 0) ? OptionMaxPreg : rk->getNumPredicateReg();
-  delete rk;
-  lsplan->num_necessary_freg=10;
-  lsplan->num_necessary_ireg=10;
-  lsplan->num_necessary_preg=1;
+  lsplan->num_max_freg = SWPipeliner::LsMaxFReg;
+  lsplan->num_max_ireg = SWPipeliner::LsMaxIReg;
+  lsplan->num_max_preg = SWPipeliner::LsMaxPReg;
+  lsplan->num_necessary_freg=lsproc.getNumNecessaryFreg();
+  lsplan->num_necessary_ireg=lsproc.getNumNecessaryIreg();
+  lsplan->num_necessary_preg=lsproc.getNumNecessaryPreg();
   return lsplan;
 }
 
@@ -4863,6 +4864,37 @@ SwplSlot SwplSlots::getLsEmptySlotInCycle( unsigned cycle, bool isvirtual ) {
   return SWPL_ILLEGAL_SLOT;
 }
 
+llvm::SmallVector<unsigned, 32> SwplSlots::getInstIdxInSlotOrder() {
+  unsigned size  = this->size();
+
+  llvm::SmallVector<std::array<unsigned,2>, 32> instix_slotidx; // vector of [inst_ix, slot.slot_index]
+  unsigned instix=0;
+  for (auto v: *this) {
+    std::array<unsigned,2> ixsx;
+    ixsx[0]=instix;
+    ixsx[1]=v.slot_index;
+    instix_slotidx.push_back(ixsx);
+    instix+=1;
+  }
+
+  // sort by slot_index
+  unsigned range = size-1;
+  while (range!=0) {
+    for (unsigned i=0; i<range; i++) {
+      if (instix_slotidx[i][1] > instix_slotidx[i+1][1]) // compare slot_index
+        std::swap(instix_slotidx[i], instix_slotidx[i+1]);
+    }
+    range-=1;
+  }
+
+  // by slot_index, listing inst_ix
+  llvm::SmallVector<unsigned, 32> ret;
+  for (auto v: instix_slotidx) {
+    ret.push_back(v[0]);
+  }
+  return ret;
+}
+
 /// \brief デバッグ用ダンプ
 void SwplSlots::dump(const SwplLoop& c_loop) {
   if( this->size() == 0 ) {
@@ -5002,6 +5034,9 @@ SwplSlots* LSListScheduling::getScheduleResult() {
   if (OptionDumpLsMrt) {
     lsmrt->dump(*slots, dbgs());
   }
+
+  calcVregs();
+
   return slots;
 }
 
@@ -5146,4 +5181,197 @@ const StmPipeline* LSListScheduling::findPlacablePipeline(const SwplInst* inst, 
   }
 
   return nullptr; // not found
+}
+
+void LSListScheduling::calcVregs() {
+  auto loopinsts=lsddg.getLoopBodyInsts();
+
+  auto regmap=lsddg.getLoop().getOrgReg2NewReg();
+  llvm::SmallSet<Register, 8> liveoutconsiders;
+  for (auto &t:LiveOutRegs) {
+    liveoutconsiders.insert(regmap[t.first]);
+  }
+
+  // Get inst_ix in placement order.
+  auto order = slots->getInstIdxInSlotOrder();
+
+  // Collect def-reg/uses-reg in the order in which instructions are placed.
+  using DefsAndUses = std::array<llvm::SmallSet<Register,4>, 2>;  // [0] as def-regs, [1] as use-regs
+  llvm::SmallVector<DefsAndUses, 32> regs_placement_order; // DefsAndUses are [0] as def, [1] as use
+  llvm::SmallSet<Register, 32>  alldefs; // all def regs
+  llvm::SmallSet<Register, 32>  alluses; // all use regs
+  for (auto o: order) {
+    auto mi = loopinsts[o]->getMI();
+    DefsAndUses defuses;
+
+    for (auto& op: mi->operands()){
+      if (!op.isReg()) continue;
+
+      if (op.isDef()) {
+        defuses[0].insert(op.getReg());
+        alldefs.insert(op.getReg());
+      }
+      else if (op.isUse()) {
+        defuses[1].insert(op.getReg());
+        alluses.insert(op.getReg());
+      }
+    }
+    regs_placement_order.push_back(defuses);
+  }
+  unsigned numregs=regs_placement_order.size();
+
+  if (OptionDumpLsReg) {
+    dbgs() << "======= LS estimate regs details =======\n";
+    dbgs() << "LiveOutReg(";
+    for (auto r: liveoutconsiders) {
+      dbgs() << printReg(r, SWPipeliner::TRI);
+    }
+    dbgs() << "):\n";
+
+    slots->dump(lsddg.getLoop());
+    dbgs() << "sorted inst_ix order :";
+    for (auto idx: order) {
+      dbgs() << idx << " ";
+    }
+    dbgs() << "\n";
+
+    dbgs() << "--- dump sorted order ---\n";
+    for (unsigned idx=0; idx<numregs; idx++) {
+      auto swpli = loopinsts[order[idx]];
+      auto mi = swpli->getMI();
+      dbgs() << " " << idx << "\t" << swpli->inst_ix << " : ";
+      mi->print(dbgs());
+
+      dbgs() << "\t\tDefs : ";
+      for (auto r: regs_placement_order[idx][0]) {
+        dbgs() << printReg(r, SWPipeliner::TRI) << " ";
+      }
+      dbgs() << "\n";
+      dbgs() << "\t\tUses : ";
+      for (auto r: regs_placement_order[idx][1]) {
+        dbgs() << printReg(r, SWPipeliner::TRI) << " ";
+      }
+      dbgs() << "\n";
+    }
+  }
+
+  // Update estimateRegCounter with register live-range.
+  estimateIregCounter.resize(numregs);
+  estimateFregCounter.resize(numregs);
+  estimatePregCounter.resize(numregs);
+  unsigned lastidx = numregs-1;
+  for (unsigned i=0; i<numregs; i++) {
+    auto &defs = regs_placement_order[i][0]; // defs of instructions where inst_ix is i
+    auto &uses = regs_placement_order[i][1]; // uses of instructions where inst_ix is i
+
+    // about def
+    for (auto r: defs) {
+      std::pair<int, int> range(-1, -1); // update range
+
+      //このdefをuseしている命令が存在する
+      if (alluses.count(r)>0) {
+        if (uses.count(r)>0) {
+          range=std::make_pair(0, lastidx); // 対象命令自身がuseしている
+          liveoutconsiders.erase(r);
+        }
+        else {
+          int c=-1;
+          for (unsigned j=0; j<i; j++) {
+            if (regs_placement_order[j][1].count(r)>0)
+              c = j;
+          }
+          if (c!=-1) {
+            range=std::make_pair(i, c); // 対象命令より早い時間にuseしている命令が存在する
+            liveoutconsiders.erase(r);
+          }
+          else {
+            for (unsigned j=i+1; j<numregs; j++) {
+              if (regs_placement_order[j][1].count(r)>0)
+                c = j;
+            }
+            if (c!=-1)
+              range=std::make_pair(i, c);// 対象命令より遅い時間にuseしている命令が存在する
+          }
+        }
+
+      }
+      else {
+        range=std::make_pair(i, lastidx); // このdefをuseしている命令が存在しない
+        liveoutconsiders.erase(r);
+      }
+      auto [ormore, orless] = range;
+      updateRegisterCounter(r, ormore, orless); // update estimate reg counter
+    }
+
+    // about use
+    for (auto r: uses) {
+      std::pair<int, int> range(-1, -1); // update range
+
+      if (alldefs.count(r)==0) {
+        // このuseをdefしている命令が存在しない
+        int c=-1;
+        for (int j=i; j>=0; j--) {
+          if (regs_placement_order[j][0].count(r)>0)
+            c = j;
+        }
+        if (c!=-1)
+          range=std::make_pair(c+1, i); //  該当命令より前にuseしている命令が存在する場合
+        else
+          range=std::make_pair(0, i); // 該当命令より前にuseしている命令が存在しない場合
+
+        auto [ormore, orless] = range;
+        updateRegisterCounter(r, ormore, orless); // update estimate reg counter
+      }
+
+      if (liveoutconsiders.count(r)>0) {
+        // このuseがLiveout考慮レジスタ群に存在する
+        if (i!=lastidx)
+          updateRegisterCounter(r, i+1, lastidx); // update estimate reg counter
+
+        liveoutconsiders.erase(r);
+      }
+    }
+  }
+  return;
+}
+
+void LSListScheduling::updateRegisterCounter(Register r, int ormore, int orless) {
+  int size=estimateIregCounter.size();
+  assert(ormore>=0 && orless>=0);
+  assert(ormore<=size && orless<size);
+
+  auto rk = SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, r);
+  llvm::SmallVector<unsigned, 32> *buf;
+  if (rk->isInteger()) buf=&estimateIregCounter;
+  else if (rk->isFloating()) buf=&estimateFregCounter;
+  else if (rk->isPredicate()) buf=&estimatePregCounter;
+  else return; // Not counted.
+
+  if (ormore<=orless) {
+    for (int i=ormore; i<=orless; i++) {
+      (*buf)[i]+=1;
+    }
+  }
+  else {
+    for (int i=0; i<=orless; i++) {
+      (*buf)[i]+=1;
+    }
+    for (int i=ormore; i<size; i++) {
+      (*buf)[i]+=1;
+    }
+  }
+
+  if (OptionDumpLsReg) {
+    dbgs() << "updateRegisterCounter("<< printReg(r, SWPipeliner::TRI) << ", "
+           << ormore << ", " << orless << ")\n";
+    dbgs() << printReg(r, SWPipeliner::TRI) << " ";
+    dbgs() << "--\tireg\tfref\tpreg\n";
+    for (unsigned i=0; i<estimateFregCounter.size(); i++) {
+      dbgs() << "[" << i
+             << "]\t" << estimateIregCounter[i]
+             << ",\t" << estimateFregCounter[i]
+             << ",\t" << estimatePregCounter[i]
+             << "\n";
+    }
+  }
 }

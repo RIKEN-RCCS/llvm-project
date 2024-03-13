@@ -105,6 +105,10 @@ public:
     if(ix==UINT_MAX) return UNCONFIGURED_Slot;
     return vector::at(ix);
   }
+
+  /// \brief Returns instruction idx in slot order.
+  llvm::SmallVector<unsigned, 32> getInstIdxInSlotOrder();
+
   void dump(const SwplLoop& c_loop);
 };
 
@@ -659,8 +663,9 @@ public:
 
   /// \brief Generate a plan with ListScheduler.
   /// \param [in] ddg Dependency information for list scheduling.
+  /// \param [in] LiveOutReg liveout regs.
   /// \return ListScheduling results.
-  static SwplPlan* generateLsPlan(const LsDdg& ddg);
+  static SwplPlan* generateLsPlan(const LsDdg& ddg, const SwplScr::UseMap &LiveOutReg);
 
 private:
   static unsigned calculateResourceII(const SwplLoop& c_loop);
@@ -778,20 +783,28 @@ public:
 class LSListScheduling {
 public:
   const LsDdg& lsddg; ///< ddg for LS.
+  const SwplScr::UseMap &LiveOutRegs; ///< liveout regs.
   SwplSlots* slots;   ///< Collection of scheduled slots.
   SwplMrt* lsmrt;     ///< MRT for LS.
   llvm::MapVector<const SwplInst*, SwplInstEdges> READY;  ///< MapVector for store instructions in the order of scheduling.
   SwplSlot earliest_slot; ///< First slot when scheduling.
   unsigned min_cycle;     ///< First cycle when scheduling.
+  llvm::SmallVector<unsigned, 32> estimateFregCounter; //< Vreg counter for Freg. Update by calcVregs() with scheduled slots.
+  llvm::SmallVector<unsigned, 32> estimateIregCounter; //< Vreg counter for Ireg. Update by calcVregs() with scheduled slots.
+  llvm::SmallVector<unsigned, 32> estimatePregCounter; //< Vreg counter for Preg. Update by calcVregs() with scheduled slots.
 
 public:
-  LSListScheduling(const LsDdg& lsddg_input) : lsddg(lsddg_input) {
+  LSListScheduling(const LsDdg& lsddg_input,
+                   const SwplScr::UseMap &liveOutReg) : lsddg(lsddg_input), LiveOutRegs(liveOutReg) {
     unsigned min_slot_index = SwplSlot::slotMin().slot_index;
     unsigned fb = SWPipeliner::FetchBandwidth;
     // Find the earliest available slot.
     earliest_slot = SwplSlot(min_slot_index+(fb - (min_slot_index % fb)));
     min_cycle = earliest_slot.calcCycle();
     slots = new SwplSlots();
+    estimateIregCounter.clear();
+    estimateFregCounter.clear();
+    estimatePregCounter.clear();
   } ///< constructor
   virtual ~LSListScheduling() {
     delete lsmrt;
@@ -804,6 +817,25 @@ public:
   /// \brief Returns the first slot of scheduling.
   /// \return First slot when scheduling.
   SwplSlot getEarliestSlot() { return earliest_slot; }
+
+  /// \brief aggregate num_necessary_ireg by estimateIregCounter.
+  unsigned getNumNecessaryIreg() {
+    unsigned num_necessary_ireg=0;
+    for (unsigned n: estimateIregCounter) num_necessary_ireg = std::max(num_necessary_ireg, n);
+    return num_necessary_ireg;
+  }
+  /// \brief aggregate num_necessary_freg by estimateFregCounter.
+  unsigned getNumNecessaryFreg() {
+    unsigned num_necessary_freg=0;
+    for (unsigned n: estimateFregCounter) num_necessary_freg = std::max(num_necessary_freg, n);
+    return num_necessary_freg;
+  }
+  /// \brief aggregate num_necessary_preg by estimatePregCounter.
+  unsigned getNumNecessaryPreg() {
+    unsigned num_necessary_preg=0;
+    for (unsigned n: estimatePregCounter) num_necessary_preg = std::max(num_necessary_preg, n);
+    return num_necessary_preg;
+  }
 
 private:
   /// \brief Get the slot number to place the instruction.
@@ -822,12 +854,22 @@ private:
   /// \return MRT
   SwplMrt* createLsMrt();
 
-  /// \brief Get resource patterns that can be placed in a specified cycle
+  /// \brief Get resource patterns that can be placed in a specified cycle.
   /// \param [in] inst Instructions to be placed.
   /// \param [in] cycle Cycle to check if it can be placed.
   /// \return resource pattern that can be placed.
   ///         If there is nothing that can be placed, return nullptr.
   const StmPipeline* findPlacablePipeline(const SwplInst* inst, unsigned cycle);
+
+  /// \brief Estimate the number of virtual registers from scheduling results.
+  /// \details Update estimate[I|F|P]regCounter with the estimation result.
+  void calcVregs();
+
+  /// \brief Update estimate[I|F|P]regCounter corresponding to the specified register type.
+  /// \param [in] r Register to be estimated.
+  /// \param [in] ormore Element of the counter to update(or more).
+  /// \param [in] orless Element of the counter to update(or less).
+  void updateRegisterCounter(Register r, int ormore, int orless);
 };
 
 }
