@@ -5336,9 +5336,11 @@ void LSListScheduling::calcVregs() {
       if (alldefs.count(r)==0) {
         // このuseをdefしている命令が存在しない
         int c=-1;
-        for (int j=i; j>=0; j--) {
-          if (regs_placement_order[j][0].count(r)>0)
+        for (int j=i-1; j>=0; j--) {
+          if (regs_placement_order[j][1].count(r)>0) {
             c = j;
+            break;
+          }
         }
         if (c!=-1)
           range=std::make_pair(c+1, i); //  該当命令より前にuseしている命令が存在する場合
@@ -5367,6 +5369,9 @@ void LSListScheduling::updateRegisterCounter(Register r, int ormore, int orless)
   assert(ormore<=size && orless<size);
 
   auto rk = SWPipeliner::TII->getRegKind(*SWPipeliner::MRI, r);
+  unsigned rkid, units;
+  std::tie(rkid, units) = SWPipeliner::TII->getRegKindId(*SWPipeliner::MRI, r);
+
   llvm::SmallVector<unsigned, 32> *buf;
   if (rk->isInteger()) buf=&estimateIregCounter;
   else if (rk->isFloating()) buf=&estimateFregCounter;
@@ -5375,22 +5380,23 @@ void LSListScheduling::updateRegisterCounter(Register r, int ormore, int orless)
 
   if (ormore<=orless) {
     for (int i=ormore; i<=orless; i++) {
-      (*buf)[i]+=1;
+      (*buf)[i]+=units;
     }
   }
   else {
     for (int i=0; i<=orless; i++) {
-      (*buf)[i]+=1;
+      (*buf)[i]+=units;
     }
     for (int i=ormore; i<size; i++) {
-      (*buf)[i]+=1;
+      (*buf)[i]+=units;
     }
   }
 
   if (OptionDumpLsReg) {
-    dbgs() << "updateRegisterCounter("<< printReg(r, SWPipeliner::TRI) << ", "
-           << ormore << ", " << orless << ")\n";
-    dbgs() << printReg(r, SWPipeliner::TRI) << " ";
+    dbgs() << "updateRegisterCounter(" << printReg(r, SWPipeliner::TRI) << ", "
+           << ormore << ", " << orless << ") "
+           << "regclass:" << printRegClassOrBank(r, *SWPipeliner::MRI, SWPipeliner::TRI)
+           << ", size:"<< units << "\n";
     dbgs() << "--\tireg\tfref\tpreg\n";
     for (unsigned i=0; i<estimateFregCounter.size(); i++) {
       dbgs() << "[" << i
