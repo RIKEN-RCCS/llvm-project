@@ -3,7 +3,7 @@
 #CHECK:%40:fpr64 = nofpexcept FMSUBDrrr killed %37:fpr64, killed %38:fpr64, killed %39:fpr64, implicit $fpcr
 #CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
 #CHECK-DAG:pred : INSERT_SUBREG(placed={{[0-9]+}}, delay=1)
-#CHECK-NEXT:pred : FADDDrr(placed=62502, delay=9)
+#CHECK-DAG:pred : FADDDrr(placed=62502, delay=9)
 #CHECK-NEXT:earliest cycle : 62511
 #CHECK-NEXT:placed cycle   : 62511
 

@@ -1,5 +1,6 @@
-#RUN: llc %s -mcpu=a64fx -fswp -fls -O3 -start-before=aarch64-swpipeliner -swpl-maxii=2 -ls-debug-dump-scheduling-every-inst -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -fls -O3 -start-before=aarch64-swpipeliner -swpl-maxii=2 -ls-debug-dump-scheduling-every-inst -pass-remarks=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 
+#CHECK:local scheduling (VReg Fp:
 #CHECK:%198:fpr128 = SUBREG_TO_REG 0, %197:fpr64, %subreg.dsub
 #CHECK-NEXT:pred : INSERT_SUBREG(placed=62501, delay=1)
 #CHECK-NEXT:earliest cycle : 62502
