@@ -577,7 +577,6 @@ class SwplMsResourceResult;
 /// \brief スケジューリング結果を保持するクラス
 /// \details transform mirへ渡す情報となる
 class SwplPlan {
-public: // @todo: Delete "public" when creating list scheduler
   const SwplLoop& loop;              ///< スケジューリング対象のループ情報
   SwplSlots slots; ///< スケジューリング結果
   unsigned minimum_iteration_interval;   ///< min II。スケジューリング試行を開始したII
@@ -643,6 +642,7 @@ public:
   int getTotalSlotCycles();
   void printInstTable();
   void dump(raw_ostream &stream);
+  void dumpForLS(raw_ostream &stream); ///< dump for LS
 
   /// \brief Dump the instruction placement state of SwplPlan.
   /// \details Output MachineInstr* and Opcode name for each instruction.

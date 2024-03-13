@@ -1,14 +1,8 @@
 #RUN: llc %s -mcpu=a64fx -fswp -fls -O3 -start-before=aarch64-swpipeliner -swpl-maxii=2 -ls-debug-dump-plan -o /dev/null 2>&1 | FileCheck %s
 #CHECK:(plan {{0x[0-9a-f]+}}:
-#CHECK-NEXT:  iteration_interval  = 19
-#CHECK-NEXT:  n_iteration_copies  = 1
-#CHECK-NEXT:  n_renaming_versions = 1
 #CHECK-NEXT:  begin_slot = {{[0-9]+}}
 #CHECK-NEXT:  end_slot   = {{[0-9]+}}
 #CHECK-NEXT:  total_cycles  = 19
-#CHECK-NEXT:  prolog_cycles = 0
-#CHECK-NEXT:  kernel_cycles = 19
-#CHECK-NEXT:  epilog_cycles = 0
 #CHECK-EMPTY:
 #CHECK-NEXT:	( MachineInstr* : OpcodeName )
 #CHECK-EMPTY:

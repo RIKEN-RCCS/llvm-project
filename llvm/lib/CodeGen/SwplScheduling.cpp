@@ -4139,6 +4139,27 @@ void SwplPlan::dump(raw_ostream &stream) {
   return;
 }
 
+/// \brief dump SwplPlan for LS
+/// \param [in] stream output stream
+/// \return なし
+void SwplPlan::dumpForLS(raw_ostream &stream) {
+  stream << "(plan " << format("%p",this) <<":\n";
+  stream << "  begin_slot = " << begin_slot << "\n";
+  stream << "  end_slot   = " << end_slot <<"\n";
+  stream << "  total_cycles  = " << total_cycles << "\n";
+
+  assert(iteration_interval==total_cycles);
+  assert(n_iteration_copies==1);
+  assert(n_renaming_versions==1);
+  assert(prolog_cycles==0);
+  assert(kernel_cycles==total_cycles);
+  assert(epilog_cycles==0);
+
+  dumpInstTable(stream);
+  stream << ")\n";
+  return;
+}
+
 void SwplPlan::dumpInstTable(raw_ostream &stream) {
   size_t table_size = (size_t)end_slot - (size_t)begin_slot;
   std::vector<SwplInst*> table(table_size, nullptr);
