@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -fswp -fls -O3 -start-before=aarch64-swpipeliner -swpl-maxii=2 --pass-remarks=aarch64-swpipeliner -swpl-max-ireg=20 -swpl-max-freg=20 -swpl-max-preg=4 -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -fls -O3 -start-before=aarch64-swpipeliner -swpl-maxii=2 --pass-remarks=aarch64-swpipeliner -ls-max-ireg=20 -ls-max-freg=20 -ls-max-preg=4 -o /dev/null 2>&1 | FileCheck %s
 #CHECK: remark: <unknown>:0:0: local scheduling (VReg Fp: {{[0-9]+}}/20, Int: {{[0-9]+}}/20, Pred: {{[0-9]+}}/4)
 
 --- |
