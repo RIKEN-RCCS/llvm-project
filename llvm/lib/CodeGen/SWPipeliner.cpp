@@ -480,7 +480,7 @@ bool SWPipeliner::localscheduler(MachineLoop &L, SwplScr::UseMap &usemap, SwplDd
   SwplPlan* lsplan = SwplPlan::generateLsPlan(*lsddg, liveOutReg);
 
   if ( OptionDumpLsPlan ) {
-    lsplan->dump( dbgs() );
+    lsplan->dumpForLS( dbgs() );
   }
 
   if (OptionLSRegAdjustment) {
