@@ -101,8 +101,10 @@ void SwplMrt::reserveResourcesForInst(unsigned cycle,
   for(unsigned i=0; i<pipeline.resources.size(); i++) {
 
     if (iteration_interval == 0) {
+      // LS Processing
       modulo_cycle = (start_cycle+pipeline.stages[i]);
     } else {
+      // SWPL Processing
       modulo_cycle = (start_cycle+pipeline.stages[i]) % iteration_interval;
     }
 
@@ -4345,9 +4347,7 @@ SwplPlan* SwplPlan::generateLsPlan(const LsDdg& lsddg, const SwplScr::UseMap &Li
   lsplan->slots = *slots;
   lsplan->n_iteration_copies=1;
   lsplan->n_renaming_versions=1;
-  unsigned min_index = SwplSlot::slotMin().slot_index;
   unsigned fb = SWPipeliner::FetchBandwidth;
-  SwplSlot slot(min_index+(fb - (min_index % fb)));
   lsplan->begin_slot=lsproc.getEarliestSlot();
   lsplan->end_slot= (slots->findLastSlot(currentLoop) / fb + 1) * fb;
   auto total_cycles = (lsplan->end_slot.calcCycle()) - (lsplan->begin_slot.calcCycle());
@@ -5035,14 +5035,14 @@ SwplSlot SwplSlot::slotMax() { return 1500000; }
 SwplSlot SwplSlot::slotMin() { return  500000; }
 
 SwplSlots* LSListScheduling::getScheduleResult() {
-  setPriorityOrder(READY);
+  setPriorityOrder(Ready);
 
-  slots->resize(READY.size());
+  slots->resize(Ready.size());
 
   lsmrt = createLsMrt();
 
-  // Scheduling in READY order.
-  for (auto [inst, edges] : READY) {
+  // Scheduling in Ready order.
+  for (auto [inst, edges] : Ready) {
     SwplSlot slot = getPlacementSlot(inst, edges);
     (*slots)[inst->inst_ix].slot_index = slot.slot_index;
 
@@ -5066,24 +5066,24 @@ SwplSlots* LSListScheduling::getScheduleResult() {
   return slots;
 }
 
-void LSListScheduling::setPriorityOrder(llvm::MapVector<const SwplInst*, SwplInstEdges> &READY) {
+void LSListScheduling::setPriorityOrder(llvm::MapVector<const SwplInst*, SwplInstEdges> &Ready) {
   SwplInstEdges edges = lsddg.getGraph().getEdges();
   const SwplInsts insts = lsddg.getGraph().getVertices();
   llvm::MapVector<const SwplInst*, unsigned> inst_pre_map; // set of SwplInst and num of pre-insts
-  llvm::MapVector<const SwplInst*, SwplInstEdges*> wREADY;
+  llvm::MapVector<const SwplInst*, SwplInstEdges*> wReady;
 
   // set of SwplInst and SwplInstEdges.
-  for (auto i : insts) {
+  for (auto* i : insts) {
     auto es = new SwplInstEdges;
-    wREADY.insert(std::make_pair(i, es));
+    wReady.insert(std::make_pair(i, es));
   }
   // Insert edge when there is a preceding instruction.
-  for (auto e : edges) {
-    wREADY[e->getTerminal()]->push_back(e);
+  for (auto* e : edges) {
+    wReady[e->getTerminal()]->push_back(e);
   }
 
   // Count the number of preceding instructions.
-  for (auto [f, s] : wREADY) {
+  for (auto [f, s] : wReady) {
     inst_pre_map.insert(std::make_pair(f,s->size()));
   }
 
@@ -5097,9 +5097,9 @@ void LSListScheduling::setPriorityOrder(llvm::MapVector<const SwplInst*, SwplIns
   while (!Q.empty()) {
     auto q = Q.front();
     Q.pop();
-    READY.insert(std::make_pair(q, *(wREADY[q])));
-    for (auto [f, s] : wREADY) {
-      for (auto edge : *s) {
+    Ready.insert(std::make_pair(q, *(wReady[q])));
+    for (auto [f, s] : wReady) {
+      for (auto* edge : *s) {
         if (edge->getInitial() == q) {
           inst_pre_map[f] -= 1;
           if (inst_pre_map[f] == 0) {
@@ -5110,7 +5110,7 @@ void LSListScheduling::setPriorityOrder(llvm::MapVector<const SwplInst*, SwplIns
     }
   }
 
-  for (auto [f, s] : wREADY) {
+  for (auto [f, s] : wReady) {
     delete s;
   }
 }
@@ -5127,7 +5127,7 @@ SwplSlot LSListScheduling::getPlacementSlot(const SwplInst* inst, SwplInstEdges 
   }
 
   // Find the cycle that can be placed fastest from multiple edges
-  for (auto edge : edges) {
+  for (auto* edge : edges) {
     auto s = (*slots)[edge->getInitial()->inst_ix];
     auto ini_cycle = s.calcCycle();
     auto d = lsddg.getDelay(*edge);
@@ -5181,7 +5181,7 @@ SwplMrt* LSListScheduling::createLsMrt() {
   const SwplInsts insts = lsddg.getGraph().getVertices();
 
   unsigned length_mrt = 0;  /// MRT length.
-  for (auto i : insts) {
+  for (auto* i : insts) {
     // Get instruction latency
     int latency_R = SWPipeliner::STM->computeRegFlowDependence(i->getMI(), nullptr);
     int latency_M = SWPipeliner::STM->computeMemFlowDependence(i->getMI(), nullptr);

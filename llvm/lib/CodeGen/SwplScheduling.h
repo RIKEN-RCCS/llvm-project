@@ -786,7 +786,7 @@ public:
   const SwplScr::UseMap &LiveOutRegs; ///< liveout regs.
   SwplSlots* slots;   ///< Collection of scheduled slots.
   SwplMrt* lsmrt;     ///< MRT for LS.
-  llvm::MapVector<const SwplInst*, SwplInstEdges> READY;  ///< MapVector for store instructions in the order of scheduling.
+  llvm::MapVector<const SwplInst*, SwplInstEdges> Ready;  ///< MapVector for store instructions in the order of scheduling.
   SwplSlot earliest_slot; ///< First slot when scheduling.
   unsigned min_cycle;     ///< First cycle when scheduling.
   llvm::SmallVector<unsigned, 32> estimateFregCounter; //< Vreg counter for Freg. Update by calcVregs() with scheduled slots.
