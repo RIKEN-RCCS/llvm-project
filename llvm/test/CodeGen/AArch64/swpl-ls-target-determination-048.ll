@@ -1,6 +1,8 @@
 ; RUN: llc < %s -O1 -mcpu=a64fx -fls --pass-remarks=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 ; CHECK-NOT: cannot be software pipelined
 ; CHECK: remark: <unknown>:0:0: This loop cannot be local scheduled because the loop contains an instruction, such as function call, which is not supported.
+; CHECK-NOT: software pipelining
+; CHECK-NOT: local scheduling
 
 ; ModuleID = '2912_8.c'
 source_filename = "2912_8.c"

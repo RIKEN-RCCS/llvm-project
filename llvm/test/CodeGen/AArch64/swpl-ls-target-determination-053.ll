@@ -1,6 +1,8 @@
 ; RUN: llc < %s -mcpu=a64fx -O1  -fls  --pass-remarks=aarch64-swpipeliner --pass-remarks-missed=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 ; CHECK-NOT: cannot be software pipelined
 ; CHECK: remark: <unknown>:0:0: This loop cannot be local scheduled because the shape of the loop is not covered.
+; CHECK-NOT: software pipelining
+; CHECK-NOT: local scheduling
 
 ; ModuleID = '2912_inf_loop.c'
 source_filename = "2912_inf_loop.c"
