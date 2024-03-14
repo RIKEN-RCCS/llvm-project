@@ -477,11 +477,6 @@ bool SWPipeliner::localscheduler(MachineLoop &L, SwplScr::UseMap &usemap, SwplDd
   if (DebugDumpLsDdg) {
     lsddg->print();
   }
-  SwplPlan* lsplan = SwplPlan::generateLsPlan(*lsddg, liveOutReg);
-
-  if ( OptionDumpLsPlan ) {
-    lsplan->dumpForLS( dbgs() );
-  }
 
   if (OptionLSRegAdjustment) {
     LS::VertexMap forDelete;
@@ -508,7 +503,17 @@ bool SWPipeliner::localscheduler(MachineLoop &L, SwplScr::UseMap &usemap, SwplDd
       }
     }
     for (auto &T:forDelete) delete T.second;
+    if (DebugDumpLsDdg) {
+      lsddg->print();
+    }
   }
+
+  SwplPlan* lsplan = SwplPlan::generateLsPlan(*lsddg, liveOutReg);
+
+  if ( OptionDumpLsPlan ) {
+    lsplan->dumpForLS( dbgs() );
+  }
+
 
   SwplTransformMIR tran(*MF, *lsplan, liveOutReg);
   tran.transformMIR4LS();
