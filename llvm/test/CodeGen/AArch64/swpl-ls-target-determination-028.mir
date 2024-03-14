@@ -1,8 +1,8 @@
 #RUN: llc %s -fswp -fls -march=aarch64 -mcpu=a64fx -start-before=aarch64-swpipeliner -stop-after=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
 # CHECK: remark: <unknown>:0:0: This loop cannot be software pipelined because the shape of the loop is not covered.
 # CHECK: remark: <unknown>:0:0: This loop cannot be local scheduled because the shape of the loop is not covered.
-# CHECK-NOT: remark: <unknown>:0:0: software pipelining
-# CHECK-NOT: remark: <unknown>:0:0: local scheduling
+# CHECK-NOT: software pipelining
+# CHECK-NOT: local scheduling
 
 --- |
   ; ModuleID = 'test.029.base.ll'

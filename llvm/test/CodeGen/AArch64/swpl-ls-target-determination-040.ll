@@ -1,6 +1,7 @@
 ; RUN: llc < %s -O1 -swpl-max-inst-num=100 -fls -mcpu=a64fx --pass-remarks=aarch64-swpipeliner  -pass-remarks-missed=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck --allow-empty %s
 ; CHECK-NOT: cannot be software pipelined
-; CHECK-NOT: cannot be local
+; CHECK-NOT: cannot be local scheduled
+; CHECK-NOT: software pipelining
 ; CHECK: remark: <unknown>:0:0: local scheduling
 
 ; ModuleID = '2912_inst_l.c'
