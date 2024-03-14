@@ -5069,8 +5069,8 @@ SwplSlots* LSListScheduling::getScheduleResult() {
 void LSListScheduling::setPriorityOrder(llvm::MapVector<const SwplInst*, SwplInstEdges> &READY) {
   SwplInstEdges edges = lsddg.getGraph().getEdges();
   const SwplInsts insts = lsddg.getGraph().getVertices();
-  llvm::DenseMap<const SwplInst*, unsigned> inst_pre_map; // set of SwplInst and num of pre-insts
-  llvm::DenseMap<const SwplInst*, SwplInstEdges*> wREADY;
+  llvm::MapVector<const SwplInst*, unsigned> inst_pre_map; // set of SwplInst and num of pre-insts
+  llvm::MapVector<const SwplInst*, SwplInstEdges*> wREADY;
 
   // set of SwplInst and SwplInstEdges.
   for (auto i : insts) {
