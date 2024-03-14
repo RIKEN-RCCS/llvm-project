@@ -2,6 +2,8 @@
 
 #CHECK: remark: <unknown>:0:0: This loop cannot be software pipelined because multiple instructions to reference CCR.
 #CHECK: remark: <unknown>:0:0: This loop cannot be local scheduled because multiple instructions to reference CCR.
+#CHECK-NOT: software pipelining
+#CHECK-NOT: local scheduling
 
 --- |
 

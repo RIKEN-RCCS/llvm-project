@@ -1,7 +1,7 @@
 # RUN: llc %s -fls -mcpu=a64fx -start-before=aarch64-swpipeliner -pass-remarks=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner -o /dev/null 2>&1 | FileCheck %s
-# CHECK-NOT: remark: <unknown>:0:0: This loop cannot be software
-# CHECK-NOT: remark: <unknown>:0:0: This loop cannot be local scheduled
-# CHECK-NOT: remark: <unknown>:0:0: softwere pipelining
+# CHECK-NOT: cannot be software pipelined
+# CHECK-NOT: cannot be local scheduled
+# CHECK-NOT: softwere pipelining
 # CHECK: remark: <unknown>:0:0: local scheduling
 --- |
   ; ModuleID = './test.base.ll'
