@@ -1,14 +1,14 @@
 ## ソースコード
 git@github.com:RIKEN-RCCS/llvm-project.git  
-branch:swpl-2023-1-llvm17  
-tag:swpl-2023-1-llvm17_tag_20231222
+branch:ls-2023-1-llvm17
+tag:ls-2023-1-llvm17_tag_202403
 
 ## ビルド方法
 
 1. リポジトリからソースコードをcloneする
 
       ```
-      $ git clone -b swpl-2023-1-llvm17 https://github.com/RIKEN-RCCS/llvm-project.git
+      $ git clone -b ls-2023-1-llvm17 https://github.com/RIKEN-RCCS/llvm-project.git
       ```
 
 2. llvm-projectディレクトリ直下でBUILD用ディレクトリを作成する
@@ -48,7 +48,7 @@ tag:swpl-2023-1-llvm17_tag_20231222
 
       ```
       $ cd ../install  
-      $ ./bin/clang++ -mcpu=a64fx --target=aarch64-linux-gnu -Ofast -msve-vector-bits=512 -fswp -S ~/axhelm-4.cpp -o ~/axhelm-4.s -foptimization-record-file=./axhelm-4.yaml
+      $ ./bin/clang++ -mcpu=a64fx --target=aarch64-linux-gnu -Ofast -msve-vector-bits=512 -fswp -fls -S ~/axhelm-4.cpp -o ~/axhelm-4.s -foptimization-record-file=./axhelm-4.yaml
       ```
 
       生成されたaxhelm-4.yamlを参照し、以下のメッセージがあればSWPLが  
