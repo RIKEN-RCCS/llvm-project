@@ -56,6 +56,14 @@ tag:swpl-2023-1-llvm17_tag_20231222
 
        「software pipelining (IPC: 2.03, ITR: 4, MVE: 2, II: 65, Stage: 4, 」
 
+  6. リンクまで行う場合
+
+      ログインノード上でリンクまで行い実行ファイルを生成するときは以下のオプションを付け加えてください。
+
+      ```
+      -fuse-ld=lld --sysroot=/opt/FJSVxos/devkit/aarch64/rfs
+      ```
+
 ## MaxIIおよびbudgetの調整について
 以下の翻訳オプションにてMaxII、budgetを調整することで、SWPLの翻訳時間を削減できる場合があります。<br>
 budgetはSWPLにて命令の配置を試みる回数の上限であり、大きくなるほど翻訳時間が長くなる傾向となります。
