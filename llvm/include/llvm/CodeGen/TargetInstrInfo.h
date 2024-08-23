@@ -2337,7 +2337,7 @@ public:
    * Determine if the target loop contains instructions that are not covered by SWPL, LS.
    *
    * \param[in] L MachineLoop
-   * \retval true  The loop contains instructions that are not covered by SWPL, LS
+   * \retval true The loop contains instructions that are not covered by SWPL, LS
    * \retval false The loop does not contain instructions that are not covered by SWPL, LS
    */
   virtual bool isNonScheduleInstr(MachineLoop &L) const {
@@ -2345,12 +2345,12 @@ public:
   }
 
   /**
-   * Determine if the target loop is a non-normalized loop.
-   *
-   * \param[in] L MachineLoop
-   * \retval true  The loop is not normalized
-   * \retval false The loop is normalized
-   */
+   * Determine if the target loop is a non-normalized loop.
+   *
+   * \param[in] L MachineLoop
+   * \retval true The loop is not normalized
+   * \retval false The loop is normalized
+   */
   virtual bool isNonNormalizeLoop(MachineLoop &L) const {
     return false;
   }
