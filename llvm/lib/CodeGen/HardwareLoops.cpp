@@ -37,6 +37,7 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -89,8 +90,8 @@ static void debugHWLoopFailure(const StringRef DebugMsg,
 }
 #endif
 
-static OptimizationRemarkAnalysis
-createHWLoopAnalysis(StringRef RemarkName, Loop *L, Instruction *I) {
+static OptimizationRemarkMissed
+createHWLoopMissed(StringRef RemarkName, Loop *L, Instruction *I) {
   Value *CodeRegion = L->getHeader();
   DebugLoc DL = L->getStartLoc();
 
@@ -102,8 +103,25 @@ createHWLoopAnalysis(StringRef RemarkName, Loop *L, Instruction *I) {
       DL = I->getDebugLoc();
   }
 
-  OptimizationRemarkAnalysis R(DEBUG_TYPE, RemarkName, DL, CodeRegion);
+  OptimizationRemarkMissed R(DEBUG_TYPE, RemarkName, DL, CodeRegion);
   R << "hardware-loop not created: ";
+  return R;
+}
+static OptimizationRemark
+createHWLoop(StringRef RemarkName, Loop *L, Instruction *I) {
+  Value *CodeRegion = L->getHeader();
+  DebugLoc DL = L->getStartLoc();
+
+  if (I) {
+    CodeRegion = I->getParent();
+    // If there is no debug location attached to the instruction, revert back to
+    // using the loop's.
+    if (I->getDebugLoc())
+      DL = I->getDebugLoc();
+  }
+
+  OptimizationRemark R(DEBUG_TYPE, RemarkName, DL, CodeRegion);
+  R << "hardware-loop created";
   return R;
 }
 
@@ -112,7 +130,11 @@ namespace {
   void reportHWLoopFailure(const StringRef Msg, const StringRef ORETag,
       OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr) {
     LLVM_DEBUG(debugHWLoopFailure(Msg, I));
-    ORE->emit(createHWLoopAnalysis(ORETag, TheLoop, I) << Msg);
+    ORE->emit(createHWLoopMissed(ORETag, TheLoop, I) << Msg);
+  }
+
+  void reportHWLoopSuccess(OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr) {
+    ORE->emit(createHWLoop("HWLoop", TheLoop, I) << "");
   }
 
   using TTI = TargetTransformInfo;
@@ -306,8 +328,8 @@ bool HardwareLoopsImpl::TryConvertLoop(Loop *L, LLVMContext &Ctx) {
   for (Loop *SL : *L)
     AnyChanged |= TryConvertLoop(SL, Ctx);
   if (AnyChanged) {
-    reportHWLoopFailure("nested hardware-loops not supported", "HWLoopNested",
-                        ORE, L);
+//    reportHWLoopFailure("nested hardware-loops not supported", "HWLoopNested",
+//                        ORE, L);
     return true; // Stop search.
   }
 
@@ -322,8 +344,13 @@ bool HardwareLoopsImpl::TryConvertLoop(Loop *L, LLVMContext &Ctx) {
 
   if (!Opts.Force &&
       !TTI.isHardwareLoopProfitable(L, SE, AC, TLI, HWLoopInfo)) {
-    reportHWLoopFailure("it's not profitable to create a hardware-loop",
-                        "HWLoopNotProfitable", ORE, L);
+    StringRef msg1="it's not profitable to create a hardware-loop";
+    std::string msg=msg1.data();
+    if (!HWLoopInfo.Reason.empty()) {
+      msg=llvm::formatv("{0}(reason={1})", msg1, HWLoopInfo.Reason);
+    }
+    reportHWLoopFailure(msg,"HWLoopNotProfitable", ORE, L);
+
     return false;
   }
 
@@ -350,7 +377,12 @@ bool HardwareLoopsImpl::TryConvertLoop(HardwareLoopInfo &HWLoopInfo) {
     // TODO: there can be many reasons a loop is not considered a
     // candidate, so we should let isHardwareLoopCandidate fill in the
     // reason and then report a better message here.
-    reportHWLoopFailure("loop is not a candidate", "HWLoopNoCandidate", ORE, L);
+    StringRef msg1="loop is not a candidate";
+    std::string msg=msg1.data();
+    if (!HWLoopInfo.Reason.empty()) {
+      msg=llvm::formatv("{0}(reason={1})", msg1, HWLoopInfo.Reason);
+    }
+    reportHWLoopFailure(msg, "HWLoopNoCandidate", ORE, L);
     return false;
   }
 
@@ -384,6 +416,7 @@ void HardwareLoop::Create() {
 
   Value *Setup = InsertIterationSetup(LoopCountInit);
 
+  reportHWLoopSuccess(ORE, L);
   if (UsePHICounter || Opts.ForcePhi) {
     Instruction *LoopDec = InsertLoopRegDec(LoopCountInit);
     Value *EltsRem = InsertPHICounter(Setup, LoopDec);
