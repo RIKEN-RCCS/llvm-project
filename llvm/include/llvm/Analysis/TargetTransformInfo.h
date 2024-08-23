@@ -115,6 +115,7 @@ struct HardwareLoopInfo {
                                DominatorTree &DT, bool ForceNestedLoop = false,
                                bool ForceHardwareLoopPHI = false);
   bool canAnalyze(LoopInfo &LI);
+  StringRef Reason;
 };
 
 class IntrinsicCostAttributes {
@@ -676,6 +677,9 @@ public:
       APInt & UndefElts, APInt & UndefElts2, APInt & UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) const;
+
+  /// Query the target if it is instructed to apply SWPL to the given loop.
+  bool isSwpDirected(Loop *L) const;
   /// @}
 
   /// \name Scalar Target Information
@@ -1817,6 +1821,7 @@ public:
       APInt &UndefElts, APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) = 0;
+  virtual bool isSwpDirected(Loop *L) = 0;
   virtual bool isLegalAddImmediate(int64_t Imm) = 0;
   virtual bool isLegalICmpImmediate(int64_t Imm) = 0;
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
@@ -2268,6 +2273,9 @@ public:
     return Impl.simplifyDemandedVectorEltsIntrinsic(
         IC, II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
         SimplifyAndSetOp);
+  }
+  bool isSwpDirected(Loop *L) override {
+    return Impl.isSwpDirected(L);
   }
   bool isLegalAddImmediate(int64_t Imm) override {
     return Impl.isLegalAddImmediate(Imm);
