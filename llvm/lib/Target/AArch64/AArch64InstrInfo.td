@@ -9521,6 +9521,14 @@ let Predicates = [HasD128] in {
   }
 }
 
+//---
+// Indicates registers that span the MBB of SWP
+//---
+let isPseudo = 1 in {
+  def SWPLIVEIN : Pseudo<(outs), (ins variable_ops), []>, Sched<[]>;
+  def SWPLIVEOUT : Pseudo<(outs), (ins variable_ops), []>, Sched<[]>;
+}
+
 //===----------------------------===//
 // 2023 Architecture Extensions:
 //===----------------------------===//
