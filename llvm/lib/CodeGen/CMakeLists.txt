@@ -116,6 +116,7 @@ add_llvm_component_library(LLVMCodeGen
   LoopTraversal.cpp
   LowLevelTypeUtils.cpp
   LowerEmuTLS.cpp
+  LSRegAdjustment.cpp
   MachineBasicBlock.cpp
   MachineBlockFrequencyInfo.cpp
   MachineBlockPlacement.cpp
@@ -237,6 +238,9 @@ add_llvm_component_library(LLVMCodeGen
   StackSlotColoring.cpp
   SwiftErrorValueTracking.cpp
   SwitchLoweringUtils.cpp
+  SWPipeliner.cpp
+  SwplScheduling.cpp
+  SwplTransformMIR.cpp
   TailDuplication.cpp
   TailDuplicator.cpp
   TargetFrameLoweringImpl.cpp
