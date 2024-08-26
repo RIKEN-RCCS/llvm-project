@@ -84,6 +84,12 @@ struct LoopAttributes {
 
   /// Value for whether the loop is required to make progress.
   bool MustProgress;
+
+  /// Value for llvm.loop.pipeline.enable metadata.
+  bool PipelineEnabled;
+
+  /// Value for llvm.loop.pipeline.nodep metadata
+  bool PipelineNodep;
 };
 
 /// Information used when generating a structured loop.
@@ -280,6 +286,9 @@ public:
   /// Set the pipeline disabled state.
   void setPipelineDisabled(bool S) { StagedAttrs.PipelineDisabled = S; }
 
+  /// Set the pipeline enabled state.
+  void setPipelineEnabled(bool S) { StagedAttrs.PipelineEnabled = S; }
+
   /// Set the pipeline initiation interval.
   void setPipelineInitiationInterval(unsigned C) {
     StagedAttrs.PipelineInitiationInterval = C;
@@ -290,6 +299,9 @@ public:
 
   /// Set no progress for the next loop pushed.
   void setMustProgress(bool P) { StagedAttrs.MustProgress = P; }
+
+/// Set the pipeline nodep
+  void setPipelineNodep(bool S) { StagedAttrs.PipelineNodep = S; }
 
 private:
   /// Returns true if there is LoopInfo on the stack.
