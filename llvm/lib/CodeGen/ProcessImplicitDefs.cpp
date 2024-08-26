@@ -112,7 +112,7 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
       if (!UserReg.isPhysical() || !TRI->regsOverlap(Reg, UserReg))
         continue;
       if (MO.isDef())
-      Defined = true;
+        Defined = true;
       // UserMI uses or redefines Reg. Set <undef> flags on all uses.
       LLVM_DEBUG(dbgs() << "Physreg user: " << *UserMI);
       Found = true;
