@@ -30,6 +30,12 @@ using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "aarch64tti"
 
+static cl::opt<bool> EnableSaveCmp("enable-savecmp",cl::init(false), cl::ReallyHidden);
+static cl::opt<unsigned> MaxSize("hwloop-max-size",cl::init(500), cl::ReallyHidden);
+static cl::opt<bool> EnableSWP("fswp",cl::init(false), cl::Hidden);
+static cl::opt<bool> EnableLS("fls",cl::init(false), cl::Hidden);
+static cl::opt<bool> DebugOutput("debug-aarch64tti",cl::init(false), cl::ReallyHidden);
+
 static cl::opt<bool> EnableFalkorHWPFUnrollFix("enable-falkor-hwpf-unroll-fix",
                                                cl::init(true), cl::Hidden);
 
@@ -3974,6 +3980,17 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
 }
 
+static void printDebug(const char *f, const StringRef &msg, const Loop *L) {
+  if (!DebugOutput) return;
+  const auto &start=L->getLocRange().getStart();
+  const auto &end=L->getLocRange().getEnd();
+  errs() << "DBG(" << f << ") " << msg << ":";
+  start.print(errs());
+  errs() << " - ";
+  end.print(errs());
+  errs() <<"\n";
+}
+
 static bool containsDecreasingPointers(Loop *TheLoop,
                                        PredicatedScalarEvolution *PSE) {
   const auto &Strides = DenseMap<Value *, const SCEV *>();
@@ -3992,6 +4009,327 @@ static bool containsDecreasingPointers(Loop *TheLoop,
     }
   }
   return false;
+}
+
+bool AArch64TTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
+                                              AssumptionCache &AC,
+                                              TargetLibraryInfo *LibInfo,
+                                              HardwareLoopInfo &HWLoopInfo) {
+
+  if (L!=nullptr && !llvm::enableSWP(L, false) && !llvm::enableLS()) {
+    printDebug(__func__, "enableSWP() is false and enableLS() is false", L);
+    return false;
+  }
+
+  LLVMContext &C = L->getHeader()->getContext();
+
+  if (!L->isInnermost()) {
+    HWLoopInfo.Reason="Not the innermost loop";
+    return false;
+  }
+  if (L->getNumBlocks()!=1) {
+    HWLoopInfo.Reason="Multiple BasicBlocks";
+    return false;
+  }
+  if (MaxSize!=0) {
+    // MaxSize！=0の場合はLoop内命令数の制限がある
+    const auto &block=L->getBlocks();
+    const auto *bb=block[0];
+    if (bb!=nullptr && bb->size()>MaxSize) {
+      HWLoopInfo.Reason="Instructions over the limit";
+      return false;
+    }
+  }
+
+  auto MaybeCall = [this](Instruction &I) {
+
+    if (isa<CallInst>(&I)) {
+      if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
+        return isLoweredToCall(F);
+      }
+      return true;
+    }
+    return false;
+  };
+
+  auto ScanLoop = [&](Loop *L) {
+    for (auto *BB : L->getBlocks()) {
+      for (auto &I : *BB) {
+        if (MaybeCall(I)) {
+          HWLoopInfo.Reason="CALL or ASM exists";
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  if (!ScanLoop(L))
+    return false;
+
+  // 「CounterInReg = true」により、UsePHICounterがtrueとなり、
+  // Intrinsic::loop_decrement_regが生成される。
+  // また、必要なPHIも生成される。
+  //
+  // Intrinsic::loop_decrementを生成したい場合はここをfalseにする。
+  // ただし、PHIは生成されない（Intrinsic::loop_decrementはdecrement対象は表に出ないので）。
+  //
+  // アーキテクチャにHardwareLoop命令がない場合は、CounterInReg = trueが正しい。
+  // 理由は、「CounterInReg = false」の場合は, ISELでPHIを生成する必要があるため。(これは面倒だ)
+  HWLoopInfo.CounterInReg = true;
+
+  HWLoopInfo.CountType = Type::getInt64Ty(C);
+  HWLoopInfo.LoopDecrement = ConstantInt::get(HWLoopInfo.CountType, 1);
+  return true;
+}
+
+/**
+ * @brief LSRInstance::CollectFixupsAndInitialFormulae()で変換の実行可否を判断する
+ * @details HardwareLoop命令が利用できるようにLoopの構造をLSRInstanceで壊さないために本関数で制御する。
+ * @param [in] L 対象LOOP
+ * @param [out] BI
+ * @param [in] SE
+ * @param [in] LI
+ * @param [in] DT
+ * @param [in] AC
+ * @param [in] LibInfo
+ * @retval true 変換を抑止せよ
+ * @retval false 抑止しなくてよい
+ */
+bool AArch64TTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
+                                LoopInfo *LI, DominatorTree *DT,
+                                AssumptionCache *AC, TargetLibraryInfo *LibInfo) {
+
+  if (!EnableSaveCmp) return false;
+
+  // 最内LOOP以外はfalseでよい
+  if (!L->isInnermost()) {
+    printDebug(__func__, "return false((!L->isInnermost())", L);
+    return false;
+  }
+
+  HardwareLoopInfo HWLoopInfo(L);
+
+  if (!HWLoopInfo.canAnalyze(*LI)){
+    printDebug(__func__, "return false(!HWLoopInfo.canAnalyze())", L);
+    return false;
+  }
+
+  if (!isHardwareLoopProfitable(L, *SE, *AC, LibInfo, HWLoopInfo)) {
+    printDebug(__func__, "return false(!isHardwareLoopProfitable())", L);
+    return false;
+  }
+
+  if (!HWLoopInfo.isHardwareLoopCandidate(*SE, *LI, *DT)) {
+    printDebug(__func__, "return false(!HWLoopInfo.isHardwareLoopCandidate())", L);
+    return false;
+  }
+
+  *BI = HWLoopInfo.ExitBranch;
+  printDebug(__func__, "return true", L);
+  return true;
+}
+
+/**
+ * Search metadata to obtain the status of llvm.loop.pipeline.enable/disable specification
+ * @details Recursively search nested metadata to obtain the specified status.
+ * @param [in] L Target Loop Information
+ * @param [in] MD Target metadata
+ * @param [out] exists True is specified in metadata
+ * @param [in] ignoreMetadataOfRemainder true Ignore remainder loop metadata
+ * @retval true llvm.loop.pipeline.enable is specified
+ * @retval false llvm.loop.pipeline.disable is specified
+ */
+static bool isEnableSwp(const Loop* L, MDNode *MD, bool &exists, bool ignoreMetadataOfRemainder) {
+
+  if (MD->isDistinct()) {
+    // example) !25 = distinct !{!25, !18, !23, !26, !27, !28}
+    for (unsigned i = 1, e = MD->getNumOperands(); i < e; ++i) {
+      MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(i));
+
+      if (MD == nullptr)
+        continue;
+
+      bool ret = isEnableSwp(L, childMD, exists, ignoreMetadataOfRemainder);
+      if (exists)
+        return ret;
+    }
+  }
+  else {
+    // example) !28 = !{!"llvm.loop.pipeline.enable"}
+    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+
+    if (S == nullptr)
+      return false;
+
+    // loop metadata display
+    LLVM_DEBUG( if (L->getLocRange().getStart().get()) dbgs() << __func__ << ":loop=" << L->getLocRange().getStart().getLine() << "-" << L->getLocRange().getEnd().getLine() << " meta:" << S->getString() << "\n");
+
+    // remainder loop
+    if (!ignoreMetadataOfRemainder) {
+      if (S->getString()=="llvm.remainder.pipeline.disable") {
+        exists = true;
+        return false;
+      }
+    }
+
+    if (S->getString()=="llvm.loop.pipeline.disable") {
+      exists = true;
+      return false;
+    }
+
+    if (S->getString()=="llvm.loop.pipeline.enable") {
+      exists = true;
+      return true;
+    }
+
+    // example) !28 = !{!"llvm.loop.vectorize.followup_all", !29}
+    if ((S->getString()).find("followup") != std::string::npos) {
+      // empty followup attribute
+      // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized"}
+      if (MD->getNumOperands() == 1)
+        return false;
+      
+      MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(1));
+      MDString *secondS = dyn_cast<MDString>(childMD->getOperand(0));
+
+      // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized", !{"llvm.loop.pipeline.enable"}}
+      if (secondS != nullptr) {
+        // remainder loop
+        if (!ignoreMetadataOfRemainder) {
+          if (secondS->getString()=="llvm.remainder.pipeline.disable") {
+            exists = true;
+            return false;
+          }
+        }
+
+        if (secondS->getString()=="llvm.loop.pipeline.disable") {
+          exists = true;
+          return false;
+        }
+
+        if (secondS->getString()=="llvm.loop.pipeline.enable") {
+          exists = true;
+          return true;
+        }
+      }
+
+      return isEnableSwp(L, childMD, exists, ignoreMetadataOfRemainder);
+    }
+  }
+  return false;
+}
+
+/**
+ * Obtaining the designation status of llvm.loop.pipeline.enable/disable from metadata
+ * @param [in] L Target loop information
+ * @param [out] exists True is specified in metadata
+ * @param [in] ignoreMetadataOfRemainder true Ignore remainder loop metadata
+ * @retval true llvm.loop.pipeline.enable is specified
+ * @retval false llvm.loop.pipeline.disable is specified
+ */
+static int enableLoopSWP(const Loop* L, bool &exists, bool ignoreMetadataOfRemainder) {
+
+  exists=false;
+  MDNode *LoopID = L->getLoopID();
+  if (LoopID == nullptr)
+    return false;
+
+  // Metadata Search
+  return isEnableSwp(L, LoopID, exists, ignoreMetadataOfRemainder);
+
+}
+bool llvm::enableLS() {
+  return EnableLS;
+}
+
+bool llvm::enableSWP(const Loop *L, bool ignoreMetadataOfRemainder) {
+  bool exists=false;
+  bool enabled=false;
+  assert(L!=nullptr);
+  if (EnableSWP)
+    enabled=true;
+
+  bool r=enableLoopSWP(L, exists, ignoreMetadataOfRemainder);
+  if (exists)
+    enabled = r;
+
+  return enabled;
+}
+
+/**
+ * Search metadata to obtain the status of llvm.loop.pipeline.nodep specification
+ * @details Recursively search nested metadata to obtain the specified status.
+ * @param [in] L Target Loop Information
+ * @param [in] MD Target metadata
+ * @param [out] exists True is specified in metadata
+ * @retval true llvm.loop.pipeline.nodep is specified
+ * @retval false llvm.loop.pipeline.nodep is not specified
+ */
+static bool isEnableNodep(const Loop* L, MDNode *MD, bool &exists){
+  if (MD->isDistinct()) {
+    // example) !25 = distinct !{!25, !18, !23, !26, !27, !28}
+    for (unsigned i = 1, e = MD->getNumOperands(); i < e; ++i) {
+      MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(i));
+
+      if (MD == nullptr)
+        continue;
+
+      bool ret = isEnableNodep(L, childMD, exists);
+      if (exists)
+        return ret;
+    }
+  }
+  else {
+    // example) !28 = !{!"llvm.loop.pipeline.nodep"}
+    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+
+    if (S == nullptr)
+      return false;
+
+    // loop metadata display
+    LLVM_DEBUG( if (L->getLocRange().getStart().get()) dbgs() << __func__ << ":loop=" << L->getLocRange().getStart().getLine() << "-" << L->getLocRange().getEnd().getLine() << " meta:" << S->getString() << "\n");
+
+    if (S->getString()=="llvm.loop.pipeline.nodep") {
+      exists = true;
+      return true;
+    }
+
+    // example) !28 = !{!"llvm.loop.vectorize.followup_all", !29}
+    if ((S->getString()).find("followup") != std::string::npos) {
+      // empty followup attribute
+      // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized"}
+      if (MD->getNumOperands() == 1)
+        return false;
+      
+      MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(1));
+      MDString *secondS = dyn_cast<MDString>(childMD->getOperand(0));
+
+      // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized", !{"llvm.loop.pipeline.enable"}}
+      if (secondS != nullptr) {
+        if (secondS->getString()=="llvm.loop.pipeline.nodep") {
+          exists = true;
+          return true;
+        }
+      }
+
+      return isEnableNodep(L, childMD, exists);
+    }
+  }
+  return false;
+}
+
+bool llvm::enableNodep(const Loop *L) {
+  bool exists=false;
+  bool enabled=false;
+  assert(L!=nullptr);
+  MDNode *LoopID = L->getLoopID();
+  if (LoopID == nullptr)
+    return false;
+  bool r=isEnableNodep(L, LoopID, exists);
+  if (exists)
+    enabled = r;
+  return enabled;
 }
 
 bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
@@ -4055,6 +4393,22 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     // it is not equal to 0 or 1.
     return AM.Scale != 0 && AM.Scale != 1;
   return -1;
+}
+
+/**
+ * Obtain the status of SWPL application instructions
+ * @param [in] L Target loop information
+ * @retval true enable
+ * @retval false disable
+ */
+bool AArch64TTIImpl::isSwpDirected(Loop *L) {
+
+  if (L!=nullptr && !llvm::enableSWP(L, true)) {
+    printDebug(__func__, "enableSWP() is false", L);
+    return false;
+  }
+
+  return true;
 }
 
 bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(const Instruction *I) {
