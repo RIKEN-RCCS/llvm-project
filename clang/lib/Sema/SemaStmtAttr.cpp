@@ -138,6 +138,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                  .Case("pipeline_initiation_interval",
                        LoopHintAttr::PipelineInitiationInterval)
                  .Case("distribute", LoopHintAttr::Distribute)
+                 .Case("pipeline_nodep", LoopHintAttr::PipelineNodep)
                  .Default(LoopHintAttr::Vectorize);
     if (Option == LoopHintAttr::VectorizeWidth) {
       assert((ValueExpr || (StateLoc && StateLoc->Ident)) &&
@@ -160,7 +161,8 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                Option == LoopHintAttr::VectorizePredicate ||
                Option == LoopHintAttr::Unroll ||
                Option == LoopHintAttr::Distribute ||
-               Option == LoopHintAttr::PipelineDisabled) {
+               Option == LoopHintAttr::PipelineDisabled ||
+               Option == LoopHintAttr::PipelineNodep) {
       assert(StateLoc && StateLoc->Ident && "Loop hint must have an argument");
       if (StateLoc->Ident->isStr("disable"))
         State = LoopHintAttr::Disable;
@@ -168,9 +170,12 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
         State = LoopHintAttr::AssumeSafety;
       else if (StateLoc->Ident->isStr("full"))
         State = LoopHintAttr::Full;
-      else if (StateLoc->Ident->isStr("enable"))
+      else if (StateLoc->Ident->isStr("enable")) {
+        if (Option == LoopHintAttr::PipelineDisabled) {
+          Option = LoopHintAttr::PipelineEnabled;
+        }
         State = LoopHintAttr::Enable;
-      else
+      } else
         llvm_unreachable("bad loop hint argument");
     } else
       llvm_unreachable("bad loop hint");
@@ -453,6 +458,7 @@ CheckForIncompatibleAttributes(Sema &S,
   struct {
     const LoopHintAttr *StateAttr;
     const LoopHintAttr *NumericAttr;
+    const LoopHintAttr *NodepAttr;
   } HintAttrs[CategoryType::NumberOfCategories] = {};
 
   for (const auto *I : Attrs) {
@@ -486,7 +492,9 @@ CheckForIncompatibleAttributes(Sema &S,
       Category = Distribute;
       break;
     case LoopHintAttr::PipelineDisabled:
+    case LoopHintAttr::PipelineEnabled:
     case LoopHintAttr::PipelineInitiationInterval:
+    case LoopHintAttr::PipelineNodep:
       Category = Pipeline;
       break;
     case LoopHintAttr::VectorizePredicate:
@@ -502,10 +510,15 @@ CheckForIncompatibleAttributes(Sema &S,
         Option == LoopHintAttr::UnrollAndJam ||
         Option == LoopHintAttr::VectorizePredicate ||
         Option == LoopHintAttr::PipelineDisabled ||
+        Option == LoopHintAttr::PipelineEnabled ||
         Option == LoopHintAttr::Distribute) {
       // Enable|Disable|AssumeSafety hint.  For example, vectorize(enable).
       PrevAttr = CategoryState.StateAttr;
       CategoryState.StateAttr = LH;
+    } else if (Option == LoopHintAttr::PipelineNodep) {
+      // Stores pragma that can only define Enable.
+      PrevAttr = CategoryState.NodepAttr;
+      CategoryState.NodepAttr = LH;
     } else {
       // Numeric hint.  For example, vectorize_width(8).
       PrevAttr = CategoryState.NumericAttr;
@@ -528,9 +541,17 @@ CheckForIncompatibleAttributes(Sema &S,
       // compatible with enable or full form of the unroll pragma because these
       // directives indicate full unrolling.
       S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
-          << /*Duplicate=*/false
-          << CategoryState.StateAttr->getDiagnosticName(Policy)
-          << CategoryState.NumericAttr->getDiagnosticName(Policy);
+        << /*Duplicate=*/false
+        << CategoryState.StateAttr->getDiagnosticName(Policy)
+        << CategoryState.NumericAttr->getDiagnosticName(Policy);
+    }
+
+    if (CategoryState.StateAttr && CategoryState.NodepAttr &&
+         CategoryState.StateAttr->getState() == LoopHintAttr::Disable) {
+      S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
+        << /*Duplicate=*/false
+        << CategoryState.StateAttr->getDiagnosticName(Policy)
+        << CategoryState.NodepAttr->getDiagnosticName(Policy);
     }
   }
 }
