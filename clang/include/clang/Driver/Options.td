@@ -4720,6 +4720,13 @@ def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">, Group<m_aarch64_Fe
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify the size in bits of an SVE vector register. Defaults to the"
            " vector length agnostic value of \"scalable\". (AArch64 only)">;
+
+def fswp : Flag<["-"], "fswp">, Group<m_aarch64_Features_Group>,
+  HelpText<"Enable the software pipeline. (AArch64 only)">;
+
+def fls : Flag<["-"], "fls">, Group<m_aarch64_Features_Group>,
+  HelpText<"Enable the local scheduling. (AArch64 only)">;
+
 } // let Flags = [TargetSpecific]
 
 def mvscale_min_EQ : Joined<["-"], "mvscale-min=">,
