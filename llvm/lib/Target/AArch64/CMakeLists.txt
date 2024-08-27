@@ -86,9 +86,11 @@ add_llvm_target(AArch64CodeGen
   AArch64TargetMachine.cpp
   AArch64TargetObjectFile.cpp
   AArch64TargetTransformInfo.cpp
+  AArch64SwplExpandPseudo.cpp
   SMEABIPass.cpp
   SVEIntrinsicOpts.cpp
   AArch64SIMDInstrOpt.cpp
+  AArch64SwplTargetMachine.cpp
 
   DEPENDS
   intrinsics_gen

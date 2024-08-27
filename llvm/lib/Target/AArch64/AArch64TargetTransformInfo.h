@@ -39,6 +39,30 @@ class Type;
 class Value;
 class VectorType;
 
+/**
+ * Returns whether or not the specified loop is a candidate for SWP application from the options and Pragma.
+ * @param L Specify target Loop information
+ * @param ignoreMetadataOfRemainder true Ignore remainder loop metadata
+ * @retval true Candidate for SWP application
+ * @retval false SWP not applied
+ */
+bool enableSWP(const Loop*, bool ignoreMetadataOfRemainder);
+
+/**
+ * Returns whether or not the specified loop is a candidate for LS application from the options.
+ * @retval true Candidate for LS application
+ * @retval false SWP not applied
+ */
+bool enableLS();
+
+/**
+ * Returns from Pragma whether the specified loop is memory-independent.
+ * @param L Specify target Loop information
+ * @retval true pipeline_nodep is specified
+ * @retval false pipeline_nodep is not specified
+ */
+bool enableNodep(const Loop *L);
+
 class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   using BaseT = BasicTTIImplBase<AArch64TTIImpl>;
   using TTI = TargetTransformInfo;
@@ -408,6 +432,17 @@ public:
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        int64_t BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;
+
+  bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
+                                  AssumptionCache &AC,
+                                  TargetLibraryInfo *LibInfo,
+                                  HardwareLoopInfo &HWLoopInfo);
+
+    bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
+                    DominatorTree *DT, AssumptionCache *AC,
+                    TargetLibraryInfo *LibInfo);
+
+    bool isSwpDirected(Loop *L);
   /// @}
 
   bool enableSelectOptimize() { return ST->enableSelectOptimize(); }
