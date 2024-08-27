@@ -682,7 +682,7 @@ bool AArch64PassConfig::addPreISel() {
                                   MergeExternalByDefault));
   }
 
-  if (TM->getTargetCPU().equals_insensitive("a64fx") && (TM->getOptLevel() != CodeGenOpt::None) && !DisableHWLOOP) {
+  if (TM->getTargetCPU().equals_insensitive("a64fx") && (TM->getOptLevel() != CodeGenOptLevel::None) && !DisableHWLOOP) {
     addPass(createHardwareLoopsLegacyPass());
   }
   return false;
@@ -791,14 +791,14 @@ void AArch64PassConfig::addPreRegAlloc() {
     addPass(&PeepholeOptimizerID);
   }
 
-  if (TM->getTargetCPU().equals_insensitive("a64fx") && TM->getOptLevel() != CodeGenOpt::None) {
+  if (TM->getTargetCPU().equals_insensitive("a64fx") && TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createSWPipelinerPrePass());
     addPass(createSWPipelinerPass());
   }
 }
 
 void AArch64PassConfig::addPostRegAlloc() {
-  if (TM->getTargetCPU().equals_insensitive("a64fx") && TM->getOptLevel() != CodeGenOpt::None) {
+  if (TM->getTargetCPU().equals_insensitive("a64fx") && TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createAArch64SwplExpandPseudoPass());
   }
   

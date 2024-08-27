@@ -24,6 +24,7 @@
 #include <llvm/ADT/SmallSet.h>
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/Register.h"
+#include <map>
 
 namespace llvm {
 
