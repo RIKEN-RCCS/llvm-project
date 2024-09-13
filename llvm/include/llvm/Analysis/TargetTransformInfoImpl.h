@@ -392,6 +392,8 @@ public:
                                  m_LogicalOr(m_Value(), m_Value())));
   }
 
+  bool isEnableFswpOption() const { return false; }
+
   bool enableInterleavedAccessVectorization() const { return false; }
 
   bool enableMaskedInterleavedAccessVectorization() const { return false; }

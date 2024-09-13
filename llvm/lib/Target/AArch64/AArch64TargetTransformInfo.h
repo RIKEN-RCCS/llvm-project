@@ -447,6 +447,13 @@ public:
 
   bool enableSelectOptimize() { return ST->enableSelectOptimize(); }
 
+  /**
+   * Returns whether the -fswp option is specified.
+   * @retval true -fswp is specified
+   * @retval false -fswp is not specified
+   */
+  bool isEnableFswpOption();
+
   bool shouldTreatInstructionLikeSelect(const Instruction *I);
 
   unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,

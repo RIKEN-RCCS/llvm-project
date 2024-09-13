@@ -26,6 +26,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -1846,6 +1847,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -2154,13 +2156,15 @@ bool PostRAMachineSinking::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  const TargetTransformInfo *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(MF.getFunction());
 
   ModifiedRegUnits.init(*TRI);
   UsedRegUnits.init(*TRI);
   for (auto &BB : MF)
     Changed |= tryToSinkCopy(BB, MF, TRI, TII);
 
-  if (!DisableRemoveUselessCopy) {
+  if (!DisableRemoveUselessCopy && TTI->isEnableFswpOption()) {
+    // Perform useless COPY deletion only when -fswp is specified in option
     // TODO: only SWPL-MBBs(prolog, kernek, epilog)
     SmallVector<MachineInstr*, 100> eraseCopys;
     SmallVector<Register, 100> usedRegisters;
