@@ -4422,3 +4422,10 @@ bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(const Instruction *I) {
     return true;
   return BaseT::shouldTreatInstructionLikeSelect(I);
 }
+
+bool AArch64TTIImpl::isEnableFswpOption() {
+  ///Determine if fswp is specified in the options.
+  ///true enable
+  ///false disable
+  return EnableSWP;
+} 

@@ -617,6 +617,10 @@ bool TargetTransformInfo::enableSelectOptimize() const {
   return TTIImpl->enableSelectOptimize();
 }
 
+bool TargetTransformInfo::isEnableFswpOption() const {
+  return TTIImpl->isEnableFswpOption();
+}
+
 bool TargetTransformInfo::shouldTreatInstructionLikeSelect(
     const Instruction *I) const {
   return TTIImpl->shouldTreatInstructionLikeSelect(I);

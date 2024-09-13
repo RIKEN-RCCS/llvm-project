@@ -944,6 +944,9 @@ public:
   /// to selects.
   bool shouldTreatInstructionLikeSelect(const Instruction *I) const;
 
+  /// Determine if fswp is specified in the options.
+  bool isEnableFswpOption() const;
+
   /// Enable matching of interleaved access groups.
   bool enableInterleavedAccessVectorization() const;
 
@@ -1890,6 +1893,7 @@ public:
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const = 0;
   virtual bool enableSelectOptimize() = 0;
   virtual bool shouldTreatInstructionLikeSelect(const Instruction *I) = 0;
+  virtual bool isEnableFswpOption() = 0;
   virtual bool enableInterleavedAccessVectorization() = 0;
   virtual bool enableMaskedInterleavedAccessVectorization() = 0;
   virtual bool isFPVectorizationPotentiallyUnsafe() = 0;
@@ -2432,6 +2436,9 @@ public:
   }
   bool shouldTreatInstructionLikeSelect(const Instruction *I) override {
     return Impl.shouldTreatInstructionLikeSelect(I);
+  }
+  bool isEnableFswpOption() override {
+    return Impl.isEnableFswpOption();
   }
   bool enableInterleavedAccessVectorization() override {
     return Impl.enableInterleavedAccessVectorization();
