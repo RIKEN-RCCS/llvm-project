@@ -2825,7 +2825,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     ///   (1)-4. preにin_rからown_rへのCopy命令を挿入する(def_r = Copy own_r)。
     /// own_r/def_rの参照がない場合はCOPY生成不要
     auto *def_op = uses[phi];
-    if (liveout_def || liveout_own || def_op==nullptr) {
+    if (liveout_def || /* liveout_own || */ def_op==nullptr) {
       if (flow.count(phi)) {
         if (DebugPrepare) {
            dbgs() << "DEBUG(convertNonSSA): change own_r " << printReg(own_r, SWPipeliner::TRI)
@@ -2849,6 +2849,12 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
         dbgs() << "DEBUG(convertNonSSA): Suppress the generation of COPY: " << *phi;
       }
       def_op->setReg(def_r);
+      if (liveout_own) {
+        MachineInstr *c =
+            BuildMI(*body, body->getFirstTerminator(), dbgloc,
+                    SWPipeliner::TII->get(TargetOpcode::COPY), own_r)
+                .addReg(def_r);
+      }
     }
 
     ///          OrgMI2NewMIがorgのphiとnewのphiとなっているので、new側をCopy命令に変更する。
