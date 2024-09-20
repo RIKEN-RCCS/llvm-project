@@ -950,7 +950,11 @@ public:
   const SwplLoop &getLoop() const { return *Loop; }
   int getDelay(SwplInstEdge &edge) const { return DelaysMap.at(&edge); }
   void setDelay(SwplInstEdge &edge, int delay) { DelaysMap[&edge] = delay; }
-  const SwplReg* getReg(SwplInstEdge &edge) const { return RegMap.at(&edge); }
+  const SwplReg* getReg(SwplInstEdge &edge) const {
+    auto it=RegMap.find(&edge);
+    if (it==RegMap.end()) return nullptr;
+    return it->second;
+  }
   void setReg(SwplInstEdge &edge, const SwplReg* reg) { RegMap[&edge] = reg; }
 
   /// Convert DDG for SWPL to DDG for LS
