@@ -2671,7 +2671,7 @@ static MachineOperand* used_reg(MachineInstr &phi) {
 
   if (def_op->getParent()->getParent()!=phi.getParent()) {
     if (DebugPrepare) {
-      dbgs() << "DEBUG(used_reg): own_r is livein!\n";
+      dbgs() << "DEBUG(used_reg): own_r(" << printReg(own_r, SWPipeliner::TRI) << ") is livein!\n";
     }
     return nullptr;
 
@@ -2682,7 +2682,7 @@ static MachineOperand* used_reg(MachineInstr &phi) {
   bool t = defMI->isRegTiedToUseOperand(defMI->getOperandNo(def_op), &use_tied_ix);
   if (t && defMI->getOperand(use_tied_ix).getReg() == def_r) {
     if (DebugPrepare) {
-      dbgs() << "DEBUG(used_reg): tied-def!\n";
+      dbgs() << "DEBUG(used_reg): tied-def! " << *defMI;
     }
     return nullptr;
   }
@@ -2695,13 +2695,13 @@ static MachineOperand* used_reg(MachineInstr &phi) {
       auto r=o.getReg();
       if (r.id()==own_r.id()) {
          if (DebugPrepare) {
-           dbgs() << "DEBUG(used_reg): own-reg is used!\n";
+           dbgs() << "DEBUG(used_reg): own-reg(" << printReg(own_r, SWPipeliner::TRI) << ") is used!\n";
          }
          return nullptr;
       }
       if (r.id()==def_r.id()) {
          if (DebugPrepare) {
-           dbgs() << "DEBUG(used_reg): def-reg is used!\n";
+           dbgs() << "DEBUG(used_reg): def-reg(" << printReg(def_r, SWPipeliner::TRI) << ") is used!\n";
          }
          return nullptr;
       }
@@ -2717,6 +2717,12 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
 
   DenseMap<MachineInstr*, Register> flow;
   DenseMap<MachineInstr*, MachineOperand*> uses;
+  if (DebugPrepare) {
+    dbgs() << "DEBUG(convertNonSSA):target MBB begin\n";
+    dbgs() << *body;
+    dbgs() << "DEBUG(convertNonSSA):target MBB end\n";
+  }
+
   for (auto &phi:body->phis()) {
     phis.push_back(&phi);
     if (DisableSuppressCopy)
@@ -2767,6 +2773,25 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
         flow[t]=newReg;
         if (DebugPrepare) {
            dbgs() << "DEBUG(convertNonSSA): def_r is referenced by subsequent own_r:" << *c;
+        }
+        break;
+      }
+    }
+    // own_rが後続のdefにある場合はCOPYが必要
+    for (auto *t=phi->getPrevNode();t;t=t->getPrevNode()) {
+      if (!t->isPHI()) break;
+      Register t_own_r;
+      if (t->getOperand(2).getMBB()==org) {
+        t_own_r = t->getOperand(1).getReg();
+      } else {
+        t_own_r = t->getOperand(3).getReg();
+      }
+      if (def_r==t_own_r) {
+        uses[phi]=nullptr;
+        if (DebugPrepare) {
+          dbgs() << "DEBUG(convertNonSSA): def_r is referenced by subsequent own_r\n"
+                 << " def phi:" << *phi
+                 << " ref phi:" << *t;
         }
         break;
       }
@@ -2840,9 +2865,9 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
       NewMI2OrgMI[c]=org_phi;
       if (DebugPrepare) {
         if (def_op && liveout_def)
-          dbgs() << "DEBUG(convertNonSSA): Generate copy: def-reg is liveout!\n";
+          dbgs() << "DEBUG(convertNonSSA): Generate copy: def-reg(" << printReg(def_op->getReg(),SWPipeliner::TRI) << ") is liveout!\n";
         else if (def_op && liveout_own)
-          dbgs() << "DEBUG(convertNonSSA): Generate copy: own-reg is liveout!\n";
+          dbgs() << "DEBUG(convertNonSSA): Generate copy: own-reg(" << printReg(def_op->getReg(),SWPipeliner::TRI) << ") is liveout!\n";
       }
     } else {
       if (DebugPrepare) {
