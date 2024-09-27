@@ -2774,6 +2774,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
         if (DebugPrepare) {
            dbgs() << "DEBUG(convertNonSSA): def_r is referenced by subsequent own_r:" << *c;
         }
+        uses[phi]=nullptr;
         break;
       }
     }
