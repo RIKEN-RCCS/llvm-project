@@ -2730,14 +2730,14 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     else
       uses[&phi]=used_reg(phi);
   }
-  /// (1). Phi命令を検索し、Phi命令の単位に以下の処理を行う。
+  /// (1). Search for Phi instructions and perform the following processing for each Phi instruction.
   for (auto *phi:phis) {
     unsigned opix;
     unsigned num=phi->getNumOperands();
     llvm::Register def_r=0, Reg=0, own_r=0, in_r=0;
     unsigned own_subreg=0;
 
-    ///   (1)-1. Phiの参照レジスタのうち、自身のMBBで定義されるレジスタ(own_r)とLiveInのレジスタ(in_r)をおさえておく。
+    ///  (1)-1. Among Phi's reference registers, the register defined in its own MBB (own_r) and the LiveIn register (in_r) are collected.
     int own_opix=0;
     def_r = phi->getOperand(0).getReg();
     for (opix=1; opix<num; opix++) {
@@ -2756,7 +2756,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
       }
     }
 
-    // def_rは後続するown_rで参照されるか調査する
+    // Check whether def_r is referenced by the following own_r
     for (auto *t=phi->getNextNode();t;t=t->getNextNode()) {
       if (!t->isPHI()) break;
       Register t_own_r;
@@ -2769,7 +2769,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
         llvm::Register newReg = SWPipeliner::MRI->cloneVirtualRegister(def_r);
         MachineInstr *c=BuildMI(*body, body->getFirstTerminator(), dbgloc,
                                   SWPipeliner::TII->get(TargetOpcode::COPY), newReg)
-                              .addReg(def_r /* def_rはsubreg指定は無い */);
+                              .addReg(def_r /* def_r has no subreg specification */);
         flow[t]=newReg;
         if (DebugPrepare) {
            dbgs() << "DEBUG(convertNonSSA): def_r is referenced by subsequent own_r:" << *c;
@@ -2778,7 +2778,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
         break;
       }
     }
-    // own_rが後続のdefにある場合はCOPYが必要
+    // COPY required if own_r is in subsequent def
     for (auto *t=phi->getPrevNode();t;t=t->getPrevNode()) {
       if (!t->isPHI()) break;
       Register t_own_r;
@@ -2798,8 +2798,8 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
       }
     }
 
-    ///   (1)-2. Phiの定義を参照する命令を検索し2.の参照レジスタに置きかえる。 \n
-    ///      defregはliveoutしているかを確認する。liveoutしていれば、PHIから生成されるCOPYの定義レジスタは新規を利用。
+    ///   (1)-2. Search for instructions that reference the definition of Phi and replace it with the reference register from 2. \n
+    ///      defreg checks whether it is liveout. If it is liveout, the definition register of COPY generated from PHI uses the new one.
     const auto *org_phi=NewMI2OrgMI[phi];
     auto org_def_r=org_phi->getOperand(0).getReg();
     auto org_own_r=org_phi->getOperand(own_opix).getReg();
@@ -2824,9 +2824,9 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     }
 
 
-    ///      PHIを元にCOPY命令を生成する際、COPYの定義レジスタクラスはPHIの定義レジスタクラスであるべき。
+    ///      When generating a COPY instruction based on PHI, the defined register class of COPY should be the defined register class of PHI.
 
-    ///      phiを２つのCOPY命令に変換し、predecessorとbodyの下方に挿入する。
+    ///      Convert phi into two COPY commands and insert them below the predecessor and body.
     ///````
     ///   body :
     ///          phi_def = PHI own_r, in_r
@@ -2843,13 +2843,13 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     ///      --> phi_def = COPY own_r
     ///````
 
-    ///   (1)-3. preにin_rからown_rへのCopy命令を挿入する(def_r = Copy in_r)。
+    ///   (1)-3. Insert a copy command from in_r to own_r in pre (def_r = Copy in_r).
     MachineInstr *Copy = BuildMI(*pre, pre->getFirstTerminator(), dbgloc,SWPipeliner::TII->get(TargetOpcode::COPY), def_r)
                                 .addReg(in_r);
     addCopies(Copy);
 
-    ///   (1)-4. preにin_rからown_rへのCopy命令を挿入する(def_r = Copy own_r)。
-    /// own_r/def_rの参照がない場合はCOPY生成不要
+    ///   (1)-4. Insert a copy command from in_r to own_r in pre (def_r = Copy own_r).
+    /// No need to generate COPY if there is no reference to own_r/def_r
     auto *def_op = uses[phi];
     if (liveout_def || /* liveout_own || */ def_op==nullptr) {
       if (flow.count(phi)) {
@@ -2883,7 +2883,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
       }
     }
 
-    ///          OrgMI2NewMIがorgのphiとnewのphiとなっているので、new側をCopy命令に変更する。
+    ///          Since OrgMI2NewMI is phi of org and phi of new, change the new side to a Copy command.
     for (auto &itr: getOrgMI2NewMI()) {
       if (itr.second == phi) {
         addOrgMI2NewMI(itr.first, const_cast<llvm::MachineInstr *>(Copy));
@@ -2891,7 +2891,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     }  
   }
 
-  /// (2). Phi命令を削除する。
+  /// (2). Delete the Phi command.
   for (auto *phi:phis) {
     phi->eraseFromParent();
   }
