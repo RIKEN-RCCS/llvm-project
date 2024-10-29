@@ -2823,7 +2823,6 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
       }
     }
 
-
     ///      When generating a COPY instruction based on PHI, the defined register class of COPY should be the defined register class of PHI.
 
     ///      Convert phi into two COPY commands and insert them below the predecessor and body.
@@ -2851,7 +2850,18 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     ///   (1)-4. Insert a copy command from in_r to own_r in pre (def_r = Copy own_r).
     /// No need to generate COPY if there is no reference to own_r/def_r
     auto *def_op = uses[phi];
-    if (liveout_def || /* liveout_own || */ def_op==nullptr) {
+    if (liveout_own && def_op) {
+      unsigned int use_ix = 0;
+      auto e = def_op->getParent()->getNumDefs();
+      for (unsigned def_ix=0; def_ix < e; def_ix++) {
+        if (def_op->getParent()->isRegTiedToUseOperand(def_ix, &use_ix)) {
+          def_op=nullptr;
+          uses[phi]=nullptr;
+          break;
+        }
+      }
+    }
+    if (liveout_def || def_op==nullptr) {
       if (flow.count(phi)) {
         if (DebugPrepare) {
            dbgs() << "DEBUG(convertNonSSA): change own_r " << printReg(own_r, SWPipeliner::TRI)
@@ -2871,15 +2881,20 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
           dbgs() << "DEBUG(convertNonSSA): Generate copy: own-reg(" << printReg(def_op->getReg(),SWPipeliner::TRI) << ") is liveout!\n";
       }
     } else {
-      if (DebugPrepare) {
-        dbgs() << "DEBUG(convertNonSSA): Suppress the generation of COPY: " << *phi;
-      }
+      // Rewrite the operand that defines own_r to def_r
       def_op->setReg(def_r);
       if (liveout_own) {
         MachineInstr *c =
-            BuildMI(*body, body->getFirstTerminator(), dbgloc,
+            BuildMI(*body, def_op->getParent()->getNextNode(), dbgloc,
                     SWPipeliner::TII->get(TargetOpcode::COPY), own_r)
                 .addReg(def_r);
+        if (DebugPrepare) {
+          dbgs() << "DEBUG(convertNonSSA): Generation copy: " << *c;
+        }
+      } else {
+        if (DebugPrepare) {
+          dbgs() << "DEBUG(convertNonSSA): Suppress the generation of COPY: " << *phi;
+        }
       }
     }
 
@@ -2895,6 +2910,12 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
   for (auto *phi:phis) {
     phi->eraseFromParent();
   }
+  if (DebugPrepare) {
+    dbgs() << "DEBUG(convertNonSSA):result MBB begin\n";
+    dbgs() << *body;
+    dbgs() << "DEBUG(convertNonSSA):result MBB end\n";
+  }
+
 }
 
 /// orgの定義レジスタを収集しレジスタを複写する。
