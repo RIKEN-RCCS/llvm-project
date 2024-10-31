@@ -3105,7 +3105,7 @@ void SwplLoop::removeCopy(MachineBasicBlock *body) {
     const auto *org_copy=NewMI2OrgMI.at(&mi);
     if (liveOuts.contains(op0.getReg())) {
       if (DebugPrepare) {
-        dbgs() << " org mi: " << org_copy;
+        dbgs() << " org mi: " << *org_copy;
         dbgs() << " op0 is liveout!\n";
       }
       continue;
