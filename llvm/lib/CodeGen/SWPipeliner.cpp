@@ -48,6 +48,7 @@ static cl::opt<bool> OptionDumpPlan("swpl-debug-dump-plan",cl::init(false), cl::
 static cl::opt<bool> OptionDumpLsPlan("ls-debug-dump-plan", cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DisableSwpl("swpl-disable",cl::init(false), cl::ReallyHidden);
 
+static cl::opt<bool> DisableSuppressCopy_ownr_is_liveout("swpl-disable-suppress-copy-ownr-lo",cl::init(false), cl::ReallyHidden);
 
 static cl::opt<bool> DebugOutput("swpl-debug",cl::init(false), cl::ReallyHidden);
 static cl::opt<bool> DebugDdgOutput("swpl-debug-ddg",cl::init(false), cl::ReallyHidden);
@@ -2860,6 +2861,10 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
           break;
         }
       }
+    }
+    if (liveout_own && DisableSuppressCopy_ownr_is_liveout) {
+          def_op=nullptr;
+          uses[phi]=nullptr;
     }
     if (liveout_def || def_op==nullptr) {
       if (flow.count(phi)) {
