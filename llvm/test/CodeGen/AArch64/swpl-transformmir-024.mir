@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O3 -swpl-debug -swpl-plan-import=%S/Inputs/3044-24.yaml -start-before=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -swpl-disable-suppress-copy-ownr-lo -O3 -swpl-debug -swpl-plan-import=%S/Inputs/3044-24.yaml -start-before=aarch64-swpipeliner  -o /dev/null 2>&1 | FileCheck %s
 
 
 # CHECK:        : (Iterative Modulo Scheduling. ResMII 3. NumOfBodyInsts 7. Budget 350. Minimum II = 3.)

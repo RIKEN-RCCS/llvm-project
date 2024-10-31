@@ -2,8 +2,7 @@
 
 #CHECK:remark: swpl-remainder-loop-pipeline-007.cpp:7:5: SVE instruction latency is calculated at 512bit.
 #CHECK:remark: swpl-remainder-loop-pipeline-007.cpp:7:5: software pipelining (IPC: 0.87, ITR: 3, MVE: 2, II: 8, Stage: 2, (VReg Fp: 0/32, Int: 8/29, Pred: 1/8)), SRA(PReg Fp: 0/32, Int: 5/29, Pred: 0/8)
-#CHECK:remark: swpl-remainder-loop-pipeline-007.cpp:7:5: software pipelining (IPC: 0.36, ITR: 3, MVE: 2, II: 72, Stage: 2, (VReg Fp: 0/32, Int: 7/29, Pred: 1/8)), SRA(PReg Fp: 0/32, Int: 6/29, Pred: 0/8)
-
+#CHECK:remark: swpl-remainder-loop-pipeline-007.cpp:7:5: software pipelining (IPC: 0.37, ITR: 3, MVE: 2, II: 69, Stage: 2, (VReg Fp: 0/32, Int: 9/29, Pred: 1/8)), SRA(PReg Fp: 0/32, Int: 7/29, Pred: 0/8)
 --- |
   ; ModuleID = '/test/swpl-remainder-loop-pipeline-007.cpp'
   source_filename = "/test/swpl-remainder-loop-pipeline-007.cpp"
