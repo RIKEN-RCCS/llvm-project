@@ -1,4 +1,4 @@
-#RUN: llc %s -mcpu=a64fx -fswp -O3 -start-before=aarch64-swpipeliner -swpl-enable-stagescheduling=true -swpl-debug-dump-ss-progress -import-swpl-dep-mi=%S/Inputs/swpl-SS-AC-018.yaml -o /dev/null 2>&1  | FileCheck %s
+#RUN: llc %s -mcpu=a64fx -fswp -O3 -swpl-disable-suppress-copy-ownr-lo -start-before=aarch64-swpipeliner -swpl-enable-stagescheduling=true -swpl-debug-dump-ss-progress -import-swpl-dep-mi=%S/Inputs/swpl-SS-AC-018.yaml -o /dev/null 2>&1  | FileCheck %s
 
 #CHECK:*** before SS : dump SwplSSNumRegisters ***
 #CHECK:estimate VReg  Fp: 1, Int: 18, Pre: 1
