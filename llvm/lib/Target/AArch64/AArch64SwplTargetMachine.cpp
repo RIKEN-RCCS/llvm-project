@@ -998,6 +998,9 @@ static StmPipeline RES_SIMDFP_SVE_OP_027_01 = {
 static StmPipeline RES_SIMDFP_SVE_OP_027_02 = {
   {0, 10}, 
   {P_::FLA, P_::EAGB}};
+static StmPipeline RES_SIMDFP_SVE_OP_028_01 = {
+  {0, 6}, 
+  {P_::FLA, P_::FLB}};
 
 /// SIMDFP_SVE_LD
 static StmPipeline RES_SIMDFP_SVE_LD_001_01 = {
@@ -1436,6 +1439,9 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
   {MI_SIMDFP_SVE_OP_027,  /// Pipeline:FLA + NULL ; EAG*  Latency:9+1 ; 15
     {{&RES_SIMDFP_SVE_OP_027_01, &RES_SIMDFP_SVE_OP_027_02},
     25}},
+  {MI_SIMDFP_SVE_OP_028,  /// Pipeline:FLA / FLB  Latency: 6 / [1]9
+    {{&RES_SIMDFP_SVE_OP_028_01},
+    15}},
   {MI_SIMDFP_SVE_LD_001,  /// Pipeline:EAG*, FLA  Latency:11
     {{&RES_SIMDFP_SVE_LD_001_01, &RES_SIMDFP_SVE_LD_001_02,
       &RES_SIMDFP_SVE_LD_001_03, &RES_SIMDFP_SVE_LD_001_04},
@@ -1759,6 +1765,7 @@ llvm::DenseMap<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSched
   {AArch64::FADD_ZPZZ_S_UNDEF, MI_SIMDFP_SVE_OP_001},
   {AArch64::FADD_ZZZ_D, MI_SIMDFP_SVE_OP_001},
   {AArch64::FADD_ZZZ_S, MI_SIMDFP_SVE_OP_001},
+  {AArch64::FCADD_ZPmZ_D, MI_SIMDFP_SVE_OP_028},
   {AArch64::FCMEQ_PPzZ0_D, MI_SVE_CMP_INST_001},
   {AArch64::FCMEQ_PPzZ0_S, MI_SVE_CMP_INST_001},
   {AArch64::FCMGE_PPzZZ_D, MI_SVE_CMP_INST_001},
