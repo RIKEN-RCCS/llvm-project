@@ -1449,7 +1449,7 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
     15}},
   {MI_SIMDFP_SVE_OP_029,  /// Pipeline:EXB  Latency: 17 Blocking:E
     {{&RES_SIMDFP_SVE_OP_029_01},
-    9}},
+    17}},
 
   {MI_SIMDFP_SVE_LD_001,  /// Pipeline:EAG*, FLA  Latency:11
     {{&RES_SIMDFP_SVE_LD_001_01, &RES_SIMDFP_SVE_LD_001_02,
