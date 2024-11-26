@@ -1002,9 +1002,10 @@ static StmPipeline RES_SIMDFP_SVE_OP_028_01 = {
   {0, 6}, 
   {P_::FLA, P_::FLB}};
 static StmPipeline RES_SIMDFP_SVE_OP_029_01 = {
-  {0,  0,  1,  2,  3,  4,  5,  6,  7,  8},
+  {0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
+   16, },
   {P_::EXB, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E,
-    P_::EXB_E}};
+    P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E,P_::EXB_E}};
 
 /// SIMDFP_SVE_LD
 static StmPipeline RES_SIMDFP_SVE_LD_001_01 = {
@@ -1446,7 +1447,7 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
   {MI_SIMDFP_SVE_OP_028,  /// Pipeline:FLA / FLB  Latency: 6 / [1]9
     {{&RES_SIMDFP_SVE_OP_028_01},
     15}},
-  {MI_SIMDFP_SVE_OP_029,  /// Pipeline:EXB  Latency: 9 Blocking:E
+  {MI_SIMDFP_SVE_OP_029,  /// Pipeline:EXB  Latency: 17 Blocking:E
     {{&RES_SIMDFP_SVE_OP_029_01},
     9}},
 
