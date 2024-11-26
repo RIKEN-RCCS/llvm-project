@@ -1001,6 +1001,10 @@ static StmPipeline RES_SIMDFP_SVE_OP_027_02 = {
 static StmPipeline RES_SIMDFP_SVE_OP_028_01 = {
   {0, 6}, 
   {P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_029_01 = {
+  {0,  0,  1,  2,  3,  4,  5,  6,  7,  8},
+  {P_::EXB, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E,
+    P_::EXB_E}};
 
 /// SIMDFP_SVE_LD
 static StmPipeline RES_SIMDFP_SVE_LD_001_01 = {
@@ -1442,6 +1446,10 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
   {MI_SIMDFP_SVE_OP_028,  /// Pipeline:FLA / FLB  Latency: 6 / [1]9
     {{&RES_SIMDFP_SVE_OP_028_01},
     15}},
+  {MI_SIMDFP_SVE_OP_029,  /// Pipeline:EXB  Latency: 9 Blocking:E
+    {{&RES_SIMDFP_SVE_OP_029_01},
+    9}},
+
   {MI_SIMDFP_SVE_LD_001,  /// Pipeline:EAG*, FLA  Latency:11
     {{&RES_SIMDFP_SVE_LD_001_01, &RES_SIMDFP_SVE_LD_001_02,
       &RES_SIMDFP_SVE_LD_001_03, &RES_SIMDFP_SVE_LD_001_04},
@@ -1718,7 +1726,8 @@ llvm::DenseMap<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSched
   {AArch64::LDURDi, MI_SIMDFP_SVE_LD_003},
   {AArch64::LDURQi, MI_SIMDFP_SVE_LD_003},
   {AArch64::LDURSi, MI_SIMDFP_SVE_LD_003},
-  
+
+  {AArch64::SDIV_ZPZZ_S_UNDEF, MI_SIMDFP_SVE_OP_029},
   {AArch64::ST1i32, MI_SIMDFP_SVE_ST_001},
   {AArch64::ST1i64, MI_SIMDFP_SVE_ST_001},
   {AArch64::ST2Twov2d, MI_SIMDFP_SVE_ST_004},
@@ -1752,6 +1761,7 @@ llvm::DenseMap<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSched
   {AArch64::AND_ZI, MI_SIMDFP_SVE_OP_007},
   {AArch64::BIC_PPzPP, MI_PREDICATE_OP_001},
   {AArch64::CMPHI_PPzZZ_D, MI_SVE_CMP_INST_002},
+  {AArch64::CPY_ZPmI_D, MI_SIMDFP_SVE_OP_004},
   {AArch64::CPY_ZPmV_D, MI_SIMDFP_SVE_OP_004},
   {AArch64::DUP_ZR_D, MI_SIMDFP_SVE_OP_005},
   {AArch64::DUP_ZR_S, MI_SIMDFP_SVE_OP_005},
