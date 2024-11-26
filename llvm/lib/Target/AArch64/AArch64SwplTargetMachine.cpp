@@ -1001,6 +1001,11 @@ static StmPipeline RES_SIMDFP_SVE_OP_027_02 = {
 static StmPipeline RES_SIMDFP_SVE_OP_028_01 = {
   {0, 6}, 
   {P_::FLA, P_::FLB}};
+static StmPipeline RES_SIMDFP_SVE_OP_029_01 = {
+  {0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
+   16, },
+  {P_::EXB, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E,
+    P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E,P_::EXB_E}};
 
 /// SIMDFP_SVE_LD
 static StmPipeline RES_SIMDFP_SVE_LD_001_01 = {
@@ -1442,6 +1447,10 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
   {MI_SIMDFP_SVE_OP_028,  /// Pipeline:FLA / FLB  Latency: 6 / [1]9
     {{&RES_SIMDFP_SVE_OP_028_01},
     15}},
+  {MI_SIMDFP_SVE_OP_029,  /// Pipeline:EXB  Latency: 17 Blocking:E
+    {{&RES_SIMDFP_SVE_OP_029_01},
+    17}},
+
   {MI_SIMDFP_SVE_LD_001,  /// Pipeline:EAG*, FLA  Latency:11
     {{&RES_SIMDFP_SVE_LD_001_01, &RES_SIMDFP_SVE_LD_001_02,
       &RES_SIMDFP_SVE_LD_001_03, &RES_SIMDFP_SVE_LD_001_04},
@@ -1564,6 +1573,7 @@ llvm::DenseMap<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSched
   {AArch64::ORRXri, MI_INT_OP_001},
   {AArch64::PRFMui, MI_INT_OP_005},
   {AArch64::PRFUMi, MI_INT_OP_005},
+  {AArch64::REVWr, MI_INT_OP_001}, 
   {AArch64::SUBSXri, MI_INT_OP_002},
   {AArch64::SUBSXrr, MI_INT_OP_002},
   {AArch64::SUBWri, MI_INT_OP_001},
@@ -1655,6 +1665,7 @@ llvm::DenseMap<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSched
   {AArch64::FMULv2f32, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMULv2f64, MI_SIMDFP_SVE_OP_001},
   {AArch64::FMULv2i32_indexed, MI_SIMDFP_SVE_OP_006},
+  {AArch64::FMULv2i64_indexed, MI_SIMDFP_SVE_OP_006},
   {AArch64::FMULv4f32, MI_SIMDFP_SVE_OP_001},
   {AArch64::FNEGDr, MI_SIMDFP_SVE_OP_002},
   {AArch64::FNMSUBDrrr, MI_SIMDFP_SVE_OP_001},  
@@ -1716,7 +1727,7 @@ llvm::DenseMap<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSched
   {AArch64::LDURDi, MI_SIMDFP_SVE_LD_003},
   {AArch64::LDURQi, MI_SIMDFP_SVE_LD_003},
   {AArch64::LDURSi, MI_SIMDFP_SVE_LD_003},
-  
+  {AArch64::SDIV_ZPZZ_S_UNDEF, MI_SIMDFP_SVE_OP_029},
   {AArch64::ST1i32, MI_SIMDFP_SVE_ST_001},
   {AArch64::ST1i64, MI_SIMDFP_SVE_ST_001},
   {AArch64::ST2Twov2d, MI_SIMDFP_SVE_ST_004},
@@ -1725,6 +1736,7 @@ llvm::DenseMap<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSched
   {AArch64::ST2Twov4s_POST, MI_SIMDFP_SVE_ST_005},
   {AArch64::ST2Twov8h, MI_SIMDFP_SVE_ST_004},
   {AArch64::STRDpost, MI_SIMDFP_SVE_ST_002},
+  {AArch64::STRDroW, MI_SIMDFP_SVE_ST_002},
   {AArch64::STRDroX, MI_SIMDFP_SVE_ST_001},
   {AArch64::STRDui, MI_SIMDFP_SVE_ST_002},
   {AArch64::STRQpost, MI_SIMDFP_SVE_ST_002},
@@ -1749,6 +1761,7 @@ llvm::DenseMap<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSched
   {AArch64::AND_ZI, MI_SIMDFP_SVE_OP_007},
   {AArch64::BIC_PPzPP, MI_PREDICATE_OP_001},
   {AArch64::CMPHI_PPzZZ_D, MI_SVE_CMP_INST_002},
+  {AArch64::CPY_ZPmI_D, MI_SIMDFP_SVE_OP_004},
   {AArch64::CPY_ZPmV_D, MI_SIMDFP_SVE_OP_004},
   {AArch64::DUP_ZR_D, MI_SIMDFP_SVE_OP_005},
   {AArch64::DUP_ZR_S, MI_SIMDFP_SVE_OP_005},
@@ -1830,6 +1843,9 @@ llvm::DenseMap<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSched
   {AArch64::SEL_PPPP, MI_PREDICATE_OP_001},
   {AArch64::SEL_ZPZZ_D, MI_SIMDFP_SVE_OP_002},
   {AArch64::SEL_ZPZZ_S, MI_SIMDFP_SVE_OP_002},
+  {AArch64::SMAX_ZPZZ_S_UNDEF, MI_SIMDFP_SVE_OP_002},
+  {AArch64::SMIN_ZPZZ_S_UNDEF, MI_SIMDFP_SVE_OP_002},
+//  {AArch64::SPLICE_ZPZ_B, MI_SIMDFP_SVE_OP_004},
   {AArch64::SPLICE_ZPZ_D, MI_SIMDFP_SVE_OP_004},
   {AArch64::SPLICE_ZPZ_S, MI_SIMDFP_SVE_OP_004},
   {AArch64::SUBR_ZI_D, MI_SIMDFP_SVE_OP_002},
@@ -1862,7 +1878,9 @@ llvm::DenseMap<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSched
   {AArch64::GLD1W_SXTW, MI_SIMDFP_SVE_LD_011},
   {AArch64::GLD1W_SXTW_SCALED, MI_SIMDFP_SVE_LD_011},
   {AArch64::LD1B, MI_SIMDFP_SVE_LD_001},
+  {AArch64::LD1B_IMM, MI_SIMDFP_SVE_LD_001},
   {AArch64::LD1B_S, MI_SIMDFP_SVE_LD_001},
+  {AArch64::LD1B_S_IMM, MI_SIMDFP_SVE_LD_001},
   {AArch64::LD1D, MI_SIMDFP_SVE_LD_001},
   {AArch64::LD1D_IMM, MI_SIMDFP_SVE_LD_001},
   {AArch64::LD1RD_IMM, MI_SIMDFP_SVE_LD_001},
@@ -1890,6 +1908,7 @@ llvm::DenseMap<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSched
   {AArch64::SST1W_SXTW, MI_SIMDFP_SVE_ST_006},
   {AArch64::SST1W_SXTW_SCALED, MI_SIMDFP_SVE_ST_006},
   {AArch64::ST1B, MI_SIMDFP_SVE_ST_001},
+  {AArch64::ST1B_IMM, MI_SIMDFP_SVE_ST_001},
   {AArch64::ST1D, MI_SIMDFP_SVE_ST_001},
   {AArch64::ST1D_IMM, MI_SIMDFP_SVE_ST_001},
   {AArch64::ST1W, MI_SIMDFP_SVE_ST_001},
