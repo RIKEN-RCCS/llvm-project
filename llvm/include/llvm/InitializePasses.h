@@ -315,6 +315,7 @@ void initializeWriteBitcodePassPass(PassRegistry&);
 void initializeXRayInstrumentationPass(PassRegistry&);
 void initializeSWPipelinerPass(PassRegistry&);
 void initializeSWPipelinerPrePass(PassRegistry&);
+void initializeSwplPseudoRelocatorPass(PassRegistry&);
 
 } // end namespace llvm
 

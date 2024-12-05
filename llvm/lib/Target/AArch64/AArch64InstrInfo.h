@@ -421,6 +421,7 @@ public:
   bool isNonTargetMI4SWPL(MachineInstr &inst) const override;
   bool isFPCR(Register reg) const override;
   bool isNonScheduleInstr(MachineLoop &L) const override;
+  bool getSwplPseudoInstr(MachineBasicBlock &MBB, MachineInstr *&Livein, MachineInstr *&Liveout) const override;
   bool isNonNormalizeLoop(MachineLoop &L) const override;
   int calcEachRegIncrement(const SwplReg *r) const override;
   SwplTargetMachine *getSwplTargetMachine() const override;
