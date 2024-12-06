@@ -16,6 +16,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 
 
 using namespace llvm;
@@ -31,13 +32,16 @@ public:
     initializeSwplPseudoRelocatorPass(*PassRegistry::getPassRegistry());
   }
   bool runOnMachineFunction(MachineFunction &mf) override;
-    void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 };
 
 void SwplPseudoRelocator::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
+  AU.addRequired<TargetPassConfig>();
+  AU.addRequired<SlotIndexes>();
   AU.addPreserved<SlotIndexes>();
+  AU.addRequired<LiveIntervals>();
   AU.addPreserved<LiveIntervals>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -58,6 +62,7 @@ bool SwplPseudoRelocator::runOnMachineFunction(MachineFunction &mf) {
   if (skipFunction(mf.getFunction()))
     return false;
   const TargetInstrInfo *TII = mf.getSubtarget().getInstrInfo();
+  LiveIntervals *LIS = &getAnalysis<LiveIntervals>();
   MachineInstr *livein=nullptr;
   MachineInstr *liveout=nullptr;
   for (auto &MBB:mf) {
@@ -66,11 +71,16 @@ bool SwplPseudoRelocator::runOnMachineFunction(MachineFunction &mf) {
       if (livein) {
         const auto T = MBB.getFirstNonPHI();
         MBB.splice(T, &MBB, livein);
+        // Update LiveIntervals
+        if (LIS)
+          LIS->handleMove(*livein, /*UpdateFlags=*/true);
       }
       if (liveout) {
         const auto T = MBB.getFirstTerminator();
         MBB.splice(T, &MBB, liveout);
-
+        // Update LiveIntervals
+        if (LIS)
+          LIS->handleMove(*liveout, /*UpdateFlags=*/true);
       }
     }
   }
