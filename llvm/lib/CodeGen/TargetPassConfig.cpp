@@ -1456,6 +1456,7 @@ void TargetPassConfig::addOptimizedRegAlloc() {
 
   // PreRA instruction scheduling.
   addPass(&MachineSchedulerID);
+  addPass(createSwplPseudoRelocatorPass());
 
   if (addRegAssignAndRewriteOptimized()) {
     // Perform stack slot coloring and post-ra machine LICM.

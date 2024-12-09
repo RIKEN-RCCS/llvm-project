@@ -89,7 +89,24 @@ static bool isCompMI(MachineInstr *MI, AArch64CC::CondCode CC) {
 
 namespace llvm {
 
-
+bool AArch64InstrInfo::getSwplPseudoInstr(MachineBasicBlock &MBB, MachineInstr *&Livein, MachineInstr *&Liveout) const {
+  bool rc = false;
+  Livein=nullptr;
+  Liveout=nullptr;
+  for (auto &I:MBB) {
+    switch (I.getOpcode()) {
+    case AArch64::SWPLIVEIN:
+      Livein = &I;
+      rc = true;
+      break;
+    case AArch64::SWPLIVEOUT:
+      Liveout = &I;
+      rc = true;
+      break;
+    }
+  }
+  return rc;
+}
 bool AArch64InstrInfo::isNonScheduleInstr(MachineLoop &L) const {
   MachineBasicBlock *LoopMBB = L.getTopBlock();
 
@@ -1845,7 +1862,7 @@ llvm::DenseMap<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSched
   {AArch64::SEL_ZPZZ_S, MI_SIMDFP_SVE_OP_002},
   {AArch64::SMAX_ZPZZ_S_UNDEF, MI_SIMDFP_SVE_OP_002},
   {AArch64::SMIN_ZPZZ_S_UNDEF, MI_SIMDFP_SVE_OP_002},
-//  {AArch64::SPLICE_ZPZ_B, MI_SIMDFP_SVE_OP_004},
+  {AArch64::SPLICE_ZPZ_B, MI_SIMDFP_SVE_OP_004},
   {AArch64::SPLICE_ZPZ_D, MI_SIMDFP_SVE_OP_004},
   {AArch64::SPLICE_ZPZ_S, MI_SIMDFP_SVE_OP_004},
   {AArch64::SUBR_ZI_D, MI_SIMDFP_SVE_OP_002},

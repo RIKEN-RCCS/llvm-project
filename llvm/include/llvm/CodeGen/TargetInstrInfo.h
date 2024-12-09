@@ -2345,6 +2345,19 @@ public:
   }
 
   /**
+   * Finding SWPL Pseudo Instr.
+   *
+   * \param[in] MBB target MachineBasicBlock
+   * \param[out] Livein SWPLIVEIN pseudo instr
+   * \param[out] Liveout SWPLIVEOUT pseudo instr
+   * \retval true found
+   * \retval false not dound
+   */
+  virtual bool getSwplPseudoInstr(MachineBasicBlock &MBB, MachineInstr *&Livein, MachineInstr *&Liveout) const {
+    return false;
+  }
+
+  /**
    * Determine if the target loop is a non-normalized loop.
    *
    * \param[in] L MachineLoop
