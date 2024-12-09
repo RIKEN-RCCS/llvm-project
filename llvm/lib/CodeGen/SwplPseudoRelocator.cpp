@@ -27,7 +27,7 @@ namespace llvm {
 
 class SwplPseudoRelocator : public MachineFunctionPass {
 public:
-  static char ID;               ///< PassのID
+  static char ID;               ///< PassID
   SwplPseudoRelocator(): MachineFunctionPass(ID) {
     initializeSwplPseudoRelocatorPass(*PassRegistry::getPassRegistry());
   }
@@ -63,9 +63,9 @@ bool SwplPseudoRelocator::runOnMachineFunction(MachineFunction &mf) {
     return false;
   const TargetInstrInfo *TII = mf.getSubtarget().getInstrInfo();
   LiveIntervals *LIS = &getAnalysis<LiveIntervals>();
-  MachineInstr *livein=nullptr;
-  MachineInstr *liveout=nullptr;
   for (auto &MBB:mf) {
+    MachineInstr *livein=nullptr;
+    MachineInstr *liveout=nullptr;
     if (TII->getSwplPseudoInstr(MBB, livein, liveout)) {
       rc=true;
       if (livein) {
