@@ -1270,6 +1270,12 @@ public:
   /// \retval false 指定された仮想レジスタが参照から始まっている行なし
   bool isUseFirstVRegInExcK(unsigned vreg);
 
+  /// The specified vreg starts with a definition in the epilogue
+  /// \param [in] vreg virtual register number
+  /// \retval true The designated virtual register begins with a definition
+  /// \retval false The specified virtual register has no definition or begins with a reference
+  bool isDefFirstVRegInExcK(unsigned vreg);
+
   /// debug dump
   void dump();
 };

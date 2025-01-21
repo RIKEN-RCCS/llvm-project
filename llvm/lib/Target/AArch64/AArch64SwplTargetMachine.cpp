@@ -2748,7 +2748,7 @@ static void extendLiveRange(SwplTransformedMIRInfo *tmi) {
     if ((((rinfo->num_use == -1) || (rinfo->num_def < rinfo->num_use)) &&
          ((unsigned)rinfo->num_use < rinfo->total_mi)) &&
         (tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg) ||
-         SWPipeliner::currentLoop->containsLiveOutReg(rinfo->vreg))) {
+         ((!tmi->swplEKRITbl->isDefFirstVRegInExcK(rinfo->vreg)) && SWPipeliner::currentLoop->containsLiveOutReg(rinfo->vreg)))) {
       /*
        *   bb.5.for.body1: (kernel loop)
        *     $x2(%11) = xxx $x1(%10), 1
@@ -3255,7 +3255,28 @@ bool SwplExcKernelRegInfoTbl::isUseFirstVRegInExcK(unsigned vreg) {
             [&](ExcKernelRegInfo &info){
               return((info.vreg == vreg) && (info.num_use > -1) &&
                      ((info.num_def == -1) ||           // 参照のみか
-                      (info.num_def > info.num_use)));  // 定義>参照か
+                      (info.num_def >= info.num_use)));  // 定義>参照か
+            });
+  if (itr == ekri_tbl.end())
+    return false;
+
+  return true;
+}
+
+/**
+ * @brief  The specified vreg starts with a definition in the epilogue
+ * @param  [in] vreg virtual register number
+ * @retval true The designated virtual register begins with a definition
+ * @retval false The specified virtual register has no definition or begins with a reference
+ */
+bool SwplExcKernelRegInfoTbl::isDefFirstVRegInExcK(unsigned vreg) {
+  std::vector<ExcKernelRegInfo>::iterator itr =
+    find_if(ekri_tbl.begin(), ekri_tbl.end(),
+            [&](ExcKernelRegInfo &info){
+              return((info.vreg == vreg) && 
+                     (info.num_def != -1) &&            // There is a definition
+                     ((info.num_use == -1) ||           // Definition only or
+                      (info.num_def < info.num_use)));  // def < ref
             });
   if (itr == ekri_tbl.end())
     return false;
