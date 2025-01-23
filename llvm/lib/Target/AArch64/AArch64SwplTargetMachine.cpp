@@ -2732,32 +2732,32 @@ static int createLiveRange(MachineInstr *mi, unsigned idx,
 }
 
 /**
- * @brief Liverangeの延長処理
- * @param [in,out] tmi 命令列変換情報
+ * @brief extend liverange
+ * @param [in,out] tmi Scheduling conversion information
  */
 static void extendLiveRange(SwplTransformedMIRInfo *tmi) {
   assert(tmi);
   auto e = tmi->swplRAITbl->length();
   for (size_t i = 0; i < e; i++) {
     RegAllocInfo *rinfo = tmi->swplRAITbl->getWithIdx(i);
-    // 後に呼び出すcallSetReg()内でカーネル終端にCOPY命令を追加する
-    // 条件に合致したレジスタはnum_useを当該COPY命令に設定して
-    // liverangeを伸ばす
-    if ((rinfo->vreg > 0) && (rinfo->preg > 0) &&                         // vreg および preg が 0 より大きい
-        ((rinfo->num_def > -1) &&                                         // (定義がある) &&
-         ((rinfo->num_use == -1) || (rinfo->num_def < rinfo->num_use)) && // (参照がないor定義<参照である) &&
-         ((unsigned)rinfo->num_use < rinfo->total_mi)) &&                 // (参照がカーネル終端未満である)
-        (tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg))) {          // エピローグで参照から始まっている
+    // If the register exists outside the kernel loop, extend its num_use to the end.
+    // The live range of the physical registers is not extended by design,
+    // but it is unclear whether it should be extended.
+    if ((rinfo->vreg <= 0) /*|| (rinfo->preg <= 0)*/ || (rinfo->num_def == -1))
+      continue;
+    if ((((rinfo->num_use == -1) || (rinfo->num_def < rinfo->num_use)) &&
+         ((unsigned)rinfo->num_use < rinfo->total_mi)) &&
+        (tmi->swplEKRITbl->isUseFirstVRegInExcK(rinfo->vreg) ||
+         ((!tmi->swplEKRITbl->isDefFirstVRegInExcK(rinfo->vreg)) && SWPipeliner::currentLoop->containsLiveOutReg(rinfo->vreg)))) {
       /*
        *   bb.5.for.body1: (kernel loop)
        *     $x2(%11) = xxx $x1(%10), 1
        *     $x3(%12) = xxx $x2(%11), 1
        *     |
-       *     | この間で$x2が再利用されないよう、liverangeを伸ばす
+       *     | Extend the liverange so that $x2 is not reused during this time.
        *     |
-       *     %13 = COPY $x2(%11)    <- callSetReg()にてliveout向けCOPYを追加する
        *   bb.11.for.body1:
-       *     %14 = ADD %13, 1
+       *     %14 = ADD %11, 1
        */
       if( DebugSwplRegAlloc ) {
         dbgs() << "num_use: " << rinfo->num_use << " to " << rinfo->total_mi << "\n";
@@ -3255,7 +3255,28 @@ bool SwplExcKernelRegInfoTbl::isUseFirstVRegInExcK(unsigned vreg) {
             [&](ExcKernelRegInfo &info){
               return((info.vreg == vreg) && (info.num_use > -1) &&
                      ((info.num_def == -1) ||           // 参照のみか
-                      (info.num_def > info.num_use)));  // 定義>参照か
+                      (info.num_def >= info.num_use)));  // 定義>参照か
+            });
+  if (itr == ekri_tbl.end())
+    return false;
+
+  return true;
+}
+
+/**
+ * @brief  The specified vreg starts with a definition in the epilogue
+ * @param  [in] vreg virtual register number
+ * @retval true The designated virtual register begins with a definition
+ * @retval false The specified virtual register has no definition or begins with a reference
+ */
+bool SwplExcKernelRegInfoTbl::isDefFirstVRegInExcK(unsigned vreg) {
+  std::vector<ExcKernelRegInfo>::iterator itr =
+    find_if(ekri_tbl.begin(), ekri_tbl.end(),
+            [&](ExcKernelRegInfo &info){
+              return((info.vreg == vreg) && 
+                     (info.num_def != -1) &&            // There is a definition
+                     ((info.num_use == -1) ||           // Definition only or
+                      (info.num_def < info.num_use)));  // def < ref
             });
   if (itr == ekri_tbl.end())
     return false;
