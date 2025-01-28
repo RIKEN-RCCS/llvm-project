@@ -1003,7 +1003,8 @@ PreservedAnalyses LoopDistribute4SWPLPass::run(Function &F,
   //bool Changed =
   runImpl(F, &LI, &DT, &SE, &ORE, LAIs);
 
-  // 成功でも失敗でもloop依存解析情報を残したくないため、
-  // PreservedAnalyses::none() を返す。
+  // Analysis that requires loopdistribute4swpl may have a detrimental
+  // effect on other passes, so it returns PreservedAnalyses::none()
+  // so that other passes will be reanalyzed.
   return PreservedAnalyses::none();
 }
