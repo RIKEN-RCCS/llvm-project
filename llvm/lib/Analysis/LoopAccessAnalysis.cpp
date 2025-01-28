@@ -105,7 +105,7 @@ static cl::opt<unsigned>
     MaxDependences("max-dependences", cl::Hidden,
                    cl::desc("Maximum number of dependences collected by "
                             "loop-access analysis (default = 100)"),
-                   cl::init(100));
+                   cl::init(1000));
 
 /// This enables versioning on the strides of symbolically striding memory
 /// accesses in code like the following.
@@ -144,6 +144,12 @@ static cl::opt<bool, true> HoistRuntimeChecks(
     cl::desc(
         "Hoist inner loop runtime memory checks to outer loop if possible"),
     cl::location(VectorizerParams::HoistRuntimeChecks), cl::init(true));
+
+static cl::opt<bool> EnableRTCheck(
+  "loopdist4swpl-enable-rtcheck", cl::init(false), cl::Hidden);
+
+static bool forSWPL=false;
+
 bool VectorizerParams::HoistRuntimeChecks;
 
 bool VectorizerParams::isInterleaveForced() {
@@ -1983,6 +1989,18 @@ getDependenceDistanceStrideAndSize(
   // "A[B[i]] += ..." and similar code or pointer arithmetic that could wrap
   // in the address space.
   if (!StrideAPtr || !StrideBPtr || StrideAPtr != StrideBPtr) {
+    if (::forSWPL) {
+      LLVM_DEBUG(dbgs() << "LAA4SWPL: Src: " << *Src << ", Sink: " << *Sink << ", Dist: " << *Dist << "\n");
+      if ((Dist != nullptr) && (Dist->getSCEVType()==scConstant)) {
+        if (Dist->isZero()) {
+          LLVM_DEBUG(dbgs() << "LAA4SWPL: Dist is 0 --> Backward\n");
+          return MemoryDepChecker::Dependence::Backward;
+        }
+        LLVM_DEBUG(dbgs() << "LAA4SWPL: Dist is not 0 --> NoDep\n");
+        return MemoryDepChecker::Dependence::NoDep;
+      }
+      LLVM_DEBUG(dbgs() << "LAA4SWPL: Dist is not constant --> Unknown\n");
+    }
     LLVM_DEBUG(dbgs() << "Pointer access with non-constant stride\n");
     return MemoryDepChecker::Dependence::Unknown;
   }
@@ -2553,9 +2571,10 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
   Value *UncomputablePtr = nullptr;
-  bool CanDoRTIfNeeded =
-      Accesses.canCheckPtrAtRT(*PtrRtChecking, PSE->getSE(), TheLoop,
-                               SymbolicStrides, UncomputablePtr, false);
+  bool CanDoRTIfNeeded = true;
+  if (EnableRTCheck || !::forSWPL)
+    CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(*PtrRtChecking, PSE->getSE(),
+      TheLoop, SymbolicStrides, UncomputablePtr, false);
   if (!CanDoRTIfNeeded) {
     auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
     recordAnalysis("CantIdentifyArrayBounds", I) 
@@ -2944,10 +2963,11 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
 
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                const TargetLibraryInfo *TLI, AAResults *AA,
-                               DominatorTree *DT, LoopInfo *LI)
+                               DominatorTree *DT, LoopInfo *LI, bool forSWPL)
     : PSE(std::make_unique<PredicatedScalarEvolution>(*SE, *L)),
       PtrRtChecking(nullptr),
       DepChecker(std::make_unique<MemoryDepChecker>(*PSE, L)), TheLoop(L) {
+  ::forSWPL = forSWPL;
   PtrRtChecking = std::make_unique<RuntimePointerChecking>(*DepChecker, SE);
   if (canAnalyzeLoop()) {
     analyzeLoop(AA, LI, TLI, DT);
@@ -2998,12 +3018,12 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
   PSE->print(OS, Depth);
 }
 
-const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L) {
+const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L, bool forSWPL) {
   auto I = LoopAccessInfoMap.insert({&L, nullptr});
 
   if (I.second)
     I.first->second =
-        std::make_unique<LoopAccessInfo>(&L, &SE, TLI, &AA, &DT, &LI);
+        std::make_unique<LoopAccessInfo>(&L, &SE, TLI, &AA, &DT, &LI, forSWPL);
 
   return *I.first->second;
 }

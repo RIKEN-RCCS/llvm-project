@@ -576,7 +576,7 @@ private:
 class LoopAccessInfo {
 public:
   LoopAccessInfo(Loop *L, ScalarEvolution *SE, const TargetLibraryInfo *TLI,
-                 AAResults *AA, DominatorTree *DT, LoopInfo *LI);
+                 AAResults *AA, DominatorTree *DT, LoopInfo *LI, bool forSWPL);
 
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles.
@@ -710,6 +710,9 @@ private:
   /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
   DenseMap<Value *, const SCEV *> SymbolicStrides;
+
+  // Analyze for SWPL
+  bool forSWPL;
 };
 
 /// Return the SCEV corresponding to a pointer with the symbolic stride
@@ -792,7 +795,7 @@ public:
                         LoopInfo &LI, const TargetLibraryInfo *TLI)
       : SE(SE), AA(AA), DT(DT), LI(LI), TLI(TLI) {}
 
-  const LoopAccessInfo &getInfo(Loop &L);
+  const LoopAccessInfo &getInfo(Loop &L, bool forSWPL=false);
 
   void clear() { LoopAccessInfoMap.clear(); }
 

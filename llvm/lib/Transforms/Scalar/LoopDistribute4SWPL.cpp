@@ -674,17 +674,12 @@ public:
 
     BasicBlock *PH = L->getLoopPreheader();
 
-    LAI = &LAIs.getInfo(*L);
-
-    // Currently, we only distribute to isolate the part of the loop with
-    // dependence cycles to enable partial vectorization.
-    if (LAI->canVectorizeMemory())
-      return fail("MemOpsCanBeVectorized",
-                  "memory operations are safe for vectorization");
+    LAI = &LAIs.getInfo(*L, true);
 
     auto *Dependences = LAI->getDepChecker().getDependences();
-    if (!Dependences || Dependences->empty())
-      return fail("NoUnsafeDeps", "no unsafe dependences to isolate");
+    llvm::SmallVector<MemoryDepChecker::Dependence> tmpDependences;
+    if (!Dependences)
+      Dependences = &tmpDependences;
 
     InstPartitionContainer Partitions(L, LI, DT);
 
@@ -784,6 +779,10 @@ public:
     // instructions to partitions.
     Partitions.setupPartitionIdOnInstructions();
 
+    // rtcheck is not required for loopdistribute4swpl, but the process is left
+    // in place to address memory overlap issues in the programs being
+    // translated.
+    // To enable rtcheck, specify the option:-loopdist4swpl-enable-rtcheck.
     // If we need run-time checks, version the loop now.
     auto PtrToPartition = Partitions.computePartitionSetForPointers(*LAI);
     const auto *RtPtrChecking = LAI->getRuntimePointerChecking();
