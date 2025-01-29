@@ -818,7 +818,7 @@ public:
       MDNode *UnversionedLoopID = *makeFollowupLoopID(
           OrigLoopID,
           {LLVMLoopDistributeFollowupAll, LLVMLoopDistributeFollowupFallback},
-          "llvm.loop.distribute.", true);
+          "llvm.loop.distribute4swpl.", true);
       LVer.getNonVersionedLoop()->setLoopID(UnversionedLoopID);
     }
 
@@ -930,7 +930,7 @@ private:
   /// enabled/disabled.
   void setForced() {
     std::optional<const MDOperand *> Value =
-        findStringMetadataForLoop(L, "llvm.loop.distribute.enable");
+        findStringMetadataForLoop(L, "llvm.loop.distribute4swpl.enable");
     if (!Value)
       return;
 
@@ -999,11 +999,16 @@ PreservedAnalyses LoopDistribute4SWPLPass::run(Function &F,
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
   LoopAccessInfoManager &LAIs = AM.getResult<LoopAccessAnalysis>(F);
-  //bool Changed =
-  runImpl(F, &LI, &DT, &SE, &ORE, LAIs);
+  bool Changed = runImpl(F, &LI, &DT, &SE, &ORE, LAIs);
+  if (!Changed) {
+    PreservedAnalyses PA = PreservedAnalyses::all();
+    PA.abandon<LoopAccessAnalysis>();
+    return PA;
+  }
 
   // Analysis that requires loopdistribute4swpl may have a detrimental
   // effect on other passes, so it returns PreservedAnalyses::none()
   // so that other passes will be reanalyzed.
+
   return PreservedAnalyses::none();
 }
