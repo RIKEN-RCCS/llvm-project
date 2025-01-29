@@ -104,7 +104,7 @@ const unsigned VectorizerParams::MaxVectorWidth = 64;
 static cl::opt<unsigned>
     MaxDependences("max-dependences", cl::Hidden,
                    cl::desc("Maximum number of dependences collected by "
-                            "loop-access analysis (default = 100)"),
+                            "loop-access analysis (default = 1000)"),
                    cl::init(1000));
 
 /// This enables versioning on the strides of symbolically striding memory
