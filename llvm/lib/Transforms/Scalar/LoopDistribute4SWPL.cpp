@@ -674,17 +674,12 @@ public:
 
     BasicBlock *PH = L->getLoopPreheader();
 
-    LAI = &LAIs.getInfo(*L);
-
-    // Currently, we only distribute to isolate the part of the loop with
-    // dependence cycles to enable partial vectorization.
-    if (LAI->canVectorizeMemory())
-      return fail("MemOpsCanBeVectorized",
-                  "memory operations are safe for vectorization");
+    LAI = &LAIs.getInfo(*L, true);
 
     auto *Dependences = LAI->getDepChecker().getDependences();
-    if (!Dependences || Dependences->empty())
-      return fail("NoUnsafeDeps", "no unsafe dependences to isolate");
+    llvm::SmallVector<MemoryDepChecker::Dependence> tmpDependences;
+    if (!Dependences)
+      Dependences = &tmpDependences;
 
     InstPartitionContainer Partitions(L, LI, DT);
 
@@ -784,6 +779,10 @@ public:
     // instructions to partitions.
     Partitions.setupPartitionIdOnInstructions();
 
+    // rtcheck is not required for loopdistribute4swpl, but the process is left
+    // in place to address memory overlap issues in the programs being
+    // translated.
+    // To enable rtcheck, specify the option:-loopdist4swpl-enable-rtcheck.
     // If we need run-time checks, version the loop now.
     auto PtrToPartition = Partitions.computePartitionSetForPointers(*LAI);
     const auto *RtPtrChecking = LAI->getRuntimePointerChecking();
@@ -819,7 +818,7 @@ public:
       MDNode *UnversionedLoopID = *makeFollowupLoopID(
           OrigLoopID,
           {LLVMLoopDistributeFollowupAll, LLVMLoopDistributeFollowupFallback},
-          "llvm.loop.distribute.", true);
+          "llvm.loop.distribute4swpl.", true);
       LVer.getNonVersionedLoop()->setLoopID(UnversionedLoopID);
     }
 
@@ -931,7 +930,7 @@ private:
   /// enabled/disabled.
   void setForced() {
     std::optional<const MDOperand *> Value =
-        findStringMetadataForLoop(L, "llvm.loop.distribute.enable");
+        findStringMetadataForLoop(L, "llvm.loop.distribute4swpl.enable");
     if (!Value)
       return;
 
@@ -1000,11 +999,16 @@ PreservedAnalyses LoopDistribute4SWPLPass::run(Function &F,
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
   LoopAccessInfoManager &LAIs = AM.getResult<LoopAccessAnalysis>(F);
-  //bool Changed =
-  runImpl(F, &LI, &DT, &SE, &ORE, LAIs);
+  bool Changed = runImpl(F, &LI, &DT, &SE, &ORE, LAIs);
+  if (!Changed) {
+    PreservedAnalyses PA = PreservedAnalyses::all();
+    PA.abandon<LoopAccessAnalysis>();
+    return PA;
+  }
 
   // Analysis that requires loopdistribute4swpl may have a detrimental
   // effect on other passes, so it returns PreservedAnalyses::none()
   // so that other passes will be reanalyzed.
+
   return PreservedAnalyses::none();
 }
