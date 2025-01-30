@@ -90,12 +90,6 @@ static cl::opt<bool>
                          "after Loop Distribution"),
                 cl::init(false));
 
-static cl::opt<bool> DistributeNonIfConvertible(
-    "loop-distribute4swpl-non-if-convertible", cl::Hidden,
-    cl::desc("Whether to distribute into a loop that may not be "
-             "if-convertible by the loop vectorizer"),
-    cl::init(false));
-
 static cl::opt<unsigned> DistributeSCEVCheckThreshold(
     "loop-distribute4swpl-scev-check-threshold", cl::init(8), cl::Hidden,
     cl::desc("The maximum number of SCEV checks allowed for Loop "
@@ -244,6 +238,16 @@ public:
       dbgs() << *BB;
   }
 
+  /// \brief Does the partition contain a store instruction?
+  bool isIncludeStore() {
+    for (auto *I : Set) {
+      if(dyn_cast<StoreInst>(I)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
 private:
   /// Instructions from OrigLoop selected for this partition.
   InstructionSet Set;
@@ -299,51 +303,11 @@ public:
     PartitionContainer.emplace_back(Inst, L);
   }
 
-  /// Merges adjacent non-cyclic partitions.
+  /// \brief Merge partitions that contain the specified instruction
   ///
-  /// The idea is that we currently only want to isolate the non-vectorizable
-  /// partition.  We could later allow more distribution among these partition
-  /// too.
-  void mergeAdjacentNonCyclic() {
-    mergeAdjacentPartitionsIf(
-        [](const InstPartition *P) { return !P->hasDepCycle(); });
-  }
-
-  /// If a partition contains only conditional stores, we won't vectorize
-  /// it.  Try to merge it with a previous cyclic partition.
-  void mergeNonIfConvertible() {
-    mergeAdjacentPartitionsIf([&](const InstPartition *Partition) {
-      if (Partition->hasDepCycle())
-        return true;
-
-      // Now, check if all stores are conditional in this partition.
-      bool seenStore = false;
-
-      for (auto *Inst : *Partition)
-        if (isa<StoreInst>(Inst)) {
-          seenStore = true;
-          if (!LoopAccessInfo::blockNeedsPredication(Inst->getParent(), L, DT))
-            return false;
-        }
-      return seenStore;
-    });
-  }
-
-  /// Merges the partitions according to various heuristics.
-  void mergeBeforePopulating() {
-    mergeAdjacentNonCyclic();
-    if (!DistributeNonIfConvertible)
-      mergeNonIfConvertible();
-  }
-
-  /// Merges partitions in order to ensure that no loads are duplicated.
-  ///
-  /// We can't duplicate loads because that could potentially reorder them.
-  /// LoopAccessAnalysis provides dependency information with the context that
-  /// the order of memory operation is preserved.
-  ///
-  /// Return if any partitions were merged.
-  bool mergeToAvoidDuplicatedLoads() {
+  /// \retval true any partitions were merged.
+  /// \retval false any partitions were not merged.
+  bool mergeContainAnyInstructions(std::set<Instruction *> &argInsts) {
     using LoadToPartitionT = DenseMap<Instruction *, InstPartition *>;
     using ToBeMergedT = EquivalenceClasses<InstPartition *>;
 
@@ -362,6 +326,12 @@ public:
       // partitions (PartI, PartJ] into PartI.
       for (Instruction *Inst : *PartI)
         if (isa<LoadInst>(Inst)) {
+
+          // Only included in argInsts are subject to merging.
+          auto it = argInsts.find(Inst);
+          if ( it == argInsts.end() )
+               continue;
+
           bool NewElt;
           LoadToPartitionT::iterator LoadToPart;
 
@@ -382,8 +352,11 @@ public:
           }
         }
     }
-    if (ToBeMerged.empty())
+    if (ToBeMerged.empty()) {
+      LLVM_DEBUG(dbgs()
+                 << "There was nothing to merge.\n");
       return false;
+    }
 
     // Merge the member of an equivalence class into its class leader.  This
     // makes the members empty.
@@ -553,6 +526,21 @@ public:
     }
   }
 
+  /// \brief Remove partitions that don't contain store instructions from non-cyclic partitions.
+  void eraseNonCyclicPartitionHaveNoStore() {
+    int cnt=0;
+    for (auto I = PartitionContainer.begin(); I != PartitionContainer.end();) {
+      LLVM_DEBUG(dbgs() << "Partition No." << cnt <<
+                 " : I->hasDepCycle()=" << I->hasDepCycle() <<
+                 ", I->isIncludeStore()=" << I->isIncludeStore() << "\n");
+      if ( !(I->hasDepCycle()) && !(I->isIncludeStore()) )
+        I = PartitionContainer.erase(I);
+      else
+        I++;
+      cnt++;
+    }
+  }
+
 private:
   using PartitionContainerT = std::list<InstPartition>;
 
@@ -641,6 +629,15 @@ public:
       }
   }
 
+  bool isInclude(Instruction *TargetInst) {
+    for (const auto &InstDep : Accesses) {
+      Instruction *I = InstDep.Inst;
+      if( TargetInst == I )
+        return true;
+    }
+    return false;
+  }
+
 private:
   AccessesType Accesses;
 };
@@ -711,20 +708,45 @@ public:
     MemoryInstructionDependences MID(DepChecker.getMemoryInstructions(),
                                      *Dependences);
 
+    std::set<Instruction *> cyclicMemInsts;
+
     int NumUnsafeDependencesActive = 0;
+    int NumCyclic=0;
+    int NumNonCyclic=0;
+    LLVM_DEBUG(dbgs() << "\ncyclic/non-cyclic base instruction.\n");
     for (const auto &InstDep : MID) {
       Instruction *I = InstDep.Inst;
       // We update NumUnsafeDependencesActive post-instruction, catch the
       // start of a dependence directly via NumUnsafeDependencesStartOrEnd.
       if (NumUnsafeDependencesActive ||
-          InstDep.NumUnsafeDependencesStartOrEnd > 0)
+          InstDep.NumUnsafeDependencesStartOrEnd > 0) {
         Partitions.addToCyclicPartition(I);
-      else
+        cyclicMemInsts.insert(I);
+        NumCyclic++;
+        LLVM_DEBUG(dbgs() << "   Cyclic     : " << *I << "\n");
+      }
+      else {
         Partitions.addToNewNonCyclicPartition(I);
+        NumNonCyclic++;
+        LLVM_DEBUG(dbgs() << "   Non Cyclic : " << *I << "\n");
+      }
       NumUnsafeDependencesActive += InstDep.NumUnsafeDependencesStartOrEnd;
       assert(NumUnsafeDependencesActive >= 0 &&
              "Negative number of dependences active");
     }
+    // output num of cyclic/non-cyclic base instruction.
+    LLVM_DEBUG(dbgs() << "   Cyclic total     = " << NumCyclic << "\n");
+    LLVM_DEBUG(dbgs() << "   Non Cyclic total = " << NumNonCyclic << "\n");
+
+    // output initial partitions.
+    LLVM_DEBUG(dbgs() << "\ninitial partitions:\n" << Partitions);
+    LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after add partition)\n");
+
+    // Remove partitions that don't contain store instructions from non-cyclic partitions.
+    LLVM_DEBUG(dbgs() << "\nremove non-store partitions:\n");
+    Partitions.eraseNonCyclicPartitionHaveNoStore();
+    LLVM_DEBUG(dbgs() << Partitions);
+    LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after erase non-store in non-cyclic partition)\n");
 
     // Add partitions for values used outside.  These partitions can be out of
     // order from the original program order.  This is OK because if the
@@ -735,15 +757,7 @@ public:
     for (auto *Inst : DefsUsedOutside)
       Partitions.addToNewNonCyclicPartition(Inst);
 
-    LLVM_DEBUG(dbgs() << "Seeded partitions:\n" << Partitions);
-    if (Partitions.getSize() < 2)
-      return fail("CantIsolateUnsafeDeps",
-                  "cannot isolate unsafe dependencies");
-
-    // Run the merge heuristics: Merge non-cyclic adjacent partitions since we
-    // should be able to vectorize these together.
-    Partitions.mergeBeforePopulating();
-    LLVM_DEBUG(dbgs() << "\nMerged partitions:\n" << Partitions);
+    LLVM_DEBUG(dbgs() << "\nSeeded partitions:\n" << Partitions);
     if (Partitions.getSize() < 2)
       return fail("CantIsolateUnsafeDeps",
                   "cannot isolate unsafe dependencies");
@@ -751,16 +765,36 @@ public:
     // Now, populate the partitions with non-memory operations.
     Partitions.populateUsedSet();
     LLVM_DEBUG(dbgs() << "\nPopulated partitions:\n" << Partitions);
+    LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after populate)\n");
 
-    // In order to preserve original lexical order for loads, keep them in the
-    // partition that we set up in the MemoryInstructionDependences loop.
-    if (Partitions.mergeToAvoidDuplicatedLoads()) {
-      LLVM_DEBUG(dbgs() << "\nPartitions merged to ensure unique loads:\n"
-                        << Partitions);
-      if (Partitions.getSize() < 2)
-        return fail("CantIsolateUnsafeDeps",
-                    "cannot isolate unsafe dependencies");
-    }
+    // Merge partitions that contain cyclic loads.
+    // The following splits are not possible
+    //
+    // [ before ]
+    //   for (int i = 0; i <= n; i++) {
+    //     float a = aa1[i];
+    //     bb1[i] = a;
+    //     aa1[i+2] = bb1[i];
+    //     z = z + a;
+    //   }
+    //
+    // [ bad distribute ]
+    //   for (int i = 0; i <= n; i++) {
+    //     float a = aa1[i];
+    //     bb1[i] = a;
+    //     aa1[i+2] = bb1[i];
+    //   }
+    //   for (int i = 0; i <= n; i++) {
+    //     float a = aa1[i];
+    //     z = z + a;
+    //   }
+    LLVM_DEBUG(dbgs() << "\nMerge partitions has cyclic-load:\n");
+    Partitions.mergeContainAnyInstructions(cyclicMemInsts);
+    LLVM_DEBUG(dbgs() << Partitions);
+    LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after merge jas cyclic-load)\n");
+    if (Partitions.getSize() < 2)
+      return fail("OnlyOnePartition",
+                  "there was nothing to distribute");
 
     // Don't distribute the loop if we need too many SCEV run-time checks, or
     // any if it's illegal.
@@ -859,7 +893,7 @@ public:
     ORE->emit([&]() {
       return OptimizationRemarkMissed(LDIST_NAME, "NotDistributed",
                                       L->getStartLoc(), L->getHeader())
-             << "loop not distributed: use -Rpass-analysis=loop-distribute for "
+             << "loop not distributed: use -Rpass-analysis=loop-distribute4SWPL for "
                 "more "
                 "info";
     });
