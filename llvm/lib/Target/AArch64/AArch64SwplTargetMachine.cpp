@@ -263,7 +263,7 @@ int AArch64InstrInfo::calcEachRegIncrement(const SwplReg *r) const {
       if (&(induction_inst->getUseRegs(0)) == target) {
         const auto& mo=mi->getOperand(2);
         if (!mo.isImm()) return SwplDdg::UNKNOWN_MEM_DIFF;
-        return mo.getImm();
+        return mo.getImm()*sign;
       }
     } else {
       return SwplDdg::UNKNOWN_MEM_DIFF;
