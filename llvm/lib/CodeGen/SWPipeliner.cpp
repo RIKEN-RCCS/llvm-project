@@ -2730,9 +2730,12 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
       uses[&phi]=nullptr;
     else {
       auto *def_op=used_reg(phi);
-      if (def_ops.contains(def_op)) continue;
-      def_ops.insert(def_op);
-      uses[&phi]=def_op;
+      if (def_ops.contains(def_op)) {
+        uses[&phi]=nullptr;
+      } else {
+        def_ops.insert(def_op);
+        uses[&phi]=def_op;
+      }
     }
   }
   /// (1). Search for Phi instructions and perform the following processing for each Phi instruction.
