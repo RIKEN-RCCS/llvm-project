@@ -2730,7 +2730,7 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
       uses[&phi]=nullptr;
     else {
       auto *def_op=used_reg(phi);
-      if (def_ops.contains(def_op)) {
+      if (def_op==nullptr || def_ops.contains(def_op)) {
         uses[&phi]=nullptr;
       } else {
         def_ops.insert(def_op);
