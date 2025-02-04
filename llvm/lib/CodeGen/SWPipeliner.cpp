@@ -2688,8 +2688,7 @@ static MachineOperand* used_reg(MachineInstr &phi) {
     return nullptr;
   }
 
-  MachineInstr *start_instr = def_op->getParent();
-  for (auto *I=start_instr->getNextNode();I;I=I->getNextNode()) {
+  for (auto *I=defMI->getNextNode();I;I=I->getNextNode()) {
     for ( auto &o:I->operands()) {
       if (!o.isReg()) continue;
       if (o.isDef()) continue;
@@ -2724,12 +2723,20 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
     dbgs() << "DEBUG(convertNonSSA):target MBB end\n";
   }
 
+  DenseSet<MachineOperand*> def_ops;
   for (auto &phi:body->phis()) {
     phis.push_back(&phi);
     if (DisableSuppressCopy)
       uses[&phi]=nullptr;
-    else
-      uses[&phi]=used_reg(phi);
+    else {
+      auto *def_op=used_reg(phi);
+      if (def_op==nullptr || def_ops.contains(def_op)) {
+        uses[&phi]=nullptr;
+      } else {
+        def_ops.insert(def_op);
+        uses[&phi]=def_op;
+      }
+    }
   }
   /// (1). Search for Phi instructions and perform the following processing for each Phi instruction.
   for (auto *phi:phis) {
