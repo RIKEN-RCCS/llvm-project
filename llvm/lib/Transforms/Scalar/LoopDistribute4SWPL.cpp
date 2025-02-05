@@ -379,6 +379,76 @@ public:
     return true;
   }
 
+  /// Merges partitions in order to ensure that no loads are duplicated.
+  ///
+  /// We can't duplicate loads because that could potentially reorder them.
+  /// LoopAccessAnalysis provides dependency information with the context that
+  /// the order of memory operation is preserved.
+  ///
+  /// Return if any partitions were merged.
+  bool mergeToAvoidDuplicatedLoads() {
+    using LoadToPartitionT = DenseMap<Instruction *, InstPartition *>;
+    using ToBeMergedT = EquivalenceClasses<InstPartition *>;
+
+    LoadToPartitionT LoadToPartition;
+    ToBeMergedT ToBeMerged;
+
+    // Step through the partitions and create equivalence between partitions
+    // that contain the same load.  Also put partitions in between them in the
+    // same equivalence class to avoid reordering of memory operations.
+    for (PartitionContainerT::iterator I = PartitionContainer.begin(),
+                                       E = PartitionContainer.end();
+         I != E; ++I) {
+      auto *PartI = &*I;
+
+      // If a load occurs in two partitions PartI and PartJ, merge all
+      // partitions (PartI, PartJ] into PartI.
+      for (Instruction *Inst : *PartI)
+        if (isa<LoadInst>(Inst)) {
+          bool NewElt;
+          LoadToPartitionT::iterator LoadToPart;
+
+          std::tie(LoadToPart, NewElt) =
+              LoadToPartition.insert(std::make_pair(Inst, PartI));
+          if (!NewElt) {
+            LLVM_DEBUG(dbgs()
+                       << "Merging partitions due to this load in multiple "
+                       << "partitions: " << PartI << ", " << LoadToPart->second
+                       << "\n"
+                       << *Inst << "\n");
+
+            auto PartJ = I;
+            do {
+              --PartJ;
+              ToBeMerged.unionSets(PartI, &*PartJ);
+            } while (&*PartJ != LoadToPart->second);
+          }
+        }
+    }
+    if (ToBeMerged.empty())
+      return false;
+
+    // Merge the member of an equivalence class into its class leader.  This
+    // makes the members empty.
+    for (ToBeMergedT::iterator I = ToBeMerged.begin(), E = ToBeMerged.end();
+         I != E; ++I) {
+      if (!I->isLeader())
+        continue;
+
+      auto PartI = I->getData();
+      for (auto *PartJ : make_range(std::next(ToBeMerged.member_begin(I)),
+                                   ToBeMerged.member_end())) {
+        PartJ->moveTo(*PartI);
+      }
+    }
+
+    // Remove the empty partitions.
+    PartitionContainer.remove_if(
+        [](const InstPartition &P) { return P.empty(); });
+
+    return true;
+  }
+
   /// Sets up the mapping between instructions to partitions.  If the
   /// instruction is duplicated across multiple partitions, set the entry to -1.
   void setupPartitionIdOnInstructions() {
@@ -762,35 +832,35 @@ public:
     LLVM_DEBUG(dbgs() << "\nPopulated partitions:\n" << Partitions);
     LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after populate)\n");
 
-    // Merge partitions that contain cyclic loads.
-    // The following splits are not possible
-    //
-    // [ before ]
-    //   for (int i = 0; i <= n; i++) {
-    //     float a = aa1[i];
-    //     bb1[i] = a;
-    //     aa1[i+2] = bb1[i];
-    //     z = z + a;
-    //   }
-    //
-    // [ bad distribute ]
-    //   for (int i = 0; i <= n; i++) {
-    //     float a = aa1[i];
-    //     bb1[i] = a;
-    //     aa1[i+2] = bb1[i];
-    //   }
-    //   for (int i = 0; i <= n; i++) {
-    //     float a = aa1[i];
-    //     z = z + a;
-    //   }
-    LLVM_DEBUG(dbgs() << "\nMerge partitions has cyclic-load:\n");
-    Partitions.mergeContainAnyInstructions(cyclicMemInsts);
-    LLVM_DEBUG(dbgs() << Partitions);
-    LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after merge jas cyclic-load)\n");
-    if (Partitions.getSize() < 2)
-      return fail("OnlyOnePartition",
-                  "there was nothing to distribute");
+    /// \TODO If you simply merge partitions with the same Load,
+    ///       you may not be able to split the desired cases.
+    ///       Consider in what cases you should merge and take appropriate action.
+    ///
+    ///     ex.) Splitting like the following is not possible.
+    ///
+    //       [ before distribute ]
+    //         for(int i=0; i<n; i++) {
+    //           C[i] = E[i];
+    //           D[i] = E[i];
+    //         }
+    //       [ after the desired distribute ]
+    //         for(int i=0; i<n; i++) {
+    //           C[i] = E[i];
+    //         }
+    //         for(int i=0; i<n; i++) {
+    //           D[i] = E[i];
+    //         }
 
+    // In order to preserve original lexical order for loads, keep them in the
+    // partition that we set up in the MemoryInstructionDependences loop.
+    if (Partitions.mergeToAvoidDuplicatedLoads()) {
+      LLVM_DEBUG(dbgs() << "\nPartitions merged to ensure unique loads:\n"
+                        << Partitions);
+      if (Partitions.getSize() < 2)
+        return fail("CantIsolateUnsafeDeps",
+                    "cannot isolate unsafe dependencies");
+    }
+    
     // Don't distribute the loop if we need too many SCEV run-time checks, or
     // any if it's illegal.
     const SCEVPredicate &Pred = LAI->getPSE().getPredicate();
