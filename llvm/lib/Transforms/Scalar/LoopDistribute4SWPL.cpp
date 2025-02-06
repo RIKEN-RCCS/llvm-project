@@ -946,7 +946,7 @@ public:
     ORE->emit([&]() {
       return OptimizationRemark(LDIST_NAME, "Distribute", L->getStartLoc(),
                                 L->getHeader())
-             << "distributed loop";
+        << "distributed loop (" << ore::NV("nDistributed",Partitions.getSize()) << ")";
     });
     return true;
   }
