@@ -238,16 +238,6 @@ public:
       dbgs() << *BB;
   }
 
-  /// \brief Does the partition contain a store instruction?
-  bool isIncludeStore() {
-    for (auto *I : Set) {
-      if(dyn_cast<StoreInst>(I)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
 private:
   /// Instructions from OrigLoop selected for this partition.
   InstructionSet Set;
@@ -301,82 +291,6 @@ public:
   //  possible, then later we may merge them back together.
   void addToNewNonCyclicPartition(Instruction *Inst) {
     PartitionContainer.emplace_back(Inst, L);
-  }
-
-  /// \brief Merge partitions that contain the specified instruction
-  ///
-  /// \retval true any partitions were merged.
-  /// \retval false any partitions were not merged.
-  bool mergeContainAnyInstructions(std::set<Instruction *> &argInsts) {
-    using LoadToPartitionT = DenseMap<Instruction *, InstPartition *>;
-    using ToBeMergedT = EquivalenceClasses<InstPartition *>;
-
-    LoadToPartitionT LoadToPartition;
-    ToBeMergedT ToBeMerged;
-
-    // Step through the partitions and create equivalence between partitions
-    // that contain the same load.  Also put partitions in between them in the
-    // same equivalence class to avoid reordering of memory operations.
-    for (PartitionContainerT::iterator I = PartitionContainer.begin(),
-                                       E = PartitionContainer.end();
-         I != E; ++I) {
-      auto *PartI = &*I;
-
-      // If a load occurs in two partitions PartI and PartJ, merge all
-      // partitions (PartI, PartJ] into PartI.
-      for (Instruction *Inst : *PartI)
-        if (isa<LoadInst>(Inst)) {
-
-          // Only included in argInsts are subject to merging.
-          auto it = argInsts.find(Inst);
-          if ( it == argInsts.end() )
-               continue;
-
-          bool NewElt;
-          LoadToPartitionT::iterator LoadToPart;
-
-          std::tie(LoadToPart, NewElt) =
-              LoadToPartition.insert(std::make_pair(Inst, PartI));
-          if (!NewElt) {
-            LLVM_DEBUG(dbgs()
-                       << "Merging partitions due to this load in multiple "
-                       << "partitions: " << PartI << ", " << LoadToPart->second
-                       << "\n"
-                       << *Inst << "\n");
-
-            auto PartJ = I;
-            do {
-              --PartJ;
-              ToBeMerged.unionSets(PartI, &*PartJ);
-            } while (&*PartJ != LoadToPart->second);
-          }
-        }
-    }
-    if (ToBeMerged.empty()) {
-      LLVM_DEBUG(dbgs()
-                 << "There was nothing to merge.\n");
-      return false;
-    }
-
-    // Merge the member of an equivalence class into its class leader.  This
-    // makes the members empty.
-    for (ToBeMergedT::iterator I = ToBeMerged.begin(), E = ToBeMerged.end();
-         I != E; ++I) {
-      if (!I->isLeader())
-        continue;
-
-      auto PartI = I->getData();
-      for (auto *PartJ : make_range(std::next(ToBeMerged.member_begin(I)),
-                                   ToBeMerged.member_end())) {
-        PartJ->moveTo(*PartI);
-      }
-    }
-
-    // Remove the empty partitions.
-    PartitionContainer.remove_if(
-        [](const InstPartition &P) { return P.empty(); });
-
-    return true;
   }
 
   /// Merges partitions in order to ensure that no loads are duplicated.
@@ -684,15 +598,6 @@ public:
       }
   }
 
-  bool isInclude(Instruction *TargetInst) {
-    for (const auto &InstDep : Accesses) {
-      Instruction *I = InstDep.Inst;
-      if( TargetInst == I )
-        return true;
-    }
-    return false;
-  }
-
 private:
   AccessesType Accesses;
 };
@@ -758,8 +663,6 @@ public:
     MemoryInstructionDependences MID(DepChecker.getMemoryInstructions(),
                                      *Dependences);
 
-    std::set<Instruction *> cyclicMemInsts;
-
     int NumUnsafeDependencesActive = 0;
     int NumCyclic=0;
     int NumNonCyclic=0;
@@ -771,7 +674,6 @@ public:
       if (NumUnsafeDependencesActive ||
           InstDep.NumUnsafeDependencesStartOrEnd > 0) {
         Partitions.addToCyclicPartition(I);
-        cyclicMemInsts.insert(I);
         NumCyclic++;
         LLVM_DEBUG(dbgs() << "   Cyclic     : " << *I << "\n");
       }
