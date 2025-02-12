@@ -1,4 +1,4 @@
-# RUN: llc %s -start-after=machine-scheduler -print-after=swpl-relocator -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc %s -start-after=machine-scheduler -stop-before=machine-block-freq -print-after=swpl-relocator -o /dev/null 2>&1 | FileCheck %s
 #CHECK:1288B     SWPLIVEIN
 #CHECK-NEXT:1328B     $xzr = SUBSXri %78:gpr64common, 0, 0, implicit-def $nzcv
 #CHECK-NEXT:1336B     SWPLIVEOUT
