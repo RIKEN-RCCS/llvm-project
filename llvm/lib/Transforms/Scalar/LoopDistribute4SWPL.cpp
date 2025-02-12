@@ -596,21 +596,6 @@ public:
     }
   }
 
-  /// \brief Remove partitions that don't contain store instructions from non-cyclic partitions.
-  void eraseNonCyclicPartitionHaveNoStore() {
-    int cnt=0;
-    for (auto I = PartitionContainer.begin(); I != PartitionContainer.end();) {
-      LLVM_DEBUG(dbgs() << "Partition No." << cnt <<
-                 " : I->hasDepCycle()=" << I->hasDepCycle() <<
-                 ", I->isIncludeStore()=" << I->isIncludeStore() << "\n");
-      if ( !(I->hasDepCycle()) && !(I->isIncludeStore()) )
-        I = PartitionContainer.erase(I);
-      else
-        I++;
-      cnt++;
-    }
-  }
-
 private:
   using PartitionContainerT = std::list<InstPartition>;
 
@@ -807,12 +792,6 @@ public:
     LLVM_DEBUG(dbgs() << "\ninitial partitions:\n" << Partitions);
     LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after add partition)\n");
 
-    // Remove partitions that don't contain store instructions from non-cyclic partitions.
-    LLVM_DEBUG(dbgs() << "\nremove non-store partitions:\n");
-    Partitions.eraseNonCyclicPartitionHaveNoStore();
-    LLVM_DEBUG(dbgs() << Partitions);
-    LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after erase non-store in non-cyclic partition)\n");
-
     // Add partitions for values used outside.  These partitions can be out of
     // order from the original program order.  This is OK because if the
     // partition uses a load we will merge this partition with the original
@@ -832,12 +811,43 @@ public:
     LLVM_DEBUG(dbgs() << "\nPopulated partitions:\n" << Partitions);
     LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after populate)\n");
 
-    /// \TODO If you simply merge partitions with the same Load,
-    ///       you may not be able to split the desired cases.
-    ///       Consider in what cases you should merge and take appropriate action.
-    ///
-    ///     ex.) Splitting like the following is not possible.
-    ///
+    // To avoid changing the order of memory access,
+    // it is necessary to create partitions for Load and Store.
+    //   * Merging in subsequent processes will be done in an upward direction.
+    //   * When merging multiple partitions, all partitions in between will also be merged.
+    //
+    // ex.) Example of merging partitions with the same Load.
+    //      When Partitions 1, 3, and 4 have the same Load.
+    //
+    //       before merge：
+    //         --------------------
+    //         Partition 0
+    //         --------------------
+    //         Partition 1 <- merge leader
+    //         --------------------
+    //         Partition 2
+    //         --------------------
+    //         Partition 3 <- merge
+    //         --------------------
+    //         Partition 4 <- merge
+    //         --------------------
+    //
+    //       after merge：
+    //         --------------------
+    //         Partition 0
+    //         --------------------
+    //         Partition 1 <- merge leader
+    //         Partition 2
+    //         Partition 3 <- merge
+    //         Partition 4 <- merge
+    //         --------------------
+    //
+    // If you simply merge partitions with the same Load,
+    // you may not be able to split the desired cases.
+    // Consider in what cases you should merge and take appropriate action.
+    //
+    // ex.) Splitting like the following is not possible.
+    //
     //       [ before distribute ]
     //         for(int i=0; i<n; i++) {
     //           C[i] = E[i];
