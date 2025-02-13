@@ -2595,7 +2595,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         DependentAccesses, Accesses.getDependenciesToCheck(), SymbolicStrides,
         Accesses.getUnderlyingObjects());
 
-    if (!CanVecMem && DepChecker->shouldRetryWithRuntimeCheck()) {
+    if ((EnableRTCheck || !::forSWPL) && !CanVecMem && DepChecker->shouldRetryWithRuntimeCheck()) {
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
 
       // Clear the dependency checks. We assume they are not needed.
@@ -2618,9 +2618,9 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         CanVecMem = false;
         return;
       }
-
       CanVecMem = true;
     }
+
   }
 
   if (HasConvergentOp) {

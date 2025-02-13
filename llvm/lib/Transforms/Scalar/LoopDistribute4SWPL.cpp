@@ -90,12 +90,6 @@ static cl::opt<bool>
                          "after Loop Distribution"),
                 cl::init(false));
 
-static cl::opt<bool> DistributeNonIfConvertible(
-    "loop-distribute4swpl-non-if-convertible", cl::Hidden,
-    cl::desc("Whether to distribute into a loop that may not be "
-             "if-convertible by the loop vectorizer"),
-    cl::init(false));
-
 static cl::opt<unsigned> DistributeSCEVCheckThreshold(
     "loop-distribute4swpl-scev-check-threshold", cl::init(8), cl::Hidden,
     cl::desc("The maximum number of SCEV checks allowed for Loop "
@@ -297,43 +291,6 @@ public:
   //  possible, then later we may merge them back together.
   void addToNewNonCyclicPartition(Instruction *Inst) {
     PartitionContainer.emplace_back(Inst, L);
-  }
-
-  /// Merges adjacent non-cyclic partitions.
-  ///
-  /// The idea is that we currently only want to isolate the non-vectorizable
-  /// partition.  We could later allow more distribution among these partition
-  /// too.
-  void mergeAdjacentNonCyclic() {
-    mergeAdjacentPartitionsIf(
-        [](const InstPartition *P) { return !P->hasDepCycle(); });
-  }
-
-  /// If a partition contains only conditional stores, we won't vectorize
-  /// it.  Try to merge it with a previous cyclic partition.
-  void mergeNonIfConvertible() {
-    mergeAdjacentPartitionsIf([&](const InstPartition *Partition) {
-      if (Partition->hasDepCycle())
-        return true;
-
-      // Now, check if all stores are conditional in this partition.
-      bool seenStore = false;
-
-      for (auto *Inst : *Partition)
-        if (isa<StoreInst>(Inst)) {
-          seenStore = true;
-          if (!LoopAccessInfo::blockNeedsPredication(Inst->getParent(), L, DT))
-            return false;
-        }
-      return seenStore;
-    });
-  }
-
-  /// Merges the partitions according to various heuristics.
-  void mergeBeforePopulating() {
-    mergeAdjacentNonCyclic();
-    if (!DistributeNonIfConvertible)
-      mergeNonIfConvertible();
   }
 
   /// Merges partitions in order to ensure that no loads are duplicated.
@@ -707,19 +664,35 @@ public:
                                      *Dependences);
 
     int NumUnsafeDependencesActive = 0;
+    int NumCyclic=0;
+    int NumNonCyclic=0;
+    LLVM_DEBUG(dbgs() << "\ncyclic/non-cyclic base instruction.\n");
     for (const auto &InstDep : MID) {
       Instruction *I = InstDep.Inst;
       // We update NumUnsafeDependencesActive post-instruction, catch the
       // start of a dependence directly via NumUnsafeDependencesStartOrEnd.
       if (NumUnsafeDependencesActive ||
-          InstDep.NumUnsafeDependencesStartOrEnd > 0)
+          InstDep.NumUnsafeDependencesStartOrEnd > 0) {
         Partitions.addToCyclicPartition(I);
-      else
+        NumCyclic++;
+        LLVM_DEBUG(dbgs() << "   Cyclic     : " << *I << "\n");
+      }
+      else {
         Partitions.addToNewNonCyclicPartition(I);
+        NumNonCyclic++;
+        LLVM_DEBUG(dbgs() << "   Non Cyclic : " << *I << "\n");
+      }
       NumUnsafeDependencesActive += InstDep.NumUnsafeDependencesStartOrEnd;
       assert(NumUnsafeDependencesActive >= 0 &&
              "Negative number of dependences active");
     }
+    // output num of cyclic/non-cyclic base instruction.
+    LLVM_DEBUG(dbgs() << "   Cyclic total     = " << NumCyclic << "\n");
+    LLVM_DEBUG(dbgs() << "   Non Cyclic total = " << NumNonCyclic << "\n");
+
+    // output initial partitions.
+    LLVM_DEBUG(dbgs() << "\ninitial partitions:\n" << Partitions);
+    LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after add partition)\n");
 
     // Add partitions for values used outside.  These partitions can be out of
     // order from the original program order.  This is OK because if the
@@ -730,15 +703,7 @@ public:
     for (auto *Inst : DefsUsedOutside)
       Partitions.addToNewNonCyclicPartition(Inst);
 
-    LLVM_DEBUG(dbgs() << "Seeded partitions:\n" << Partitions);
-    if (Partitions.getSize() < 2)
-      return fail("CantIsolateUnsafeDeps",
-                  "cannot isolate unsafe dependencies");
-
-    // Run the merge heuristics: Merge non-cyclic adjacent partitions since we
-    // should be able to vectorize these together.
-    Partitions.mergeBeforePopulating();
-    LLVM_DEBUG(dbgs() << "\nMerged partitions:\n" << Partitions);
+    LLVM_DEBUG(dbgs() << "\nSeeded partitions:\n" << Partitions);
     if (Partitions.getSize() < 2)
       return fail("CantIsolateUnsafeDeps",
                   "cannot isolate unsafe dependencies");
@@ -746,6 +711,57 @@ public:
     // Now, populate the partitions with non-memory operations.
     Partitions.populateUsedSet();
     LLVM_DEBUG(dbgs() << "\nPopulated partitions:\n" << Partitions);
+    LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after populate)\n");
+
+    // To avoid changing the order of memory access,
+    // it is necessary to create partitions for Load and Store.
+    //   * Merging in subsequent processes will be done in an upward direction.
+    //   * When merging multiple partitions, all partitions in between will also be merged.
+    //
+    // ex.) Example of merging partitions with the same Load.
+    //      When Partitions 1, 3, and 4 have the same Load.
+    //
+    //       before merge：
+    //         --------------------
+    //         Partition 0
+    //         --------------------
+    //         Partition 1 <- merge leader
+    //         --------------------
+    //         Partition 2
+    //         --------------------
+    //         Partition 3 <- merge
+    //         --------------------
+    //         Partition 4 <- merge
+    //         --------------------
+    //
+    //       after merge：
+    //         --------------------
+    //         Partition 0
+    //         --------------------
+    //         Partition 1 <- merge leader
+    //         Partition 2
+    //         Partition 3 <- merge
+    //         Partition 4 <- merge
+    //         --------------------
+    //
+    // If you simply merge partitions with the same Load,
+    // you may not be able to split the desired cases.
+    // Consider in what cases you should merge and take appropriate action.
+    //
+    // ex.) Splitting like the following is not possible.
+    //
+    //       [ before distribute ]
+    //         for(int i=0; i<n; i++) {
+    //           C[i] = E[i];
+    //           D[i] = E[i];
+    //         }
+    //       [ after the desired distribute ]
+    //         for(int i=0; i<n; i++) {
+    //           C[i] = E[i];
+    //         }
+    //         for(int i=0; i<n; i++) {
+    //           D[i] = E[i];
+    //         }
 
     // In order to preserve original lexical order for loads, keep them in the
     // partition that we set up in the MemoryInstructionDependences loop.
@@ -756,7 +772,7 @@ public:
         return fail("CantIsolateUnsafeDeps",
                     "cannot isolate unsafe dependencies");
     }
-
+    
     // Don't distribute the loop if we need too many SCEV run-time checks, or
     // any if it's illegal.
     const SCEVPredicate &Pred = LAI->getPSE().getPredicate();
@@ -842,7 +858,7 @@ public:
     ORE->emit([&]() {
       return OptimizationRemark(LDIST_NAME, "Distribute", L->getStartLoc(),
                                 L->getHeader())
-             << "distributed loop";
+        << "distributed loop (" << ore::NV("nDistributed",Partitions.getSize()) << ")";
     });
     return true;
   }
@@ -858,7 +874,7 @@ public:
     ORE->emit([&]() {
       return OptimizationRemarkMissed(LDIST_NAME, "NotDistributed",
                                       L->getStartLoc(), L->getHeader())
-             << "loop not distributed: use -Rpass-analysis=loop-distribute for "
+             << "loop not distributed: use -Rpass-analysis=loop-distribute4SWPL for "
                 "more "
                 "info";
     });
