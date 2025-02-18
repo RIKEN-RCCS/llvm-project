@@ -148,6 +148,9 @@ static cl::opt<bool, true> HoistRuntimeChecks(
 static cl::opt<bool> EnableRTCheck(
   "loopdist4swpl-enable-rtcheck", cl::init(false), cl::Hidden);
 
+static cl::opt<bool> ExpandDistTarget(
+  "expand-loopdist-target", cl::Hidden, cl::init(false));
+
 static bool forSWPL=false;
 
 /// Reason for interrupting processing
@@ -2488,7 +2491,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   if (!Stores.size()) {
     LLVM_DEBUG(dbgs() << "LAA: Found a read-only loop!\n");
     CanVecMem = true;
-    if (::forSWPL)
+    if (::forSWPL && !ExpandDistTarget)
       ::Reason = "Found a read-only loop.";
     return;
   }
@@ -2595,7 +2598,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   if (NumReadWrites == 1 && NumReads == 0) {
     LLVM_DEBUG(dbgs() << "LAA: Found a write-only loop!\n");
     CanVecMem = true;
-    if (::forSWPL) {
+    if (::forSWPL && !ExpandDistTarget) {
       ::Reason = "Found a write-only loop.";
     }
     return;
