@@ -150,6 +150,9 @@ static cl::opt<bool> EnableRTCheck(
 
 static bool forSWPL=false;
 
+/// Reason for interrupting processing
+static std::string Reason;
+
 bool VectorizerParams::HoistRuntimeChecks;
 
 bool VectorizerParams::isInterleaveForced() {
@@ -2248,6 +2251,10 @@ bool MemoryDepChecker::areDepsSafe(
                 Dependences.clear();
                 LLVM_DEBUG(dbgs()
                            << "Too many dependences, stopped recording\n");
+                if (::forSWPL) {
+                  ::Reason = "Too many dependencies. Increase max-dependences or rewrite your program.";
+                  return false;
+                }
               }
             }
             if (!RecordDependences && !isSafeForVectorization())
@@ -2293,6 +2300,10 @@ void MemoryDepChecker::Dependence::print(
   OS.indent(Depth + 2) << *Instrs[Destination] << "\n";
 }
 
+StringRef LoopAccessInfo::getReason() const {
+  return ::Reason;
+}
+
 bool LoopAccessInfo::canAnalyzeLoop() {
   // We need to have a loop header.
   LLVM_DEBUG(dbgs() << "LAA: Found a loop in "
@@ -2302,7 +2313,11 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   // We can only analyze innermost loops.
   if (!TheLoop->isInnermost()) {
     LLVM_DEBUG(dbgs() << "LAA: loop is not the innermost loop\n");
-    recordAnalysis("NotInnerMostLoop") << "loop is not the innermost loop";
+    if (::forSWPL) {
+      ::Reason = "loop is not the innermost loop.";
+    } else {
+      recordAnalysis("NotInnerMostLoop") << "loop is not the innermost loop";
+    }
     return false;
   }
 
@@ -2310,16 +2325,24 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   if (TheLoop->getNumBackEdges() != 1) {
     LLVM_DEBUG(
         dbgs() << "LAA: loop control flow is not understood by analyzer\n");
-    recordAnalysis("CFGNotUnderstood")
-        << "loop control flow is not understood by analyzer";
+    if (::forSWPL) {
+      ::Reason = "loop control flow is not understood by analyzer.";
+    } else {
+      recordAnalysis("CFGNotUnderstood")
+          << "loop control flow is not understood by analyzer";
+    }
     return false;
   }
 
   // ScalarEvolution needs to be able to find the exit count.
   const SCEV *ExitCount = PSE->getBackedgeTakenCount();
   if (isa<SCEVCouldNotCompute>(ExitCount)) {
-    recordAnalysis("CantComputeNumberOfIterations")
-        << "could not determine number of loop iterations";
+    if (::forSWPL) {
+      ::Reason = "could not determine number of loop iterations.";
+    } else {
+      recordAnalysis("CantComputeNumberOfIterations")
+          << "could not determine number of loop iterations";
+    }
     LLVM_DEBUG(dbgs() << "LAA: SCEV could not compute the loop exit count.\n");
     return false;
   }
@@ -2370,6 +2393,9 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
       // operation, found in this loop, no reason to continue the search.
       if (HasComplexMemInst && HasConvergentOp) {
         CanVecMem = false;
+        if (::forSWPL) {
+          ::Reason = "Has Complex Memory Instruction.";
+        }
         return;
       }
 
@@ -2448,6 +2474,9 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
 
   if (HasComplexMemInst) {
     CanVecMem = false;
+    if (::forSWPL) {
+      ::Reason = "Has Complex Memory Instruction.";
+    }
     return;
   }
 
@@ -2459,6 +2488,8 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   if (!Stores.size()) {
     LLVM_DEBUG(dbgs() << "LAA: Found a read-only loop!\n");
     CanVecMem = true;
+    if (::forSWPL)
+      ::Reason = "Found a read-only loop.";
     return;
   }
 
@@ -2513,6 +2544,9 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         dbgs() << "LAA: A loop annotated parallel, ignore memory dependency "
                << "checks.\n");
     CanVecMem = true;
+    if (::forSWPL) {
+      ::Reason = "A loop annotated parallel.";
+    }
     return;
   }
 
@@ -2561,6 +2595,9 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   if (NumReadWrites == 1 && NumReads == 0) {
     LLVM_DEBUG(dbgs() << "LAA: Found a write-only loop!\n");
     CanVecMem = true;
+    if (::forSWPL) {
+      ::Reason = "Found a write-only loop.";
+    }
     return;
   }
 
@@ -2582,6 +2619,9 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     LLVM_DEBUG(dbgs() << "LAA: We can't vectorize because we can't find "
                       << "the array bounds.\n");
     CanVecMem = false;
+    if (::forSWPL) {
+      ::Reason = "Can't find the array bounds.";
+    }
     return;
   }
 
@@ -2595,6 +2635,10 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         DependentAccesses, Accesses.getDependenciesToCheck(), SymbolicStrides,
         Accesses.getUnderlyingObjects());
 
+    if (::forSWPL && !::Reason.empty()) {
+      // Processing was interrupted within areDepsSafe()
+      return;
+    }
     if ((EnableRTCheck || !::forSWPL) && !CanVecMem && DepChecker->shouldRetryWithRuntimeCheck()) {
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
 
@@ -2616,6 +2660,9 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
             << "cannot check memory dependencies at runtime";
         LLVM_DEBUG(dbgs() << "LAA: Can't vectorize with memory checks\n");
         CanVecMem = false;
+        if (::forSWPL) {
+          ::Reason = "Cannot check memory dependencies at runtime.";
+        }
         return;
       }
       CanVecMem = true;
@@ -2629,9 +2676,12 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     LLVM_DEBUG(dbgs() << "LAA: We can't vectorize because a runtime check "
                          "would be needed with a convergent operation\n");
     CanVecMem = false;
+    if (::forSWPL) {
+      ::Reason = "Cannot add control dependency to convergent operation";
+    }
     return;
   }
-
+  if (::forSWPL) return;
   if (CanVecMem)
     LLVM_DEBUG(
         dbgs() << "LAA: No unsafe dependent memory operations in loop.  We"
@@ -2968,6 +3018,7 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
       PtrRtChecking(nullptr),
       DepChecker(std::make_unique<MemoryDepChecker>(*PSE, L)), TheLoop(L) {
   ::forSWPL = forSWPL;
+  ::Reason = "";
   PtrRtChecking = std::make_unique<RuntimePointerChecking>(*DepChecker, SE);
   if (canAnalyzeLoop()) {
     analyzeLoop(AA, LI, TLI, DT);

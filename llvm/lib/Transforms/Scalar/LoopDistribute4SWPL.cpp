@@ -632,6 +632,10 @@ public:
     BasicBlock *PH = L->getLoopPreheader();
 
     LAI = &LAIs.getInfo(*L, true);
+    auto M = LAI->getReason();
+    if (!M.empty()) {
+      return fail("AnalysisWasInterrupted", M);
+    }
 
     auto *Dependences = LAI->getDepChecker().getDependences();
     llvm::SmallVector<MemoryDepChecker::Dependence> tmpDependences;
