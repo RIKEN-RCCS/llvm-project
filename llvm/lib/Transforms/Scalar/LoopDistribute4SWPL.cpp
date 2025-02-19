@@ -299,6 +299,8 @@ public:
   /// LoopAccessAnalysis provides dependency information with the context that
   /// the order of memory operation is preserved.
   ///
+  /// It also merges partitions with overlapping instructions that define the liveout values.
+  ///
   /// Return if any partitions were merged.
   bool mergeToAvoidDuplicatedLoadsOrOusideUse() {
     using LoadToPartitionT = DenseMap<Instruction *, InstPartition *>;
@@ -776,7 +778,8 @@ public:
 
     // In order to preserve original lexical order for loads, keep them in the
     // partition that we set up in the MemoryInstructionDependences loop.
-    if (Partitions.mergeToAvoidDuplicatedLoads()) {
+    // It also merges partitions with overlapping instructions that define the liveout values.
+    if (Partitions.mergeToAvoidDuplicatedLoadsOrOusideUse()) {
       LLVM_DEBUG(dbgs() << "\nPartitions merged to ensure unique loads:\n"
                         << Partitions);
       if (Partitions.getSize() < 2)
