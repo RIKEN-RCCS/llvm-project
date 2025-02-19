@@ -780,7 +780,7 @@ public:
     // partition that we set up in the MemoryInstructionDependences loop.
     // It also merges partitions with overlapping instructions that define the liveout values.
     if (Partitions.mergeToAvoidDuplicatedLoadsOrOusideUse()) {
-      LLVM_DEBUG(dbgs() << "\nPartitions merged to ensure unique loads:\n"
+      LLVM_DEBUG(dbgs() << "\nPartitions merged to ensure unique loads or OutsizeUse:\n"
                         << Partitions);
       if (Partitions.getSize() < 2)
         return fail("CantIsolateUnsafeDeps",
