@@ -2350,6 +2350,11 @@ bool LoopAccessInfo::canAnalyzeLoop() {
     return false;
   }
 
+  if (::forSWPL && TheLoop->getNumBlocks() > 1) {
+    ::Reason = "Found multiple basicblocks.";
+    return false;
+  }
+
   return true;
 }
 
