@@ -111,6 +111,13 @@ static cl::opt<bool> DetailEstimateDebugLog(
     "distribute4swpl-detail-estimate-debuglog", cl::Hidden,
     cl::init(false));
 
+static cl::opt<unsigned> DistributeByLimitIreg(
+    "distribute4swpl-limit-ireg", cl::init(16), cl::Hidden,
+    cl::desc("Number of iregs limited by merging adjacent division units"));
+static cl::opt<unsigned> DistributeByLimitFreg(
+    "distribute4swpl-limit-freg", cl::init(16), cl::Hidden,
+    cl::desc("Number of fregs limited by merging adjacent division units"));
+
 STATISTIC(NumLoopsDistributed4SWPL, "Number of loops distributed for SWPL");
 
 namespace {
@@ -144,6 +151,9 @@ public:
       : DepCycle(DepCycle), OrigLoop(L) {
     Set.insert(I);
   }
+  InstPartition(Loop *L, bool DepCycle = false)
+      : DepCycle(DepCycle), OrigLoop(L) {
+  }
 
   /// Returns whether this partition contains a dependence cycle.
   bool hasDepCycle() const { return DepCycle; }
@@ -172,6 +182,12 @@ public:
   void moveTo(InstPartition &Other) {
     Other.Set.insert(Set.begin(), Set.end());
     Set.clear();
+    Other.DepCycle |= DepCycle;
+  }
+
+  /// Copy Set of this partition into \p Other.
+  void copySetTo(InstPartition &Other) {
+    Other.Set.insert(Set.begin(), Set.end());
     Other.DepCycle |= DepCycle;
   }
 
@@ -707,12 +723,78 @@ public:
     }
   }
 
+  /// Estimage required registers of all partitions.
   void calcEstimateRegs() {
     unsigned Index = 0;
     for (auto &P : PartitionContainer) {
       LLVM_DEBUG(dbgs() << "Estimate regs of Partition " << Index++ << " (" << &P << "): ");
       P.estimateRegs();
     }
+  }
+
+  /// Merge adjacent partitions within the specified number of registers.
+  void mergeByRegs() {
+    unsigned limitIreg = DistributeByLimitIreg;
+    unsigned limitFreg = DistributeByLimitFreg;
+
+    for (PartitionContainerT::iterator I = PartitionContainer.begin(),
+                                       E = PartitionContainer.end();
+         I != E; ++I) {
+      auto J=I;
+      J++;
+      if (J==E) break;
+
+      auto *PartI = &*I;
+      auto *PartJ = &*J;
+
+      LLVM_DEBUG(dbgs() << "---------------------------------\n");
+      LLVM_DEBUG(dbgs() << "Partition " << " (" << PartI << "): ");
+      PartI->estimateRegs();
+      LLVM_DEBUG(dbgs() << "Partition " << " (" << PartJ << "): ");
+      PartJ->estimateRegs();
+
+      auto I_ireg = PartI->nEstimateIreg;
+      auto I_freg = PartI->nEstimateFreg;
+      auto J_ireg = PartJ->nEstimateIreg;
+      auto J_freg = PartJ->nEstimateFreg;
+
+      if (I_ireg >= limitIreg || I_freg >= limitFreg ||
+          J_ireg >= limitIreg || J_freg >= limitFreg) {
+        LLVM_DEBUG(dbgs() << "Do not merge because the number of registers exceeds the specified number.\n");
+        continue;
+      }
+
+      // Use a temporary InstPartition to check the
+      // number of registers after merging.
+      // If the number of registers after merging exceeds a
+      // specified number, do not merge.
+      InstPartition tmpP(L);
+      PartI->copySetTo(tmpP);
+      PartJ->copySetTo(tmpP);
+      LLVM_DEBUG(dbgs() << "reg-count after merge : ");
+      tmpP.estimateRegs();
+      if (tmpP.nEstimateIreg > limitIreg || tmpP.nEstimateFreg > limitFreg) {
+        LLVM_DEBUG(dbgs() << "Do not merge because merging would exceed the specified number of registers.\n");
+        continue;
+      }
+
+      // Merge by moving instructions
+      // from the previous partition to the next partition.
+      LLVM_DEBUG(dbgs() << "Merge these partitions.\n");
+      PartI->moveTo(*PartJ);
+    }
+    // Delete the partition that becomes empty after merging.
+    PartitionContainer.remove_if(
+        [](const InstPartition &P) { return P.empty(); });
+
+    LLVM_DEBUG(dbgs() << "---------------------------------\n");
+    LLVM_DEBUG(dbgs() << "Merge Result : num of Partitions : " << 
+               PartitionContainer.size() << "\n");
+    for (auto &P : PartitionContainer) {
+      LLVM_DEBUG(dbgs() << "Partition " << " (" << &P << "): ");
+      P.estimateRegs(); // Re-estimating after merge.
+    }
+    return;
   }
 
 private:
@@ -985,6 +1067,11 @@ public:
 
     LLVM_DEBUG(dbgs() << "\nEstimate the num of required regs  for each partition.\n");
     Partitions.calcEstimateRegs();
+
+    // If the total number of registers required by adjacent parcels falls below a
+    // specified number, they are merged.
+    LLVM_DEBUG(dbgs() << "\nMerging by number of registers.\n");
+    Partitions.mergeByRegs();
 
     // Don't distribute the loop if we need too many SCEV run-time checks, or
     // any if it's illegal.
