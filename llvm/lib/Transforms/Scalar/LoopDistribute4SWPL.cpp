@@ -111,6 +111,25 @@ STATISTIC(NumLoopsDistributed4SWPL, "Number of loops distributed for SWPL");
 
 namespace {
 
+static void updateRegCounter(SmallVector<unsigned, 8> &counter, unsigned countersize, unsigned from=0, unsigned to=0) {
+  assert(from<countersize && to<countersize);
+  if ( from < to ) {
+    for(unsigned n=from; n<=to; n++)
+      counter[n]++;
+  }
+  else if ( from > to ) {
+    for(unsigned n=from; n<countersize; n++)
+      counter[n]++;
+    for(unsigned n=0; n<=to; n++)
+      counter[n]++;
+  }
+  else {
+    for(unsigned n=0; n<countersize; n++)
+      counter[n]++;
+  }
+  return;
+}
+
 /// Maintains the set of instructions of the loop for a partition before
 /// cloning.  After cloning, it hosts the new loop.
 class InstPartition {
@@ -127,6 +146,15 @@ public:
 
   /// Adds an instruction to this partition.
   void add(Instruction *I) { Set.insert(I); }
+
+  /// Estimate the num of required i-reg.
+  unsigned nEstimateIreg=0;
+
+  /// Estimate the num of required f-regs.
+  unsigned nEstimateFreg=0;
+
+  /// Estimate the num of required other-regs.
+  unsigned nEstimateOtherreg=0;
 
   /// Collection accessors.
   InstructionSet::iterator begin() { return Set.begin(); }
@@ -238,6 +266,149 @@ public:
       dbgs() << *BB;
   }
 
+  void estimateRegs() {
+    assert(OrigLoop->getNumBlocks() == 1); // loop body must be a single block.
+
+    const BasicBlock *BB = OrigLoop->getHeader(); // The header is the only loop body.
+
+    // Arrange the partition instructions in the order they appear and
+    // store them in insts.
+    // The instructions in Set should exist in the loop body.
+    SmallVector<Instruction *, 8> insts;
+    insts.clear();
+    for (const Instruction &I : *BB) {
+      for (auto *setI : Set) {
+        if ( &I == setI ) {
+          insts.push_back(setI);
+        }
+      }
+    }
+    assert(Set.size()==insts.size());
+
+    unsigned instnum = insts.size();
+    SmallVector<unsigned, 8> iregcounter;
+    SmallVector<unsigned, 8> fregcounter;
+    SmallVector<unsigned, 8> otherregcounter;
+    std::set<Value*> refregs;
+    iregcounter.resize(instnum);
+    fregcounter.resize(instnum);
+    otherregcounter.resize(instnum);
+
+    for (unsigned ndef=0; ndef<instnum; ndef++) {
+      auto *I = insts[ndef];
+
+      auto DefsUsedOutside = findDefsUsedOutsideOfLoop(OrigLoop);
+      if (I->getType()->isVoidTy()) {
+        LLVM_DEBUG(dbgs() << "[" << ndef << "] (void-type)    " << *I << "\n");
+        continue;
+      }
+
+      // if isliveout==true, liverange is ndef to instnum-1.
+      unsigned lastref = 0;
+      bool isliveout = false;
+      for (auto *useOutsudeInst : DefsUsedOutside) {
+        if (useOutsudeInst == I) {
+          isliveout = true;
+          break;
+        }
+      }
+      if (isliveout) {
+        lastref = instnum-1;
+      }
+      else {
+        // If it is not liveout, look for the location that
+        // references the definition.
+        bool bSetLastref = false;
+        for (unsigned nref=0; nref<instnum; nref++) {
+          auto *i = insts[nref];
+
+          for (unsigned p=0, q=i->getNumOperands(); p<q; p++) {
+            auto op = i->getOperand(p); // Value
+            auto *ref = dyn_cast<Instruction>(op); // Instruction
+
+            // When branching from the Preheader of a PHI reference,
+            // the vreg has no live range.
+            if ( isa<PHINode>(i) &&
+                 ref && ref->getParent() != OrigLoop->getHeader() )
+              continue;
+
+            // If it does not represent a value defined by an instruction or
+            // a pointer, it is not treated as a virtual register.
+            if (ref || op->getType()->isPointerTy()) {
+              if (op == I) {
+                // Processing assuming that instructions are searched in
+                // order of appearance.
+                if (bSetLastref==false) {
+                  lastref=nref;
+                  bSetLastref=true;
+                }
+                else if (lastref < ndef ) {
+                  if (nref < ndef) {
+                    lastref=nref;
+                  }
+                }
+                else
+                  lastref=nref;
+              }
+              refregs.insert(op);
+            }
+          }
+        }
+        // If no reference is found, the live range is extended to
+        // the last instruction.
+        if (!bSetLastref) {
+          lastref = instnum-1;
+        }
+      }
+
+      LLVM_DEBUG(dbgs() << "[" << ndef << "]->[" << lastref  << "]" <<
+                 ((isliveout == true) ? " (liveout) " : "           ") <<
+                 *I << ")\n");
+
+      // Update the regcounter corresponding to the type at the definition and
+      // reference position
+      SmallVector<unsigned, 8> *regcounter;
+      if (I->getType()->isIntOrPtrTy()) regcounter=&iregcounter;
+      else if (I->getType()->isFloatingPointTy()) regcounter=&fregcounter;
+      else regcounter=&otherregcounter;
+      updateRegCounter(*regcounter, instnum, ndef, lastref);
+    }
+
+    // References only are treated as if they live from the beginning to
+    // the end of the block.
+    for (auto refreg: refregs) {
+      bool founddef = false;
+      for (unsigned i=0; i<instnum; i++) {
+        if (insts[i]==refreg) founddef=true;
+      }
+      if (founddef==false) {
+        LLVM_DEBUG(dbgs() << " -- ref only :" << *refreg << "\n");
+        SmallVector<unsigned, 8> *regcounter;
+        // Update the regcounter corresponding to the type.
+        if (refreg->getType()->isIntOrPtrTy()) regcounter=&iregcounter;
+        else if (refreg->getType()->isFloatingPointTy()) regcounter=&fregcounter;
+        else regcounter=&otherregcounter;
+        updateRegCounter(*regcounter, instnum);
+      }
+    }
+
+    // The maxi of overlapping live ranges is the estimated registers.
+    unsigned iregmax=0, fregmax=0, otherregmax=0;;
+    for (unsigned n; n<instnum; n++) {
+      if (iregmax < iregcounter[n]) iregmax=iregcounter[n];
+    }
+    for (unsigned n; n<instnum; n++) {
+      if (fregmax < fregcounter[n]) fregmax=fregcounter[n];
+    }
+    for (unsigned n; n<instnum; n++) {
+      if (otherregmax < otherregcounter[n]) otherregmax=fregcounter[n];
+    }
+
+    nEstimateIreg = iregmax;
+    nEstimateFreg = fregmax;
+    nEstimateOtherreg = otherregmax;
+    return ;
+  }
 private:
   /// Instructions from OrigLoop selected for this partition.
   InstructionSet Set;
@@ -523,6 +694,17 @@ public:
     }
   }
 
+  void calcEstimateRegs() {
+    unsigned Index = 0;
+    for (auto &P : PartitionContainer) {
+      LLVM_DEBUG(dbgs() << "\nEstimate regs of Partition " << Index++ << " (" << &P << "):\n");
+      P.estimateRegs();
+      dbgs() << "Estimate regs result : " <<
+        "ireg=" << P.nEstimateIreg <<
+        ", freg=" << P.nEstimateFreg << "\n";
+    }
+  }
+
 private:
   using PartitionContainerT = std::list<InstPartition>;
 
@@ -790,7 +972,10 @@ public:
         return fail("CantIsolateUnsafeDeps",
                     "cannot isolate unsafe dependencies");
     }
-    
+
+    LLVM_DEBUG(dbgs() << "\nEstimate the num of required regs  for each partition.\n");
+    Partitions.calcEstimateRegs();
+
     // Don't distribute the loop if we need too many SCEV run-time checks, or
     // any if it's illegal.
     const SCEVPredicate &Pred = LAI->getPSE().getPredicate();
@@ -809,9 +994,12 @@ public:
       return fail("HeuristicDisabled", "distribution heuristic disabled");
 
     LLVM_DEBUG(dbgs() << "\nDistributing loop: " << *L << "\n");
+
     // We're done forming the partitions set up the reverse mapping from
     // instructions to partitions.
     Partitions.setupPartitionIdOnInstructions();
+    LLVM_DEBUG(dbgs() << "\nsetupPartitionIdOnInstructions:\n" << Partitions);
+    LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after setupPartitionIdOnInstructions)\n");
 
     // rtcheck is not required for loopdistribute4swpl, but the process is left
     // in place to address memory overlap issues in the programs being
