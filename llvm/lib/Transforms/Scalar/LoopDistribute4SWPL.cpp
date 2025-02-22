@@ -107,6 +107,10 @@ static cl::opt<bool> EnableLoopDistribute(
     cl::desc("Enable the new, experimental LoopDistribution4SWPL Pass"),
     cl::init(false));
 
+static cl::opt<bool> DetailEstimateDebugLog(
+    "distribute4swpl-detail-estimate-debuglog", cl::Hidden,
+    cl::init(false));
+
 STATISTIC(NumLoopsDistributed4SWPL, "Number of loops distributed for SWPL");
 
 namespace {
@@ -294,12 +298,16 @@ public:
     fregcounter.resize(instnum);
     otherregcounter.resize(instnum);
 
+    if(DetailEstimateDebugLog)
+      LLVM_DEBUG(dbgs() << "\n");
+
     for (unsigned ndef=0; ndef<instnum; ndef++) {
       auto *I = insts[ndef];
 
       auto DefsUsedOutside = findDefsUsedOutsideOfLoop(OrigLoop);
       if (I->getType()->isVoidTy()) {
-        LLVM_DEBUG(dbgs() << "[" << ndef << "] (void-type)    " << *I << "\n");
+        if(DetailEstimateDebugLog)
+          LLVM_DEBUG(dbgs() << "    [" << ndef << "] (void-type)    " << *I << "\n");
         continue;
       }
 
@@ -361,9 +369,10 @@ public:
         }
       }
 
-      LLVM_DEBUG(dbgs() << "[" << ndef << "]->[" << lastref  << "]" <<
-                 ((isliveout == true) ? " (liveout) " : "           ") <<
-                 *I << ")\n");
+      if (DetailEstimateDebugLog)
+        LLVM_DEBUG(dbgs() << "    [" << ndef << "]->[" << lastref  << "]" <<
+                   ((isliveout == true) ? " (liveout) " : "           ") <<
+                   *I << ")\n");
 
       // Update the regcounter corresponding to the type at the definition and
       // reference position
@@ -382,7 +391,8 @@ public:
         if (insts[i]==refreg) founddef=true;
       }
       if (founddef==false) {
-        LLVM_DEBUG(dbgs() << " -- ref only :" << *refreg << "\n");
+        if (DetailEstimateDebugLog)
+          LLVM_DEBUG(dbgs() << "    -- ref only :" << *refreg << "\n");
         SmallVector<unsigned, 8> *regcounter;
         // Update the regcounter corresponding to the type.
         if (refreg->getType()->isIntOrPtrTy()) regcounter=&iregcounter;
@@ -407,6 +417,9 @@ public:
     nEstimateIreg = iregmax;
     nEstimateFreg = fregmax;
     nEstimateOtherreg = otherregmax;
+    LLVM_DEBUG(dbgs() << "Estimate regs result : " <<
+               "ireg=" << nEstimateIreg <<
+               ", freg=" << nEstimateFreg << "\n");
     return ;
   }
 private:
@@ -697,11 +710,8 @@ public:
   void calcEstimateRegs() {
     unsigned Index = 0;
     for (auto &P : PartitionContainer) {
-      LLVM_DEBUG(dbgs() << "\nEstimate regs of Partition " << Index++ << " (" << &P << "):\n");
+      LLVM_DEBUG(dbgs() << "Estimate regs of Partition " << Index++ << " (" << &P << "): ");
       P.estimateRegs();
-      dbgs() << "Estimate regs result : " <<
-        "ireg=" << P.nEstimateIreg <<
-        ", freg=" << P.nEstimateFreg << "\n";
     }
   }
 
