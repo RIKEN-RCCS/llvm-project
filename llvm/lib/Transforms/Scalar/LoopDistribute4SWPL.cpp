@@ -1072,6 +1072,11 @@ public:
     // specified number, they are merged.
     LLVM_DEBUG(dbgs() << "\nMerging by number of registers.\n");
     Partitions.mergeByRegs();
+    if (Partitions.getSize() < 2) {
+      return fail("SingleUnitByRegsMerge",
+                  "The division unit became one, by merging the required number of registers"
+);
+    }
 
     // Don't distribute the loop if we need too many SCEV run-time checks, or
     // any if it's illegal.
