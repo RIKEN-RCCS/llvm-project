@@ -69,7 +69,7 @@
 
 using namespace llvm;
 
-#define LDIST_NAME "loop-distribute4SWPL"
+#define LDIST_NAME "loop-distribute4swpl"
 #define DEBUG_TYPE LDIST_NAME
 
 /// @{
@@ -1223,7 +1223,7 @@ public:
     ORE->emit([&]() {
       return OptimizationRemarkMissed(LDIST_NAME, "NotDistributed",
                                       L->getStartLoc(), L->getHeader())
-             << "loop not distributed: use -Rpass-analysis=loop-distribute4SWPL for "
+             << "loop not distributed: use -Rpass-analysis=loop-distribute4swpl for "
                 "more "
                 "info";
     });
