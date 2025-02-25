@@ -293,16 +293,21 @@ public:
     PartitionContainer.emplace_back(Inst, L);
   }
 
-  /// Merges partitions in order to ensure that no loads or OutsizeUse are duplicated.
+  /// Adds \p Inst into a last non-cyclic partition.
+  void addToLastNonCyclicPartition(Instruction *Inst) {
+    assert(getSize()>0);
+    assert(!PartitionContainer.back().hasDepCycle());
+    PartitionContainer.back().add(Inst);
+  }
+
+  /// Merges partitions in order to ensure that no loads are duplicated.
   ///
   /// We can't duplicate loads because that could potentially reorder them.
   /// LoopAccessAnalysis provides dependency information with the context that
   /// the order of memory operation is preserved.
   ///
-  /// It also merges partitions with overlapping instructions that define the liveout values.
-  ///
   /// Return if any partitions were merged.
-  bool mergeToAvoidDuplicatedLoadsOrOusideUse() {
+  bool mergeToAvoidDuplicatedLoads() {
     using LoadToPartitionT = DenseMap<Instruction *, InstPartition *>;
     using ToBeMergedT = EquivalenceClasses<InstPartition *>;
 
@@ -319,18 +324,8 @@ public:
 
       // If a load occurs in two partitions PartI and PartJ, merge all
       // partitions (PartI, PartJ] into PartI.
-      auto DefsUsedOutside = findDefsUsedOutsideOfLoop(L);
-
-      for (Instruction *Inst : *PartI) {
-        bool useOutside = false;
-        for (auto *useOutsudeInst : DefsUsedOutside) {
-          if (useOutsudeInst == Inst ) {
-            useOutside =true;
-            break;
-          }
-        }
-
-        if (isa<LoadInst>(Inst) || useOutside) {
+      for (Instruction *Inst : *PartI)
+        if (isa<LoadInst>(Inst)) {
           bool NewElt;
           LoadToPartitionT::iterator LoadToPart;
 
@@ -338,7 +333,7 @@ public:
               LoadToPartition.insert(std::make_pair(Inst, PartI));
           if (!NewElt) {
             LLVM_DEBUG(dbgs()
-                       << "Merging partitions due to this load or OutsizeUse in multiple "
+                       << "Merging partitions due to this load in multiple "
                        << "partitions: " << PartI << ", " << LoadToPart->second
                        << "\n"
                        << *Inst << "\n");
@@ -351,7 +346,6 @@ public:
           }
         }
       }
-    }
     if (ToBeMerged.empty())
       return false;
 
@@ -717,8 +711,16 @@ public:
     // partition of the load that we set up in the previous loop (see
     // mergeToAvoidDuplicatedLoads).
     auto DefsUsedOutside = findDefsUsedOutsideOfLoop(L);
-    for (auto *Inst : DefsUsedOutside)
-      Partitions.addToNewNonCyclicPartition(Inst);
+    bool first=true;
+    for (auto *Inst : DefsUsedOutside) {
+      if (first) {
+        Partitions.addToNewNonCyclicPartition(Inst);
+        first=false;
+      }
+      else {
+        Partitions.addToLastNonCyclicPartition(Inst);
+      }
+    }
 
     LLVM_DEBUG(dbgs() << "\nSeeded partitions:\n" << Partitions);
     if (Partitions.getSize() < 2)
@@ -782,9 +784,8 @@ public:
 
     // In order to preserve original lexical order for loads, keep them in the
     // partition that we set up in the MemoryInstructionDependences loop.
-    // It also merges partitions with overlapping instructions that define the liveout values.
-    if (Partitions.mergeToAvoidDuplicatedLoadsOrOusideUse()) {
-      LLVM_DEBUG(dbgs() << "\nPartitions merged to ensure unique loads or OutsizeUse:\n"
+    if (Partitions.mergeToAvoidDuplicatedLoads()) {
+      LLVM_DEBUG(dbgs() << "\nPartitions merged to ensure unique loads:\n"
                         << Partitions);
       if (Partitions.getSize() < 2)
         return fail("CantIsolateUnsafeDeps",
