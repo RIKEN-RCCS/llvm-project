@@ -127,14 +127,12 @@ static void updateRegCounter(SmallVector<unsigned, 8> &counter, unsigned counter
   if ( from < to ) {
     for(unsigned n=from; n<=to; n++)
       counter[n]++;
-  }
-  else if ( from > to ) {
+  } else if ( from > to ) {
     for(unsigned n=from; n<countersize; n++)
       counter[n]++;
     for(unsigned n=0; n<=to; n++)
       counter[n]++;
-  }
-  else {
+  } else {
     for(unsigned n=0; n<countersize; n++)
       counter[n]++;
   }
@@ -318,16 +316,20 @@ public:
     fregcounter.resize(instnum);
     otherregcounter.resize(instnum);
 
-    if(DetailEstimateDebugLog)
-      LLVM_DEBUG(dbgs() << "\n");
+    LLVM_DEBUG({
+      if(DetailEstimateDebugLog)
+        dbgs() << "\n";
+    });
 
     for (unsigned ndef=0; ndef<instnum; ndef++) {
       auto *I = insts[ndef];
 
       auto DefsUsedOutside = findDefsUsedOutsideOfLoop(OrigLoop);
       if (I->getType()->isVoidTy()) {
-        if(DetailEstimateDebugLog)
-          LLVM_DEBUG(dbgs() << "    [" << ndef << "] (void-type)    " << *I << "\n");
+        LLVM_DEBUG({
+          if(DetailEstimateDebugLog)
+            dbgs() << "    [" << ndef << "] (void-type)    " << *I << "\n";
+        });
         continue;
       }
 
@@ -342,8 +344,7 @@ public:
       }
       if (isliveout) {
         lastref = instnum-1;
-      }
-      else {
+      } else {
         // If it is not liveout, look for the location that
         // references the definition.
         bool bSetLastref = false;
@@ -361,21 +362,19 @@ public:
               continue;
 
             // If it does not represent a value defined by an instruction or
-            // a pointer, it is not treated as a virtual register.
-            if (ref || op->getType()->isPointerTy()) {
+            // a pointer(but not global), it is not treated as a virtual register.
+            if (ref || (op->getType()->isPointerTy() && !(isa<GlobalValue>(op)))) {
               if (op == I) {
                 // Processing assuming that instructions are searched in
                 // order of appearance.
                 if (bSetLastref==false) {
                   lastref=nref;
                   bSetLastref=true;
-                }
-                else if (lastref < ndef ) {
+                } else if (lastref < ndef ) {
                   if (nref < ndef) {
                     lastref=nref;
                   }
-                }
-                else
+                } else
                   lastref=nref;
               }
               refregs.insert(op);
@@ -389,10 +388,12 @@ public:
         }
       }
 
-      if (DetailEstimateDebugLog)
-        LLVM_DEBUG(dbgs() << "    [" << ndef << "]->[" << lastref  << "]" <<
-                   ((isliveout == true) ? " (liveout) " : "           ") <<
-                   *I << ")\n");
+      LLVM_DEBUG({
+        if (DetailEstimateDebugLog)
+          dbgs() << "    [" << ndef << "]->[" << lastref  << "]" <<
+            ((isliveout == true) ? " (liveout) " : "           ") <<
+            *I << ")\n";
+      });
 
       // Update the regcounter corresponding to the type at the definition and
       // reference position
@@ -405,32 +406,26 @@ public:
 
     // References only are treated as if they live from the beginning to
     // the end of the block.
+    for (auto inst: insts)
+      refregs.erase(inst);
     for (auto refreg: refregs) {
-      bool founddef = false;
-      for (unsigned i=0; i<instnum; i++) {
-        if (insts[i]==refreg) founddef=true;
-      }
-      if (founddef==false) {
+      LLVM_DEBUG({
         if (DetailEstimateDebugLog)
-          LLVM_DEBUG(dbgs() << "    -- ref only :" << *refreg << "\n");
-        SmallVector<unsigned, 8> *regcounter;
-        // Update the regcounter corresponding to the type.
-        if (refreg->getType()->isIntOrPtrTy()) regcounter=&iregcounter;
-        else if (refreg->getType()->isFloatingPointTy()) regcounter=&fregcounter;
-        else regcounter=&otherregcounter;
-        updateRegCounter(*regcounter, instnum);
-      }
+          dbgs() << "    -- ref only :" << *refreg << "\n";
+      });
+      SmallVector<unsigned, 8> *regcounter;
+      // Update the regcounter corresponding to the type.
+      if (refreg->getType()->isIntOrPtrTy()) regcounter=&iregcounter;
+      else if (refreg->getType()->isFloatingPointTy()) regcounter=&fregcounter;
+      else regcounter=&otherregcounter;
+      updateRegCounter(*regcounter, instnum);
     }
 
     // The maxi of overlapping live ranges is the estimated registers.
     unsigned iregmax=0, fregmax=0, otherregmax=0;;
     for (unsigned n; n<instnum; n++) {
       if (iregmax < iregcounter[n]) iregmax=iregcounter[n];
-    }
-    for (unsigned n; n<instnum; n++) {
       if (fregmax < fregcounter[n]) fregmax=fregcounter[n];
-    }
-    for (unsigned n; n<instnum; n++) {
       if (otherregmax < otherregcounter[n]) otherregmax=fregcounter[n];
     }
 
@@ -735,11 +730,52 @@ public:
     }
   }
 
-  /// Merge adjacent partitions within the specified number of registers.
-  void mergeByRegs() {
+  /// Check whether merging is possible based on the number of registers.
+  ///
+  /// Merging is not possible in the following cases:
+  /// - The number of registers in Part I exceeds the specified num of registers
+  /// - The number of registers after merging exceeds the specified num of registers
+  bool canMergeByNumRegisters(InstPartition *PartI, InstPartition *PartJ) const {
+    // specified num of registers.
     unsigned limitIreg = DistributeByLimitIreg;
     unsigned limitFreg = DistributeByLimitFreg;
 
+    LLVM_DEBUG(dbgs() << "- canMergeByNumRegisters -----------\n");
+    LLVM_DEBUG(dbgs() << "Partition " << " (" << PartI << "): ");
+    PartI->estimateRegs();
+    LLVM_DEBUG(dbgs() << "Partition " << " (" << PartJ << "): ");
+    PartJ->estimateRegs();
+
+    auto I_ireg = PartI->nEstimateIreg;
+    auto I_freg = PartI->nEstimateFreg;
+    auto J_ireg = PartJ->nEstimateIreg;
+    auto J_freg = PartJ->nEstimateFreg;
+
+    if (I_ireg >= limitIreg || I_freg >= limitFreg ||
+        J_ireg >= limitIreg || J_freg >= limitFreg) {
+      LLVM_DEBUG(dbgs() << "Do not merge because the number of registers exceeds the specified number.\n");
+      return false;
+    }
+
+    // Use a temporary InstPartition to check the
+    // number of registers after merging.
+    // If the number of registers after merging exceeds a
+    // specified number, do not merge.
+    InstPartition tmpP(L);
+    PartI->copySetTo(tmpP);
+    PartJ->copySetTo(tmpP);
+    LLVM_DEBUG(dbgs() << "reg-count after merge : ");
+    tmpP.estimateRegs();
+    if (tmpP.nEstimateIreg > limitIreg || tmpP.nEstimateFreg > limitFreg) {
+      LLVM_DEBUG(dbgs() << "Do not merge because merging would exceed the specified number of registers.\n");
+      return false;
+    }
+
+    return true;
+  }
+
+  /// Merge adjacent partitions within the specified number of registers.
+  void mergeByRegs() {
     for (PartitionContainerT::iterator I = PartitionContainer.begin(),
                                        E = PartitionContainer.end();
          I != E; ++I) {
@@ -750,41 +786,12 @@ public:
       auto *PartI = &*I;
       auto *PartJ = &*J;
 
-      LLVM_DEBUG(dbgs() << "---------------------------------\n");
-      LLVM_DEBUG(dbgs() << "Partition " << " (" << PartI << "): ");
-      PartI->estimateRegs();
-      LLVM_DEBUG(dbgs() << "Partition " << " (" << PartJ << "): ");
-      PartJ->estimateRegs();
-
-      auto I_ireg = PartI->nEstimateIreg;
-      auto I_freg = PartI->nEstimateFreg;
-      auto J_ireg = PartJ->nEstimateIreg;
-      auto J_freg = PartJ->nEstimateFreg;
-
-      if (I_ireg >= limitIreg || I_freg >= limitFreg ||
-          J_ireg >= limitIreg || J_freg >= limitFreg) {
-        LLVM_DEBUG(dbgs() << "Do not merge because the number of registers exceeds the specified number.\n");
-        continue;
+      if (canMergeByNumRegisters(PartI, PartJ)) {
+        // Merge by moving instructions
+        // from the previous partition to the next partition.
+        LLVM_DEBUG(dbgs() << "Merge these partitions.\n");
+        PartI->moveTo(*PartJ);
       }
-
-      // Use a temporary InstPartition to check the
-      // number of registers after merging.
-      // If the number of registers after merging exceeds a
-      // specified number, do not merge.
-      InstPartition tmpP(L);
-      PartI->copySetTo(tmpP);
-      PartJ->copySetTo(tmpP);
-      LLVM_DEBUG(dbgs() << "reg-count after merge : ");
-      tmpP.estimateRegs();
-      if (tmpP.nEstimateIreg > limitIreg || tmpP.nEstimateFreg > limitFreg) {
-        LLVM_DEBUG(dbgs() << "Do not merge because merging would exceed the specified number of registers.\n");
-        continue;
-      }
-
-      // Merge by moving instructions
-      // from the previous partition to the next partition.
-      LLVM_DEBUG(dbgs() << "Merge these partitions.\n");
-      PartI->moveTo(*PartJ);
     }
     // Delete the partition that becomes empty after merging.
     PartitionContainer.remove_if(
@@ -992,8 +999,7 @@ public:
         Partitions.addToCyclicPartition(I);
         NumCyclic++;
         LLVM_DEBUG(dbgs() << "   Cyclic     : " << *I << "\n");
-      }
-      else {
+      } else {
         Partitions.addToNewNonCyclicPartition(I);
         NumNonCyclic++;
         LLVM_DEBUG(dbgs() << "   Non Cyclic : " << *I << "\n");
@@ -1021,8 +1027,7 @@ public:
       if (first) {
         Partitions.addToNewNonCyclicPartition(Inst);
         first=false;
-      }
-      else {
+      } else {
         Partitions.addToLastNonCyclicPartition(Inst);
       }
     }
@@ -1097,8 +1102,10 @@ public:
                     "cannot isolate unsafe dependencies");
     }
 
-    LLVM_DEBUG(dbgs() << "\nEstimate the num of required regs  for each partition.\n");
-    Partitions.calcEstimateRegs();
+    LLVM_DEBUG({
+      dbgs() << "\nEstimate the num of required regs  for each partition.\n";
+      Partitions.calcEstimateRegs();
+    });
 
     // If the total number of registers required by adjacent parcels falls below a
     // specified number, they are merged.
@@ -1108,8 +1115,7 @@ public:
       return fail("SingleUnitByRegsMerge",
                   "The division unit became one, by merging the required number of registers"
 );
-    }
-    else {
+    } else {
       Partitions.outputAnalysisOfPartitionStatus(ORE);
     }
 
