@@ -820,7 +820,7 @@ public:
       ORE->emit(OptimizationRemarkAnalysis(
                                            LDIST_NAME, "MergedDistributeUnit", L->getStartLoc(), L->getHeader()) <<
                 "distributing loop: " <<
-                ore::NV("Index",index) << "of" << ore::NV("TotalSize", size) <<
+                ore::NV("Index",index) << " of " << ore::NV("TotalSize", size) <<
                 " ireg=" << ore::NV("numIreg", nIreg) <<
                 ", freg=" << ore::NV("numFreg", nFreg) <<
                 ", numInst=" << ore::NV("numInst", instnum));
