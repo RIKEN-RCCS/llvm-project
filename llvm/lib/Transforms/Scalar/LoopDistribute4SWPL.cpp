@@ -286,6 +286,10 @@ public:
       dbgs() << *BB;
   }
 
+  /// Estimate registers that survive in a partition.
+  ///
+  /// The estimation results are stored in
+  /// nEstimateIreg, nEstimateFreg, and nEstimateOtherreg.
   void estimateRegs() {
     assert(OrigLoop->getNumBlocks() == 1); // loop body must be a single block.
 
@@ -437,6 +441,11 @@ public:
                "ireg=" << nEstimateIreg <<
                ", freg=" << nEstimateFreg << "\n");
     return ;
+  }
+
+  /// Returns the number of instructions stored in the Set.
+  unsigned getSetSize() const {
+    return Set.size();
   }
 private:
   /// Instructions from OrigLoop selected for this partition.
@@ -797,6 +806,28 @@ public:
     return;
   }
 
+  /// Output the partition status to optimize-analysis.
+  void outputAnalysisOfPartitionStatus(OptimizationRemarkEmitter *ORE) {
+    unsigned index=1;
+    unsigned size = getSize();
+    assert(size>1);
+
+    for (const auto &P : PartitionContainer) {
+      unsigned instnum = P.getSetSize();
+      unsigned nIreg = P.nEstimateIreg;
+      unsigned nFreg = P.nEstimateFreg;
+      ORE->emit(OptimizationRemarkAnalysis(
+                                           LDIST_NAME, "MergedDistributeUnit", L->getStartLoc(), L->getHeader()) <<
+                "distributing loop: " <<
+                ore::NV("Index",index) << "of" << ore::NV("TotalSize", size) <<
+                " ireg=" << ore::NV("numIreg", nIreg) <<
+                ", freg=" << ore::NV("numFreg", nFreg) <<
+                ", numInst=" << ore::NV("numInst", instnum));
+      index++;
+    }
+    return;
+  }
+
 private:
   using PartitionContainerT = std::list<InstPartition>;
 
@@ -1076,6 +1107,9 @@ public:
       return fail("SingleUnitByRegsMerge",
                   "The division unit became one, by merging the required number of registers"
 );
+    }
+    else {
+      Partitions.outputAnalysisOfPartitionStatus(ORE);
     }
 
     // Don't distribute the loop if we need too many SCEV run-time checks, or
