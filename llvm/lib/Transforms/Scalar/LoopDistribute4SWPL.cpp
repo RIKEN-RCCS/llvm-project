@@ -69,7 +69,7 @@
 
 using namespace llvm;
 
-#define LDIST_NAME "loop-distribute4SWPL"
+#define LDIST_NAME "loop-distribute4swpl"
 #define DEBUG_TYPE LDIST_NAME
 
 /// @{
@@ -107,9 +107,37 @@ static cl::opt<bool> EnableLoopDistribute(
     cl::desc("Enable the new, experimental LoopDistribution4SWPL Pass"),
     cl::init(false));
 
+static cl::opt<bool> DetailEstimateDebugLog(
+    "distribute4swpl-detail-estimate-debuglog", cl::Hidden,
+    cl::init(false));
+
+static cl::opt<unsigned> DistributeByLimitIreg(
+    "distribute4swpl-limit-ireg", cl::init(16), cl::Hidden,
+    cl::desc("Number of iregs limited by merging adjacent division units"));
+static cl::opt<unsigned> DistributeByLimitFreg(
+    "distribute4swpl-limit-freg", cl::init(16), cl::Hidden,
+    cl::desc("Number of fregs limited by merging adjacent division units"));
+
 STATISTIC(NumLoopsDistributed4SWPL, "Number of loops distributed for SWPL");
 
 namespace {
+
+static void updateRegCounter(SmallVector<unsigned, 8> &counter, unsigned countersize, unsigned from=0, unsigned to=0) {
+  assert(from<countersize && to<countersize);
+  if ( from < to ) {
+    for(unsigned n=from; n<=to; n++)
+      counter[n]++;
+  } else if ( from > to ) {
+    for(unsigned n=from; n<countersize; n++)
+      counter[n]++;
+    for(unsigned n=0; n<=to; n++)
+      counter[n]++;
+  } else {
+    for(unsigned n=0; n<countersize; n++)
+      counter[n]++;
+  }
+  return;
+}
 
 /// Maintains the set of instructions of the loop for a partition before
 /// cloning.  After cloning, it hosts the new loop.
@@ -121,12 +149,24 @@ public:
       : DepCycle(DepCycle), OrigLoop(L) {
     Set.insert(I);
   }
+  InstPartition(Loop *L, bool DepCycle = false)
+      : DepCycle(DepCycle), OrigLoop(L) {
+  }
 
   /// Returns whether this partition contains a dependence cycle.
   bool hasDepCycle() const { return DepCycle; }
 
   /// Adds an instruction to this partition.
   void add(Instruction *I) { Set.insert(I); }
+
+  /// Estimate the num of required i-reg.
+  unsigned nEstimateIreg=0;
+
+  /// Estimate the num of required f-regs.
+  unsigned nEstimateFreg=0;
+
+  /// Estimate the num of required other-regs.
+  unsigned nEstimateOtherreg=0;
 
   /// Collection accessors.
   InstructionSet::iterator begin() { return Set.begin(); }
@@ -140,6 +180,12 @@ public:
   void moveTo(InstPartition &Other) {
     Other.Set.insert(Set.begin(), Set.end());
     Set.clear();
+    Other.DepCycle |= DepCycle;
+  }
+
+  /// Copy Set of this partition into \p Other.
+  void copySetTo(InstPartition &Other) {
+    Other.Set.insert(Set.begin(), Set.end());
     Other.DepCycle |= DepCycle;
   }
 
@@ -238,6 +284,164 @@ public:
       dbgs() << *BB;
   }
 
+  /// Estimate registers that survive in a partition.
+  ///
+  /// The estimation results are stored in
+  /// nEstimateIreg, nEstimateFreg, and nEstimateOtherreg.
+  void estimateRegs() {
+    assert(OrigLoop->getNumBlocks() == 1); // loop body must be a single block.
+
+    const BasicBlock *BB = OrigLoop->getHeader(); // The header is the only loop body.
+
+    // Arrange the partition instructions in the order they appear and
+    // store them in insts.
+    // The instructions in Set should exist in the loop body.
+    SmallVector<Instruction *, 8> insts;
+    insts.clear();
+    for (const Instruction &I : *BB) {
+      for (auto *setI : Set) {
+        if ( &I == setI ) {
+          insts.push_back(setI);
+        }
+      }
+    }
+    assert(Set.size()==insts.size());
+
+    unsigned instnum = insts.size();
+    SmallVector<unsigned, 8> iregcounter;
+    SmallVector<unsigned, 8> fregcounter;
+    SmallVector<unsigned, 8> otherregcounter;
+    std::set<Value*> refregs;
+    iregcounter.resize(instnum);
+    fregcounter.resize(instnum);
+    otherregcounter.resize(instnum);
+
+    LLVM_DEBUG({
+      if(DetailEstimateDebugLog)
+        dbgs() << "\n";
+    });
+
+    for (unsigned ndef=0; ndef<instnum; ndef++) {
+      auto *I = insts[ndef];
+
+      auto DefsUsedOutside = findDefsUsedOutsideOfLoop(OrigLoop);
+      if (I->getType()->isVoidTy()) {
+        LLVM_DEBUG({
+          if(DetailEstimateDebugLog)
+            dbgs() << "    [" << ndef << "] (void-type)    " << *I << "\n";
+        });
+        continue;
+      }
+
+      // if isliveout==true, liverange is ndef to instnum-1.
+      unsigned lastref = 0;
+      bool isliveout = false;
+      for (auto *useOutsudeInst : DefsUsedOutside) {
+        if (useOutsudeInst == I) {
+          isliveout = true;
+          break;
+        }
+      }
+      if (isliveout) {
+        lastref = instnum-1;
+      } else {
+        // If it is not liveout, look for the location that
+        // references the definition.
+        bool bSetLastref = false;
+        for (unsigned nref=0; nref<instnum; nref++) {
+          auto *i = insts[nref];
+
+          for (unsigned p=0, q=i->getNumOperands(); p<q; p++) {
+            auto op = i->getOperand(p); // Value
+            auto *ref = dyn_cast<Instruction>(op); // Instruction
+
+            // When branching from the Preheader of a PHI reference,
+            // the vreg has no live range.
+            if ( isa<PHINode>(i) &&
+                 ref && ref->getParent() != OrigLoop->getHeader() )
+              continue;
+
+            // If it does not represent a value defined by an instruction or
+            // a pointer(but not global), it is not treated as a virtual register.
+            if (ref || (op->getType()->isPointerTy() && !(isa<GlobalValue>(op)))) {
+              if (op == I) {
+                // Processing assuming that instructions are searched in
+                // order of appearance.
+                if (bSetLastref==false) {
+                  lastref=nref;
+                  bSetLastref=true;
+                } else if (lastref < ndef ) {
+                  if (nref < ndef) {
+                    lastref=nref;
+                  }
+                } else
+                  lastref=nref;
+              }
+              refregs.insert(op);
+            }
+          }
+        }
+        // If no reference is found, the live range is extended to
+        // the last instruction.
+        if (!bSetLastref) {
+          lastref = instnum-1;
+        }
+      }
+
+      LLVM_DEBUG({
+        if (DetailEstimateDebugLog)
+          dbgs() << "    [" << ndef << "]->[" << lastref  << "]" <<
+            ((isliveout == true) ? " (liveout) " : "           ") <<
+            *I << ")\n";
+      });
+
+      // Update the regcounter corresponding to the type at the definition and
+      // reference position
+      SmallVector<unsigned, 8> *regcounter;
+      if (I->getType()->isIntOrPtrTy()) regcounter=&iregcounter;
+      else if (I->getType()->isFloatingPointTy()) regcounter=&fregcounter;
+      else regcounter=&otherregcounter;
+      updateRegCounter(*regcounter, instnum, ndef, lastref);
+    }
+
+    // References only are treated as if they live from the beginning to
+    // the end of the block.
+    for (auto inst: insts)
+      refregs.erase(inst);
+    for (auto refreg: refregs) {
+      LLVM_DEBUG({
+        if (DetailEstimateDebugLog)
+          dbgs() << "    -- ref only :" << *refreg << "\n";
+      });
+      SmallVector<unsigned, 8> *regcounter;
+      // Update the regcounter corresponding to the type.
+      if (refreg->getType()->isIntOrPtrTy()) regcounter=&iregcounter;
+      else if (refreg->getType()->isFloatingPointTy()) regcounter=&fregcounter;
+      else regcounter=&otherregcounter;
+      updateRegCounter(*regcounter, instnum);
+    }
+
+    // The maxi of overlapping live ranges is the estimated registers.
+    unsigned iregmax=0, fregmax=0, otherregmax=0;;
+    for (unsigned n; n<instnum; n++) {
+      if (iregmax < iregcounter[n]) iregmax=iregcounter[n];
+      if (fregmax < fregcounter[n]) fregmax=fregcounter[n];
+      if (otherregmax < otherregcounter[n]) otherregmax=fregcounter[n];
+    }
+
+    nEstimateIreg = iregmax;
+    nEstimateFreg = fregmax;
+    nEstimateOtherreg = otherregmax;
+    LLVM_DEBUG(dbgs() << "Estimate regs result : " <<
+               "ireg=" << nEstimateIreg <<
+               ", freg=" << nEstimateFreg << "\n");
+    return ;
+  }
+
+  /// Returns the number of instructions stored in the Set.
+  unsigned getSetSize() const {
+    return Set.size();
+  }
 private:
   /// Instructions from OrigLoop selected for this partition.
   InstructionSet Set;
@@ -517,6 +721,114 @@ public:
     }
   }
 
+  /// Estimage required registers of all partitions.
+  void calcEstimateRegs() {
+    unsigned Index = 0;
+    for (auto &P : PartitionContainer) {
+      LLVM_DEBUG(dbgs() << "Estimate regs of Partition " << Index++ << " (" << &P << "): ");
+      P.estimateRegs();
+    }
+  }
+
+  /// Check whether merging is possible based on the number of registers.
+  ///
+  /// Merging is not possible in the following cases:
+  /// - The number of registers in Part I exceeds the specified num of registers
+  /// - The number of registers after merging exceeds the specified num of registers
+  bool canMergeByNumRegisters(InstPartition *PartI, InstPartition *PartJ) const {
+    // specified num of registers.
+    unsigned limitIreg = DistributeByLimitIreg;
+    unsigned limitFreg = DistributeByLimitFreg;
+
+    LLVM_DEBUG(dbgs() << "- canMergeByNumRegisters -----------\n");
+    LLVM_DEBUG(dbgs() << "Partition " << " (" << PartI << "): ");
+    PartI->estimateRegs();
+    LLVM_DEBUG(dbgs() << "Partition " << " (" << PartJ << "): ");
+    PartJ->estimateRegs();
+
+    auto I_ireg = PartI->nEstimateIreg;
+    auto I_freg = PartI->nEstimateFreg;
+    auto J_ireg = PartJ->nEstimateIreg;
+    auto J_freg = PartJ->nEstimateFreg;
+
+    if (I_ireg >= limitIreg || I_freg >= limitFreg ||
+        J_ireg >= limitIreg || J_freg >= limitFreg) {
+      LLVM_DEBUG(dbgs() << "Do not merge because the number of registers exceeds the specified number.\n");
+      return false;
+    }
+
+    // Use a temporary InstPartition to check the
+    // number of registers after merging.
+    // If the number of registers after merging exceeds a
+    // specified number, do not merge.
+    InstPartition tmpP(L);
+    PartI->copySetTo(tmpP);
+    PartJ->copySetTo(tmpP);
+    LLVM_DEBUG(dbgs() << "reg-count after merge : ");
+    tmpP.estimateRegs();
+    if (tmpP.nEstimateIreg > limitIreg || tmpP.nEstimateFreg > limitFreg) {
+      LLVM_DEBUG(dbgs() << "Do not merge because merging would exceed the specified number of registers.\n");
+      return false;
+    }
+
+    return true;
+  }
+
+  /// Merge adjacent partitions within the specified number of registers.
+  void mergeByRegs() {
+    for (PartitionContainerT::iterator I = PartitionContainer.begin(),
+                                       E = PartitionContainer.end();
+         I != E; ++I) {
+      auto J=I;
+      J++;
+      if (J==E) break;
+
+      auto *PartI = &*I;
+      auto *PartJ = &*J;
+
+      if (canMergeByNumRegisters(PartI, PartJ)) {
+        // Merge by moving instructions
+        // from the previous partition to the next partition.
+        LLVM_DEBUG(dbgs() << "Merge these partitions.\n");
+        PartI->moveTo(*PartJ);
+      }
+    }
+    // Delete the partition that becomes empty after merging.
+    PartitionContainer.remove_if(
+        [](const InstPartition &P) { return P.empty(); });
+
+    LLVM_DEBUG(dbgs() << "---------------------------------\n");
+    LLVM_DEBUG(dbgs() << "Merge Result : num of Partitions : " << 
+               PartitionContainer.size() << "\n");
+    for (auto &P : PartitionContainer) {
+      LLVM_DEBUG(dbgs() << "Partition " << " (" << &P << "): ");
+      P.estimateRegs(); // Re-estimating after merge.
+    }
+    return;
+  }
+
+  /// Output the partition status to optimize-analysis.
+  void outputAnalysisOfPartitionStatus(OptimizationRemarkEmitter *ORE) {
+    unsigned index=1;
+    unsigned size = getSize();
+    assert(size>1);
+
+    for (const auto &P : PartitionContainer) {
+      unsigned instnum = P.getSetSize();
+      unsigned nIreg = P.nEstimateIreg;
+      unsigned nFreg = P.nEstimateFreg;
+      ORE->emit(OptimizationRemarkAnalysis(
+                                           LDIST_NAME, "MergedDistributeUnit", L->getStartLoc(), L->getHeader()) <<
+                "distributing loop: " <<
+                ore::NV("Index",index) << " of " << ore::NV("TotalSize", size) <<
+                " ireg=" << ore::NV("numIreg", nIreg) <<
+                ", freg=" << ore::NV("numFreg", nFreg) <<
+                ", numInst=" << ore::NV("numInst", instnum));
+      index++;
+    }
+    return;
+  }
+
 private:
   using PartitionContainerT = std::list<InstPartition>;
 
@@ -687,8 +999,7 @@ public:
         Partitions.addToCyclicPartition(I);
         NumCyclic++;
         LLVM_DEBUG(dbgs() << "   Cyclic     : " << *I << "\n");
-      }
-      else {
+      } else {
         Partitions.addToNewNonCyclicPartition(I);
         NumNonCyclic++;
         LLVM_DEBUG(dbgs() << "   Non Cyclic : " << *I << "\n");
@@ -716,8 +1027,7 @@ public:
       if (first) {
         Partitions.addToNewNonCyclicPartition(Inst);
         first=false;
-      }
-      else {
+      } else {
         Partitions.addToLastNonCyclicPartition(Inst);
       }
     }
@@ -791,7 +1101,24 @@ public:
         return fail("CantIsolateUnsafeDeps",
                     "cannot isolate unsafe dependencies");
     }
-    
+
+    LLVM_DEBUG({
+      dbgs() << "\nEstimate the num of required regs  for each partition.\n";
+      Partitions.calcEstimateRegs();
+    });
+
+    // If the total number of registers required by adjacent parcels falls below a
+    // specified number, they are merged.
+    LLVM_DEBUG(dbgs() << "\nMerging by number of registers.\n");
+    Partitions.mergeByRegs();
+    if (Partitions.getSize() < 2) {
+      return fail("SingleUnitByRegsMerge",
+                  "The division unit became one, by merging the required number of registers"
+);
+    } else {
+      Partitions.outputAnalysisOfPartitionStatus(ORE);
+    }
+
     // Don't distribute the loop if we need too many SCEV run-time checks, or
     // any if it's illegal.
     const SCEVPredicate &Pred = LAI->getPSE().getPredicate();
@@ -810,9 +1137,12 @@ public:
       return fail("HeuristicDisabled", "distribution heuristic disabled");
 
     LLVM_DEBUG(dbgs() << "\nDistributing loop: " << *L << "\n");
+
     // We're done forming the partitions set up the reverse mapping from
     // instructions to partitions.
     Partitions.setupPartitionIdOnInstructions();
+    LLVM_DEBUG(dbgs() << "\nsetupPartitionIdOnInstructions:\n" << Partitions);
+    LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after setupPartitionIdOnInstructions)\n");
 
     // rtcheck is not required for loopdistribute4swpl, but the process is left
     // in place to address memory overlap issues in the programs being
@@ -893,7 +1223,7 @@ public:
     ORE->emit([&]() {
       return OptimizationRemarkMissed(LDIST_NAME, "NotDistributed",
                                       L->getStartLoc(), L->getHeader())
-             << "loop not distributed: use -Rpass-analysis=loop-distribute4SWPL for "
+             << "loop not distributed: use -Rpass-analysis=loop-distribute4swpl for "
                 "more "
                 "info";
     });
