@@ -122,7 +122,7 @@ STATISTIC(NumLoopsDistributed4SWPL, "Number of loops distributed for SWPL");
 
 namespace {
 
-static void updateRegCounter(SmallVector<unsigned, 8> &counter, unsigned countersize, unsigned from=0, unsigned to=0) {
+static void updateRegCounter(SmallVectorImpl<unsigned> &counter, unsigned countersize, unsigned from=0, unsigned to=0) {
   assert(from<countersize && to<countersize);
   if ( from < to ) {
     for(unsigned n=from; n<=to; n++)
@@ -205,9 +205,9 @@ public:
       Instruction *I = Worklist.pop_back_val();
       // Insert instructions from the loop that we depend on.
       for (Value *V : I->operand_values()) {
-        auto *I = dyn_cast<Instruction>(V);
-        if (I && OrigLoop->contains(I->getParent()) && Set.insert(I).second)
-          Worklist.push_back(I);
+        auto *O = dyn_cast<Instruction>(V);
+        if (O && OrigLoop->contains(O->getParent()) && Set.insert(O).second)
+          Worklist.push_back(O);
       }
     }
   }
@@ -423,7 +423,7 @@ public:
 
     // The maxi of overlapping live ranges is the estimated registers.
     unsigned iregmax=0, fregmax=0, otherregmax=0;;
-    for (unsigned n; n<instnum; n++) {
+    for (unsigned n=0; n<instnum; n++) {
       if (iregmax < iregcounter[n]) iregmax=iregcounter[n];
       if (fregmax < fregcounter[n]) fregmax=fregcounter[n];
       if (otherregmax < otherregcounter[n]) otherregmax=fregcounter[n];
@@ -521,8 +521,7 @@ public:
     // Step through the partitions and create equivalence between partitions
     // that contain the same load.  Also put partitions in between them in the
     // same equivalence class to avoid reordering of memory operations.
-    for (PartitionContainerT::iterator I = PartitionContainer.begin(),
-                                       E = PartitionContainer.end();
+    for (auto I = PartitionContainer.begin(), E = PartitionContainer.end();
          I != E; ++I) {
       auto *PartI = &*I;
 
@@ -555,7 +554,7 @@ public:
 
     // Merge the member of an equivalence class into its class leader.  This
     // makes the members empty.
-    for (ToBeMergedT::iterator I = ToBeMerged.begin(), E = ToBeMerged.end();
+    for (auto I = ToBeMerged.begin(), E = ToBeMerged.end();
          I != E; ++I) {
       if (!I->isLeader())
         continue;
@@ -776,8 +775,7 @@ public:
 
   /// Merge adjacent partitions within the specified number of registers.
   void mergeByRegs() {
-    for (PartitionContainerT::iterator I = PartitionContainer.begin(),
-                                       E = PartitionContainer.end();
+    for (auto I = PartitionContainer.begin(), E = PartitionContainer.end();
          I != E; ++I) {
       auto J=I;
       J++;
@@ -785,6 +783,11 @@ public:
 
       auto *PartI = &*I;
       auto *PartJ = &*J;
+
+      if ( PartI->hasDepCycle() != PartJ->hasDepCycle() ) {
+        LLVM_DEBUG(dbgs() << "Do not merge cyclic and noncyclic partitions (-distribute4swpl-allow-merge-cyclic-and-noncyclic=false)\n");
+        continue;
+      }
 
       if (canMergeByNumRegisters(PartI, PartJ)) {
         // Merge by moving instructions
@@ -1113,8 +1116,7 @@ public:
     Partitions.mergeByRegs();
     if (Partitions.getSize() < 2) {
       return fail("SingleUnitByRegsMerge",
-                  "The division unit became one, by merging the required number of registers"
-);
+                  "The division unit became one, by merging the required number of registers");
     } else {
       Partitions.outputAnalysisOfPartitionStatus(ORE);
     }
