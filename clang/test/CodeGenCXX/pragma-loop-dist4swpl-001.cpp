@@ -9,10 +9,10 @@
 #define C_2 "clang loop distribute(disable)"
 #define D_1 "clang loop pipeline(enable)"
 #define D_2 "clang loop pipeline(disable)"
-#define E_1 "clang loop distribute4swp(enable)"
-#define E_2 "clang loop distribute4swp(disable)"
-#define E_3 "clang loop distribute4swp()"
-#define E_4 "clang loop distribute4swp(2)"
+#define E_1 "clang loop distribute4swpl(enable)"
+#define E_2 "clang loop distribute4swpl(disable)"
+#define E_3 "clang loop distribute4swpl()"
+#define E_4 "clang loop distribute4swpl(2)"
 
 
 #define N 1000
@@ -22,10 +22,10 @@ void test_1(void) {
 	int i;
     int x[N], y[N], z[N];
 	int sum=0;
-P(E_1)
 P(A_1)
 P(B_2)
 P(D_1)
+P(E_1)
     for (i = 0; i < N; i++) {
         // CHECK: br label {{.*}}, !llvm.loop ![[LOOP1_1:.*]]
         z[i] = x[i] + y[i];
@@ -35,11 +35,11 @@ P(D_1)
 }
 
 
-// CHECK: ![[LOOP1_1]] = distinct !{![[LOOP1_1]], [[MP:![0-9]+]], [[UR:![0-9]+]], [[D4SWP:![0-9]+]], [[D4SWP_FA:![0-9]+]]}
+// CHECK: ![[LOOP1_1]] = distinct !{![[LOOP1_1]], [[MP:![0-9]+]], [[UR:![0-9]+]], [[D4SWPL:![0-9]+]], [[D4SWPL_FA:![0-9]+]]}
 // CHECK-NEXT: [[MP]] = !{!"llvm.loop.mustprogress"}
 // CHECK-NEXT: [[UR]] = !{!"llvm.loop.unroll.disable"}
-// CHECK-NEXT: [[D4SWP]] = !{!"llvm.loop.distribute4swp.enable", i1 true}
-// CHECK-NEXT: [[D4SWP_FA]] = !{!"llvm.loop.distribute4swp.followup_all", [[DIST_1:![0-9]+]]}
+// CHECK-NEXT: [[D4SWPL]] = !{!"llvm.loop.distribute4swpl.enable", i1 true}
+// CHECK-NEXT: [[D4SWPL_FA]] = !{!"llvm.loop.distribute4swpl.followup_all", [[DIST_1:![0-9]+]]}
 // CHECK-NEXT: [[DIST_1]] = distinct !{[[DIST_1]], [[MP:![0-9]+]], [[UR:![0-9]+]], [[VEC_1:![0-9]+]], [[VEC_FA:![0-9]+]]}
 // CHECK-NEXT: [[VEC_1]] = !{!"llvm.loop.vectorize.enable", i1 true}
 // CHECK-NEXT: [[VEC_FA]] = !{!"llvm.loop.vectorize.followup_all", [[DIST_2:![0-9]+]]}

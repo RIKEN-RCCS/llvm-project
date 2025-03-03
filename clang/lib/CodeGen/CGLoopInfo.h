@@ -91,8 +91,8 @@ struct LoopAttributes {
   /// Value for llvm.loop.pipeline.nodep metadata
   bool PipelineNodep;
 
-  /// Value for llvm.loop.distribute4swp.enable metadata.
-  LVEnableState Distribute4swpEnable;
+  /// Value for llvm.loop.distribute4swpl.enable metadata.
+  LVEnableState Distribute4swplEnable;
 };
 
 /// Information used when generating a structured loop.
@@ -185,7 +185,7 @@ private:
                            llvm::ArrayRef<llvm::Metadata *> LoopProperties,
                            bool &HasUserTransforms);
   llvm::MDNode *
-  createLoopDistribute4swpMetadata(const LoopAttributes &Attrs,
+  createLoopDistribute4swplMetadata(const LoopAttributes &Attrs,
                                llvm::ArrayRef<llvm::Metadata *> LoopProperties,
                                bool &HasUserTransforms);
   /// @}
@@ -302,8 +302,8 @@ public:
   }
 
   /// Set the next pushed loop as a distribution candidate.
-  void setDistribute4swpState(bool Enable = true) {
-    StagedAttrs.Distribute4swpEnable =
+  void setDistribute4swplState(bool Enable = true) {
+    StagedAttrs.Distribute4swplEnable =
         Enable ? LoopAttributes::Enable : LoopAttributes::Disable;
   }
 

@@ -75,13 +75,13 @@ using namespace llvm;
 /// @{
 /// Metadata attribute names
 static const char *const LLVMLoopDistributeFollowupAll =
-    "llvm.loop.distribute4swp.followup_all";
+    "llvm.loop.distribute4swpl.followup_all";
 static const char *const LLVMLoopDistributeFollowupCoincident =
-    "llvm.loop.distribute4swp.followup_coincident";
+    "llvm.loop.distribute4swpl.followup_coincident";
 static const char *const LLVMLoopDistributeFollowupSequential =
-    "llvm.loop.distribute4swp.followup_sequential";
+    "llvm.loop.distribute4swpl.followup_sequential";
 static const char *const LLVMLoopDistributeFollowupFallback =
-    "llvm.loop.distribute4swp.followup_fallback";
+    "llvm.loop.distribute4swpl.followup_fallback";
 /// @}
 
 static cl::opt<bool>
@@ -1185,7 +1185,7 @@ public:
       MDNode *UnversionedLoopID = *makeFollowupLoopID(
           OrigLoopID,
           {LLVMLoopDistributeFollowupAll, LLVMLoopDistributeFollowupFallback},
-          "llvm.loop.distribute4swp.", true);
+          "llvm.loop.distribute4swpl.", true);
       LVer.getNonVersionedLoop()->setLoopID(UnversionedLoopID);
     }
 
@@ -1297,7 +1297,7 @@ private:
   /// enabled/disabled.
   void setForced() {
     std::optional<const MDOperand *> Value =
-        findStringMetadataForLoop(L, "llvm.loop.distribute4swp.enable");
+        findStringMetadataForLoop(L, "llvm.loop.distribute4swpl.enable");
     if (!Value)
       return;
 

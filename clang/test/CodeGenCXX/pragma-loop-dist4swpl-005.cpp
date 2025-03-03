@@ -10,10 +10,10 @@
 #define C_2 "clang loop distribute(disable)"
 #define D_1 "clang loop pipeline(enable)"
 #define D_2 "clang loop pipeline(disable)"
-#define E_1 "clang loop distribute4swp(enable)"
-#define E_2 "clang loop distribute4swp(disable)"
-#define E_3 "clang loop distribute4swp()"
-#define E_4 "clang loop distribute4swp(2)"
+#define E_1 "clang loop distribute4swpl(enable)"
+#define E_2 "clang loop distribute4swpl(disable)"
+#define E_3 "clang loop distribute4swpl()"
+#define E_4 "clang loop distribute4swpl(2)"
 
 
 #define N 1000

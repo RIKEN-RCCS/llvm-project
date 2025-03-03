@@ -9,10 +9,10 @@
 #define C_2 "clang loop distribute(disable)"
 #define D_1 "clang loop pipeline(enable)"
 #define D_2 "clang loop pipeline(disable)"
-#define E_1 "clang loop distribute4swp(enable)"
-#define E_2 "clang loop distribute4swp(disable)"
-#define E_3 "clang loop distribute4swp()"
-#define E_4 "clang loop distribute4swp(2)"
+#define E_1 "clang loop distribute4swpl(enable)"
+#define E_2 "clang loop distribute4swpl(disable)"
+#define E_3 "clang loop distribute4swpl()"
+#define E_4 "clang loop distribute4swpl(2)"
 
 
 #define N 1000
@@ -35,14 +35,14 @@ P(E_2)
 }
 
 
-// CHECK: ![[LOOP1_1]] = distinct !{![[LOOP1_1]], [[MP:![0-9]+]], [[D4SWP:![0-9]+]], [[DISTRIBUTE:![0-9]+]], [[DISTRIBUTE_FA:![0-9]+]]}
+// CHECK: ![[LOOP1_1]] = distinct !{![[LOOP1_1]], [[MP:![0-9]+]], [[D4SWPL:![0-9]+]], [[DISTRIBUTE:![0-9]+]], [[DISTRIBUTE_FA:![0-9]+]]}
 // CHECK-NEXT: [[MP]] = !{!"llvm.loop.mustprogress"}
-// CHECK-NEXT: [[D4SWP]] = !{!"llvm.loop.distribute4swp.enable", i1 false}
+// CHECK-NEXT: [[D4SWPL]] = !{!"llvm.loop.distribute4swpl.enable", i1 false}
 // CHECK-NEXT: [[DISTRIBUTE]] = !{!"llvm.loop.distribute.enable", i1 true}
 // CHECK-NEXT: [[DISTRIBUTE_FA]] = !{!"llvm.loop.distribute.followup_all", [[DIST_1:![0-9]+]]}
-// CHECK-NEXT: [[DIST_1]] = distinct !{[[DIST_1]], [[MP:![0-9]+]], [[D4SWP:![0-9]+]], [[VEC_WIDTH:![0-9]+]], [[VEC_FA:![0-9]+]]}
+// CHECK-NEXT: [[DIST_1]] = distinct !{[[DIST_1]], [[MP:![0-9]+]], [[D4SWPL:![0-9]+]], [[VEC_WIDTH:![0-9]+]], [[VEC_FA:![0-9]+]]}
 // CHECK-NEXT: [[VEC_WIDTH]] = !{!"llvm.loop.vectorize.width", i32 1}
 // CHECK-NEXT: [[VEC_FA]] = !{!"llvm.loop.vectorize.followup_all", [[DIST_2:![0-9]+]]}
-// CHECK-NEXT: [[DIST_2]] = distinct !{[[DIST_2]], [[MP:![0-9]+]], [[D4SWP:![0-9]+]], [[ISVECTORIZED:![0-9]+]], [[PIP:![0-9]+]]}
+// CHECK-NEXT: [[DIST_2]] = distinct !{[[DIST_2]], [[MP:![0-9]+]], [[D4SWPL:![0-9]+]], [[ISVECTORIZED:![0-9]+]], [[PIP:![0-9]+]]}
 // CHECK-NEXT: [[ISVECTORIZED]] = !{!"llvm.loop.isvectorized"}
 // CHECK-NEXT: [[PIP]] = !{!"llvm.loop.pipeline.disable", i1 true}
