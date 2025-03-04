@@ -90,6 +90,9 @@ struct LoopAttributes {
 
   /// Value for llvm.loop.pipeline.nodep metadata
   bool PipelineNodep;
+
+  /// Value for llvm.loop.distribute4swpl.enable metadata.
+  LVEnableState Distribute4swplEnable;
 };
 
 /// Information used when generating a structured loop.
@@ -181,6 +184,10 @@ private:
   createFullUnrollMetadata(const LoopAttributes &Attrs,
                            llvm::ArrayRef<llvm::Metadata *> LoopProperties,
                            bool &HasUserTransforms);
+  llvm::MDNode *
+  createLoopDistribute4swplMetadata(const LoopAttributes &Attrs,
+                               llvm::ArrayRef<llvm::Metadata *> LoopProperties,
+                               bool &HasUserTransforms);
   /// @}
 
   /// Create a LoopID for this loop, including transformation-unspecific
@@ -292,6 +299,12 @@ public:
   /// Set the pipeline initiation interval.
   void setPipelineInitiationInterval(unsigned C) {
     StagedAttrs.PipelineInitiationInterval = C;
+  }
+
+  /// Set the next pushed loop as a distribution candidate.
+  void setDistribute4swplState(bool Enable = true) {
+    StagedAttrs.Distribute4swplEnable =
+        Enable ? LoopAttributes::Enable : LoopAttributes::Disable;
   }
 
   /// Set value of code align for the next loop pushed.

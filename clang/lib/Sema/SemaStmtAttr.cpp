@@ -139,6 +139,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                        LoopHintAttr::PipelineInitiationInterval)
                  .Case("distribute", LoopHintAttr::Distribute)
                  .Case("pipeline_nodep", LoopHintAttr::PipelineNodep)
+                 .Case("distribute4swpl", LoopHintAttr::Distribute4swpl)
                  .Default(LoopHintAttr::Vectorize);
     if (Option == LoopHintAttr::VectorizeWidth) {
       assert((ValueExpr || (StateLoc && StateLoc->Ident)) &&
@@ -162,7 +163,8 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                Option == LoopHintAttr::Unroll ||
                Option == LoopHintAttr::Distribute ||
                Option == LoopHintAttr::PipelineDisabled ||
-               Option == LoopHintAttr::PipelineNodep) {
+               Option == LoopHintAttr::PipelineNodep ||
+               Option == LoopHintAttr::Distribute4swpl) {
       assert(StateLoc && StateLoc->Ident && "Loop hint must have an argument");
       if (StateLoc->Ident->isStr("disable"))
         State = LoopHintAttr::Disable;
@@ -450,6 +452,9 @@ CheckForIncompatibleAttributes(Sema &S,
     // The vector predication only has a state form that is exposed by
     // #pragma clang loop vectorize_predicate (enable | disable).
     VectorizePredicate,
+    // The loop distribution transformation only has a state form that is
+    // exposed by #pragma clang loop distribute4swpl (enable | disable).
+    Distribute4swpl,
     // This serves as a indicator to how many category are listed in this enum.
     NumberOfCategories
   };
@@ -500,6 +505,10 @@ CheckForIncompatibleAttributes(Sema &S,
     case LoopHintAttr::VectorizePredicate:
       Category = VectorizePredicate;
       break;
+      case LoopHintAttr::Distribute4swpl:
+      // Perform the check for duplicated 'distribute4swpl' hints.
+      Category = Distribute4swpl;
+      break;
     };
 
     assert(Category != NumberOfCategories && "Unhandled loop hint option");
@@ -511,7 +520,8 @@ CheckForIncompatibleAttributes(Sema &S,
         Option == LoopHintAttr::VectorizePredicate ||
         Option == LoopHintAttr::PipelineDisabled ||
         Option == LoopHintAttr::PipelineEnabled ||
-        Option == LoopHintAttr::Distribute) {
+        Option == LoopHintAttr::Distribute ||
+        Option == LoopHintAttr::Distribute4swpl) {
       // Enable|Disable|AssumeSafety hint.  For example, vectorize(enable).
       PrevAttr = CategoryState.StateAttr;
       CategoryState.StateAttr = LH;

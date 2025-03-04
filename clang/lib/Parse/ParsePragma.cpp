@@ -1448,6 +1448,7 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
   bool OptionDistribute = false;
   bool OptionPipelineDisabled = false;
   bool OptionPipelineNodep = false;
+  bool OptionDistribute4swpl = false;
   bool StateOption = false;
   if (OptionInfo) { // Pragma Unroll does not specify an option.
     OptionUnroll = OptionInfo->isStr("unroll");
@@ -1455,17 +1456,18 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
     OptionDistribute = OptionInfo->isStr("distribute");
     OptionPipelineDisabled = OptionInfo->isStr("pipeline");
     OptionPipelineNodep = OptionInfo->isStr("pipeline_nodep");
+    OptionDistribute4swpl = OptionInfo->isStr("distribute4swpl");
     StateOption = llvm::StringSwitch<bool>(OptionInfo->getName())
                       .Case("vectorize", true)
                       .Case("interleave", true)
                       .Case("vectorize_predicate", true)
                       .Default(false) ||
                   OptionUnroll || OptionUnrollAndJam || OptionDistribute ||
-                  OptionPipelineDisabled || OptionPipelineNodep;
+                  OptionPipelineDisabled || OptionPipelineNodep || OptionDistribute4swpl;
   }
 
   bool AssumeSafetyArg = !OptionUnroll && !OptionUnrollAndJam &&
-                         !OptionDistribute && !OptionPipelineDisabled && !OptionPipelineNodep;
+                         !OptionDistribute && !OptionPipelineDisabled && !OptionPipelineNodep && !OptionDistribute4swpl;
   // Verify loop hint has an argument.
   if (Toks[0].is(tok::eof)) {
     ConsumeAnnotationToken();
@@ -3629,6 +3631,7 @@ void PragmaLoopHintHandler::HandlePragma(Preprocessor &PP,
                            .Case("pipeline", true)
                            .Case("pipeline_initiation_interval", true)
                            .Case("pipeline_nodep", true)
+                           .Case("distribute4swpl", true)
                            .Default(false);
     if (!OptionValid) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_loop_invalid_option)
