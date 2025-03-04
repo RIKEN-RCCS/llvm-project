@@ -785,7 +785,7 @@ public:
       auto *PartJ = &*J;
 
       if ( PartI->hasDepCycle() != PartJ->hasDepCycle() ) {
-        LLVM_DEBUG(dbgs() << "Do not merge cyclic and noncyclic partitions (-distribute4swpl-allow-merge-cyclic-and-noncyclic=false)\n");
+        LLVM_DEBUG(dbgs() << "Do not merge cyclic and noncyclic partitions.\n");
         continue;
       }
 
