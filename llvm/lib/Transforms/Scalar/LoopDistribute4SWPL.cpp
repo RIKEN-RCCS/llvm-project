@@ -886,7 +886,7 @@ private:
           ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 1)))});
     MDNode *NewLoopID =
         makePostTransformationMetadata(Context, DistLoopID,
-                                         {"distribute4swpl."},
+                                         {"llvm.loop.distribute4swpl."},
                                          {dist4swplMD});
     DistLoop->setLoopID(NewLoopID);
   }
