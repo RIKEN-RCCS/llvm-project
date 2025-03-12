@@ -877,6 +877,18 @@ private:
       Loop *NewLoop = Part->getDistributedLoop();
       NewLoop->setLoopID(*PartitionID);
     }
+    Loop *DistLoop = Part->getDistributedLoop();
+    MDNode *DistLoopID = DistLoop->getLoopID();
+    LLVMContext &Context = DistLoop->getHeader()->getContext();
+    MDNode *dist4swplMD = MDNode::get(
+          Context,
+          {MDString::get(Context, "llvm.loop.distributed4swpl"),
+          ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 1)))});
+    MDNode *NewLoopID =
+        makePostTransformationMetadata(Context, DistLoopID,
+                                         {"distribute4swpl."},
+                                         {dist4swplMD});
+    DistLoop->setLoopID(NewLoopID);
   }
 };
 
