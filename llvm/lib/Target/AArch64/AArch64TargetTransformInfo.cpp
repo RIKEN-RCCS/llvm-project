@@ -4343,7 +4343,7 @@ bool llvm::enableNodep(const Loop *L) {
  * @retval true llvm.loop.distributed4swpl is specified
  * @retval false llvm.loop.distributed4swpl is not specified
  */
-static bool getDistributed4swpl(const Loop* L, MDNode *MD, bool &exists, signed &loopDistNum, signed &loopNum){
+static bool getDistributed4swpl(const Loop* L, MDNode *MD, bool &exists, unsigned &loopDistNum, unsigned &loopNum){
   if (MD->isDistinct()) {
     // example) !25 = distinct !{!25, !18, !23, !26, !27, !28}
     for (unsigned i = 1, e = MD->getNumOperands(); i < e; ++i) {
@@ -4406,11 +4406,11 @@ static bool getDistributed4swpl(const Loop* L, MDNode *MD, bool &exists, signed 
   return false;
 }
 
-bool llvm::getLoopDistributedInfo(const Loop *L, signed *LoopDistNum, signed *LoopNum) {
+bool llvm::getLoopDistributedInfo(const Loop *L, unsigned *LoopDistNum, unsigned *LoopNum) {
   bool exists=false;
   bool enabled=false;
-  signed distNum = -1;
-  signed loopNum = -1;
+  unsigned distNum = 0;
+  unsigned loopNum = 0;
   assert(L!=nullptr);
   MDNode *LoopID = L->getLoopID();
   if (LoopID == nullptr)

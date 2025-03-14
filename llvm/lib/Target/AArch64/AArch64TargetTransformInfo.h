@@ -71,7 +71,7 @@ bool enableNodep(const Loop *L);
  * @retval true distributed4swpl is specified
  * @retval false distributed4swpl is not specified
  */
-bool getLoopDistributedInfo(const Loop *L, signed *LoopDistNum, signed *LoopNum);
+bool getLoopDistributedInfo(const Loop *L, unsigned *LoopDistNum, unsigned *LoopNum);
 
 class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   using BaseT = BasicTTIImplBase<AArch64TTIImpl>;
