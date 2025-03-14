@@ -1,5 +1,5 @@
 ; RUN: opt -S -O1 -enable-loop-distribute4swpl -pass-remarks=loop-dist < %s |& FileCheck %s
-; CHECK: distributed loop (2)
+; CHECK: distributed loop. num of distributied is 2.
 ; ModuleID = 'target.c'
 source_filename = "target.c"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
