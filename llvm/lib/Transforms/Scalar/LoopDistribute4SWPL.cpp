@@ -112,10 +112,10 @@ static cl::opt<bool> DetailEstimateDebugLog(
     cl::init(false));
 
 static cl::opt<unsigned> DistributeByLimitIreg(
-    "distribute4swpl-limit-ireg", cl::init(16), cl::Hidden,
+    "distribute4swpl-limit-ireg", cl::init(20), cl::Hidden,
     cl::desc("Number of iregs limited by merging adjacent division units"));
 static cl::opt<unsigned> DistributeByLimitFreg(
-    "distribute4swpl-limit-freg", cl::init(16), cl::Hidden,
+    "distribute4swpl-limit-freg", cl::init(20), cl::Hidden,
     cl::desc("Number of fregs limited by merging adjacent division units"));
 
 STATISTIC(NumLoopsDistributed4SWPL, "Number of loops distributed for SWPL");
@@ -825,7 +825,7 @@ public:
       unsigned nFreg = P.nEstimateFreg;
       ORE->emit(OptimizationRemarkAnalysis(
                                            LDIST_NAME, "MergedDistributeUnit", L->getStartLoc(), L->getHeader()) <<
-                "distributing loop: " <<
+                "distributed loop: " <<
                 ore::NV("Index",index) << " of " << ore::NV("TotalSize", size) <<
                 " ireg=" << ore::NV("numIreg", nIreg) <<
                 ", freg=" << ore::NV("numFreg", nFreg) <<
@@ -1228,14 +1228,13 @@ public:
     ORE->emit([&]() {
       return OptimizationRemark(LDIST_NAME, "Distribute", L->getStartLoc(),
                                 L->getHeader())
-        << "distributed loop (" << ore::NV("nDistributed",Partitions.getSize()) << ")";
+        << "distributed loop. num of distributied is " << ore::NV("nDistributed",Partitions.getSize()) << ".";
     });
     return true;
   }
 
   /// Provide diagnostics then \return with false.
   bool fail(StringRef RemarkName, StringRef Message) {
-    LLVMContext &Ctx = F->getContext();
     bool Forced = isForced().value_or(false);
 
     LLVM_DEBUG(dbgs() << "Skipping; " << Message << "\n");
@@ -1255,13 +1254,6 @@ public:
                   Forced ? OptimizationRemarkAnalysis::AlwaysPrint : LDIST_NAME,
                   RemarkName, L->getStartLoc(), L->getHeader())
               << "loop not distributed: " << Message);
-
-    // Also issue a warning if distribution was requested explicitly but it
-    // failed.
-    if (Forced)
-      Ctx.diagnose(DiagnosticInfoOptimizationFailure(
-          *F, L->getStartLoc(), "loop not distributed: failed "
-                                "explicitly specified loop distribution"));
 
     return false;
   }

@@ -1,5 +1,5 @@
 ; RUN: opt -S -O1 -enable-loop-distribute4swpl -distribute4swpl-limit-freg=5 -pass-remarks=loop-dist < %s |& FileCheck %s
-; CHECK: distributed loop (2)
+; CHECK: distributed loop. num of distributied is 2.
 
 ; ModuleID = 'target.c'
 source_filename = "target.c"

@@ -1,6 +1,6 @@
 ; RUN: opt -O1 -mcpu=a64fx -enable-loop-distribute4swpl -pass-remarks=loop-distribute4swpl -S -distribute4swpl-limit-ireg=1 < %s |& FileCheck %s
 
-; CHECK: distributed loop (2)
+; CHECK: distributed loop. num of distributied is 2.
 
 ; ModuleID = 'target.c'
 source_filename = "target.c"
