@@ -1216,7 +1216,6 @@ public:
 
   /// Provide diagnostics then \return with false.
   bool fail(StringRef RemarkName, StringRef Message) {
-    LLVMContext &Ctx = F->getContext();
     bool Forced = isForced().value_or(false);
 
     LLVM_DEBUG(dbgs() << "Skipping; " << Message << "\n");
@@ -1236,13 +1235,6 @@ public:
                   Forced ? OptimizationRemarkAnalysis::AlwaysPrint : LDIST_NAME,
                   RemarkName, L->getStartLoc(), L->getHeader())
               << "loop not distributed: " << Message);
-
-    // Also issue a warning if distribution was requested explicitly but it
-    // failed.
-    if (Forced)
-      Ctx.diagnose(DiagnosticInfoOptimizationFailure(
-          *F, L->getStartLoc(), "loop not distributed: failed "
-                                "explicitly specified loop distribution"));
 
     return false;
   }
