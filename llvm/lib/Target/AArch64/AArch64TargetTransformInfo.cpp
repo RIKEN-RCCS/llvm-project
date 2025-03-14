@@ -4335,7 +4335,6 @@ bool llvm::enableNodep(const Loop *L) {
 /**
  * Search metadata to obtain the status of llvm.loop.pipeline.nodep specification
  * @details Recursively search nested metadata to obtain the specified status.
- * @param [in] L Target Loop Information
  * @param [in] MD Target metadata
  * @param [out] exists True is specified in metadata
  * @param LoopDistNum Number of loops distributions
@@ -4343,7 +4342,7 @@ bool llvm::enableNodep(const Loop *L) {
  * @retval true llvm.loop.distributed4swpl is specified
  * @retval false llvm.loop.distributed4swpl is not specified
  */
-static bool getDistributed4swpl(const Loop* L, MDNode *MD, bool &exists, unsigned &loopDistNum, unsigned &loopNum){
+static bool getDistributed4swpl(MDNode *MD, bool &exists, unsigned &loopDistNum, unsigned &loopNum){
   if (MD->isDistinct()) {
     // example) !25 = distinct !{!25, !18, !23, !26, !27, !28}
     for (unsigned i = 1, e = MD->getNumOperands(); i < e; ++i) {
@@ -4352,7 +4351,7 @@ static bool getDistributed4swpl(const Loop* L, MDNode *MD, bool &exists, unsigne
       if (MD == nullptr)
         continue;
 
-      bool ret = getDistributed4swpl(L, childMD, exists, loopDistNum, loopNum);
+      bool ret = getDistributed4swpl(childMD, exists, loopDistNum, loopNum);
       if (exists)
         return ret;
     }
@@ -4363,9 +4362,6 @@ static bool getDistributed4swpl(const Loop* L, MDNode *MD, bool &exists, unsigne
 
     if (S == nullptr)
       return false;
-
-    // loop metadata display
-    LLVM_DEBUG( if (L->getLocRange().getStart().get()) dbgs() << __func__ << ":loop=" << L->getLocRange().getStart().getLine() << "-" << L->getLocRange().getEnd().getLine() << " meta:" << S->getString() << "\n");
 
     if (S->getString()=="llvm.loop.distributed4swpl") {
       if (MD->getNumOperands() != 3) {
@@ -4400,22 +4396,18 @@ static bool getDistributed4swpl(const Loop* L, MDNode *MD, bool &exists, unsigne
         }
       }
 
-      return getDistributed4swpl(L, childMD, exists, loopDistNum, loopNum);
+      return getDistributed4swpl(childMD, exists, loopDistNum, loopNum);
     }
   }
   return false;
 }
 
-bool llvm::getLoopDistributedInfo(const Loop *L, unsigned *LoopDistNum, unsigned *LoopNum) {
+bool llvm::getLoopDistributedInfo(MDNode *LoopID, unsigned *LoopDistNum, unsigned *LoopNum) {
   bool exists=false;
   bool enabled=false;
   unsigned distNum = 0;
   unsigned loopNum = 0;
-  assert(L!=nullptr);
-  MDNode *LoopID = L->getLoopID();
-  if (LoopID == nullptr)
-    return false;
-  bool r=getDistributed4swpl(L, LoopID, exists, distNum, loopNum);
+  bool r=getDistributed4swpl(LoopID, exists, distNum, loopNum);
   if (exists) {
     enabled = r;
   }

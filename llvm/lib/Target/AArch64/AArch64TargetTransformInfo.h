@@ -65,13 +65,13 @@ bool enableNodep(const Loop *L);
 
 /**
  * Get information on destributed loops from metadata.
- * @param L Specify target Loop information
+ * @param LoopID Target metadata
  * @param LoopDistNum Number of loops distributions
  * @param LoopNum Loop Number
  * @retval true distributed4swpl is specified
  * @retval false distributed4swpl is not specified
  */
-bool getLoopDistributedInfo(const Loop *L, unsigned *LoopDistNum, unsigned *LoopNum);
+bool getLoopDistributedInfo(MDNode *LoopID, unsigned *LoopDistNum, unsigned *LoopNum);
 
 class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   using BaseT = BasicTTIImplBase<AArch64TTIImpl>;
