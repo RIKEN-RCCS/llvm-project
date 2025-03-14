@@ -2835,7 +2835,7 @@ static bool isNoPhysRegAlloc(RegAllocInfo *own, SwplRegAllocInfoTbl &rai_tbl,
  * @brief  生存区間を基に仮想レジスタへ物理レジスタを割り付ける
  * @param  [in] preg 物理レジスタ
  * @param  [in] rai 割り当て済みレジスタ情報
- * @param  [in] ekri_tbl カーネル外のレジスタ情報の表
+ * @param  [in] rai_tbl カーネル外のレジスタ情報の表
  */
 static void assignPReg(unsigned preg, RegAllocInfo *rai, SwplRegAllocInfoTbl &rai_tbl) {
   assert(rai);
@@ -3168,13 +3168,6 @@ int RegAllocInfo::calcLiveRange() {
   return -1;
 }
 
-/**
- * @brief  Determine if the LiveRange of rows in the Survival Interval Table overlap.
- * @param  [in]  reginfo1 RegAllocInfo for comparison
- * @param  [in]  reginfo2 RegAllocInfo for comparison
- * @retval true  LiveRange overlap
- * @retval false LiveRange does not overlap
- */
 bool SwplRegAllocInfoTbl::isOverlapLiveRange( RegAllocInfo *reginfo1, RegAllocInfo *reginfo2) {
   int def1 = reginfo1->num_def;
   int use1 = reginfo1->num_use;
@@ -3409,23 +3402,10 @@ unsigned SwplRegAllocInfoTbl::getReusePReg( RegAllocInfo* rai ) {
   return 0;
 }
 
-/**
- * @brief  二つの物理レジスタの物理領域が重複するかを判定する
- * @param  [in] preg1 チェック対象の物理レジスタ
- * @param  [in] preg2 チェック対象の物理レジスタ
- * @retval true  重複している
- * @retval false 重複していない
- */
 bool SwplRegAllocInfoTbl::isPRegOverlap( unsigned preg1, unsigned preg2 ) {
   return SWPipeliner::TRI->regsOverlap(preg1, preg2);
 }
 
-/**
- * @brief  指定された物理レジスタが割り当てに使用されているか否かを判定する
- * @param  [in] preg チェック対象の物理レジスタ
- * @retval true  使用されている
- * @retval false 使用されていない
- */
 bool SwplRegAllocInfoTbl::isUsePReg( unsigned preg ) {
   auto e = rai_tbl.size();
   for(unsigned i=0; i<e; i++) {

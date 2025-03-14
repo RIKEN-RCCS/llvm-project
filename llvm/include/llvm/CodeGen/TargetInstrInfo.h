@@ -2245,6 +2245,7 @@ public:
   }
 
   /// Create a branch before the kernel to pass the sequential route if the number of rotations is not enough.
+  /// \param [in] MRI
   /// \param [in] doInitVar
   /// \param [in] dbgloc
   /// \param [out] from
@@ -2275,7 +2276,7 @@ public:
   /// \param [in] MBB
   /// \param [out] Branch
   /// \param [out] Cmp
-  /// \param [out] AddSub
+  /// \param [out] Addsub
   ///
   /// \retval true found
   /// \retval false
