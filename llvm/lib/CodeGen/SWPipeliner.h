@@ -93,7 +93,7 @@ bool enableNodep(const Loop *L);
  * @retval true distributed4swpl is specified
  * @retval false distributed4swpl is not specified
  */
-bool getLoopDistributedInfo(MDNode *LoopID, unsigned *LoopDistNum, unsigned *LoopNum);
+bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum);
 
 /// Loop形状を変形したり、Loopから情報を探し出す機能を提供する
 class SwplScr {

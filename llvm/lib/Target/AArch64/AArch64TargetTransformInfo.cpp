@@ -4402,7 +4402,7 @@ static bool getDistributed4swpl(MDNode *MD, bool &exists, unsigned &loopDistNum,
   return false;
 }
 
-bool llvm::getLoopDistributedInfo(MDNode *LoopID, unsigned *LoopDistNum, unsigned *LoopNum) {
+bool llvm::getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) {
   bool exists=false;
   bool enabled=false;
   unsigned distNum = 0;
@@ -4411,8 +4411,8 @@ bool llvm::getLoopDistributedInfo(MDNode *LoopID, unsigned *LoopDistNum, unsigne
   if (exists) {
     enabled = r;
   }
-  *LoopDistNum = distNum;
-  *LoopNum = loopNum;
+  LoopDistNum = distNum;
+  LoopNum = loopNum;
   return enabled;
 }
 
