@@ -46,7 +46,7 @@ class VectorType;
  * @retval true Candidate for SWP application
  * @retval false SWP not applied
  */
-bool enableSWP(const Loop*, bool ignoreMetadataOfRemainder);
+bool enableSWP(const Loop* L, bool ignoreMetadataOfRemainder);
 
 /**
  * Returns whether or not the specified loop is a candidate for LS application from the options.

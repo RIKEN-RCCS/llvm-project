@@ -124,6 +124,7 @@ private:
 
   /// 回転数が１の場合、余りループの冗長な繰返し分岐を削除する
   /// \param [in] br
+  /// \param [in] body
   void removeIterationBranch(MachineInstr *br, MachineBasicBlock *body);
 
   /// oldBodyからnewBodyへ、MachineBasicBlock内の全命令を移動する
@@ -379,7 +380,7 @@ private:
   /// Phi命令を検索し、非SSA形式に命令例を変換する
   /// \param[in,out]  body ループボディの MachineBasicBlock
   /// \param[in,out]  pre preheaderの MachineBasicBlock
-  /// \param[in]  dbglod DebugLoc
+  /// \param[in]  dbgloc DebugLoc
   /// \param[in]  org オリジナルの MachineBasicBlock
   /// \param[in]  LiveOutReg UseMap
   void convertNonSSA(MachineBasicBlock *body, MachineBasicBlock *pre, const DebugLoc &dbgloc,
@@ -513,7 +514,7 @@ public:
   bool isRecurrence() const;
 
   /// Push the registers used by the relevant SwplInst to SwplLoop::Regs
-  /// \param[in] target SwplLoop
+  /// \param[in] loop SwplLoop
   void pushAllRegs(SwplLoop *loop);
 
   /// Freeing SwplInst
@@ -1118,7 +1119,7 @@ private:
    * \brief shouldOptimize
    *        Determine the Swpl optimization instructions for the target loop.
    *
-   * \param[in] L Target MachineLoop
+   * \param[in] BBLoop Target MachineLoop
    * \retval true  Swpl optimization target instruction
    * \retval false Swpl optimization target instruction or optimization suppression instruction
    */
@@ -1447,11 +1448,11 @@ public:
   int availablePRegNumber() const;
 
 private:
-  /// 生存区間表の行のLiveRangeが重なるかを判定する
-  /// \param [in] reginfo1 チェック対象のRegAllocInfo
-  /// \param [in] reginfo2 チェック対象のRegAllocInfo
-  /// \retval true 重なる
-  /// \retval false 重ならない
+  /// @brief  Determine if the LiveRange of rows in the Survival Interval Table overlap.
+  /// @param  [in]  reginfo1 RegAllocInfo for comparison
+  /// @param  [in]  reginfo2 RegAllocInfo for comparison
+  /// @retval true  LiveRange overlap
+  /// @retval false LiveRange does not overlap
   bool isOverlapLiveRange( RegAllocInfo *reginfo1, RegAllocInfo *reginfo2 );
 
   /// 物理的に重なるレジスタかを判定する

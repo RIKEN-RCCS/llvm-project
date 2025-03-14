@@ -211,9 +211,9 @@ FunctionPass *createSWPipelinerPass() {
 /**
  * \brief runOnMachineFunction
  *
- * \param MF 対象のMachineFunction
- * \retval true  MF に変更を加えたことを示す
- * \retval false MF を変更していないことを示す
+ * \param mf 対象のMachineFunction
+ * \retval true  mf に変更を加えたことを示す
+ * \retval false mf を変更していないことを示す
  */
 bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
 
@@ -735,9 +735,9 @@ FunctionPass *createSWPipelinerPrePass() {
 /**
  * \brief runOnMachineFunction
  *
- * \param MF 対象のMachineFunction
- * \retval true  MF に変更を加えたことを示す
- * \retval false MF を変更していないことを示す
+ * \param mf 対象のMachineFunction
+ * \retval true  mf に変更を加えたことを示す
+ * \retval false mf を変更していないことを示す
  */
 bool SWPipelinerPre::runOnMachineFunction(MachineFunction &mf) {
   if (skipFunction(mf.getFunction())) {
@@ -3553,7 +3553,7 @@ static void construct_use(Register2SwplRegMap &rmap, SwplInst &inst, MachineOper
 /// \param [in,out] inst SwplInst
 /// \param [in] MMO MachineMemOperand
 /// \param [in,out] insts SwplInsts
-/// \param [in,out] mem SwplMems
+/// \param [in,out] mems SwplMems
 /// \param [in,out] memsOtherBody SwplMems
 static void construct_mem_use(Register2SwplRegMap &rmap, SwplInst &inst, const MachineMemOperand *MMO, SwplInsts &insts,
                               SwplMems *mems, SwplMems *memsOtherBody) {

@@ -401,7 +401,7 @@ public:
   /// 命令種と依存レジスタによるペナルティを算出する
   /// \param [in] prod 先行命令のMI
   /// \param [in] cons 後続命令のMI
-  /// \param [in] regs 先行命令と後続命令で依存するレジスタ
+  /// \param [in] reg 先行命令と後続命令で依存するレジスタ
   /// \return 命令種と依存レジスタによるペナルティ
   unsigned calcPenaltyByInsttypeAndDependreg(const MachineInstr& prod, const MachineInstr& cons,
                                              const llvm::Register& reg) const override;
