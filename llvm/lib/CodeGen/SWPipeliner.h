@@ -864,6 +864,7 @@ public:
 
   /// Generate SwplDdg from instruction dependency information of SwplLoop
   /// \param[in,out]  loop SwplLoop
+  /// \param[in]  Nodep bool
   /// \return     DDG
   static SwplDdg *Initialize(SwplLoop &loop,bool Nodep);
 

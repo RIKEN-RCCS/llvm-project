@@ -2835,7 +2835,7 @@ static bool isNoPhysRegAlloc(RegAllocInfo *own, SwplRegAllocInfoTbl &rai_tbl,
  * @brief  生存区間を基に仮想レジスタへ物理レジスタを割り付ける
  * @param  [in] preg 物理レジスタ
  * @param  [in] rai 割り当て済みレジスタ情報
- * @param  [in] ekri_tbl カーネル外のレジスタ情報の表
+ * @param  [in] rai_tbl カーネル外のレジスタ情報の表
  */
 static void assignPReg(unsigned preg, RegAllocInfo *rai, SwplRegAllocInfoTbl &rai_tbl) {
   assert(rai);
