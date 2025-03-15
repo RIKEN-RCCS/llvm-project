@@ -448,6 +448,8 @@ public:
                                   TargetLibraryInfo *LibInfo,
                                   HardwareLoopInfo &HWLoopInfo);
 
+  bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum);
+
     bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
                     DominatorTree *DT, AssumptionCache *AC,
                     TargetLibraryInfo *LibInfo);
