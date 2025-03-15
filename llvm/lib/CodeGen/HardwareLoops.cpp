@@ -90,6 +90,8 @@ static void debugHWLoopFailure(const StringRef DebugMsg,
 }
 #endif
 
+bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum);
+
 static OptimizationRemarkMissed
 createHWLoopMissed(StringRef RemarkName, Loop *L, Instruction *I) {
   Value *CodeRegion = L->getHeader();
@@ -104,6 +106,12 @@ createHWLoopMissed(StringRef RemarkName, Loop *L, Instruction *I) {
   }
 
   OptimizationRemarkMissed R(DEBUG_TYPE, RemarkName, DL, CodeRegion);
+  unsigned distnum=0;
+  unsigned loopid=0;
+  if (getLoopDistributedInfo(L->getLoopID(), distnum, loopid)) {
+    R << "distributed loop: " << ore::NV("NoOfDistributed", loopid)
+    << " of " << ore::NV("NumOfDistributed", distnum) << " ";
+  }
   R << "hardware-loop not created: ";
   return R;
 }
@@ -121,6 +129,12 @@ createHWLoop(StringRef RemarkName, Loop *L, Instruction *I) {
   }
 
   OptimizationRemark R(DEBUG_TYPE, RemarkName, DL, CodeRegion);
+  unsigned distnum=0;
+  unsigned loopid=0;
+  if (getLoopDistributedInfo(L->getLoopID(), distnum, loopid)) {
+    R << "distributed loop: " << ore::NV("NoOfDistributed", loopid)
+    << " of " << ore::NV("NumOfDistributed", distnum) << " ";
+  }
   R << "hardware-loop created";
   return R;
 }
