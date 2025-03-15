@@ -4420,6 +4420,8 @@ bool AArch64TTIImpl::getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNu
   bool enabled=false;
   unsigned distNum = 0;
   unsigned loopNum = 0;
+  if (LoopID==nullptr)
+    return false;
   bool r=getDistributed4swpl(LoopID, exists, distNum, loopNum);
   if (exists) {
     enabled = r;
