@@ -110,7 +110,7 @@ attributes #0 = { noinline nounwind uwtable vscale_range(1,16) "frame-pointer"="
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 7, !"uwtable", i32 2}
 !2 = !{i32 7, !"frame-pointer", i32 1}
-!3 = !{!"clang version 18.1.8 (git@172.16.1.70:a64fx-swpl/llvm-project.git 12a42309c5fd4f205d81846435ddf871efcf8ac1)"}
+!3 = !{!"clang version 18.1.8"}
 !4 = distinct !{!4, !5, !7}
 !5 = !{!"llvm.loop.mustprogress"}
 !6 = distinct !{!6, !5}
