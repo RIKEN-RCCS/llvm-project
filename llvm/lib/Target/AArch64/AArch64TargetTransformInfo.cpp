@@ -4407,19 +4407,6 @@ bool llvm::getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigne
   bool enabled=false;
   unsigned distNum = 0;
   unsigned loopNum = 0;
-  bool r=getDistributed4swpl(LoopID, exists, distNum, loopNum);
-  if (exists) {
-    enabled = r;
-  }
-  LoopDistNum = distNum;
-  LoopNum = loopNum;
-  return enabled;
-}
-bool AArch64TTIImpl::getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) {
-  bool exists=false;
-  bool enabled=false;
-  unsigned distNum = 0;
-  unsigned loopNum = 0;
   if (LoopID==nullptr)
     return false;
   bool r=getDistributed4swpl(LoopID, exists, distNum, loopNum);
@@ -4429,6 +4416,9 @@ bool AArch64TTIImpl::getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNu
   LoopDistNum = distNum;
   LoopNum = loopNum;
   return enabled;
+}
+bool AArch64TTIImpl::getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) {
+  return llvm::getLoopDistributedInfo(LoopID, LoopDistNum, LoopNum);
 }
 
 bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
