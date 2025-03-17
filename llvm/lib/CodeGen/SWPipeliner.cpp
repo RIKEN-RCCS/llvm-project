@@ -278,18 +278,34 @@ void SWPipeliner::remarkMissed(const char *msg, MachineLoop &L) {
     SWPipeliner::Reason = "";
   }
 
+  auto *lid = L.getLoopID();
+  unsigned LoopDistNum =0;
+  unsigned LoopNum = 0;
   ORE->emit([&]() {
-    return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipelined",
-                                           L.getStartLoc(), L.getHeader())
-           << msg1;
+    MachineOptimizationRemarkMissed R(DEBUG_TYPE, "NotSoftwarePipelined",
+                                      L.getStartLoc(), L.getHeader());
+    if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
+      R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
+        << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+    }
+    R << msg1;
+    return R;
   });
 }
 
 void SWPipeliner::remarkAnalysis(const char *msg, MachineLoop &L, const char *Name) {
+  auto *lid = L.getLoopID();
+  unsigned LoopDistNum =0;
+  unsigned LoopNum = 0;
   ORE->emit([&]() {
-    return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, Name,
-                                           L.getStartLoc(), L.getHeader())
-           << msg;
+    MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, Name,
+                                        L.getStartLoc(), L.getHeader());
+    if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
+      R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
+        << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+    }
+    R << msg;
+    return R;
   });
 }
 static cl::opt<SWPipeliner::SwplRestrictionsFlag> DisableRestrictionsCheck("swpl-disable-restrictions-check",
@@ -397,21 +413,36 @@ void SWPipeliner::outputRemarkMissed(bool is_swpl, bool is_ls, const MachineLoop
     return;
   }
 
+  auto *lid = L.getLoopID();
+  unsigned LoopDistNum =0;
+  unsigned LoopNum = 0;
+  bool isDistributed = getLoopDistributedInfo(lid, LoopDistNum, LoopNum);
+
   if (is_swpl) {
     swpl_msg += SWPipeliner::Reason;
     ORE->emit([&]() {
-      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotSoftwarePipelined",
-                                           L.getStartLoc(), L.getHeader())
-             << swpl_msg;
+      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "NotSoftwarePipelined",
+                                        L.getStartLoc(), L.getHeader());
+      if (isDistributed) {
+        R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
+          << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+      }
+      R << swpl_msg;
+      return R;
     });
   }
 
   if (is_ls) {
     ls_msg += SWPipeliner::Reason;
     ORE->emit([&]() {
-      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "NotLocalScheduled",
-                                           L.getStartLoc(), L.getHeader())
-             << ls_msg;
+      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "NotLocalScheduled",
+                                        L.getStartLoc(), L.getHeader());
+      if (isDistributed) {
+        R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
+          << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+      }
+      R << ls_msg;
+      return R;
     });
   }
 
@@ -486,9 +517,17 @@ bool SWPipeliner::localscheduler(MachineLoop &L, SwplScr::UseMap &usemap, SwplDd
     G.greedyK(LS::FLOAT_TYPE, KStar);
     LS::EdgeList AddEdges;
     bool Result = G.serialize(LS::FLOAT_TYPE, KStar, SWPipeliner::LsMaxFReg, AddEdges);
+    auto *lid = L.getLoopID();
+    unsigned LoopDistNum =0;
+    unsigned LoopNum = 0;
     ORE->emit([&]() {
-      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "AddingEdges", L.getStartLoc(), L.getHeader())
-             << "Adding " << ore::NV("Edges", AddEdges.size()) << " dependencies as a result of adjusting registers.";
+      MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, "AddingEdges", L.getStartLoc(), L.getHeader());
+      if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
+        R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
+          << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+      }
+      R << "Adding " << ore::NV("Edges", AddEdges.size()) << " dependencies as a result of adjusting registers.";
+      return R;
     });
     if (OptionLsDebugRegAdjustment) dbgs() << "ls-reg-adjustment:" << Result << ", add edges:" << AddEdges.size() << "\n";
     if (AddEdges.size()) {

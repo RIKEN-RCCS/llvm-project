@@ -783,10 +783,19 @@ void SwplTransformMIR::outputLoopoptMessage(int n_body_inst) {
                           );
 
   SWPipeliner::Reason = "";
+  const auto *ml = Loop.getML();
+  auto *lid = ml->getLoopID();
+  unsigned LoopDistNum =0;
+  unsigned LoopNum = 0;
   SWPipeliner::ORE->emit([&]() {
-    return MachineOptimizationRemark(DEBUG_TYPE, "SoftwarePipelined",
-                                     LoopLoc, Loop.getML()->getHeader())
-            << msg;
+    MachineOptimizationRemark R(DEBUG_TYPE, "SoftwarePipelined",
+                                LoopLoc, Loop.getML()->getHeader());
+    if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
+      R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
+        << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+    }
+    R << msg;
+    return R;
   });
 }
 
@@ -800,10 +809,19 @@ void SwplTransformMIR::outputLoopoptMessage4LS() {
   );
 
   SWPipeliner::Reason = "";
+  const auto *ml = Loop.getML();
+  auto *lid = ml->getLoopID();
+  unsigned LoopDistNum =0;
+  unsigned LoopNum = 0;
   SWPipeliner::ORE->emit([&]() {
-    return MachineOptimizationRemark(DEBUG_TYPE, "LocalScheduled",
-                                     LoopLoc, Loop.getML()->getHeader())
-           << msg;
+    MachineOptimizationRemark R(DEBUG_TYPE, "LocalScheduled",
+                                LoopLoc, Loop.getML()->getHeader());
+    if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
+      R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
+        << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+    }
+    R << msg;
+    return R;
   });
 }
 
@@ -1146,19 +1164,28 @@ void SwplTransformMIR::printTransformingMI(const MachineInstr *mi) {
 }
 
 void SwplTransformMIR::countKernelCOPY() {
-    unsigned count = 0;
-    for (auto &mi : *(TMI.OrgBody)) {
-        if (mi.isCopy()) count++;
+  unsigned count = 0;
+  for (auto &mi : *(TMI.OrgBody)) {
+    if (mi.isCopy()) count++;
+  }
+
+  std::string msg =
+    "The number of COPY instructions in the kernel loop for software "
+    "pipelining is ";
+
+  const auto *ml = Loop.getML();
+  auto *lid = ml->getLoopID();
+  unsigned LoopDistNum =0;
+  unsigned LoopNum = 0;
+  SWPipeliner::ORE->emit([&]() {
+    MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, "countKernelCOPY",
+                                        LoopLoc,
+                                        Loop.getML()->getHeader());
+    if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
+      R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
+        << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
     }
-
-    std::string msg =
-        "The number of COPY instructions in the kernel loop for software "
-        "pipelining is ";
-
-    SWPipeliner::ORE->emit([&]() {
-        return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "countKernelCOPY",
-                                                 LoopLoc,
-                                                 Loop.getML()->getHeader())
-               << msg << ore::NV("KernelCOPY", count) << ".";
-    });
+    R << msg << ore::NV("KernelCOPY", count) << ".";
+    return R;
+  });
 }
