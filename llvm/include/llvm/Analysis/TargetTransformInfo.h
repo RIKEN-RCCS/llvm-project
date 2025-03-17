@@ -620,6 +620,12 @@ public:
                                 AssumptionCache &AC, TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) const;
 
+  /// Get information on destributed loops from metadata.
+  /// \param LoopID Target metadata
+  /// \param LoopDistNum Number of loops distributions
+  /// \param LoopNum Loop Number
+  /// \retval true distributed4swpl is specified
+  /// \retval false distributed4swpl is not specified
   bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) const;
 
   /// Query the target whether it would be prefered to create a predicated

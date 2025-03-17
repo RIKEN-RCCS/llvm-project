@@ -4405,16 +4405,14 @@ static bool getDistributed4swpl(MDNode *MD, bool &exists, unsigned &loopDistNum,
 bool llvm::getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) {
   bool exists=false;
   bool enabled=false;
-  unsigned distNum = 0;
-  unsigned loopNum = 0;
+  LoopDistNum = 0;
+  LoopNum = 0;
   if (LoopID==nullptr)
     return false;
-  bool r=getDistributed4swpl(LoopID, exists, distNum, loopNum);
+  bool r=getDistributed4swpl(LoopID, exists, LoopDistNum, LoopNum);
   if (exists) {
     enabled = r;
   }
-  LoopDistNum = distNum;
-  LoopNum = loopNum;
   return enabled;
 }
 bool AArch64TTIImpl::getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) {
