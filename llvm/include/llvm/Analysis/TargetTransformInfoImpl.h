@@ -180,6 +180,10 @@ public:
     return false;
   }
 
+  bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) const {
+    return false;
+  }
+
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const { return false; }
 
   TailFoldingStyle

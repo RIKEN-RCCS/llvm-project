@@ -659,6 +659,10 @@ public:
     return BaseT::isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
   }
 
+  bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) {
+    return BaseT::getLoopDistributedInfo(LoopID, LoopDistNum, LoopNum);
+  }
+
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
     return BaseT::preferPredicateOverEpilogue(TFI);
   }

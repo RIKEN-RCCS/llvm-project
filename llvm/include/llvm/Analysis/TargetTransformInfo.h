@@ -620,6 +620,14 @@ public:
                                 AssumptionCache &AC, TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) const;
 
+  /// Get information on destributed loops from metadata.
+  /// \param LoopID Target metadata
+  /// \param LoopDistNum Number of loops distributions
+  /// \param LoopNum Loop Number
+  /// \retval true distributed4swpl is specified
+  /// \retval false distributed4swpl is not specified
+  bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) const;
+
   /// Query the target whether it would be prefered to create a predicated
   /// vector loop, which can avoid the need to emit a scalar epilogue loop.
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const;
@@ -1811,6 +1819,7 @@ public:
                                         AssumptionCache &AC,
                                         TargetLibraryInfo *LibInfo,
                                         HardwareLoopInfo &HWLoopInfo) = 0;
+  virtual bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) = 0;
   virtual bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) = 0;
   virtual TailFoldingStyle
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) = 0;
@@ -2250,6 +2259,9 @@ public:
                                 AssumptionCache &AC, TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) override {
     return Impl.isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
+  }
+  bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) override {
+    return Impl.getLoopDistributedInfo(LoopID, LoopDistNum, LoopNum);
   }
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) override {
     return Impl.preferPredicateOverEpilogue(TFI);

@@ -624,19 +624,22 @@ public:
     // update PH to point to the newly added preheader.
     BasicBlock *TopPH = OrigPH;
     unsigned Index = getSize() - 1;
+    unsigned LoopSize = getSize();
+    unsigned LoopNum = 1;
     for (auto &Part : llvm::drop_begin(llvm::reverse(PartitionContainer))) {
       NewLoop = Part.cloneLoopWithPreheader(TopPH, Pred, Index, LI, DT);
 
       Part.getVMap()[ExitBlock] = TopPH;
       Part.remapInstructions();
-      setNewLoopID(OrigLoopID, &Part);
+      setNewLoopID(OrigLoopID, &Part, LoopSize, LoopNum);
       --Index;
+      LoopNum++;
       TopPH = NewLoop->getLoopPreheader();
     }
     Pred->getTerminator()->replaceUsesOfWith(OrigPH, TopPH);
 
     // Also set a new loop ID for the last loop.
-    setNewLoopID(OrigLoopID, &PartitionContainer.back());
+    setNewLoopID(OrigLoopID, &PartitionContainer.back(), LoopSize, LoopNum);
 
     // Now go in forward order and update the immediate dominator for the
     // preheaders with the exiting block of the previous loop.  Dominance
@@ -867,7 +870,7 @@ private:
   }
 
   /// Assign new LoopIDs for the partition's cloned loop.
-  void setNewLoopID(MDNode *OrigLoopID, InstPartition *Part) {
+  void setNewLoopID(MDNode *OrigLoopID, InstPartition *Part, int LoopSize, int LoopNum) {
     std::optional<MDNode *> PartitionID = makeFollowupLoopID(
         OrigLoopID,
         {LLVMLoopDistributeFollowupAll,
@@ -877,6 +880,22 @@ private:
       Loop *NewLoop = Part->getDistributedLoop();
       NewLoop->setLoopID(*PartitionID);
     }
+    // Updating Metadata
+    // delete "llvm.loop.distribute4swpl.*"
+    // insert "llvm.loop.distributed4swpl"
+    Loop *DistLoop = Part->getDistributedLoop();
+    MDNode *DistLoopID = DistLoop->getLoopID();
+    LLVMContext &Context = DistLoop->getHeader()->getContext();
+    MDNode *dist4swplMD = MDNode::get(
+          Context,
+          {MDString::get(Context, "llvm.loop.distributed4swpl"),
+          ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, LoopSize))),
+          ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, LoopNum)))});
+    MDNode *NewLoopID =
+        makePostTransformationMetadata(Context, DistLoopID,
+                                         {"llvm.loop.distribute4swpl."},
+                                         {dist4swplMD});
+    DistLoop->setLoopID(NewLoopID);
   }
 };
 
