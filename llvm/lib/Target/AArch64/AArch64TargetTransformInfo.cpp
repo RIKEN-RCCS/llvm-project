@@ -4332,6 +4332,93 @@ bool llvm::enableNodep(const Loop *L) {
   return enabled;
 }
 
+/**
+ * Search metadata to obtain the status of llvm.loop.pipeline.nodep specification
+ * @details Recursively search nested metadata to obtain the specified status.
+ * @param [in] MD Target metadata
+ * @param [out] exists True is specified in metadata
+ * @param LoopDistNum Number of loops distributions
+ * @param LoopNum Loop Number
+ * @retval true llvm.loop.distributed4swpl is specified
+ * @retval false llvm.loop.distributed4swpl is not specified
+ */
+static bool getDistributed4swpl(MDNode *MD, bool &exists, unsigned &loopDistNum, unsigned &loopNum){
+  if (MD->isDistinct()) {
+    // example) !25 = distinct !{!25, !18, !23, !26, !27, !28}
+    for (unsigned i = 1, e = MD->getNumOperands(); i < e; ++i) {
+      MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(i));
+
+      if (MD == nullptr)
+        continue;
+
+      bool ret = getDistributed4swpl(childMD, exists, loopDistNum, loopNum);
+      if (exists)
+        return ret;
+    }
+  }
+  else {
+    // example) !28 = !{!"llvm.loop.distributed4swpl"}
+    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+
+    if (S == nullptr)
+      return false;
+
+    if (S->getString()=="llvm.loop.distributed4swpl") {
+      if (MD->getNumOperands() != 3) {
+        return false;
+      }
+      loopDistNum = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
+      loopNum = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2))->getZExtValue();
+      exists = true;
+      return true;
+    }
+
+    // example) !28 = !{!"llvm.loop.vectorize.followup_all", !29}
+    if ((S->getString()).find("followup") != std::string::npos) {
+      // empty followup attribute
+      // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized"}
+      if (MD->getNumOperands() == 1)
+        return false;
+      
+      MDNode *childMD = dyn_cast<MDNode>(MD->getOperand(1));
+      MDString *secondS = dyn_cast<MDString>(childMD->getOperand(0));
+
+      // example) !28 = !{!"llvm.loop.vectorize.followup_vectorized", !{"llvm.loop.distributed4swpl", i32 2, i32 1}}
+      if (secondS != nullptr) {
+        if (secondS->getString()=="llvm.loop.distributed4swpl") {
+          if (MD->getNumOperands() != 3) {
+            return false;
+          }
+          loopDistNum = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
+          loopNum = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2))->getZExtValue();    
+          exists = true;
+          return true;
+        }
+      }
+
+      return getDistributed4swpl(childMD, exists, loopDistNum, loopNum);
+    }
+  }
+  return false;
+}
+
+bool llvm::getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) {
+  bool exists=false;
+  bool enabled=false;
+  LoopDistNum = 0;
+  LoopNum = 0;
+  if (LoopID==nullptr)
+    return false;
+  bool r=getDistributed4swpl(LoopID, exists, LoopDistNum, LoopNum);
+  if (exists) {
+    enabled = r;
+  }
+  return enabled;
+}
+bool AArch64TTIImpl::getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) {
+  return llvm::getLoopDistributedInfo(LoopID, LoopDistNum, LoopNum);
+}
+
 bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
   if (!ST->hasSVE())
     return false;

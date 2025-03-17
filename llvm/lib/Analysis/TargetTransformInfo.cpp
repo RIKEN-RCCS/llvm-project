@@ -354,7 +354,9 @@ bool TargetTransformInfo::isHardwareLoopProfitable(
     TargetLibraryInfo *LibInfo, HardwareLoopInfo &HWLoopInfo) const {
   return TTIImpl->isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
 }
-
+bool TargetTransformInfo::getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) const {
+  return TTIImpl->getLoopDistributedInfo(LoopID, LoopDistNum, LoopNum);
+}
 bool TargetTransformInfo::preferPredicateOverEpilogue(
     TailFoldingInfo *TFI) const {
   return TTIImpl->preferPredicateOverEpilogue(TFI);
