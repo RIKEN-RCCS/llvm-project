@@ -91,7 +91,7 @@ static void debugHWLoopFailure(const StringRef DebugMsg,
 #endif
 
 static OptimizationRemarkMissed
-createHWLoopMissed(StringRef RemarkName, Loop *L, Instruction *I) {
+createHWLoopMissed(StringRef RemarkName, Loop *L, Instruction *I, const TargetTransformInfo &TTI) {
   Value *CodeRegion = L->getHeader();
   DebugLoc DL = L->getStartLoc();
 
@@ -104,11 +104,17 @@ createHWLoopMissed(StringRef RemarkName, Loop *L, Instruction *I) {
   }
 
   OptimizationRemarkMissed R(DEBUG_TYPE, RemarkName, DL, CodeRegion);
+  unsigned distnum=0;
+  unsigned loopid=0;
+  if (TTI.getLoopDistributedInfo(L->getLoopID(), distnum, loopid)) {
+    R << "distributed loop: " << ore::NV("NoOfDistributed", loopid)
+    << " of " << ore::NV("NumOfDistributed", distnum) << " ";
+  }
   R << "hardware-loop not created: ";
   return R;
 }
 static OptimizationRemark
-createHWLoop(StringRef RemarkName, Loop *L, Instruction *I) {
+createHWLoop(StringRef RemarkName, Loop *L, Instruction *I, const TargetTransformInfo &TTI) {
   Value *CodeRegion = L->getHeader();
   DebugLoc DL = L->getStartLoc();
 
@@ -121,6 +127,12 @@ createHWLoop(StringRef RemarkName, Loop *L, Instruction *I) {
   }
 
   OptimizationRemark R(DEBUG_TYPE, RemarkName, DL, CodeRegion);
+  unsigned distnum=0;
+  unsigned loopid=0;
+  if (TTI.getLoopDistributedInfo(L->getLoopID(), distnum, loopid)) {
+    R << "distributed loop: " << ore::NV("NoOfDistributed", loopid)
+    << " of " << ore::NV("NumOfDistributed", distnum) << " ";
+  }
   R << "hardware-loop created";
   return R;
 }
@@ -128,13 +140,13 @@ createHWLoop(StringRef RemarkName, Loop *L, Instruction *I) {
 namespace {
 
   void reportHWLoopFailure(const StringRef Msg, const StringRef ORETag,
-      OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr) {
+      OptimizationRemarkEmitter *ORE, Loop *TheLoop, const TargetTransformInfo &TTI, Instruction *I = nullptr) {
     LLVM_DEBUG(debugHWLoopFailure(Msg, I));
-    ORE->emit(createHWLoopMissed(ORETag, TheLoop, I) << Msg);
+    ORE->emit(createHWLoopMissed(ORETag, TheLoop, I, TTI) << Msg);
   }
 
-  void reportHWLoopSuccess(OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr) {
-    ORE->emit(createHWLoop("HWLoop", TheLoop, I) << "");
+  void reportHWLoopSuccess(OptimizationRemarkEmitter *ORE, Loop *TheLoop, const TargetTransformInfo &TTI, Instruction *I = nullptr) {
+    ORE->emit(createHWLoop("HWLoop", TheLoop, I, TTI) << "");
   }
 
   using TTI = TargetTransformInfo;
@@ -222,14 +234,16 @@ namespace {
     HardwareLoop(HardwareLoopInfo &Info, ScalarEvolution &SE,
                  const DataLayout &DL,
                  OptimizationRemarkEmitter *ORE,
-                 HardwareLoopOptions &Opts) :
+                 HardwareLoopOptions &Opts,
+                 const TargetTransformInfo &TTI) :
       SE(SE), DL(DL), ORE(ORE), Opts(Opts), L(Info.L), M(L->getHeader()->getModule()),
       ExitCount(Info.ExitCount),
       CountType(Info.CountType),
       ExitBranch(Info.ExitBranch),
       LoopDecrement(Info.LoopDecrement),
       UsePHICounter(Info.CounterInReg),
-      UseLoopGuard(Info.PerformEntryTest) { }
+      UseLoopGuard(Info.PerformEntryTest),
+      TTI(TTI){ }
 
     void Create();
 
@@ -247,6 +261,7 @@ namespace {
     bool UsePHICounter      = false;
     bool UseLoopGuard       = false;
     BasicBlock *BeginBB     = nullptr;
+    const TargetTransformInfo &TTI;
   };
 }
 
@@ -338,7 +353,7 @@ bool HardwareLoopsImpl::TryConvertLoop(Loop *L, LLVMContext &Ctx) {
   HardwareLoopInfo HWLoopInfo(L);
   if (!HWLoopInfo.canAnalyze(LI)) {
     reportHWLoopFailure("cannot analyze loop, irreducible control flow",
-                        "HWLoopCannotAnalyze", ORE, L);
+                        "HWLoopCannotAnalyze", ORE, L, TTI);
     return false;
   }
 
@@ -349,7 +364,7 @@ bool HardwareLoopsImpl::TryConvertLoop(Loop *L, LLVMContext &Ctx) {
     if (!HWLoopInfo.Reason.empty()) {
       msg=llvm::formatv("{0}(reason={1})", msg1, HWLoopInfo.Reason);
     }
-    reportHWLoopFailure(msg,"HWLoopNotProfitable", ORE, L);
+    reportHWLoopFailure(msg,"HWLoopNotProfitable", ORE, L, TTI);
 
     return false;
   }
@@ -382,7 +397,7 @@ bool HardwareLoopsImpl::TryConvertLoop(HardwareLoopInfo &HWLoopInfo) {
     if (!HWLoopInfo.Reason.empty()) {
       msg=llvm::formatv("{0}(reason={1})", msg1, HWLoopInfo.Reason);
     }
-    reportHWLoopFailure(msg, "HWLoopNoCandidate", ORE, L);
+    reportHWLoopFailure(msg, "HWLoopNoCandidate", ORE, L, TTI);
     return false;
   }
 
@@ -398,7 +413,7 @@ bool HardwareLoopsImpl::TryConvertLoop(HardwareLoopInfo &HWLoopInfo) {
   if (!Preheader)
     return false;
 
-  HardwareLoop HWLoop(HWLoopInfo, SE, DL, ORE, Opts);
+  HardwareLoop HWLoop(HWLoopInfo, SE, DL, ORE, Opts, TTI);
   HWLoop.Create();
   ++NumHWLoops;
   return true;
@@ -410,13 +425,13 @@ void HardwareLoop::Create() {
   Value *LoopCountInit = InitLoopCount();
   if (!LoopCountInit) {
     reportHWLoopFailure("could not safely create a loop count expression",
-                        "HWLoopNotSafe", ORE, L);
+                        "HWLoopNotSafe", ORE, L, TTI);
     return;
   }
 
   Value *Setup = InsertIterationSetup(LoopCountInit);
 
-  reportHWLoopSuccess(ORE, L);
+  reportHWLoopSuccess(ORE, L, TTI);
   if (UsePHICounter || Opts.ForcePhi) {
     Instruction *LoopDec = InsertLoopRegDec(LoopCountInit);
     Value *EltsRem = InsertPHICounter(Setup, LoopDec);
