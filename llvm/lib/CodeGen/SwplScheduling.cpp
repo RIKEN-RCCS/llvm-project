@@ -996,9 +996,17 @@ bool SwplPlanSpec::init(unsigned arg_res_mii, bool &existsPragma) {
 
     //analysis
     const auto *ml = loop.getML();
+    auto *lid = ml->getLoopID();
+    unsigned LoopDistNum =0;
+    unsigned LoopNum = 0;
     SWPipeliner::ORE->emit([&]() {
-      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "InitiationInterval", ml->getStartLoc(), ml->getHeader())
-      << "This loop tries to schedule with the InitiationInterval=" << ore::NV("InitiationInterval ", ii) << " specified in the pragma.";
+      MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, "InitiationInterval", ml->getStartLoc(), ml->getHeader());
+      if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
+        R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
+          << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+      }
+      R << "This loop tries to schedule with the InitiationInterval=" << ore::NV("InitiationInterval ", ii) << " specified in the pragma.";
+      return R;
     });
       
     if (SWPipeliner::isDebugOutput()) {
@@ -1012,13 +1020,21 @@ bool SwplPlanSpec::init(unsigned arg_res_mii, bool &existsPragma) {
   if (min_ii >= max_ii) {
     //analysis
     const auto *ml = loop.getML();
+    auto *lid = ml->getLoopID();
+    unsigned LoopDistNum =0;
+    unsigned LoopNum = 0;
     SWPipeliner::ORE->emit([&]() {
-      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "MaxII", ml->getStartLoc(), ml->getHeader())
-        << "Since the calculated min_ii("
+      MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, "MaxII", ml->getStartLoc(), ml->getHeader());
+      if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
+        R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
+          << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+      }
+      R << "Since the calculated min_ii("
         << ore::NV("min_ii", min_ii)
         << ") is greater than or equal to max_ii("
         << ore::NV("max_ii", max_ii)
         << "), processing continues with max_ii=min_ii+1.";
+      return R;
     });
     max_ii=min_ii+1;
   }
