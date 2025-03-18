@@ -3921,6 +3921,8 @@ def LoopHint : Attr {
   /// pipeline_initiation_interval: create loop schedule with initiation interval equal to 'Value'.
   /// pipeline_nodep: gives a hint that there are no memory dependencies in the loop if State == Enable.
   /// distribute4swpl: attempt to distribute loop if State == Enable.
+  /// distribute4swpl_freg: upper limit on 'Value' of floating-point registers.
+  /// distribute4swpl_ireg: upper limit on 'Value' of integer registers.
 
   /// #pragma unroll <argument> directive
   /// <no arg>: fully unrolls loop.
@@ -3936,11 +3938,13 @@ def LoopHint : Attr {
                           ["vectorize", "vectorize_width", "interleave", "interleave_count",
                            "unroll", "unroll_count", "unroll_and_jam", "unroll_and_jam_count",
                            "pipeline", "pipeline_initiation_interval", "distribute",
-                           "vectorize_predicate", "pipeline", "pipeline_nodep", "distribute4swpl"],
+                           "vectorize_predicate", "pipeline", "pipeline_nodep",
+                           "distribute4swpl", "distribute4swpl_fretg", "distribute4swpl_iretg"],
                           ["Vectorize", "VectorizeWidth", "Interleave", "InterleaveCount",
                            "Unroll", "UnrollCount", "UnrollAndJam", "UnrollAndJamCount",
                            "PipelineDisabled", "PipelineInitiationInterval", "Distribute",
-                           "VectorizePredicate", "PipelineEnabled", "PipelineNodep", "Distribute4swpl"]>,
+                           "VectorizePredicate", "PipelineEnabled", "PipelineNodep",
+                           "Distribute4swpl", "Distribute4swplFreg", "Distribute4swplIreg"]>,
               EnumArgument<"State", "LoopHintState",
                            ["enable", "disable", "numeric", "fixed_width",
                             "scalable_width", "assume_safety", "full"],
@@ -3966,6 +3970,8 @@ def LoopHint : Attr {
     case PipelineEnabled: return "pipeline";
     case PipelineNodep: return "pipeline_nodep";
     case Distribute4swpl: return "distribute4swpl";
+    case Distribute4swplFreg: return "distribute4swpl_freg";
+    case Distribute4swplIreg: return "distribute4swpl_ireg";
     }
     llvm_unreachable("Unhandled LoopHint option.");
   }
