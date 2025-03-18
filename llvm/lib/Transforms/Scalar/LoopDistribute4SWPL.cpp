@@ -1265,6 +1265,20 @@ public:
   /// distribution was not forced either way.
   const std::optional<bool> &isForced() const { return IsForced; }
 
+  signed getLoopDistributeFreg(MDNode *LoopID) {
+    MDNode *MD = findOptionMDForLoopID(LoopID, "llvm.loop.distribute4swpl.freg");
+    if (ConstantInt *IntMD =
+      mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
+    return IntMD->getZExtValue();
+  }
+
+  signed getLoopDistributeIreg(MDNode *LoopID) {
+    MDNode *MD = findOptionMDForLoopID(LoopID, "llvm.loop.distribute4swpl.ireg");
+    if (ConstantInt *IntMD =
+      mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
+    return IntMD->getZExtValue();
+  }
+
 private:
   /// Filter out checks between pointers from the same partition.
   ///
