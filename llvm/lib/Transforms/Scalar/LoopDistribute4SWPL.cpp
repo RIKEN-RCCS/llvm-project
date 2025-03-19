@@ -1267,6 +1267,8 @@ public:
 
   signed getLoopDistributeFreg(MDNode *LoopID) {
     MDNode *MD = findOptionMDForLoopID(LoopID, "llvm.loop.distribute4swpl.freg");
+    if (!MD)
+      return 999;
     if (ConstantInt *IntMD =
       mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
     return IntMD->getZExtValue();
@@ -1274,6 +1276,8 @@ public:
 
   signed getLoopDistributeIreg(MDNode *LoopID) {
     MDNode *MD = findOptionMDForLoopID(LoopID, "llvm.loop.distribute4swpl.ireg");
+    if (!MD)
+      return 999;
     if (ConstantInt *IntMD =
       mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
     return IntMD->getZExtValue();
