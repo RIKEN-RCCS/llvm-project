@@ -1265,22 +1265,38 @@ public:
   /// distribution was not forced either way.
   const std::optional<bool> &isForced() const { return IsForced; }
 
+  /// Get specified value of llvm.loop.distribute4swpl.freg.
+  /// @param LoopID Metadata node
+  /// @retval 0 distribute4swpl.freg is not specified
+  /// @retval 1 to 998 Specified value of distribute4swpl.freg
+  /// @retval 999 More than 999 specified in distribute4swpl.freg
   signed getLoopDistributeFreg(MDNode *LoopID) {
+    signed fregInt = 0;
     MDNode *MD = findOptionMDForLoopID(LoopID, "llvm.loop.distribute4swpl.freg");
     if (!MD)
-      return 999;
-    if (ConstantInt *IntMD =
-      mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
-    return IntMD->getZExtValue();
+      return fregInt;
+    if (ConstantInt *IntMD = mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get())) 
+      fregInt = IntMD->getZExtValue();
+    if (fregInt > 999)
+      fregInt = 999;
+    return fregInt;
   }
 
+  /// Get specified value of llvm.loop.distribute4swpl.ireg.
+  /// @param LoopID Metadata node
+  /// @retval 0 distribute4swpl.ireg is not specified
+  /// @retval 1 to 998 Specified value of distribute4swpl.ireg
+  /// @retval 999 More than 999 specified in distribute4swpl.ireg
   signed getLoopDistributeIreg(MDNode *LoopID) {
+    signed IregInt = 0;
     MDNode *MD = findOptionMDForLoopID(LoopID, "llvm.loop.distribute4swpl.ireg");
     if (!MD)
-      return 999;
-    if (ConstantInt *IntMD =
-      mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
-    return IntMD->getZExtValue();
+      return IregInt;
+    if (ConstantInt *IntMD = mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
+      IregInt = IntMD->getZExtValue();
+    if (IregInt > 999)
+      IregInt = 999;
+    return IregInt;
   }
 
 private:
