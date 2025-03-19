@@ -1270,8 +1270,8 @@ public:
   /// @retval 0 distribute4swpl.freg is not specified
   /// @retval 1 to 998 Specified value of distribute4swpl.freg
   /// @retval 999 More than 999 specified in distribute4swpl.freg
-  signed getLoopDistributeFreg(MDNode *LoopID) {
-    signed fregInt = 0;
+  unsigned getLoopDistributeFreg(MDNode *LoopID) {
+    unsigned fregInt = 0;
     MDNode *MD = findOptionMDForLoopID(LoopID, "llvm.loop.distribute4swpl.freg");
     if (!MD)
       return fregInt;
@@ -1287,8 +1287,8 @@ public:
   /// @retval 0 distribute4swpl.ireg is not specified
   /// @retval 1 to 998 Specified value of distribute4swpl.ireg
   /// @retval 999 More than 999 specified in distribute4swpl.ireg
-  signed getLoopDistributeIreg(MDNode *LoopID) {
-    signed IregInt = 0;
+  unsigned getLoopDistributeIreg(MDNode *LoopID) {
+    unsigned IregInt = 0;
     MDNode *MD = findOptionMDForLoopID(LoopID, "llvm.loop.distribute4swpl.ireg");
     if (!MD)
       return IregInt;
