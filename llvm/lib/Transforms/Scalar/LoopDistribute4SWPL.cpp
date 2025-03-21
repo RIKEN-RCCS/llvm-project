@@ -1274,7 +1274,7 @@ public:
     unsigned fregInt = 0;
     MDNode *MD = findOptionMDForLoopID(LoopID, "llvm.loop.distribute4swpl.freg");
     if (!MD)
-      return fregInt;
+      return 0;
     if (ConstantInt *IntMD = mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get())) 
       fregInt = IntMD->getZExtValue();
     if (fregInt > 999)
@@ -1291,7 +1291,7 @@ public:
     unsigned IregInt = 0;
     MDNode *MD = findOptionMDForLoopID(LoopID, "llvm.loop.distribute4swpl.ireg");
     if (!MD)
-      return IregInt;
+      return 0;
     if (ConstantInt *IntMD = mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
       IregInt = IntMD->getZExtValue();
     if (IregInt > 999)

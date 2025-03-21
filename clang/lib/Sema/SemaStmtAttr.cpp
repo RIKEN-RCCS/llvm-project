@@ -582,7 +582,7 @@ CheckForIncompatibleAttributes(Sema &S,
 
     if (CategoryState.StateAttr && CategoryState.DistFregAttr &&
         CategoryState.StateAttr->getState() == LoopHintAttr::Disable) {
-      // distribute4swpl(Disable) and distribute4swpl_freg specified
+      // distribute4swpl(Disable) and distribute4swpl_freg are cannot be specified
       S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
          << /*Duplicate=*/false
          << CategoryState.StateAttr->getDiagnosticName(Policy)
@@ -591,7 +591,7 @@ CheckForIncompatibleAttributes(Sema &S,
     
     if (CategoryState.StateAttr && CategoryState.DistIregAttr &&
         CategoryState.StateAttr->getState() == LoopHintAttr::Disable) {
-      // distribute4swpl(Disable) and distribute4swpl_ireg specified
+      // distribute4swpl(Disable) and distribute4swpl_ireg are cannot be specified
       S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
          << /*Duplicate=*/false
          << CategoryState.StateAttr->getDiagnosticName(Policy)
