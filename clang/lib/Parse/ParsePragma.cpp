@@ -3632,6 +3632,8 @@ void PragmaLoopHintHandler::HandlePragma(Preprocessor &PP,
                            .Case("pipeline_initiation_interval", true)
                            .Case("pipeline_nodep", true)
                            .Case("distribute4swpl", true)
+                           .Case("distribute4swpl_freg", true)
+                           .Case("distribute4swpl_ireg", true)
                            .Default(false);
     if (!OptionValid) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_loop_invalid_option)

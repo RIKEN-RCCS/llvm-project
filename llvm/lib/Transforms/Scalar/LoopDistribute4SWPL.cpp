@@ -1265,6 +1265,40 @@ public:
   /// distribution was not forced either way.
   const std::optional<bool> &isForced() const { return IsForced; }
 
+  /// Get specified value of llvm.loop.distribute4swpl.freg.
+  /// @param LoopID Metadata node
+  /// @retval 0 distribute4swpl.freg is not specified
+  /// @retval 1 to 998 Specified value of distribute4swpl.freg
+  /// @retval 999 More than 999 specified in distribute4swpl.freg
+  unsigned getLoopDistributeFreg(MDNode *LoopID) {
+    unsigned fregInt = 0;
+    MDNode *MD = findOptionMDForLoopID(LoopID, "llvm.loop.distribute4swpl.freg");
+    if (!MD)
+      return 0;
+    if (ConstantInt *IntMD = mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get())) 
+      fregInt = IntMD->getZExtValue();
+    if (fregInt > 999)
+      fregInt = 999;
+    return fregInt;
+  }
+
+  /// Get specified value of llvm.loop.distribute4swpl.ireg.
+  /// @param LoopID Metadata node
+  /// @retval 0 distribute4swpl.ireg is not specified
+  /// @retval 1 to 998 Specified value of distribute4swpl.ireg
+  /// @retval 999 More than 999 specified in distribute4swpl.ireg
+  unsigned getLoopDistributeIreg(MDNode *LoopID) {
+    unsigned IregInt = 0;
+    MDNode *MD = findOptionMDForLoopID(LoopID, "llvm.loop.distribute4swpl.ireg");
+    if (!MD)
+      return 0;
+    if (ConstantInt *IntMD = mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
+      IregInt = IntMD->getZExtValue();
+    if (IregInt > 999)
+      IregInt = 999;
+    return IregInt;
+  }
+
 private:
   /// Filter out checks between pointers from the same partition.
   ///

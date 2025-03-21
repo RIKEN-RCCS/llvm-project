@@ -93,6 +93,12 @@ struct LoopAttributes {
 
   /// Value for llvm.loop.distribute4swpl.enable metadata.
   LVEnableState Distribute4swplEnable;
+
+  /// Value for llvm.loop.distribute4swpl.freg metadata.
+  unsigned Distribute4swplFreg;
+
+  /// Value for llvm.loop.distribute4swpl.ireg metadata.
+  unsigned Distribute4swplIreg;
 };
 
 /// Information used when generating a structured loop.
@@ -306,6 +312,12 @@ public:
     StagedAttrs.Distribute4swplEnable =
         Enable ? LoopAttributes::Enable : LoopAttributes::Disable;
   }
+
+  /// Set the Limit on number of floating-point registers.
+  void setDistribute4swplFreg(unsigned C) { StagedAttrs.Distribute4swplFreg = C; }
+
+  /// Set the Limit on number of integer registers.
+  void setDistribute4swplIreg(unsigned C) { StagedAttrs.Distribute4swplIreg = C; }
 
   /// Set value of code align for the next loop pushed.
   void setCodeAlign(unsigned C) { StagedAttrs.CodeAlign = C; }

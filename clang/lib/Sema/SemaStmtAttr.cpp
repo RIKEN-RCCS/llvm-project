@@ -140,6 +140,8 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                  .Case("distribute", LoopHintAttr::Distribute)
                  .Case("pipeline_nodep", LoopHintAttr::PipelineNodep)
                  .Case("distribute4swpl", LoopHintAttr::Distribute4swpl)
+                 .Case("distribute4swpl_freg", LoopHintAttr::Distribute4swplFreg)
+                 .Case("distribute4swpl_ireg", LoopHintAttr::Distribute4swplIreg)
                  .Default(LoopHintAttr::Vectorize);
     if (Option == LoopHintAttr::VectorizeWidth) {
       assert((ValueExpr || (StateLoc && StateLoc->Ident)) &&
@@ -152,7 +154,9 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
         State = LoopHintAttr::FixedWidth;
     } else if (Option == LoopHintAttr::InterleaveCount ||
                Option == LoopHintAttr::UnrollCount ||
-               Option == LoopHintAttr::PipelineInitiationInterval) {
+               Option == LoopHintAttr::PipelineInitiationInterval ||
+               Option == LoopHintAttr::Distribute4swplFreg ||
+               Option == LoopHintAttr::Distribute4swplIreg ) {
       assert(ValueExpr && "Attribute must have a valid value expression.");
       if (S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc()))
         return nullptr;
@@ -464,6 +468,8 @@ CheckForIncompatibleAttributes(Sema &S,
     const LoopHintAttr *StateAttr;
     const LoopHintAttr *NumericAttr;
     const LoopHintAttr *NodepAttr;
+    const LoopHintAttr *DistFregAttr;
+    const LoopHintAttr *DistIregAttr;
   } HintAttrs[CategoryType::NumberOfCategories] = {};
 
   for (const auto *I : Attrs) {
@@ -505,7 +511,9 @@ CheckForIncompatibleAttributes(Sema &S,
     case LoopHintAttr::VectorizePredicate:
       Category = VectorizePredicate;
       break;
-      case LoopHintAttr::Distribute4swpl:
+    case LoopHintAttr::Distribute4swpl:
+    case LoopHintAttr::Distribute4swplFreg:
+    case LoopHintAttr::Distribute4swplIreg:
       // Perform the check for duplicated 'distribute4swpl' hints.
       Category = Distribute4swpl;
       break;
@@ -529,6 +537,14 @@ CheckForIncompatibleAttributes(Sema &S,
       // Stores pragma that can only define Enable.
       PrevAttr = CategoryState.NodepAttr;
       CategoryState.NodepAttr = LH;
+    } else if (Option == LoopHintAttr::Distribute4swplFreg) {
+      // Numeric hint. distribute4swpl_freg
+      PrevAttr = CategoryState.DistFregAttr;
+      CategoryState.DistFregAttr = LH;
+    } else if (Option == LoopHintAttr::Distribute4swplIreg) {
+      // Numeric hint. distribute4swpl_ireg
+      PrevAttr = CategoryState.DistIregAttr;
+      CategoryState.DistIregAttr = LH;
     } else {
       // Numeric hint.  For example, vectorize_width(8).
       PrevAttr = CategoryState.NumericAttr;
@@ -563,6 +579,25 @@ CheckForIncompatibleAttributes(Sema &S,
         << CategoryState.StateAttr->getDiagnosticName(Policy)
         << CategoryState.NodepAttr->getDiagnosticName(Policy);
     }
+
+    if (CategoryState.StateAttr && CategoryState.DistFregAttr &&
+        CategoryState.StateAttr->getState() == LoopHintAttr::Disable) {
+      // distribute4swpl(Disable) and distribute4swpl_freg are cannot be specified
+      S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
+         << /*Duplicate=*/false
+         << CategoryState.StateAttr->getDiagnosticName(Policy)
+         << CategoryState.DistFregAttr->getDiagnosticName(Policy);
+    }
+    
+    if (CategoryState.StateAttr && CategoryState.DistIregAttr &&
+        CategoryState.StateAttr->getState() == LoopHintAttr::Disable) {
+      // distribute4swpl(Disable) and distribute4swpl_ireg are cannot be specified
+      S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
+         << /*Duplicate=*/false
+         << CategoryState.StateAttr->getDiagnosticName(Policy)
+         << CategoryState.DistIregAttr->getDiagnosticName(Policy);
+    }
+
   }
 }
 

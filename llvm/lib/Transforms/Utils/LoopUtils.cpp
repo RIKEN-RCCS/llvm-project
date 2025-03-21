@@ -448,6 +448,16 @@ TransformationMode llvm::hasDistribute4swplTransformation(const Loop *L) {
   if (getBooleanLoopAttribute(L, "llvm.loop.distribute4swpl.enable"))
     return TM_ForcedByUser;
 
+  std::optional<int> LimitFreg =
+    getOptionalIntLoopAttribute(L, "llvm.loop.istribute4swpl.freg");
+  if (LimitFreg)
+    return TM_ForcedByUser;
+
+  std::optional<int> LimitIreg =
+    getOptionalIntLoopAttribute(L, "llvm.loop.istribute4swpl.ireg");
+  if (LimitIreg)
+    return TM_ForcedByUser;
+
   if (hasDisableAllTransformsHint(L))
     return TM_Disable;
 
