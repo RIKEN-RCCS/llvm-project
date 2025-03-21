@@ -1,13 +1,13 @@
 ## ソースコード
 git@github.com:RIKEN-RCCS/llvm-project.git  
-branch:2024-base-llvm17 (It is a temporary name)
+branch:loopdistro-2024-llvm18 (It is a temporary name)
 
 ## ビルド方法
 
 1. リポジトリからソースコードをcloneする
 
       ```
-      $ git clone -b 2024-base-llvm17 https://github.com/RIKEN-RCCS/llvm-project.git
+      $ git clone -b loopdistro-2024-llvm18 https://github.com/RIKEN-RCCS/llvm-project.git
       ```
 
 2. llvm-projectディレクトリ直下でBUILD用ディレクトリを作成する
