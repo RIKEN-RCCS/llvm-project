@@ -3939,7 +3939,7 @@ def LoopHint : Attr {
                            "unroll", "unroll_count", "unroll_and_jam", "unroll_and_jam_count",
                            "pipeline", "pipeline_initiation_interval", "distribute",
                            "vectorize_predicate", "pipeline", "pipeline_nodep",
-                           "distribute4swpl", "distribute4swpl_fretg", "distribute4swpl_iretg"],
+                           "distribute4swpl", "distribute4swpl_freg", "distribute4swpl_ireg"],
                           ["Vectorize", "VectorizeWidth", "Interleave", "InterleaveCount",
                            "Unroll", "UnrollCount", "UnrollAndJam", "UnrollAndJamCount",
                            "PipelineDisabled", "PipelineInitiationInterval", "Distribute",
