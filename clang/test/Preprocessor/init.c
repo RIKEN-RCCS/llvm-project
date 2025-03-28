@@ -1534,6 +1534,7 @@
 // RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY-CXX-ATOMICS %s
 //
 // WEBASSEMBLY32:#define _ILP32 1
+// WEBASSEMBLY32:#define _LDIST_AUTO 999
 // WEBASSEMBLY32-NOT:#define _LP64
 // WEBASSEMBLY64-NOT:#define _ILP32
 // WEBASSEMBLY64:#define _LP64 1
