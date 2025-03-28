@@ -1361,6 +1361,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 #undef TARGET_OS
   }
 
+  // Macro for LoopDistribute4swpl _LDIST_AUTO
+  Builder.defineMacro("_LDIST_AUTO", "999");
+
   // Get other target #defines.
   TI.getTargetDefines(LangOpts, Builder);
 }
