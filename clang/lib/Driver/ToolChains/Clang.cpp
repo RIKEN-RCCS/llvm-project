@@ -1863,6 +1863,15 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
 
   AddUnalignedAccessWarning(CmdArgs);
 
+  if (Args.hasArg(options::OPT_fswp)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-fswp");
+  }
+  if (Args.hasArg(options::OPT_fls)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-fls");
+  }
+
   Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_intrinsics,
                     options::OPT_fno_ptrauth_intrinsics);
   Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_calls,

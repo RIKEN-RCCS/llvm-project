@@ -142,6 +142,10 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                  .Case("pipeline_initiation_interval",
                        LoopHintAttr::PipelineInitiationInterval)
                  .Case("distribute", LoopHintAttr::Distribute)
+                 .Case("pipeline_nodep", LoopHintAttr::PipelineNodep)
+                 .Case("distribute4swpl", LoopHintAttr::Distribute4swpl)
+                 .Case("distribute4swpl_freg", LoopHintAttr::Distribute4swplFreg)
+                 .Case("distribute4swpl_ireg", LoopHintAttr::Distribute4swplIreg)
                  .Default(LoopHintAttr::Vectorize);
     if (Option == LoopHintAttr::VectorizeWidth) {
       assert((ValueExpr || (StateLoc && StateLoc->Ident)) &&
@@ -155,7 +159,9 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
         State = LoopHintAttr::FixedWidth;
     } else if (Option == LoopHintAttr::InterleaveCount ||
                Option == LoopHintAttr::UnrollCount ||
-               Option == LoopHintAttr::PipelineInitiationInterval) {
+               Option == LoopHintAttr::PipelineInitiationInterval ||
+               Option == LoopHintAttr::Distribute4swplFreg ||
+               Option == LoopHintAttr::Distribute4swplIreg ) {
       assert(ValueExpr && "Attribute must have a valid value expression.");
       if (S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc(),
                               /*AllowZero=*/false))
@@ -166,7 +172,9 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                Option == LoopHintAttr::VectorizePredicate ||
                Option == LoopHintAttr::Unroll ||
                Option == LoopHintAttr::Distribute ||
-               Option == LoopHintAttr::PipelineDisabled) {
+               Option == LoopHintAttr::PipelineDisabled ||
+               Option == LoopHintAttr::PipelineNodep ||
+               Option == LoopHintAttr::Distribute4swpl) {
       assert(StateLoc && StateLoc->Ident && "Loop hint must have an argument");
       if (StateLoc->Ident->isStr("disable"))
         State = LoopHintAttr::Disable;
@@ -174,9 +182,12 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
         State = LoopHintAttr::AssumeSafety;
       else if (StateLoc->Ident->isStr("full"))
         State = LoopHintAttr::Full;
-      else if (StateLoc->Ident->isStr("enable"))
+      else if (StateLoc->Ident->isStr("enable")) {
+        if (Option == LoopHintAttr::PipelineDisabled) {
+          Option = LoopHintAttr::PipelineEnabled;
+        }
         State = LoopHintAttr::Enable;
-      else
+      } else
         llvm_unreachable("bad loop hint argument");
     } else
       llvm_unreachable("bad loop hint");
@@ -472,6 +483,9 @@ CheckForIncompatibleAttributes(Sema &S,
     // The vector predication only has a state form that is exposed by
     // #pragma clang loop vectorize_predicate (enable | disable).
     VectorizePredicate,
+    // The loop distribution transformation only has a state form that is
+    // exposed by #pragma clang loop distribute4swpl (enable | disable).
+    Distribute4swpl,
     // This serves as a indicator to how many category are listed in this enum.
     NumberOfCategories
   };
@@ -480,6 +494,9 @@ CheckForIncompatibleAttributes(Sema &S,
   struct {
     const LoopHintAttr *StateAttr;
     const LoopHintAttr *NumericAttr;
+    const LoopHintAttr *NodepAttr;
+    const LoopHintAttr *DistFregAttr;
+    const LoopHintAttr *DistIregAttr;
   } HintAttrs[CategoryType::NumberOfCategories] = {};
 
   for (const auto *I : Attrs) {
@@ -513,11 +530,19 @@ CheckForIncompatibleAttributes(Sema &S,
       Category = Distribute;
       break;
     case LoopHintAttr::PipelineDisabled:
+    case LoopHintAttr::PipelineEnabled:
     case LoopHintAttr::PipelineInitiationInterval:
+    case LoopHintAttr::PipelineNodep:
       Category = Pipeline;
       break;
     case LoopHintAttr::VectorizePredicate:
       Category = VectorizePredicate;
+      break;
+    case LoopHintAttr::Distribute4swpl:
+    case LoopHintAttr::Distribute4swplFreg:
+    case LoopHintAttr::Distribute4swplIreg:
+      // Perform the check for duplicated 'distribute4swpl' hints.
+      Category = Distribute4swpl;
       break;
     };
 
@@ -529,10 +554,24 @@ CheckForIncompatibleAttributes(Sema &S,
         Option == LoopHintAttr::UnrollAndJam ||
         Option == LoopHintAttr::VectorizePredicate ||
         Option == LoopHintAttr::PipelineDisabled ||
-        Option == LoopHintAttr::Distribute) {
+        Option == LoopHintAttr::PipelineEnabled ||
+        Option == LoopHintAttr::Distribute ||
+        Option == LoopHintAttr::Distribute4swpl) {
       // Enable|Disable|AssumeSafety hint.  For example, vectorize(enable).
       PrevAttr = CategoryState.StateAttr;
       CategoryState.StateAttr = LH;
+    } else if (Option == LoopHintAttr::PipelineNodep) {
+      // Stores pragma that can only define Enable.
+      PrevAttr = CategoryState.NodepAttr;
+      CategoryState.NodepAttr = LH;
+    } else if (Option == LoopHintAttr::Distribute4swplFreg) {
+      // Numeric hint. distribute4swpl_freg
+      PrevAttr = CategoryState.DistFregAttr;
+      CategoryState.DistFregAttr = LH;
+    } else if (Option == LoopHintAttr::Distribute4swplIreg) {
+      // Numeric hint. distribute4swpl_ireg
+      PrevAttr = CategoryState.DistIregAttr;
+      CategoryState.DistIregAttr = LH;
     } else {
       // Numeric hint.  For example, vectorize_width(8).
       PrevAttr = CategoryState.NumericAttr;
@@ -559,6 +598,33 @@ CheckForIncompatibleAttributes(Sema &S,
           << CategoryState.StateAttr->getDiagnosticName(Policy)
           << CategoryState.NumericAttr->getDiagnosticName(Policy);
     }
+
+    if (CategoryState.StateAttr && CategoryState.NodepAttr &&
+         CategoryState.StateAttr->getState() == LoopHintAttr::Disable) {
+      S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
+          << /*Duplicate=*/false
+          << CategoryState.StateAttr->getDiagnosticName(Policy)
+          << CategoryState.NodepAttr->getDiagnosticName(Policy);
+    }
+
+    if (CategoryState.StateAttr && CategoryState.DistFregAttr &&
+        CategoryState.StateAttr->getState() == LoopHintAttr::Disable) {
+      // distribute4swpl(Disable) and distribute4swpl_freg are cannot be specified
+      S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
+          << /*Duplicate=*/false
+          << CategoryState.StateAttr->getDiagnosticName(Policy)
+          << CategoryState.DistFregAttr->getDiagnosticName(Policy);
+    }
+    
+    if (CategoryState.StateAttr && CategoryState.DistIregAttr &&
+        CategoryState.StateAttr->getState() == LoopHintAttr::Disable) {
+      // distribute4swpl(Disable) and distribute4swpl_ireg are cannot be specified
+      S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
+          << /*Duplicate=*/false
+          << CategoryState.StateAttr->getDiagnosticName(Policy)
+          << CategoryState.DistIregAttr->getDiagnosticName(Policy);
+    }
+
   }
 }
 
