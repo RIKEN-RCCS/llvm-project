@@ -1455,30 +1455,39 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
   bool OptionUnrollAndJam = false;
   bool OptionDistribute = false;
   bool OptionPipelineDisabled = false;
+  bool OptionPipelineNodep = false;
+  bool OptionDistribute4swpl = false;
   bool StateOption = false;
   if (OptionInfo) { // Pragma Unroll does not specify an option.
     OptionUnroll = OptionInfo->isStr("unroll");
     OptionUnrollAndJam = OptionInfo->isStr("unroll_and_jam");
     OptionDistribute = OptionInfo->isStr("distribute");
     OptionPipelineDisabled = OptionInfo->isStr("pipeline");
+    OptionPipelineNodep = OptionInfo->isStr("pipeline_nodep");
+    OptionDistribute4swpl = OptionInfo->isStr("distribute4swpl");
     StateOption = llvm::StringSwitch<bool>(OptionInfo->getName())
                       .Case("vectorize", true)
                       .Case("interleave", true)
                       .Case("vectorize_predicate", true)
                       .Default(false) ||
                   OptionUnroll || OptionUnrollAndJam || OptionDistribute ||
-                  OptionPipelineDisabled;
+                  OptionPipelineDisabled || OptionPipelineNodep || OptionDistribute4swpl;
   }
 
   bool AssumeSafetyArg = !OptionUnroll && !OptionUnrollAndJam &&
-                         !OptionDistribute && !OptionPipelineDisabled;
+                         !OptionDistribute && !OptionPipelineDisabled && !OptionPipelineNodep && !OptionDistribute4swpl;
   // Verify loop hint has an argument.
   if (Toks[0].is(tok::eof)) {
     ConsumeAnnotationToken();
+    // Enable can only be specified for nodep, which processes it individually.
+    if (OptionPipelineNodep) {
+      Diag(Toks[0].getLocation(), diag::err_pragma_pipeline_nodep_keyword);
+    } else {
     Diag(Toks[0].getLocation(), diag::err_pragma_loop_missing_argument)
         << /*StateArgument=*/StateOption
         << /*FullKeyword=*/(OptionUnroll || OptionUnrollAndJam)
         << /*AssumeSafetyKeyword=*/AssumeSafetyArg;
+    }
     return false;
   }
 
@@ -1490,14 +1499,16 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
 
     bool Valid = StateInfo &&
                  llvm::StringSwitch<bool>(StateInfo->getName())
-                     .Case("disable", true)
-                     .Case("enable", !OptionPipelineDisabled)
+                     //Disable cannot be specified in Nodep, so it will be an error.
+                     .Case("disable", !OptionPipelineNodep)
+                     .Case("enable", true)
                      .Case("full", OptionUnroll || OptionUnrollAndJam)
                      .Case("assume_safety", AssumeSafetyArg)
                      .Default(false);
     if (!Valid) {
-      if (OptionPipelineDisabled) {
-        Diag(Toks[0].getLocation(), diag::err_pragma_pipeline_invalid_keyword);
+      // Enable can only be specified for nodep, which processes it individually.
+      if (OptionPipelineNodep) {
+        Diag(Toks[0].getLocation(), diag::err_pragma_pipeline_nodep_keyword);
       } else {
         Diag(Toks[0].getLocation(), diag::err_pragma_invalid_keyword)
             << /*FullKeyword=*/(OptionUnroll || OptionUnrollAndJam)
@@ -3593,6 +3604,7 @@ static bool ParseLoopHintValue(Preprocessor &PP, Token &Tok, Token PragmaName,
 ///    'unroll_count' '(' loop-hint-value ')'
 ///    'pipeline' '(' disable ')'
 ///    'pipeline_initiation_interval' '(' loop-hint-value ')'
+///    'pipeline_nodep' '(' enable ')'
 ///
 ///  loop-hint-keyword:
 ///    'enable'
@@ -3655,6 +3667,10 @@ void PragmaLoopHintHandler::HandlePragma(Preprocessor &PP,
                            .Case("unroll_count", true)
                            .Case("pipeline", true)
                            .Case("pipeline_initiation_interval", true)
+                           .Case("pipeline_nodep", true)
+                           .Case("distribute4swpl", true)
+                           .Case("distribute4swpl_freg", true)
+                           .Case("distribute4swpl_ireg", true)
                            .Default(false);
     if (!OptionValid) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_loop_invalid_option)

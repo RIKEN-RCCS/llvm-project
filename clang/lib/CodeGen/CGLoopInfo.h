@@ -84,6 +84,21 @@ struct LoopAttributes {
 
   /// Value for whether the loop is required to make progress.
   bool MustProgress;
+
+  /// Value for llvm.loop.pipeline.enable metadata.
+  bool PipelineEnabled;
+
+  /// Value for llvm.loop.pipeline.nodep metadata
+  bool PipelineNodep;
+
+  /// Value for llvm.loop.distribute4swpl.enable metadata.
+  LVEnableState Distribute4swplEnable;
+
+  /// Value for llvm.loop.distribute4swpl.freg metadata.
+  unsigned Distribute4swplFreg;
+
+  /// Value for llvm.loop.distribute4swpl.ireg metadata.
+  unsigned Distribute4swplIreg;
 };
 
 /// Information used when generating a structured loop.
@@ -179,6 +194,10 @@ private:
   createFullUnrollMetadata(const LoopAttributes &Attrs,
                            llvm::ArrayRef<llvm::Metadata *> LoopProperties,
                            bool &HasUserTransforms);
+  llvm::MDNode *
+  createLoopDistribute4swplMetadata(const LoopAttributes &Attrs,
+                               llvm::ArrayRef<llvm::Metadata *> LoopProperties,
+                               bool &HasUserTransforms);
   /// @}
 
   /// Create a LoopID for this loop, including transformation-unspecific
@@ -284,16 +303,34 @@ public:
   /// Set the pipeline disabled state.
   void setPipelineDisabled(bool S) { StagedAttrs.PipelineDisabled = S; }
 
+  /// Set the pipeline enabled state.
+  void setPipelineEnabled(bool S) { StagedAttrs.PipelineEnabled = S; }
+
   /// Set the pipeline initiation interval.
   void setPipelineInitiationInterval(unsigned C) {
     StagedAttrs.PipelineInitiationInterval = C;
   }
+
+  /// Set the next pushed loop as a distribution candidate.
+  void setDistribute4swplState(bool Enable = true) {
+    StagedAttrs.Distribute4swplEnable =
+        Enable ? LoopAttributes::Enable : LoopAttributes::Disable;
+  }
+
+  /// Set the Limit on number of floating-point registers.
+  void setDistribute4swplFreg(unsigned C) { StagedAttrs.Distribute4swplFreg = C; }
+
+  /// Set the Limit on number of integer registers.
+  void setDistribute4swplIreg(unsigned C) { StagedAttrs.Distribute4swplIreg = C; }
 
   /// Set value of code align for the next loop pushed.
   void setCodeAlign(unsigned C) { StagedAttrs.CodeAlign = C; }
 
   /// Set no progress for the next loop pushed.
   void setMustProgress(bool P) { StagedAttrs.MustProgress = P; }
+
+/// Set the pipeline nodep
+  void setPipelineNodep(bool S) { StagedAttrs.PipelineNodep = S; }
 
   /// Returns true if there is LoopInfo on the stack.
   bool hasInfo() const { return !Active.empty(); }
