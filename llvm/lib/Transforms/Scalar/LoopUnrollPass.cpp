@@ -1326,7 +1326,6 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   if (!UP.Count)
     return LoopUnrollResult::Unmodified;
 
-  //@ToDo 相談して対応
   UP.Runtime &= UCE.ConvergenceAllowsRuntime;
 
   if (PP.PeelCount) {
@@ -1392,6 +1391,12 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
                                         LLVMLoopUnrollFollowupRemainder});
     if (RemainderLoopID)
       RemainderLoop->setLoopID(*RemainderLoopID);
+
+    // Generate meta information only for SWPL target loops.
+    // This is done so as not to affect the existing lit.
+    if (TTI.isSwpDirected(L) && !EnablePipelineRemainderLoopUnroll) {
+      AddSWPLDisableMetaData(RemainderLoop);
+    }
   }
 
   if (UnrollResult != LoopUnrollResult::FullyUnrolled) {
