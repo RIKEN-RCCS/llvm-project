@@ -179,6 +179,9 @@ static cl::opt<unsigned> PragmaUnrollFullMaxIterations(
     "pragma-unroll-full-max-iterations", cl::init(1'000'000), cl::Hidden,
     cl::desc("Maximum allowed iterations to unroll under pragma unroll full."));
 
+static cl::opt<bool> EnablePipelineRemainderLoopUnroll(
+    "swpl-enable-pipeline-remainder-unroll", cl::init(false), cl::Hidden);
+
 /// A magic value for use with the Threshold parameter to indicate
 /// that the loop unroll should be performed regardless of how much
 /// code expansion would result.
@@ -1154,6 +1157,29 @@ bool llvm::computeUnrollCount(
   return ExplicitUnroll;
 }
 
+static void AddSWPLDisableMetaData(Loop *L) {
+  SmallVector<Metadata *, 4> MDs;
+  // Reserve first location for self reference to the LoopID metadata node.
+  MDs.push_back(nullptr);
+  MDNode *LoopID = L->getLoopID();
+  if (LoopID) {
+    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
+      MDs.push_back(LoopID->getOperand(i));
+    }
+  }
+  // Add pipline disable metadata.
+  LLVMContext &Context = L->getHeader()->getContext();
+  SmallVector<Metadata *, 4> DisableOperands;
+  DisableOperands.push_back(
+      MDString::get(Context, "llvm.remainder.pipeline.disable"));
+  MDNode *DisableNode = MDNode::get(Context, DisableOperands);
+  MDs.push_back(DisableNode);
+  MDNode *NewLoopID = MDNode::get(Context, MDs);
+  // Set operand 0 to refer to the loop id itself.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  L->setLoopID(NewLoopID);
+}
+
 static LoopUnrollResult
 tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
                 const TargetTransformInfo &TTI, AssumptionCache &AC,
@@ -1365,6 +1391,12 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
                                         LLVMLoopUnrollFollowupRemainder});
     if (RemainderLoopID)
       RemainderLoop->setLoopID(*RemainderLoopID);
+
+    // Generate meta information only for SWPL target loops.
+    // This is done so as not to affect the existing lit.
+    if (TTI.isSwpDirected(L) && !EnablePipelineRemainderLoopUnroll) {
+      AddSWPLDisableMetaData(RemainderLoop);
+    }
   }
 
   if (UnrollResult != LoopUnrollResult::FullyUnrolled) {

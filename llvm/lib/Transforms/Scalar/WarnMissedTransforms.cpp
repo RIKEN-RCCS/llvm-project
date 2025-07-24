@@ -80,6 +80,17 @@ static void warnAboutLeftoverTransformations(Loop *L,
            "requested transformation; the transformation might be disabled or "
            "specified as part of an unsupported transformation ordering");
   }
+
+  if (hasDistribute4swplTransformation(L) == TM_ForcedByUser) {
+    LLVM_DEBUG(dbgs() << "Leftover distribute for swpl transformation\n");
+    ORE->emit(
+        DiagnosticInfoOptimizationFailure(DEBUG_TYPE,
+                                          "FailedRequestedDistribution",
+                                          L->getStartLoc(), L->getHeader())
+        << "loop not distributed for swpl: the optimizer was unable to perform the "
+           "requested transformation; the transformation might be disabled or "
+           "specified as part of an unsupported transformation ordering");
+  }
 }
 
 static void warnAboutLeftoverTransformations(Function *F, LoopInfo *LI,
