@@ -380,6 +380,9 @@ static cl::opt<cl::boolOrDefault> ForceSafeDivisor(
     cl::desc(
         "Override cost based safe divisor widening for div/rem instructions"));
 
+static cl::opt<bool> EnablePipelineRemainderLoopVec(
+    "swpl-enable-pipeline-remainder-vec", cl::init(false), cl::Hidden);
+
 static cl::opt<bool> UseWiderVFIfCallVariantsPresent(
     "vectorizer-maximize-bandwidth-for-vector-calls", cl::init(true),
     cl::Hidden,
@@ -7576,6 +7579,29 @@ static void addRuntimeUnrollDisableMetaData(Loop *L) {
   }
 }
 
+static void AddSWPLDisableMetaData(Loop *L) {
+  SmallVector<Metadata *, 4> MDs;
+  // Reserve first location for self reference to the LoopID metadata node.
+  MDs.push_back(nullptr);
+  MDNode *LoopID = L->getLoopID();
+  if (LoopID) {
+    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
+      MDs.push_back(LoopID->getOperand(i));
+    }
+  }
+  // Add pipline disable metadata.
+  LLVMContext &Context = L->getHeader()->getContext();
+  SmallVector<Metadata *, 4> DisableOperands;
+  DisableOperands.push_back(
+      MDString::get(Context, "llvm.remainder.pipeline.disable"));
+  MDNode *DisableNode = MDNode::get(Context, DisableOperands);
+  MDs.push_back(DisableNode);
+  MDNode *NewLoopID = MDNode::get(Context, MDs);
+  // Set operand 0 to refer to the loop id itself.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  L->setLoopID(NewLoopID);
+}
+
 // If \p R is a ComputeReductionResult when vectorizing the epilog loop,
 // fix the reduction's scalar PHI node by adding the incoming value from the
 // main vector loop.
@@ -7767,6 +7793,14 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);
     if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)
       addRuntimeUnrollDisableMetaData(L);
+  }
+
+  if (CanonicalIVStartValue) {
+    // Generate meta information only for SWPL target loops.
+    // This is done so as not to affect the existing lit.
+    if (TTI.isSwpDirected(L) && !EnablePipelineRemainderLoopVec) {
+      AddSWPLDisableMetaData(L);
+    }
   }
 
   // 3. Fix the vectorized code: take care of header phi's, live-outs,
@@ -10746,6 +10780,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   } else {
     if (DisableRuntimeUnroll)
       addRuntimeUnrollDisableMetaData(L);
+    // Generate meta information only for SWPL target loops.
+    // This is done so as not to affect the existing lit.
+    if (TTI->isSwpDirected(L) && !EnablePipelineRemainderLoopVec) {
+      AddSWPLDisableMetaData(L);
+    }
 
     // Mark the loop as already vectorized to avoid vectorizing again.
     Hints.setAlreadyVectorized();

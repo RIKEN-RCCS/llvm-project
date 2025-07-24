@@ -114,6 +114,7 @@ struct HardwareLoopInfo {
                                DominatorTree &DT, bool ForceNestedLoop = false,
                                bool ForceHardwareLoopPHI = false);
   bool canAnalyze(LoopInfo &LI);
+  StringRef Reason;
 };
 
 class IntrinsicCostAttributes {
@@ -642,6 +643,14 @@ public:
                                 AssumptionCache &AC, TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) const;
 
+  /// Get information on destributed loops from metadata.
+  /// \param LoopID Target metadata
+  /// \param LoopDistNum Number of loops distributions
+  /// \param LoopNum Loop Number
+  /// \retval true distributed4swpl is specified
+  /// \retval false distributed4swpl is not specified
+  bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) const;
+
   // Query the target for which minimum vectorization factor epilogue
   // vectorization should be considered.
   unsigned getEpilogueVectorizationMinVF() const;
@@ -703,6 +712,9 @@ public:
       APInt & UndefElts, APInt & UndefElts2, APInt & UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) const;
+
+  /// Query the target if it is instructed to apply SWPL to the given loop.
+  bool isSwpDirected(Loop *L) const;
   /// @}
 
   /// \name Scalar Target Information
@@ -1006,6 +1018,9 @@ public:
   /// include select-like instructions like or(zext(c), x) that can be converted
   /// to selects.
   bool shouldTreatInstructionLikeSelect(const Instruction *I) const;
+
+  /// Determine if fswp is specified in the options.
+  bool isEnableFswpOption() const;
 
   /// Enable matching of interleaved access groups.
   bool enableInterleavedAccessVectorization() const;
@@ -1963,6 +1978,7 @@ public:
                                         AssumptionCache &AC,
                                         TargetLibraryInfo *LibInfo,
                                         HardwareLoopInfo &HWLoopInfo) = 0;
+  virtual bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) = 0;
   virtual unsigned getEpilogueVectorizationMinVF() = 0;
   virtual bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) = 0;
   virtual TailFoldingStyle
@@ -1977,6 +1993,7 @@ public:
       APInt &UndefElts, APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) = 0;
+  virtual bool isSwpDirected(Loop *L) = 0;
   virtual bool isLegalAddImmediate(int64_t Imm) = 0;
   virtual bool isLegalAddScalableImmediate(int64_t Imm) = 0;
   virtual bool isLegalICmpImmediate(int64_t Imm) = 0;
@@ -2061,6 +2078,7 @@ public:
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const = 0;
   virtual bool enableSelectOptimize() = 0;
   virtual bool shouldTreatInstructionLikeSelect(const Instruction *I) = 0;
+  virtual bool isEnableFswpOption() = 0;
   virtual bool enableInterleavedAccessVectorization() = 0;
   virtual bool enableMaskedInterleavedAccessVectorization() = 0;
   virtual bool isFPVectorizationPotentiallyUnsafe() = 0;
@@ -2465,6 +2483,9 @@ public:
                                 HardwareLoopInfo &HWLoopInfo) override {
     return Impl.isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
   }
+  bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) override {
+    return Impl.getLoopDistributedInfo(LoopID, LoopDistNum, LoopNum);
+  }
   unsigned getEpilogueVectorizationMinVF() override {
     return Impl.getEpilogueVectorizationMinVF();
   }
@@ -2494,6 +2515,9 @@ public:
     return Impl.simplifyDemandedVectorEltsIntrinsic(
         IC, II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
         SimplifyAndSetOp);
+  }
+  bool isSwpDirected(Loop *L) override {
+    return Impl.isSwpDirected(L);
   }
   bool isLegalAddImmediate(int64_t Imm) override {
     return Impl.isLegalAddImmediate(Imm);
@@ -2683,6 +2707,9 @@ public:
   }
   bool shouldTreatInstructionLikeSelect(const Instruction *I) override {
     return Impl.shouldTreatInstructionLikeSelect(I);
+  }
+  bool isEnableFswpOption() override {
+    return Impl.isEnableFswpOption();
   }
   bool enableInterleavedAccessVectorization() override {
     return Impl.enableInterleavedAccessVectorization();

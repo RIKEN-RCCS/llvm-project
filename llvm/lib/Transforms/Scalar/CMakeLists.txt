@@ -32,6 +32,7 @@ add_llvm_component_library(LLVMScalarOpts
   LoopSink.cpp
   LoopDeletion.cpp
   LoopDataPrefetch.cpp
+  LoopDistribute4SWPL.cpp
   LoopDistribute.cpp
   LoopFuse.cpp
   LoopIdiomRecognize.cpp

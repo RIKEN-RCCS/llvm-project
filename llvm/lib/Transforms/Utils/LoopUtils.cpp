@@ -444,6 +444,26 @@ TransformationMode llvm::hasLICMVersioningTransformation(const Loop *L) {
   return TM_Unspecified;
 }
 
+TransformationMode llvm::hasDistribute4swplTransformation(const Loop *L) {
+  if (getBooleanLoopAttribute(L, "llvm.loop.distribute4swpl.enable"))
+    return TM_ForcedByUser;
+
+  std::optional<int> LimitFreg =
+    getOptionalIntLoopAttribute(L, "llvm.loop.istribute4swpl.freg");
+  if (LimitFreg)
+    return TM_ForcedByUser;
+
+  std::optional<int> LimitIreg =
+    getOptionalIntLoopAttribute(L, "llvm.loop.istribute4swpl.ireg");
+  if (LimitIreg)
+    return TM_ForcedByUser;
+
+  if (hasDisableAllTransformsHint(L))
+    return TM_Disable;
+
+  return TM_Unspecified;
+}
+
 /// Does a BFS from a given node to all of its children inside a given loop.
 /// The returned vector of basic blocks includes the starting point.
 SmallVector<BasicBlock *, 16> llvm::collectChildrenInLoop(DominatorTree *DT,
