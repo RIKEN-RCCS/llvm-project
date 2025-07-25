@@ -39,6 +39,40 @@ class Type;
 class Value;
 class VectorType;
 
+/**
+ * Returns whether or not the specified loop is a candidate for SWP application from the options and Pragma.
+ * @param L Specify target Loop information
+ * @param ignoreMetadataOfRemainder true Ignore remainder loop metadata
+ * @retval true Candidate for SWP application
+ * @retval false SWP not applied
+ */
+bool enableSWP(const Loop* L, bool ignoreMetadataOfRemainder);
+
+/**
+ * Returns whether or not the specified loop is a candidate for LS application from the options.
+ * @retval true Candidate for LS application
+ * @retval false SWP not applied
+ */
+bool enableLS();
+
+/**
+ * Returns from Pragma whether the specified loop is memory-independent.
+ * @param L Specify target Loop information
+ * @retval true pipeline_nodep is specified
+ * @retval false pipeline_nodep is not specified
+ */
+bool enableNodep(const Loop *L);
+
+/**
+ * Get information on destributed loops from metadata.
+ * @param LoopID Target metadata
+ * @param LoopDistNum Number of loops distributions
+ * @param LoopNum Loop Number
+ * @retval true distributed4swpl is specified
+ * @retval false distributed4swpl is not specified
+ */
+bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum);
+
 class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   using BaseT = BasicTTIImplBase<AArch64TTIImpl>;
   using TTI = TargetTransformInfo;
@@ -445,7 +479,27 @@ public:
                                        StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;
 
+  bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
+                                  AssumptionCache &AC,
+                                  TargetLibraryInfo *LibInfo,
+                                  HardwareLoopInfo &HWLoopInfo);
+
+  bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum);
+
+  bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
+                    DominatorTree *DT, AssumptionCache *AC,
+                    TargetLibraryInfo *LibInfo);
+
+  bool isSwpDirected(Loop *L);
+
   bool enableSelectOptimize() { return ST->enableSelectOptimize(); }
+
+  /**
+   * Returns whether the -fswp option is specified.
+   * @retval true -fswp is specified
+   * @retval false -fswp is not specified
+   */
+  bool isEnableFswpOption();
 
   bool shouldTreatInstructionLikeSelect(const Instruction *I);
 
