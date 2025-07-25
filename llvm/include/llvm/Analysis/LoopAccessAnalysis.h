@@ -637,7 +637,7 @@ class LoopAccessInfo {
 public:
   LoopAccessInfo(Loop *L, ScalarEvolution *SE, const TargetTransformInfo *TTI,
                  const TargetLibraryInfo *TLI, AAResults *AA, DominatorTree *DT,
-                 LoopInfo *LI);
+                 LoopInfo *LI, bool forSWPL);
 
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles. Note that for dependences between loads &
@@ -646,6 +646,9 @@ public:
   /// hasLoadStoreDependenceInvolvingLoopInvariantAddress also need to be
   /// checked.
   bool canVectorizeMemory() const { return CanVecMem; }
+
+  /// If processing is interrupted, the reason for interruption is returned.
+  StringRef getReason() const;
 
   /// Return true if there is a convergent operation in the loop. There may
   /// still be reported runtime pointer checks that would be required, but it is
@@ -890,7 +893,7 @@ public:
                         const TargetLibraryInfo *TLI)
       : SE(SE), AA(AA), DT(DT), LI(LI), TTI(TTI), TLI(TLI) {}
 
-  const LoopAccessInfo &getInfo(Loop &L);
+  const LoopAccessInfo &getInfo(Loop &L, bool forSWPL=false);
 
   void clear();
 
