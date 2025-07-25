@@ -57,6 +57,11 @@
 
 using namespace llvm;
 
+static cl::opt<bool>
+    DisableHWLOOP("disable-hwloop",
+                                cl::desc("Disable the HardwareLoop Insertion pass"),
+                                cl::init(false), cl::ReallyHidden);
+
 static cl::opt<bool> EnableCCMP("aarch64-enable-ccmp",
                                 cl::desc("Enable the CCMP formation pass"),
                                 cl::init(true), cl::Hidden);
@@ -266,6 +271,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64SLSHardeningPass(*PR);
   initializeAArch64StackTaggingPass(*PR);
   initializeAArch64StackTaggingPreRAPass(*PR);
+  initializeSWPipelinerPrePass(*PR);
+  initializeSWPipelinerPass(*PR);
+  initializeAArch64SwplExpandPseudoPass(*PR);
   initializeAArch64LowerHomogeneousPrologEpilogPass(*PR);
   initializeAArch64DAGToDAGISelLegacyPass(*PR);
 }
@@ -702,6 +710,9 @@ bool AArch64PassConfig::addPreISel() {
                                   MergeExternalByDefault));
   }
 
+  if (TM->getTargetCPU().equals_insensitive("a64fx") && (TM->getOptLevel() != CodeGenOptLevel::None) && !DisableHWLOOP) {
+    addPass(createHardwareLoopsLegacyPass());
+  }
   return false;
 }
 
@@ -810,11 +821,21 @@ void AArch64PassConfig::addPreRegAlloc() {
     // be register coalescer friendly.
     addPass(&PeepholeOptimizerLegacyID);
   }
+
+  if (TM->getTargetCPU().equals_insensitive("a64fx") && TM->getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createSWPipelinerPrePass());
+    addPass(createSWPipelinerPass());
+  }
+
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);
 }
 
 void AArch64PassConfig::addPostRegAlloc() {
+  if (TM->getTargetCPU().equals_insensitive("a64fx") && TM->getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createAArch64SwplExpandPseudoPass());
+  }
+
   // Remove redundant copy instructions.
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRedundantCopyElimination)
