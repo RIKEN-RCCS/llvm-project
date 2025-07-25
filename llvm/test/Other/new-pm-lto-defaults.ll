@@ -114,6 +114,9 @@
 ; CHECK-O23SZ-NEXT: Running pass: IndVarSimplifyPass on loop
 ; CHECK-O23SZ-NEXT: Running pass: LoopDeletionPass on loop
 ; CHECK-O23SZ-NEXT: Running pass: LoopFullUnrollPass on loop
+; CHECK-O23SZ-NEXT: Running pass: LoopDistribute4SWPLPass on foo
+; CHECK-O23SZ-NEXT: Running analysis: LoopAccessAnalysis on foo
+; CHECK-O23SZ-NEXT: Invalidating analysis: LoopAccessAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: LoopDistributePass on foo
 ; CHECK-O23SZ-NEXT: Running analysis: LoopAccessAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running pass: LoopVectorizePass on foo
@@ -139,6 +142,7 @@
 ; CHECK-O23SZ-NEXT: Running pass: AlignmentFromAssumptionsPass on foo
 ; CHECK-EP-Peephole-NEXT: Running pass: NoOpFunctionPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: JumpThreadingPass on foo
+; CHECK-O23SZ-NEXT: Invalidating analysis: LoopAccessAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-O-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-O23SZ-NEXT: Running pass: LoopSink

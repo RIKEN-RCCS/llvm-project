@@ -168,6 +168,9 @@
 ; CHECK-O-NEXT: Running pass: LCSSAPass
 ; CHECK-O-NEXT: Running pass: LoopRotatePass
 ; CHECK-O-NEXT: Running pass: LoopDeletionPass
+; CHECK-O-NEXT: Running pass: LoopDistribute4SWPLPass
+; CHECK-O-NEXT: Running analysis: LoopAccessAnalysis
+; CHECK-O-NEXT: Invalidating analysis: LoopAccessAnalysis
 ; CHECK-O-NEXT: Running pass: LoopDistributePass
 ; CHECK-O-NEXT: Running analysis: LoopAccessAnalysis
 ; CHECK-O-NEXT: Running pass: InjectTLIMappings
@@ -195,6 +198,7 @@
 ; CHECK-O-NEXT: Running pass: DivRemPairsPass
 ; CHECK-O-NEXT: Running pass: TailCallElimPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-O-NEXT: Invalidating analysis: LoopAccessAnalysis
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: ConstantMergePass
 ; CHECK-O-NEXT: Running pass: CGProfilePass
