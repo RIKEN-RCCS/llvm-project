@@ -7795,7 +7795,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       addRuntimeUnrollDisableMetaData(L);
 
     if (VectorizingEpilogue) {
-      // Generate meta information oVectorizingEpiloguenly for SWPL target loops.
+      // Generate meta information only for SWPL target loops.
       // This is done so as not to affect the existing lit.
       if (TTI.isSwpDirected(L) && !EnablePipelineRemainderLoopVec) {
         AddSWPLDisableMetaData(L);
