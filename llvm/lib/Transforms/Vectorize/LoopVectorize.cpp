@@ -7793,13 +7793,13 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);
     if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)
       addRuntimeUnrollDisableMetaData(L);
-  }
 
-  if (CanonicalIVStartValue) {
-    // Generate meta information only for SWPL target loops.
-    // This is done so as not to affect the existing lit.
-    if (TTI.isSwpDirected(L) && !EnablePipelineRemainderLoopVec) {
-      AddSWPLDisableMetaData(L);
+    if (VectorizingEpilogue) {
+      // Generate meta information only for SWPL target loops.
+      // This is done so as not to affect the existing lit.
+      if (TTI.isSwpDirected(L) && !EnablePipelineRemainderLoopVec) {
+        AddSWPLDisableMetaData(L);
+      }
     }
   }
 
