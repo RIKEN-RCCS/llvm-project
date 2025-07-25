@@ -1,0 +1,82 @@
+# No., MI
+# 0:%63:gpr32 = nsw ADDWrr %20:gpr32, %60:gpr32, debug-location !19; swpl-SS-cyclic-xxx.c:20:17
+# 1:%64:gpr32 = LDRWroX %38:gpr64sp, %59:gpr64common, 0, 0, debug-location !24 :: (load (s32) from %ir.scevgep23, !tbaa !14); swpl-SS-cyclic-xxx.c:25:17
+# 2:%65:gpr32 = nsw MADDWrrr killed %64:gpr32, %63:gpr32, $wzr, debug-location !25; swpl-SS-cyclic-xxx.c:25:23
+# 3:%66:gpr32 = COPY %65:gpr32, debug-location !25; swpl-SS-cyclic-xxx.c:25:23
+# 4:STRWroX %65:gpr32, %41:gpr64sp, %59:gpr64common, 0, 0, debug-location !26 :: (store (s32) into %ir.scevgep, !tbaa !14); swpl-SS-cyclic-xxx.c:25:15
+# 5:%59:gpr64common = nuw nsw ADDXri %59:gpr64common, 4, 0, debug-location !27; swpl-SS-cyclic-xxx.c:19:19
+# 6:%61:gpr64sp = SUBSXri %61:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !18; swpl-SS-cyclic-xxx.c:19:5
+# 7:%71:gpr32 = nsw ADDWrr %62:gpr32, %24:gpr32, debug-location !19; swpl-SS-cyclic-xxx.c:20:17
+# 8:%72:gpr32 = nsw ORRWrr %22:gpr32, %24:gpr32, debug-location !19; swpl-SS-cyclic-xxx.c:20:17
+# 9:%73:gpr32 = nsw SUBWrr %71:gpr32, %72:gpr32, debug-location !19; swpl-SS-cyclic-xxx.c:20:17
+# 10:%62:gpr32 = nsw ORRWrr %73:gpr32, %24:gpr32, debug-location !19; swpl-SS-cyclic-xxx.c:20:17
+# 11:%60:gpr32 = COPY %66:gpr32
+---
+fname:           main
+loopid:          1
+deps:
+  - from:            { id: 11, mi: '%60:gpr32 = COPY %66:gpr32' }
+    to:              { id: 0, mi: '%63:gpr32 = nsw ADDWrr %20:gpr32, %60:gpr32, debug-location !19; swpl-SS-cyclic-xxx.c:20:17' }
+    infos:
+      - { distance: 1, delay: 1 }
+  - from:            { id: 5, mi: '%59:gpr64common = nuw nsw ADDXri %59:gpr64common, 4, 0, debug-location !27; swpl-SS-cyclic-xxx.c:19:19' }
+    to:              { id: 1, mi: '%64:gpr32 = LDRWroX %38:gpr64sp, %59:gpr64common, 0, 0, debug-location !24 :: (load (s32) from %ir.scevgep23, !tbaa !14); swpl-SS-cyclic-xxx.c:25:17' }
+    infos:
+      - { distance: 1, delay: 1 }
+  - from:            { id: 1, mi: '%64:gpr32 = LDRWroX %38:gpr64sp, %59:gpr64common, 0, 0, debug-location !24 :: (load (s32) from %ir.scevgep23, !tbaa !14); swpl-SS-cyclic-xxx.c:25:17' }
+    to:              { id: 2, mi: '%65:gpr32 = nsw MADDWrrr killed %64:gpr32, %63:gpr32, $wzr, debug-location !25; swpl-SS-cyclic-xxx.c:25:23' }
+    infos:
+      - { distance: 0, delay: 5 }
+  - from:            { id: 0, mi: '%63:gpr32 = nsw ADDWrr %20:gpr32, %60:gpr32, debug-location !19; swpl-SS-cyclic-xxx.c:20:17' }
+    to:              { id: 2, mi: '%65:gpr32 = nsw MADDWrrr killed %64:gpr32, %63:gpr32, $wzr, debug-location !25; swpl-SS-cyclic-xxx.c:25:23' }
+    infos:
+      - { distance: 0, delay: 1 }
+  - from:            { id: 2, mi: '%65:gpr32 = nsw MADDWrrr killed %64:gpr32, %63:gpr32, $wzr, debug-location !25; swpl-SS-cyclic-xxx.c:25:23' }
+    to:              { id: 3, mi: '%66:gpr32 = COPY %65:gpr32, debug-location !25; swpl-SS-cyclic-xxx.c:25:23' }
+    infos:
+      - { distance: 0, delay: 5 }
+  - from:            { id: 2, mi: '%65:gpr32 = nsw MADDWrrr killed %64:gpr32, %63:gpr32, $wzr, debug-location !25; swpl-SS-cyclic-xxx.c:25:23' }
+    to:              { id: 4, mi: 'STRWroX %65:gpr32, %41:gpr64sp, %59:gpr64common, 0, 0, debug-location !26 :: (store (s32) into %ir.scevgep, !tbaa !14); swpl-SS-cyclic-xxx.c:25:15' }
+    infos:
+      - { distance: 0, delay: 5 }
+  - from:            { id: 5, mi: '%59:gpr64common = nuw nsw ADDXri %59:gpr64common, 4, 0, debug-location !27; swpl-SS-cyclic-xxx.c:19:19' }
+    to:              { id: 4, mi: 'STRWroX %65:gpr32, %41:gpr64sp, %59:gpr64common, 0, 0, debug-location !26 :: (store (s32) into %ir.scevgep, !tbaa !14); swpl-SS-cyclic-xxx.c:25:15' }
+    infos:
+      - { distance: 1, delay: 1 }
+  - from:            { id: 5, mi: '%59:gpr64common = nuw nsw ADDXri %59:gpr64common, 4, 0, debug-location !27; swpl-SS-cyclic-xxx.c:19:19' }
+    to:              { id: 5, mi: '%59:gpr64common = nuw nsw ADDXri %59:gpr64common, 4, 0, debug-location !27; swpl-SS-cyclic-xxx.c:19:19' }
+    infos:
+      - { distance: 1, delay: 1 }
+  - from:            { id: 6, mi: '%61:gpr64sp = SUBSXri %61:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !18; swpl-SS-cyclic-xxx.c:19:5' }
+    to:              { id: 6, mi: '%61:gpr64sp = SUBSXri %61:gpr64sp, 1, 0, implicit-def $nzcv, debug-location !18; swpl-SS-cyclic-xxx.c:19:5' }
+    infos:
+      - { distance: 1, delay: 1 }
+  - from:            { id: 10, mi: '%62:gpr32 = nsw ORRWrr %73:gpr32, %24:gpr32, debug-location !19; swpl-SS-cyclic-xxx.c:20:17' }
+    to:              { id: 7, mi: '%71:gpr32 = nsw ADDWrr %62:gpr32, %24:gpr32, debug-location !19; swpl-SS-cyclic-xxx.c:20:17' }
+    infos:
+      - { distance: 1, delay: 1 }
+  - from:            { id: 7, mi: '%71:gpr32 = nsw ADDWrr %62:gpr32, %24:gpr32, debug-location !19; swpl-SS-cyclic-xxx.c:20:17' }
+    to:              { id: 9, mi: '%73:gpr32 = nsw SUBWrr %71:gpr32, %72:gpr32, debug-location !19; swpl-SS-cyclic-xxx.c:20:17' }
+    infos:
+      - { distance: 0, delay: 1 }
+  - from:            { id: 8, mi: '%72:gpr32 = nsw ORRWrr %22:gpr32, %24:gpr32, debug-location !19; swpl-SS-cyclic-xxx.c:20:17' }
+    to:              { id: 9, mi: '%73:gpr32 = nsw SUBWrr %71:gpr32, %72:gpr32, debug-location !19; swpl-SS-cyclic-xxx.c:20:17' }
+    infos:
+      - { distance: 0, delay: 9 }
+  - from:            { id: 9, mi: '%73:gpr32 = nsw SUBWrr %71:gpr32, %72:gpr32, debug-location !19; swpl-SS-cyclic-xxx.c:20:17' }
+    to:              { id: 10, mi: '%62:gpr32 = nsw ORRWrr %73:gpr32, %24:gpr32, debug-location !19; swpl-SS-cyclic-xxx.c:20:17' }
+    infos:
+      - { distance: 0, delay: 1 }
+  - from:            { id: 3, mi: '%66:gpr32 = COPY %65:gpr32, debug-location !25; swpl-SS-cyclic-xxx.c:25:23' }
+    to:              { id: 11, mi: '%60:gpr32 = COPY %66:gpr32' }
+    infos:
+      - { distance: 0, delay: 1 }
+  - from:            { id: 1, mi: '%64:gpr32 = LDRWroX %38:gpr64sp, %59:gpr64common, 0, 0, debug-location !24 :: (load (s32) from %ir.scevgep23, !tbaa !14); swpl-SS-cyclic-xxx.c:25:17' }
+    to:              { id: 4, mi: 'STRWroX %65:gpr32, %41:gpr64sp, %59:gpr64common, 0, 0, debug-location !26 :: (store (s32) into %ir.scevgep, !tbaa !14); swpl-SS-cyclic-xxx.c:25:15' }
+    infos:
+      - { distance: 20, delay: 1 }
+  - from:            { id: 4, mi: 'STRWroX %65:gpr32, %41:gpr64sp, %59:gpr64common, 0, 0, debug-location !26 :: (store (s32) into %ir.scevgep, !tbaa !14); swpl-SS-cyclic-xxx.c:25:15' }
+    to:              { id: 1, mi: '%64:gpr32 = LDRWroX %38:gpr64sp, %59:gpr64common, 0, 0, debug-location !24 :: (load (s32) from %ir.scevgep23, !tbaa !14); swpl-SS-cyclic-xxx.c:25:17' }
+    infos:
+      - { distance: 20, delay: 6 }
+...
