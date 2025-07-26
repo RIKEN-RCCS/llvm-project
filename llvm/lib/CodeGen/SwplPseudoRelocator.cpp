@@ -39,10 +39,10 @@ public:
 void SwplPseudoRelocator::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<TargetPassConfig>();
-  AU.addRequired<SlotIndexes>();
-  AU.addPreserved<SlotIndexes>();
-  AU.addRequired<LiveIntervals>();
-  AU.addPreserved<LiveIntervals>();
+  AU.addRequired<SlotIndexesWrapperPass>();
+  AU.addPreserved<SlotIndexesWrapperPass>();
+  AU.addRequired<LiveIntervalsWrapperPass>();
+  AU.addPreserved<LiveIntervalsWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -62,7 +62,8 @@ bool SwplPseudoRelocator::runOnMachineFunction(MachineFunction &mf) {
   if (skipFunction(mf.getFunction()))
     return false;
   const TargetInstrInfo *TII = mf.getSubtarget().getInstrInfo();
-  LiveIntervals *LIS = &getAnalysis<LiveIntervals>();
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
   for (auto &MBB:mf) {
     MachineInstr *livein=nullptr;
     MachineInstr *liveout=nullptr;
