@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-unknown-hurd-gnu -S -emit-llvm -target-cpu a64fx -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-unknown-hurd-gnu -emit-llvm -target-cpu a64fx -o - %s | FileCheck %s
 
 #define P(a) _Pragma(a)
 #define A_1 "clang loop vectorize(enable)"
