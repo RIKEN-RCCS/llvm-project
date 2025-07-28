@@ -215,7 +215,7 @@ body:             |
     %10:gpr32all = COPY %15
     %19:gpr32 = MOVi32imm 4000
     %20:gpr64common = LOADgot target-flags(aarch64-got) @a
-    %21:ppr_3b = PTRUE_D 31
+    %21:ppr_3b = PTRUE_D 31, implicit $vg
     %26:zpr = IMPLICIT_DEF
     %31:gpr64common = LOADgot target-flags(aarch64-got) @b
     %32:gpr64common = LOADgot target-flags(aarch64-got) @c

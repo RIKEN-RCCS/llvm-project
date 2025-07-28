@@ -493,7 +493,7 @@ body:             |
     %20:gpr64common = LOADgot target-flags(aarch64-got) @a
     %22:gpr64common = LOADgot target-flags(aarch64-got) @b
     %28:zpr = IMPLICIT_DEF
-    %33:ppr_3b = PTRUE_S 4
+    %33:ppr_3b = PTRUE_S 4, implicit $vg
     %41:zpr = IMPLICIT_DEF
     %53:zpr = IMPLICIT_DEF
     %65:zpr = IMPLICIT_DEF

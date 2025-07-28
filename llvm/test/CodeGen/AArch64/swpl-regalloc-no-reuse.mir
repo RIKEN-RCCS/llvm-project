@@ -274,10 +274,10 @@ body:             |
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !14
     %16:gpr32all = COPY $wzr
     %11:gpr32all = COPY %16
-    %0:zpr = INDEX_II_D 0, 1, debug-location !15
+    %0:zpr = INDEX_II_D 0, 1, implicit $vg, debug-location !15
     %19:gpr32 = MOVi32imm 4000
     %20:gpr64common = LOADgot target-flags(aarch64-got) @b
-    %21:ppr_3b = PTRUE_D 31
+    %21:ppr_3b = PTRUE_D 31, implicit $vg
     %26:gpr64common = LOADgot target-flags(aarch64-got) @c
     %28:gpr64common = LOADgot target-flags(aarch64-got) @d
     %31:gpr64common = LOADgot target-flags(aarch64-got) @a

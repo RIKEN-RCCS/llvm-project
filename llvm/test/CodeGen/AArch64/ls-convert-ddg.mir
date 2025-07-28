@@ -218,7 +218,7 @@ body:             |
     %7:gpr32 = MOVi32imm 125
     %0:gpr64all = SUBREG_TO_REG 0, killed %7, %subreg.sub_32
     %8:gpr64common = MOVaddr target-flags(aarch64-page) @a, target-flags(aarch64-pageoff, aarch64-nc) @a
-    %9:ppr_3b = PTRUE_D 31
+    %9:ppr_3b = PTRUE_D 31, implicit $vg
     %11:gpr64common = MOVaddr target-flags(aarch64-page) @b, target-flags(aarch64-pageoff, aarch64-nc) @b
   
   bb.1.vector.body:

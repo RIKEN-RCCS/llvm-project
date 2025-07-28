@@ -233,10 +233,10 @@ body:             |
     liveins: $x0
   
     %7:gpr64common = COPY $x0
-    %0:ppr_3b = PTRUE_S 31
+    %0:ppr_3b = PTRUE_S 31, implicit $vg
     dead $xzr = SUBSXri %7, 1, 0, implicit-def $nzcv
     %10:gpr64 = CSINCXr %7, $xzr, 8, implicit $nzcv
-    %11:gpr64 = CNTW_XPiI 31, 1
+    %11:gpr64 = CNTW_XPiI 31, 1, implicit $vg
     %1:gpr32 = COPY %11.sub_32
     %12:gpr32all = COPY $wzr
     %8:gpr32all = COPY %12
@@ -257,7 +257,7 @@ body:             |
     SST1W_SXTW_SCALED killed %15, %0, %16, %13
     %18:zpr = GLD1W_SXTW_SCALED %0, %17, %13
     SST1W_SXTW_SCALED killed %18, %0, %19, %13
-    %22:ppr_3b = PTRUE_S 31
+    %22:ppr_3b = PTRUE_S 31, implicit $vg
     %20:gpr32 = ADDWrr %3, %1
     %5:gpr32all = COPY %20
     %21:gpr64 = SUBSXri %4, 1, 0, implicit-def $nzcv

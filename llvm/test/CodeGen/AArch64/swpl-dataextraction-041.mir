@@ -176,12 +176,12 @@ body:             |
   bb.0.iter.check:
     successors: %bb.1(0x80000000)
   
-    %0:zpr = INDEX_II_S 0, 1, debug-location !12
+    %0:zpr = INDEX_II_S 0, 1, implicit $vg, debug-location !12
     %9:gpr64common = MOVaddr target-flags(aarch64-page) @A, target-flags(aarch64-pageoff, aarch64-nc) @A
     %8:gpr64all = COPY %9
     %10:gpr32 = MOVi32imm 625
     %1:gpr64all = SUBREG_TO_REG 0, killed %10, %subreg.sub_32
-    %12:ppr_3b = PTRUE_S 31
+    %12:ppr_3b = PTRUE_S 31, implicit $vg
     %13:gpr32common = MOVi32imm -776530087
     %14:zpr = DUP_ZR_S %13
     %17:gpr32common = MOVi32imm 10000

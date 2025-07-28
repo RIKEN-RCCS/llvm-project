@@ -168,7 +168,7 @@ body:             |
     %0:gpr64all = SUBREG_TO_REG 0, killed %17, %subreg.sub_32
     %400:fpr32 = IMPLICIT_DEF
     %401:fpr32 = IMPLICIT_DEF
-    %332:ppr_3b = PTRUE_D 31
+    %332:ppr_3b = PTRUE_D 31, implicit $vg
     B %bb.3
   
   bb.2.for.cond.cleanup:
@@ -186,7 +186,7 @@ body:             |
     %222:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr %102, %202, implicit $fpcr
     %23:gpr64 = SUBSXri %5, 1, 0, implicit-def $nzcv
     %19:fpr32 = LDURSi %2:gpr64sp, 0
-    %333:ppr_3b = PTRUE_D 31
+    %333:ppr_3b = PTRUE_D 31, implicit $vg
     %334:ppr_3b = COPY %333
     %9:gpr64all = COPY %2
     %25:gpr64all = COPY %23

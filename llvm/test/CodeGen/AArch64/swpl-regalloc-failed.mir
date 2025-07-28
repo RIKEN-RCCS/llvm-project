@@ -322,10 +322,10 @@ body:             |
     %7:gpr32 = MOVi32imm 1250
     %0:gpr64all = SUBREG_TO_REG 0, killed %7, %subreg.sub_32
     %8:gpr64common = MOVaddr target-flags(aarch64-page) @a, target-flags(aarch64-pageoff, aarch64-nc) @a
-    %10:ppr_3b = PTRUE_B 31
+    %10:ppr_3b = PTRUE_B 31, implicit $vg
     %12:gpr64common = MOVi64imm 4636737291354636288
     %13:zpr = DUP_ZR_D %12
-    %14:ppr_3b = PTRUE_D 31
+    %14:ppr_3b = PTRUE_D 31, implicit $vg
     %16:gpr64common = MOVaddr target-flags(aarch64-page) @b, target-flags(aarch64-pageoff, aarch64-nc) @b
     %21:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
     %26:gpr64common = MOVaddr target-flags(aarch64-page) @d, target-flags(aarch64-pageoff, aarch64-nc) @d

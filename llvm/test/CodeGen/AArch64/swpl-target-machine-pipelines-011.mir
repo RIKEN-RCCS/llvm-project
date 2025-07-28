@@ -526,8 +526,8 @@ body:             |
     %8:gpr32all = COPY %13
     %16:gpr32 = MOVi32imm 800
     %17:gpr64common = LOADgot target-flags(aarch64-got) @a
-    %19:ppr_3b = PTRUE_B 31
-    %21:ppr_3b = PTRUE_D 31
+    %19:ppr_3b = PTRUE_B 31, implicit $vg
+    %21:ppr_3b = PTRUE_D 31, implicit $vg
     %25:gpr64common = LOADgot target-flags(aarch64-got) @b
     %28:gpr64common = LOADgot target-flags(aarch64-got) @d
     %33:gpr64common = LOADgot target-flags(aarch64-got) @c

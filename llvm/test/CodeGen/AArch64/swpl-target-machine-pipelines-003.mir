@@ -912,9 +912,9 @@ body:             |
     %21:gpr64common = LOADgot target-flags(aarch64-got) @cc
     %23:gpr64common = LOADgot target-flags(aarch64-got) @bb
     %25:gpr64common = LOADgot target-flags(aarch64-got) @aa
-    %30:ppr_3b = PTRUE_B 31
+    %30:ppr_3b = PTRUE_B 31, implicit $vg
     %32:gpr64common = MOVi64imm 8
-    %33:ppr_3b = PTRUE_D 31
+    %33:ppr_3b = PTRUE_D 31, implicit $vg
     %35:gpr64common = MOVi64imm 16
     %37:gpr64common = MOVi64imm 24
     %52:gpr64common = LOADgot target-flags(aarch64-got) @flat_2d_array

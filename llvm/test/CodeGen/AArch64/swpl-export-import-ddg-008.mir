@@ -409,7 +409,7 @@ body:             |
     %48:gpr64common = MOVaddr target-flags(aarch64-page) @d, target-flags(aarch64-pageoff, aarch64-nc) @d
     %49:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
     %50:gpr32 = MOVi32imm 4000
-    %51:ppr_3b = PTRUE_D 31
+    %51:ppr_3b = PTRUE_D 31, implicit $vg
     %77:gpr64common = MOVaddr target-flags(aarch64-page) @aa, target-flags(aarch64-pageoff, aarch64-nc) @aa
     %78:gpr64common = MOVaddr target-flags(aarch64-page) @bb, target-flags(aarch64-pageoff, aarch64-nc) @bb
     %79:gpr64common = MOVaddr target-flags(aarch64-page) @cc, target-flags(aarch64-pageoff, aarch64-nc) @cc
@@ -428,7 +428,7 @@ body:             |
     %95:gpr64common = MOVaddr target-flags(aarch64-page) @d, target-flags(aarch64-pageoff, aarch64-nc) @d
     %96:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
     %97:gpr32 = MOVi32imm 4000
-    %98:ppr_3b = PTRUE_D 31
+    %98:ppr_3b = PTRUE_D 31, implicit $vg
     %122:gpr64common = MOVaddr target-flags(aarch64-page) @aa, target-flags(aarch64-pageoff, aarch64-nc) @aa
     %123:gpr64common = MOVaddr target-flags(aarch64-page) @bb, target-flags(aarch64-pageoff, aarch64-nc) @bb
     %124:gpr64common = MOVaddr target-flags(aarch64-page) @cc, target-flags(aarch64-pageoff, aarch64-nc) @cc

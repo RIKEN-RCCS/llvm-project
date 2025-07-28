@@ -307,14 +307,14 @@ body:             |
     $x1 = COPY %25, debug-location !14
     BL @gettimeofday, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit-def $sp, implicit-def $w0, debug-location !14
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !14
-    %0:zpr = INDEX_II_D 0, 1, debug-location !15
+    %0:zpr = INDEX_II_D 0, 1, implicit $vg, debug-location !15
     %22:gpr64all = COPY %25
     %27:gpr32 = MOVi32imm 4000
     %1:gpr64all = SUBREG_TO_REG 0, killed %27, %subreg.sub_32
-    %30:ppr_3b = PTRUE_D 31
+    %30:ppr_3b = PTRUE_D 31, implicit $vg
     %31:gpr64common = MOVi64imm 147573952589676413
     %32:zpr = DUP_ZR_D %31
-    %35:zpr = DUP_ZI_D 125, 8
+    %35:zpr = DUP_ZI_D 125, 8, implicit $vg
     %38:zpr = IMPLICIT_DEF
     %39:gpr64common = LOADgot target-flags(aarch64-got) @a
   
