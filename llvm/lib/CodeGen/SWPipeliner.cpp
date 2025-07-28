@@ -156,7 +156,7 @@ public:
   bool runOnMachineFunction(MachineFunction &mf) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<MachineOptimizationRemarkEmitterPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -191,7 +191,7 @@ char SWPipeliner::ID = 0;
 
 INITIALIZE_PASS_BEGIN(SWPipeliner, DEBUG_TYPE,
                       "Software Pipeliner", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(SWPipeliner, DEBUG_TYPE,
                     "Software Pipeliner", false, false)
@@ -234,7 +234,7 @@ bool SWPipeliner::runOnMachineFunction(MachineFunction &mf) {
     return false;
   }
   MF = &mf;
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
   TII = MF->getSubtarget().getInstrInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
@@ -754,7 +754,7 @@ char SWPipelinerPre::ID = 0;
 
 INITIALIZE_PASS_BEGIN(SWPipelinerPre, "swpipelinerpre",
                       "Software Pipeliner Pre", false, false)
-  INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+  INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
   INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(SWPipelinerPre, "swpipelinerpre",
                     "Software Pipeliner Pre", false, false)
@@ -788,7 +788,7 @@ bool SWPipelinerPre::runOnMachineFunction(MachineFunction &mf) {
     // llcでmcpuを指定しても意味がない（Clangで-mcpu=a64fx指定が必須）のようだ
     return false;
   }
-  auto mli = &getAnalysis<MachineLoopInfo>();
+  auto mli = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
   TII = mf.getSubtarget().getInstrInfo();
   MF = &mf;
@@ -1564,19 +1564,20 @@ static bool isDependence(const MachineInstr *p, const MachineInstr *q) {
   if (!LoopDef || !SWPipeliner::TII->getIncrementValue(*LoopDef, D))
     return true;
 
-  uint64_t AccessSizeS = (*p->memoperands_begin())->getSize();
-  uint64_t AccessSizeD = (*q->memoperands_begin())->getSize();
+  LocationSize AccessSizeS = (*p->memoperands_begin())->getSize();
+  LocationSize AccessSizeD = (*q->memoperands_begin())->getSize();
 
   // This is the main test, which checks the offset values and the loop
   // increment value to determine if the accesses may be loop carried.
-  if (AccessSizeS == MemoryLocation::UnknownSize ||
-      AccessSizeD == MemoryLocation::UnknownSize)
+  if (!AccessSizeS.hasValue() || !AccessSizeD.hasValue())
     return true;
 
-  if (DeltaS != DeltaD || DeltaS < AccessSizeS || DeltaD < AccessSizeD)
+  if (DeltaS != DeltaD || DeltaS < AccessSizeS.getValue() ||
+      DeltaD < AccessSizeD.getValue())
     return true;
 
-  return (OffsetS + (int64_t)AccessSizeS < OffsetD + (int64_t)AccessSizeD);
+  return (OffsetS + (int64_t)AccessSizeS.getValue() <
+          OffsetD + (int64_t)AccessSizeD.getValue());
 }
 
 void SwplDdg::analysisInstDependence() {
@@ -3596,7 +3597,7 @@ static void construct_use(Register2SwplRegMap &rmap, SwplInst &inst, MachineOper
 /// \param [in,out] memsOtherBody SwplMems
 static void construct_mem_use(Register2SwplRegMap &rmap, SwplInst &inst, const MachineMemOperand *MMO, SwplInsts &insts,
                               SwplMems *mems, SwplMems *memsOtherBody) {
-  SwplMem *mem = new SwplMem(MMO, inst, (MMO==nullptr)?0:MMO->getSize());
+  SwplMem *mem = new SwplMem(MMO, inst, (MMO==nullptr)?0:MMO->getSize().getValue());
 
   const MachineOperand *BaseOp=nullptr;
   int64_t Offset=0;
