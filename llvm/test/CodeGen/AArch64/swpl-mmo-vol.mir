@@ -357,9 +357,9 @@ body:             |
     $x1 = COPY %26
     BL @gettimeofday, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit-def $sp, implicit-def $w0
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    %28:gpr64 = RDVLI_XI 1
+    %28:gpr64 = RDVLI_XI 1, implicit $vg
     %29:gpr64 = UBFMXri killed %28, 4, 63
-    %30:gpr64 = CNTD_XPiI 31, 1
+    %30:gpr64 = CNTD_XPiI 31, 1, implicit $vg
     %31:gpr32 = MOVi32imm 9999
     %32:gpr64 = SUBREG_TO_REG 0, killed %31, %subreg.sub_32
     %33:gpr64 = UDIVXr %32, %30
@@ -383,7 +383,7 @@ body:             |
     %47:gpr32all = COPY $wzr
     %23:gpr32all = COPY %47
     %6:gpr64all = COPY %46
-    %51:ppr_3b = PTRUE_D 31
+    %51:ppr_3b = PTRUE_D 31, implicit $vg
     %58:gpr64common = MOVi64imm 1
     %77:gpr64common = LOADgot target-flags(aarch64-got) @d
     %79:gpr64common = LOADgot target-flags(aarch64-got) @aa

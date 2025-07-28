@@ -283,11 +283,11 @@ body:             |
   
     %17:gpr32all = COPY $wzr
     %16:gpr32all = COPY %17
-    %20:zpr = INDEX_II_D -1, 2
+    %20:zpr = INDEX_II_D -1, 2, implicit $vg
     %23:gpr32 = MOVi32imm 1999
     %26:gpr64common = LOADgot target-flags(aarch64-got) @b
     %27:zpr = DUP_ZR_D %26
-    %29:ppr_3b = PTRUE_D 31
+    %29:ppr_3b = PTRUE_D 31, implicit $vg
     %33:gpr64common = LOADgot target-flags(aarch64-got) @d
     %35:gpr64common = MOVi64imm 15992
     %38:gpr64common = LOADgot target-flags(aarch64-got) @a

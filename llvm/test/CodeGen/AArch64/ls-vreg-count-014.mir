@@ -168,7 +168,7 @@ body:             |
     %0:gpr64all = SUBREG_TO_REG 0, killed %17, %subreg.sub_32
     %400:fpr32 = IMPLICIT_DEF
     %401:fpr32 = IMPLICIT_DEF
-    %332:ppr_3b = PTRUE_D 31
+    %332:ppr_3b = PTRUE_D 31, implicit $vg
     B %bb.3
   
   bb.2.for.cond.cleanup:
@@ -179,7 +179,7 @@ body:             |
   
     %2:gpr64sp = PHI %12, %bb.1, %9, %bb.3
     %5:gpr64sp = PHI %12, %bb.1, %25, %bb.3
-    %333:ppr_3b = PTRUE_D 31
+    %333:ppr_3b = PTRUE_D 31, implicit $vg
     %23:gpr64 = SUBSXri %5, 1, 0, implicit-def $nzcv
     %19:fpr32 = LDURSi %2:gpr64sp, 0
     %X1:zpr = LD1D_IMM %333, %2, 0

@@ -218,9 +218,9 @@ body:             |
   bb.0.entry:
     successors: %bb.1(0x80000000)
   
-    %17:gpr64 = RDVLI_XI 1
+    %17:gpr64 = RDVLI_XI 1, implicit $vg
     %18:gpr64 = UBFMXri killed %17, 4, 63
-    %19:gpr64 = CNTD_XPiI 31, 1
+    %19:gpr64 = CNTD_XPiI 31, 1, implicit $vg
     %20:gpr32sp = COPY %19.sub_32
     %21:gpr32common = SUBWri killed %20, 1, 0
     %23:gpr64all = IMPLICIT_DEF
@@ -241,7 +241,7 @@ body:             |
     %35:gpr32all = COPY $wzr
     %16:gpr32all = COPY %35
     %4:gpr64all = COPY %34
-    %39:ppr_3b = PTRUE_D 31
+    %39:ppr_3b = PTRUE_D 31, implicit $vg
     %53:gpr32 = MOVi32imm 200000
     %48:fpr64 = FMOVDi 112
   

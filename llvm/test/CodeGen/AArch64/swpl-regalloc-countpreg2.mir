@@ -682,7 +682,7 @@ body:             |
     BL @finish, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     %84:gpr32 = COPY $w0
-    %85:gpr64 = RDVLI_XI 1
+    %85:gpr64 = RDVLI_XI 1, implicit $vg
     %86:gpr64common = UBFMXri killed %85, 4, 63
     dead $xzr = SUBSXri killed %86, 25, 0, implicit-def $nzcv
     %242:gpr64common = MOVaddr target-flags(aarch64-page) @b, target-flags(aarch64-pageoff, aarch64-nc) @b
@@ -698,7 +698,7 @@ body:             |
   bb.1.vector.ph:
     successors: %bb.2(0x80000000)
   
-    %90:gpr64common = CNTW_XPiI 31, 1
+    %90:gpr64common = CNTW_XPiI 31, 1, implicit $vg
     %91:gpr32 = MOVi32imm 100
     %92:gpr64 = SUBREG_TO_REG 0, killed %91, %subreg.sub_32
     %93:gpr64 = UDIVXr %92, %90
@@ -706,16 +706,16 @@ body:             |
     %95:gpr64 = SUBXrr %92, %94
     %1:gpr64 = COPY %95
     %2:gpr64 = COPY %94
-    %3:zpr = INDEX_II_D 0, 1
+    %3:zpr = INDEX_II_D 0, 1, implicit $vg
     %4:zpr = INCD_ZPiI %3, 31, 1
     %6:zpr = DUP_ZR_D %90
-    %7:zpr = INDEX_II_S 0, 1
+    %7:zpr = INDEX_II_S 0, 1, implicit $vg
     %96:gpr32sp = COPY %90.sub_32
     %8:zpr = DUP_ZR_S killed %96
     %97:gpr64all = COPY $xzr
     %89:gpr64all = COPY %97
     %101:gpr64common = MOVi64imm 1
-    %102:ppr_3b = PTRUE_S 31
+    %102:ppr_3b = PTRUE_S 31, implicit $vg
   
   bb.2.vector.body:
     successors: %bb.3(0x04000000), %bb.2(0x7c000000)
@@ -799,7 +799,7 @@ body:             |
     %123:gpr64 = INSERT_SUBREG %124, %84, %subreg.sub_32
     %125:gpr64 = SBFMXri killed %123, 0, 31
     %126:gpr64 = nsw SUBXrr %125, %122
-    %127:gpr64common = CNTD_XPiI 31, 1
+    %127:gpr64common = CNTD_XPiI 31, 1, implicit $vg
     dead $xzr = SUBSXrr %126, %127, implicit-def $nzcv
     %246:gpr64common = MOVaddr target-flags(aarch64-page) @ga, target-flags(aarch64-pageoff, aarch64-nc) @ga
     %247:gpr64common = MOVaddr target-flags(aarch64-page) @gb, target-flags(aarch64-pageoff, aarch64-nc) @gb
@@ -824,8 +824,8 @@ body:             |
     %29:gpr64all = COPY %134
     %136:gpr64all = IMPLICIT_DEF
     %135:gpr64sp = INSERT_SUBREG %136, %119, %subreg.sub_32
-    %137:ppr_3b = PTRUE_D 1
-    %138:zpr = DUP_ZI_D 0, 0
+    %137:ppr_3b = PTRUE_D 1, implicit $vg
+    %138:zpr = DUP_ZI_D 0, 0, implicit $vg
     %30:zpr = CPY_ZPmR_D %138, %137, killed %135
     %140:gpr64all = IMPLICIT_DEF
     %139:gpr64sp = INSERT_SUBREG %140, %117, %subreg.sub_32
@@ -848,7 +848,7 @@ body:             |
     %154:gpr64all = COPY $xzr
     %129:gpr64all = COPY %154
     %39:gpr64sp = COPY %153
-    %155:ppr_3b = PTRUE_D 31
+    %155:ppr_3b = PTRUE_D 31, implicit $vg
     %162:gpr64common = MOVaddrCP target-flags(aarch64-page) %const.0, target-flags(aarch64-pageoff, aarch64-nc) %const.0
   
   bb.10.vector.body96:

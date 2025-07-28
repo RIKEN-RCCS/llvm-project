@@ -300,9 +300,9 @@ body:             |
   bb.0.entry:
     successors: %bb.1(0x80000000)
   
-    %27:gpr64 = RDVLI_XI 1
+    %27:gpr64 = RDVLI_XI 1, implicit $vg
     %28:gpr64 = UBFMXri killed %27, 4, 63
-    %29:gpr64common = CNTD_XPiI 31, 1
+    %29:gpr64common = CNTD_XPiI 31, 1, implicit $vg
     %30:gpr32sp = COPY %29.sub_32
     %31:gpr32common = SUBWri killed %30, 1, 0
     %33:gpr64all = IMPLICIT_DEF
@@ -312,7 +312,7 @@ body:             |
     %36:gpr64 = ANDXrr killed %32, %35
     %0:gpr64 = COPY %36
     %37:gpr64 = EORXrr %36, %35
-    %2:zpr = INDEX_II_D 0, 1
+    %2:zpr = INDEX_II_D 0, 1, implicit $vg
     %3:zpr = DUP_ZR_D %29
     %38:gpr64 = UDIVXr %35, %29
     %39:gpr64 = MADDXrrr killed %28, killed %38, $xzr
@@ -331,7 +331,7 @@ body:             |
     %49:gpr32all = COPY $wzr
     %26:gpr32all = COPY %49
     %8:gpr64all = COPY %48
-    %53:ppr_3b = PTRUE_D 31
+    %53:ppr_3b = PTRUE_D 31, implicit $vg
     %84:gpr32 = MOVi32imm 200000
   
   bb.1.vector.ph:

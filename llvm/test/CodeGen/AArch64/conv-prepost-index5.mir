@@ -314,9 +314,9 @@ body:             |
     %23:gpr64common = COPY $x0
     %25:gpr64 = LDRXui %23, 4 :: (load (s64) from %ir.arg_info, !tbaa !6)
     %0:gpr64sp = COPY %25
-    %26:gpr64 = RDVLI_XI 1
+    %26:gpr64 = RDVLI_XI 1, implicit $vg
     %27:gpr64 = UBFMXri killed %26, 4, 63
-    %28:gpr64 = CNTW_XPiI 31, 1
+    %28:gpr64 = CNTW_XPiI 31, 1, implicit $vg
     %29:gpr32 = MOVi32imm 32000
     %30:gpr64 = SUBREG_TO_REG 0, killed %29, %subreg.sub_32
     %31:gpr64 = UDIVXr %30, %28
@@ -338,7 +338,7 @@ body:             |
     %43:gpr32all = COPY $wzr
     %24:gpr32all = COPY %43
     %7:gpr64all = COPY %42
-    %47:ppr_3b = PTRUE_S 31
+    %47:ppr_3b = PTRUE_S 31, implicit $vg
     %56:gpr64common = MOVaddr target-flags(aarch64-page) @a, target-flags(aarch64-pageoff, aarch64-nc) @a
     %75:gpr64common = MOVaddr target-flags(aarch64-page) @e, target-flags(aarch64-pageoff, aarch64-nc) @e
     %76:gpr64common = MOVaddr target-flags(aarch64-page) @aa, target-flags(aarch64-pageoff, aarch64-nc) @aa

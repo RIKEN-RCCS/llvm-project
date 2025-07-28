@@ -628,13 +628,13 @@ body:             |
     $x2 = COPY %39, debug-location !27
     BL &memset, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2, implicit-def $sp, implicit-def $x0, debug-location !27
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !27
-    %0:zpr = INDEX_II_S 0, 1, debug-location !28
+    %0:zpr = INDEX_II_S 0, 1, implicit $vg, debug-location !28
     %42:gpr64all = COPY $xzr
     %32:gpr64all = COPY %42
     %43:gpr32 = MOVi32imm 125
     %1:gpr64all = SUBREG_TO_REG 0, killed %43, %subreg.sub_32
     %44:gpr64common = MOVaddr target-flags(aarch64-page) @gA1, target-flags(aarch64-pageoff, aarch64-nc) @gA1
-    %45:ppr_3b = PTRUE_S 31
+    %45:ppr_3b = PTRUE_S 31, implicit $vg
     %46:gpr64common = MOVaddr target-flags(aarch64-page) @gA2, target-flags(aarch64-pageoff, aarch64-nc) @gA2
   
   bb.1.vector.body:
@@ -708,14 +708,14 @@ body:             |
   bb.6.vector.ph74:
     successors: %bb.7(0x80000000)
   
-    %16:zpr = INDEX_II_S 0, -1, debug-location !51
+    %16:zpr = INDEX_II_S 0, -1, implicit $vg, debug-location !51
     %74:gpr32 = MOVi32imm 62
     %17:gpr64all = SUBREG_TO_REG 0, killed %74, %subreg.sub_32
     %75:gpr32common = MOVi32imm 1000
     %76:zpr = DUP_ZR_S %75
     %79:gpr64sp = ADDXri %stack.1.aA2, 0, 0
     %82:gpr64common = MOVi64imm -15
-    %84:zpr = DUP_ZI_S 240, 0
+    %84:zpr = DUP_ZI_S 240, 0, implicit $vg
   
   bb.7.vector.body79:
     successors: %bb.7(0x7c000000), %bb.8(0x04000000)
@@ -899,13 +899,13 @@ body:             |
   bb.0.entry:
     successors: %bb.1(0x80000000)
   
-    %0:zpr = INDEX_II_S 0, 1, debug-location !75
+    %0:zpr = INDEX_II_S 0, 1, implicit $vg, debug-location !75
     %11:gpr64all = COPY $xzr
     %10:gpr64all = COPY %11
     %12:gpr32 = MOVi32imm 125
     %1:gpr64all = SUBREG_TO_REG 0, killed %12, %subreg.sub_32
     %13:gpr64common = MOVaddr target-flags(aarch64-page) @gA1, target-flags(aarch64-pageoff, aarch64-nc) @gA1
-    %14:ppr_3b = PTRUE_S 31
+    %14:ppr_3b = PTRUE_S 31, implicit $vg
     %15:gpr64common = MOVaddr target-flags(aarch64-page) @gA2, target-flags(aarch64-pageoff, aarch64-nc) @gA2
   
   bb.1.vector.body:

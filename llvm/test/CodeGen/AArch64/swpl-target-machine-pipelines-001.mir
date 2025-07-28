@@ -235,7 +235,7 @@ body:             |
   bb.0.entry:
     successors: %bb.7(0x40000000), %bb.1(0x40000000)
   
-    %17:gpr64 = RDVLI_XI 1
+    %17:gpr64 = RDVLI_XI 1, implicit $vg
     %18:gpr64common = UBFMXri killed %17, 4, 63
     dead $xzr = SUBSXri %18, 16, 0, implicit-def $nzcv
     %49:gpr64common = MOVaddr target-flags(aarch64-page) @b, target-flags(aarch64-pageoff, aarch64-nc) @b
@@ -260,13 +260,13 @@ body:             |
     %27:gpr64 = SUBXrr %24, %26
     %2:gpr64 = COPY %27
     %3:gpr64 = COPY %26
-    %4:zpr = INDEX_II_S 0, 1
-    %28:gpr64 = CNTW_XPiI 31, 1
+    %4:zpr = INDEX_II_S 0, 1, implicit $vg
+    %28:gpr64 = CNTW_XPiI 31, 1, implicit $vg
     %29:gpr32sp = COPY %28.sub_32
     %5:zpr = DUP_ZR_S killed %29
     %30:gpr64all = COPY $xzr
     %21:gpr64all = COPY %30
-    %32:ppr_3b = PTRUE_S 31
+    %32:ppr_3b = PTRUE_S 31, implicit $vg
   
   bb.2.vector.body:
     successors: %bb.3(0x04000000), %bb.2(0x7c000000)

@@ -584,7 +584,7 @@ body:             |
     successors: %bb.8(0x40000000), %bb.2(0x40000000)
   
     %24:gpr64common = ADDXri %22, 1, 0
-    %25:gpr64 = RDVLI_XI 1
+    %25:gpr64 = RDVLI_XI 1, implicit $vg
     dead $xzr = SUBSXrr %24, %25, implicit-def $nzcv
     %74:gpr64common = LOADgot target-flags(aarch64-got) @A
     %75:gpr64common = LOADgot target-flags(aarch64-got) @B
@@ -626,7 +626,7 @@ body:             |
     %48:gpr64all = COPY $xzr
     %28:gpr64all = COPY %48
     %9:gpr64sp = COPY %47
-    %50:ppr_3b = PTRUE_S 31
+    %50:ppr_3b = PTRUE_S 31, implicit $vg
   
   bb.3 (%ir-block.22):
     successors: %bb.4(0x04000000), %bb.3(0x7c000000)

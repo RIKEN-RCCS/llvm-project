@@ -263,9 +263,9 @@ body:             |
   bb.0.entry:
     successors: %bb.1(0x80000000)
   
-    %21:gpr64 = RDVLI_XI 1
+    %21:gpr64 = RDVLI_XI 1, implicit $vg
     %22:gpr64 = UBFMXri killed %21, 4, 63
-    %23:gpr64 = CNTW_XPiI 31, 1
+    %23:gpr64 = CNTW_XPiI 31, 1, implicit $vg
     %24:gpr32 = MOVi32imm 16000
     %25:gpr64 = SUBREG_TO_REG 0, killed %24, %subreg.sub_32
     %26:gpr64 = UDIVXr %25, %23
@@ -286,7 +286,7 @@ body:             |
     %38:gpr32all = COPY $wzr
     %20:gpr32all = COPY %38
     %5:gpr64all = COPY %32
-    %43:ppr_3b = PTRUE_S 31
+    %43:ppr_3b = PTRUE_S 31, implicit $vg
     %48:gpr64common = MOVi64imm 16000
     %60:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
     %61:gpr64common = MOVaddr target-flags(aarch64-page) @d, target-flags(aarch64-pageoff, aarch64-nc) @d

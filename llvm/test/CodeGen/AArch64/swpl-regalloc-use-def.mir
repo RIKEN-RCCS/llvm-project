@@ -273,12 +273,12 @@ body:             |
     %22:gpr32 = MOVi32imm 7
     %23:gpr64sp = SUBREG_TO_REG 0, %22, %subreg.sub_32
     %24:zpr = DUP_ZR_D %23
-    %25:zpr = INDEX_II_D 0, 1
-    %26:ppr_3b = PTRUE_D 31
+    %25:zpr = INDEX_II_D 0, 1, implicit $vg
+    %26:ppr_3b = PTRUE_D 31, implicit $vg
     %27:ppr_3b = CMPEQ_PPzZZ_D %26, %25, %24, implicit-def dead $nzcv
     %28:zpr = IMPLICIT_DEF
     %30:gpr32 = MOVi32imm 4000
-    %33:ppr = PTRUE_D 1
+    %33:ppr = PTRUE_D 1, implicit $vg
     %34:ppr_3b = REV_PP_D %33
     %39:gpr64common = LOADgot target-flags(aarch64-got) @a
     %44:gpr64common = LOADgot target-flags(aarch64-got) @c

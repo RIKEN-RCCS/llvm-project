@@ -1429,7 +1429,7 @@ body:             |
     %21:fpr64 = LDRDui %125, 7 :: (dereferenceable load (s64) from `ptr getelementptr inbounds ([8 x double], ptr @qr, i64 0, i64 7)`, !tbaa !6)
     %22:fpr64 = LDRDui %126, 7 :: (dereferenceable load (s64) from `ptr getelementptr inbounds ([8 x double], ptr @qs, i64 0, i64 7)`, !tbaa !6)
     %23:fpr64 = LDRDui %124, 7 :: (dereferenceable load (s64) from `ptr getelementptr inbounds ([8 x double], ptr @qt, i64 0, i64 7)`, !tbaa !6)
-    %127:ppr_3b = PTRUE_D 31
+    %127:ppr_3b = PTRUE_D 31, implicit $vg
     %128:gpr64common = ADDXri %stack.1.s_D, 0, 0
     %129:zpr = LD1D_IMM %127, %128, 0 :: (dereferenceable load (s512) from %ir.s_D, align 8, !tbaa !6)
     %130:zpr = COPY %129
@@ -1516,8 +1516,8 @@ body:             |
     %616:gpr64sp = ADDXri %stack.49, 0, 0
     %620:gpr32 = MOVi32imm 8
     %622:zpr = IMPLICIT_DEF
-    %623:zpr = DUP_ZI_D 0, 0
-    %624:ppr = PTRUE_D 1
+    %623:zpr = DUP_ZI_D 0, 0, implicit $vg
+    %624:ppr = PTRUE_D 1, implicit $vg
     %627:zpr = IMPLICIT_DEF
     %630:zpr = IMPLICIT_DEF
     %633:zpr = IMPLICIT_DEF
