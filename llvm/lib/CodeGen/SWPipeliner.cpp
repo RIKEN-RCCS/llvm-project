@@ -3597,7 +3597,14 @@ static void construct_use(Register2SwplRegMap &rmap, SwplInst &inst, MachineOper
 /// \param [in,out] memsOtherBody SwplMems
 static void construct_mem_use(Register2SwplRegMap &rmap, SwplInst &inst, const MachineMemOperand *MMO, SwplInsts &insts,
                               SwplMems *mems, SwplMems *memsOtherBody) {
-  SwplMem *mem = new SwplMem(MMO, inst, (MMO==nullptr)?0:MMO->getSize().getValue());
+  uint64_t memsize = 0;
+  if (MMO) {
+    if (MMO->getSize().hasValue() && !MMO->getSize().isScalable())
+      memsize = MMO->getSize().getValue();
+    else
+      memsize = UINT32_MAX;
+  }
+  SwplMem *mem = new SwplMem(MMO, inst, memsize);
 
   const MachineOperand *BaseOp=nullptr;
   int64_t Offset=0;

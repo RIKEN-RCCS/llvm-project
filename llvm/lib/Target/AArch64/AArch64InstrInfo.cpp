@@ -10568,7 +10568,7 @@ std::tuple<unsigned, unsigned> AArch64InstrInfo::getRegKindId(const MachineRegis
     if (AArch64::CCRRegClass.contains(reg)) {
       return {AArch64StmRegKind::getCCRegID(), 1};
     }
-    if (reg == AArch64::FPCR) {
+    if (reg == AArch64::FPCR || reg == AArch64::VG) {
       return {0, 1};
     }
     llvm_unreachable("unknown register");
