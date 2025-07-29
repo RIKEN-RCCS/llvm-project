@@ -12,6 +12,7 @@ void test(void) {
     for (int j = 0; j < N; j++) {
         for (int i = j+1; i < N; i++) {
             a[i] -= b[j][i] * a[j];
+            printf("%d\n", a[i]);
         }
     }
     sum = a[0];
