@@ -1,6 +1,6 @@
 ## Source Code
 `git@github.com:RIKEN-RCCS/llvm-project.git`  
-branch: `ldit-2025-llvm20` (This is a temporary name)
+branch: `ldist-2025-llvm20` (This is a temporary name)
 
 ## Build Instructions
 
@@ -31,10 +31,10 @@ branch: `ldit-2025-llvm20` (This is a temporary name)
          -DLLVM_INCLUDE_BENCHMARKS=OFF
       ```
 
-      CMAKE_BUILD_TYPE:      Build type (`Release` or `Debug`)
-      CMAKE_INSTALL_PREFIX:  Installation path
-      LLVM_TARGETS_TO_BUILD: Target architecture to build
-      LLVM_ENABLE_PROJECTS:  LLVM projects to build
+      CMAKE_BUILD_TYPE:      Build type (`Release` or `Debug`)<br>
+      CMAKE_INSTALL_PREFIX:  Installation path<br>
+      LLVM_TARGETS_TO_BUILD: Target architecture to build<br>
+      LLVM_ENABLE_PROJECTS:  LLVM projects to build<br>
 
 4. Build and install
 
