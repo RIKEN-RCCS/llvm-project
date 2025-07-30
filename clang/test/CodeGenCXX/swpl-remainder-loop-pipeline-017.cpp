@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-unknown-hurd-gnu -emit-llvm -target-cpu a64fx -Ofast -vectorize-loops -fno-unroll-loops -mllvm -fswp -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-unknown-hurd-gnu -emit-llvm -target-cpu a64fx -Ofast -mllvm -vectorize-loops=false -fno-unroll-loops -mllvm -fswp -o - %s | FileCheck %s
 // CHECK-NOT: [[A:![0-9]+]] = !{!"llvm.remainder.pipeline.disable"}
 
 // Non remainder loop 
