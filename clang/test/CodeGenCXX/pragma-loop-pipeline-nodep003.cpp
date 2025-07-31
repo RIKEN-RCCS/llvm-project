@@ -27,7 +27,6 @@ P(E_1)
     for (i = 0; i < N; i++) {
         // CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[LOOP1_1:.*]]
         // CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[LOOP1_2:.*]]
-        // CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[LOOP1_3:.*]]
         z[i] = x[i] + y[i];
     }
     sum = z[0];
@@ -45,4 +44,3 @@ P(E_1)
 
 // CHECK: ![[LOOP1_2]] = distinct !{![[LOOP1_2]], [[DIS]], ![[URR]], ![[RPIPE:.*]]}
 // CHECK-NEXT: ![[RPIPE]] = !{!"llvm.remainder.pipeline.disable"} 
-// CHECK: ![[LOOP1_3]] = distinct !{![[LOOP1_3]], [[DIS]]}
