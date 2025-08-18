@@ -5037,8 +5037,9 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
 
 static void printDebug(const char *f, const StringRef &msg, const Loop *L) {
   if (!DebugOutput) return;
-  const auto &start=L->getLocRange().getStart();
-  const auto &end=L->getLocRange().getEnd();
+  auto locRange = L->getLocRange();
+  const auto &start=locRange.getStart();
+  const auto &end=locRange.getEnd();
   errs() << "DBG(" << f << ") " << msg << ":";
   start.print(errs());
   errs() << " - ";
