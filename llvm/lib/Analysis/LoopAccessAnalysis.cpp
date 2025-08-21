@@ -1933,7 +1933,7 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
 
   const SCEV *Dist = SE.getMinusSCEV(Sink, Src);
 
-  LLVM_DEBUG(dbgs() << "LAA: Src Scev: " << *Src << "Sink Scev: " << *Sink
+  LLVM_DEBUG(dbgs() << "LAA: Src Scev: " << *Src << " Sink Scev: " << *Sink
                     << "\n");
   LLVM_DEBUG(dbgs() << "LAA: Distance for " << *AInst << " to " << *BInst
                     << ": " << *Dist << "\n");
@@ -1976,6 +1976,17 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   // not loop-invariant (stride will be 0 in that case), we cannot analyze the
   // dependence further and also cannot generate runtime checks.
   if (!StrideAPtr || !StrideBPtr) {
+    LLVM_DEBUG(dbgs() << "Pointer access is IndirectUnsafe\n");
+    return MemoryDepChecker::Dependence::IndirectUnsafe;
+  }
+
+  int64_t StrideAPtrInt = *StrideAPtr;
+  int64_t StrideBPtrInt = *StrideBPtr;
+  LLVM_DEBUG(dbgs() << "LAA:  Src induction step: " << StrideAPtrInt
+                    << " Sink induction step: " << StrideBPtrInt << "\n");
+  // At least Src or Sink are loop invariant and the other is strided or
+  // invariant. We can generate a runtime check to disambiguate the accesses.
+  if (!StrideAPtrInt || !StrideBPtrInt) {
     if (::forSWPL) {
       LLVM_DEBUG(dbgs() << "LAA4SWPL: Src: " << *Src << ", Sink: " << *Sink << ", Dist: " << *Dist << "\n");
       if ((Dist != nullptr) && (Dist->getSCEVType()==scConstant)) {
@@ -1989,17 +2000,8 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
       LLVM_DEBUG(dbgs() << "LAA4SWPL: Dist is not constant --> Unknown\n");
     }
     LLVM_DEBUG(dbgs() << "Pointer access with non-constant stride\n");
-    return MemoryDepChecker::Dependence::IndirectUnsafe;
-  }
-
-  int64_t StrideAPtrInt = *StrideAPtr;
-  int64_t StrideBPtrInt = *StrideBPtr;
-  LLVM_DEBUG(dbgs() << "LAA:  Src induction step: " << StrideAPtrInt
-                    << " Sink induction step: " << StrideBPtrInt << "\n");
-  // At least Src or Sink are loop invariant and the other is strided or
-  // invariant. We can generate a runtime check to disambiguate the accesses.
-  if (!StrideAPtrInt || !StrideBPtrInt)
     return MemoryDepChecker::Dependence::Unknown;
+  }
 
   // Both Src and Sink have a constant stride, check if they are in the same
   // direction.
