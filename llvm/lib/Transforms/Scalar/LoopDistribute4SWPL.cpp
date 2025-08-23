@@ -725,7 +725,9 @@ public:
 
   /// Estimage required registers of all partitions.
   void calcEstimateRegs() {
+#ifndef NDEBUG
     unsigned Index = 0;
+#endif
     for (auto &P : PartitionContainer) {
       LLVM_DEBUG(dbgs() << "Estimate regs of Partition " << Index++ << " (" << &P << "): ");
       P.estimateRegs();
@@ -979,6 +981,15 @@ public:
     llvm::SmallVector<MemoryDepChecker::Dependence> tmpDependences;
     if (!Dependences)
       Dependences = &tmpDependences;
+
+    if (EnableLoopDistribute) {
+      for (auto dep:*Dependences) {
+        if (dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe) {
+          return fail("CantIsolateUnsafeDeps",
+                      "cannot isolate unsafe dependencies");
+        }
+      }
+    }
 
     InstPartitionContainer Partitions(L, LI, DT);
 
