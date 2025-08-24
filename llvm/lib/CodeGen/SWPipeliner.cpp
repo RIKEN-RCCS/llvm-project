@@ -2813,6 +2813,15 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
       } else {
         t_own_r = t->getOperand(3).getReg();
       }
+      if (own_r == t_own_r) {
+        if (DebugPrepare) {
+          dbgs() << "DEBUG(convertNonSSA): own_r is referenced by subsequent own_r\n"
+                 << " ref phi:" << *phi
+                 << " ref phi:" << *t;
+        }
+        uses[phi]=nullptr;
+        break;
+      }
       if (def_r==t_own_r) {
         llvm::Register newReg = SWPipeliner::MRI->cloneVirtualRegister(def_r);
         MachineInstr *c=BuildMI(*body, body->getFirstTerminator(), dbgloc,
