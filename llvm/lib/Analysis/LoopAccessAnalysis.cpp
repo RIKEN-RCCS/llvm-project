@@ -1988,6 +1988,10 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   // invariant. We can generate a runtime check to disambiguate the accesses.
   if (!StrideAPtrInt || !StrideBPtrInt) {
     if (::forSWPL) {
+      if (AInst->mayWriteToMemory() && BInst->mayWriteToMemory()) {
+        LLVM_DEBUG(dbgs() << "LAA4SWPL: Src is Store and Sinc is Store --> NoDep\n");
+        return MemoryDepChecker::Dependence::NoDep;
+      }
       LLVM_DEBUG(dbgs() << "LAA4SWPL: Src: " << *Src << ", Sink: " << *Sink << ", Dist: " << *Dist << "\n");
       if ((Dist != nullptr) && (Dist->getSCEVType()==scConstant)) {
         if (Dist->isZero()) {
@@ -2658,10 +2662,18 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     // words may be written to the same address.
     bool IsReadOnlyPtr = false;
     Type *AccessTy = getLoadStoreType(LD);
-    if (Seen.insert({Ptr, AccessTy}).second ||
+    if (::forSWPL) {
+      if (Seen.insert({Ptr, AccessTy}).second ||
+          !getPtrStride(*PSE, AccessTy, Ptr, TheLoop, SymbolicStrides).value_or(0)) {
+        ++NumReads;
+        IsReadOnlyPtr = true;
+      }
+    } else {
+      if (Seen.insert({Ptr, AccessTy}).second ||
         !getPtrStride(*PSE, AccessTy, Ptr, TheLoop, SymbolicStrides)) {
-      ++NumReads;
-      IsReadOnlyPtr = true;
+        ++NumReads;
+        IsReadOnlyPtr = true;
+      }
     }
 
     // See if there is an unsafe dependency between a load to a uniform address and
