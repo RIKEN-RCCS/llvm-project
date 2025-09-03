@@ -1988,10 +1988,6 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   // invariant. We can generate a runtime check to disambiguate the accesses.
   if (!StrideAPtrInt || !StrideBPtrInt) {
     if (::forSWPL) {
-      if (AInst->mayWriteToMemory() && BInst->mayWriteToMemory()) {
-        LLVM_DEBUG(dbgs() << "LAA4SWPL: Src is Store and Sinc is Store --> NoDep\n");
-        return MemoryDepChecker::Dependence::NoDep;
-      }
       LLVM_DEBUG(dbgs() << "LAA4SWPL: Src: " << *Src << ", Sink: " << *Sink << ", Dist: " << *Dist << "\n");
       if ((Dist != nullptr) && (Dist->getSCEVType()==scConstant)) {
         if (Dist->isZero()) {
