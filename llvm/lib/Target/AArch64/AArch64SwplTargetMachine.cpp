@@ -1023,6 +1023,11 @@ static StmPipeline RES_SIMDFP_SVE_OP_029_01 = {
    16, },
   {P_::EXB, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E,
     P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E, P_::EXB_E,P_::EXB_E}};
+static StmPipeline RES_SIMDFP_SVE_OP_030_01 = {{0, 1, 1, 5}, {P_::FLA, P_::FLA_C, P_::FLA, P_::FLA_C}};
+static StmPipeline RES_SIMDFP_SVE_OP_030_02 = {{0, 1, 1, 5}, {P_::FLA, P_::FLA_C, P_::FLB, P_::FLB_C}};
+static StmPipeline RES_SIMDFP_SVE_OP_030_03 = {{0, 1, 1, 5}, {P_::FLB, P_::FLB_C, P_::FLA, P_::FLA_C}};
+static StmPipeline RES_SIMDFP_SVE_OP_030_04 = {{0, 1, 1, 5}, {P_::FLB, P_::FLB_C, P_::FLB, P_::FLB_C}};
+
 
 /// SIMDFP_SVE_LD
 static StmPipeline RES_SIMDFP_SVE_LD_001_01 = {
@@ -1467,6 +1472,9 @@ std::map<AArch64SwplSchedA64FX::ResourceID, AArch64SwplSchedA64FX::SchedResource
   {MI_SIMDFP_SVE_OP_029,  /// Pipeline:EXB  Latency: 17 Blocking:E
     {{&RES_SIMDFP_SVE_OP_029_01},
     17}},
+  {MI_SIMDFP_SVE_OP_030,  /// Pipeline:FL*+FL*  Latency:1+4
+    {{&RES_SIMDFP_SVE_OP_030_01, &RES_SIMDFP_SVE_OP_030_02,
+      &RES_SIMDFP_SVE_OP_030_03, &RES_SIMDFP_SVE_OP_030_04}, 5}},
 
   {MI_SIMDFP_SVE_LD_001,  /// Pipeline:EAG*, FLA  Latency:11
     {{&RES_SIMDFP_SVE_LD_001_01, &RES_SIMDFP_SVE_LD_001_02,
@@ -1623,6 +1631,7 @@ llvm::DenseMap<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSched
   // SIMD&FP
   {AArch64::ADDv2i64, MI_SIMDFP_SVE_OP_002},
   {AArch64::ADDv4i32, MI_SIMDFP_SVE_OP_002},
+  {AArch64::BSPv16i8, MI_SIMDFP_SVE_OP_030},
   {AArch64::DUPi32, MI_SIMDFP_SVE_OP_004},
   {AArch64::DUPi64, MI_SIMDFP_SVE_OP_004},
   {AArch64::DUPv2i32lane, MI_SIMDFP_SVE_OP_004},
@@ -1779,8 +1788,9 @@ llvm::DenseMap<unsigned int, AArch64SwplSchedA64FX::ResourceID> AArch64SwplSched
   {AArch64::AND_ZI, MI_SIMDFP_SVE_OP_007},
   {AArch64::BIC_PPzPP, MI_PREDICATE_OP_001},
   {AArch64::CMPHI_PPzZZ_D, MI_SVE_CMP_INST_002},
-  {AArch64::CPY_ZPmI_D, MI_SIMDFP_SVE_OP_004},
+  {AArch64::CPY_ZPmI_D, MI_SIMDFP_SVE_OP_007},
   {AArch64::CPY_ZPmV_D, MI_SIMDFP_SVE_OP_004},
+  {AArch64::CPY_ZPzI_D, MI_SIMDFP_SVE_OP_007},
   {AArch64::DUP_ZR_D, MI_SIMDFP_SVE_OP_005},
   {AArch64::DUP_ZR_S, MI_SIMDFP_SVE_OP_005},
   {AArch64::DUP_ZZI_D, MI_SIMDFP_SVE_OP_004},
