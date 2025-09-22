@@ -102,6 +102,7 @@
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Scalar/LICM.h"
 #include "llvm/Transforms/Scalar/LoopDeletion.h"
+#include "llvm/Transforms/Scalar/LoopDistribute4SWPL.h"
 #include "llvm/Transforms/Scalar/LoopDistribute.h"
 #include "llvm/Transforms/Scalar/LoopFlatten.h"
 #include "llvm/Transforms/Scalar/LoopIdiomRecognize.h"
@@ -1522,6 +1523,9 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(
       std::move(LPM), /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/false));
 
+  // Distribute loops to allow SWPL.
+  OptimizePM.addPass(LoopDistribute4SWPLPass());
+
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences
   // into separate loop that would otherwise inhibit vectorization.  This is
   // currently only performed for loops marked with the metadata
@@ -2074,6 +2078,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // *All* loop passes must preserve it, in order to be able to use it.
   MainFPM.addPass(createFunctionToLoopPassAdaptor(
       std::move(LPM), /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/true));
+
+  MainFPM.addPass(LoopDistribute4SWPLPass());
 
   MainFPM.addPass(LoopDistributePass());
 

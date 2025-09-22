@@ -199,6 +199,10 @@ public:
     return false;
   }
 
+  bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) const {
+    return false;
+  }
+
   unsigned getEpilogueVectorizationMinVF() const { return 16; }
 
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const { return false; }
@@ -227,6 +231,11 @@ public:
           SimplifyAndSetOp) const {
     return std::nullopt;
   }
+
+  bool isSwpDirected(Loop *L) const {
+    return false;
+  }
+
 
   void getUnrollingPreferences(Loop *, ScalarEvolution &,
                                TTI::UnrollingPreferences &,
@@ -448,6 +457,8 @@ public:
            !match(I, m_CombineOr(m_LogicalAnd(m_Value(), m_Value()),
                                  m_LogicalOr(m_Value(), m_Value())));
   }
+
+  bool isEnableFswpOption() const { return false; }
 
   bool enableInterleavedAccessVectorization() const { return false; }
 

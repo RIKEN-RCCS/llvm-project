@@ -710,6 +710,10 @@ public:
     return BaseT::getEpilogueVectorizationMinVF();
   }
 
+  bool getLoopDistributedInfo(MDNode *LoopID, unsigned &LoopDistNum, unsigned &LoopNum) {
+    return BaseT::getLoopDistributedInfo(LoopID, LoopDistNum, LoopNum);
+  }
+
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
     return BaseT::preferPredicateOverEpilogue(TFI);
   }
@@ -740,6 +744,10 @@ public:
     return BaseT::simplifyDemandedVectorEltsIntrinsic(
         IC, II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
         SimplifyAndSetOp);
+  }
+
+  bool isSwpDirected(Loop *L) {
+    return BaseT::isSwpDirected(L);
   }
 
   virtual std::optional<unsigned>

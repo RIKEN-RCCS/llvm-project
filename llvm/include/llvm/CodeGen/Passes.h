@@ -602,6 +602,9 @@ namespace llvm {
   /// otherwise this does nothing
   FunctionPass *createRegAllocScoringPass();
 
+  /// Relocate Swpl Pseudo Instr.
+  FunctionPass *createSwplPseudoRelocatorPass();
+
   /// JMC instrument pass.
   ModulePass *createJMCInstrumenterPass();
 

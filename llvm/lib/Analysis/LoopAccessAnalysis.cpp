@@ -105,8 +105,8 @@ const unsigned VectorizerParams::MaxVectorWidth = 64;
 static cl::opt<unsigned>
     MaxDependences("max-dependences", cl::Hidden,
                    cl::desc("Maximum number of dependences collected by "
-                            "loop-access analysis (default = 100)"),
-                   cl::init(100));
+                            "loop-access analysis (default = 1000)"),
+                   cl::init(1000));
 
 /// This enables versioning on the strides of symbolically striding memory
 /// accesses in code like the following.
@@ -145,6 +145,18 @@ static cl::opt<bool, true> HoistRuntimeChecks(
     cl::desc(
         "Hoist inner loop runtime memory checks to outer loop if possible"),
     cl::location(VectorizerParams::HoistRuntimeChecks), cl::init(true));
+
+static cl::opt<bool> EnableRTCheck(
+  "loopdist4swpl-enable-rtcheck", cl::init(false), cl::Hidden);
+
+static cl::opt<bool> ExpandDistTarget(
+  "expand-loopdist-target", cl::Hidden, cl::init(false));
+
+static bool forSWPL=false;
+
+/// Reason for interrupting processing
+static std::string Reason;
+
 bool VectorizerParams::HoistRuntimeChecks;
 
 bool VectorizerParams::isInterleaveForced() {
@@ -1921,7 +1933,7 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
 
   const SCEV *Dist = SE.getMinusSCEV(Sink, Src);
 
-  LLVM_DEBUG(dbgs() << "LAA: Src Scev: " << *Src << "Sink Scev: " << *Sink
+  LLVM_DEBUG(dbgs() << "LAA: Src Scev: " << *Src << " Sink Scev: " << *Sink
                     << "\n");
   LLVM_DEBUG(dbgs() << "LAA: Distance for " << *AInst << " to " << *BInst
                     << ": " << *Dist << "\n");
@@ -1964,7 +1976,7 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   // not loop-invariant (stride will be 0 in that case), we cannot analyze the
   // dependence further and also cannot generate runtime checks.
   if (!StrideAPtr || !StrideBPtr) {
-    LLVM_DEBUG(dbgs() << "Pointer access with non-constant stride\n");
+    LLVM_DEBUG(dbgs() << "Pointer access is IndirectUnsafe\n");
     return MemoryDepChecker::Dependence::IndirectUnsafe;
   }
 
@@ -1974,8 +1986,22 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
                     << " Sink induction step: " << StrideBPtrInt << "\n");
   // At least Src or Sink are loop invariant and the other is strided or
   // invariant. We can generate a runtime check to disambiguate the accesses.
-  if (!StrideAPtrInt || !StrideBPtrInt)
+  if (!StrideAPtrInt || !StrideBPtrInt) {
+    if (::forSWPL) {
+      LLVM_DEBUG(dbgs() << "LAA4SWPL: Src: " << *Src << ", Sink: " << *Sink << ", Dist: " << *Dist << "\n");
+      if ((Dist != nullptr) && (Dist->getSCEVType()==scConstant)) {
+        if (Dist->isZero()) {
+          LLVM_DEBUG(dbgs() << "LAA4SWPL: Dist is 0 --> Backward\n");
+          return MemoryDepChecker::Dependence::Backward;
+        }
+        LLVM_DEBUG(dbgs() << "LAA4SWPL: Dist is not 0 --> NoDep\n");
+        return MemoryDepChecker::Dependence::NoDep;
+      }
+      LLVM_DEBUG(dbgs() << "LAA4SWPL: Dist is not constant --> Unknown\n");
+    }
+    LLVM_DEBUG(dbgs() << "Pointer access with non-constant stride\n");
     return MemoryDepChecker::Dependence::Unknown;
+  }
 
   // Both Src and Sink have a constant stride, check if they are in the same
   // direction.
@@ -2311,6 +2337,10 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &AccessSets,
                 Dependences.clear();
                 LLVM_DEBUG(dbgs()
                            << "Too many dependences, stopped recording\n");
+                if (::forSWPL) {
+                  ::Reason = "Too many dependencies. Increase max-dependences or rewrite your program.";
+                  return false;
+                }
               }
             }
             if (!RecordDependences && !isSafeForVectorization())
@@ -2356,6 +2386,10 @@ void MemoryDepChecker::Dependence::print(
   OS.indent(Depth + 2) << *Instrs[Destination] << "\n";
 }
 
+StringRef LoopAccessInfo::getReason() const {
+  return ::Reason;
+}
+
 bool LoopAccessInfo::canAnalyzeLoop() {
   // We need to have a loop header.
   LLVM_DEBUG(dbgs() << "\nLAA: Checking a loop in '"
@@ -2365,7 +2399,11 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   // We can only analyze innermost loops.
   if (!TheLoop->isInnermost()) {
     LLVM_DEBUG(dbgs() << "LAA: loop is not the innermost loop\n");
-    recordAnalysis("NotInnerMostLoop") << "loop is not the innermost loop";
+    if (::forSWPL) {
+      ::Reason = "loop is not the innermost loop.";
+    } else {
+      recordAnalysis("NotInnerMostLoop") << "loop is not the innermost loop";
+    }
     return false;
   }
 
@@ -2373,8 +2411,12 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   if (TheLoop->getNumBackEdges() != 1) {
     LLVM_DEBUG(
         dbgs() << "LAA: loop control flow is not understood by analyzer\n");
-    recordAnalysis("CFGNotUnderstood")
-        << "loop control flow is not understood by analyzer";
+    if (::forSWPL) {
+      ::Reason = "loop control flow is not understood by analyzer.";
+    } else {
+      recordAnalysis("CFGNotUnderstood")
+          << "loop control flow is not understood by analyzer";
+    }
     return false;
   }
 
@@ -2383,12 +2425,19 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   // may execute fewer iterations, if it exits via an uncountable exit.
   const SCEV *ExitCount = PSE->getSymbolicMaxBackedgeTakenCount();
   if (isa<SCEVCouldNotCompute>(ExitCount)) {
-    recordAnalysis("CantComputeNumberOfIterations")
-        << "could not determine number of loop iterations";
+    if (::forSWPL) {
+      ::Reason = "could not determine number of loop iterations.";
+    } else {
+      recordAnalysis("CantComputeNumberOfIterations")
+          << "could not determine number of loop iterations";
+    }
     LLVM_DEBUG(dbgs() << "LAA: SCEV could not compute the loop exit count.\n");
     return false;
   }
-
+  if (::forSWPL && TheLoop->getNumBlocks() > 1) {
+    ::Reason = "Found multiple basicblocks.";
+    return false;
+  }
   LLVM_DEBUG(dbgs() << "LAA: Found an analyzable loop: "
                     << TheLoop->getHeader()->getName() << "\n");
   return true;
@@ -2435,8 +2484,12 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
 
       // With both a non-vectorizable memory instruction and a convergent
       // operation, found in this loop, no reason to continue the search.
-      if (HasComplexMemInst && HasConvergentOp)
+      if (HasComplexMemInst && HasConvergentOp) {
+        if (::forSWPL) {
+          ::Reason = "Has Complex Memory Instruction.";
+        }
         return false;
+      }
 
       // Avoid hitting recordAnalysis multiple times.
       if (HasComplexMemInst)
@@ -2518,8 +2571,12 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     } // Next instr.
   } // Next block.
 
-  if (HasComplexMemInst)
+  if (HasComplexMemInst) {
+    if (::forSWPL) {
+      ::Reason = "Has Complex Memory Instruction.";
+    }
     return false;
+  }
 
   // Now we have two lists that hold the loads and the stores.
   // Next, we find the pointers that they use.
@@ -2528,6 +2585,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   // care if the pointers are *restrict*.
   if (!Stores.size()) {
     LLVM_DEBUG(dbgs() << "LAA: Found a read-only loop!\n");
+    if (::forSWPL && !ExpandDistTarget)
+      ::Reason = "Found a read-only loop.";
     return true;
   }
 
@@ -2581,6 +2640,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     LLVM_DEBUG(
         dbgs() << "LAA: A loop annotated parallel, ignore memory dependency "
                << "checks.\n");
+    if (::forSWPL) {
+      ::Reason = "A loop annotated parallel.";
+    }
     return true;
   }
 
@@ -2596,10 +2658,18 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     // words may be written to the same address.
     bool IsReadOnlyPtr = false;
     Type *AccessTy = getLoadStoreType(LD);
-    if (Seen.insert({Ptr, AccessTy}).second ||
+    if (::forSWPL) {
+      if (Seen.insert({Ptr, AccessTy}).second ||
+          !getPtrStride(*PSE, AccessTy, Ptr, TheLoop, SymbolicStrides).value_or(0)) {
+        ++NumReads;
+        IsReadOnlyPtr = true;
+      }
+    } else {
+      if (Seen.insert({Ptr, AccessTy}).second ||
         !getPtrStride(*PSE, AccessTy, Ptr, TheLoop, SymbolicStrides)) {
-      ++NumReads;
-      IsReadOnlyPtr = true;
+        ++NumReads;
+        IsReadOnlyPtr = true;
+      }
     }
 
     // See if there is an unsafe dependency between a load to a uniform address and
@@ -2628,6 +2698,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   // other reads in this loop then is it safe to vectorize.
   if (NumReadWrites == 1 && NumReads == 0) {
     LLVM_DEBUG(dbgs() << "LAA: Found a write-only loop!\n");
+    if (::forSWPL && !ExpandDistTarget) {
+      ::Reason = "Found a write-only loop.";
+    }
     return true;
   }
 
@@ -2638,7 +2711,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
   Value *UncomputablePtr = nullptr;
-  bool CanDoRTIfNeeded =
+  bool CanDoRTIfNeeded = true;
+  if (EnableRTCheck || !::forSWPL)
+    CanDoRTIfNeeded =
       Accesses.canCheckPtrAtRT(*PtrRtChecking, PSE->getSE(), TheLoop,
                                SymbolicStrides, UncomputablePtr, false);
   if (!CanDoRTIfNeeded) {
@@ -2647,6 +2722,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
         << "cannot identify array bounds";
     LLVM_DEBUG(dbgs() << "LAA: We can't vectorize because we can't find "
                       << "the array bounds.\n");
+    if (::forSWPL) {
+      ::Reason = "Can't find the array bounds.";
+    }
     return false;
   }
 
@@ -2659,7 +2737,11 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     DepsAreSafe = DepChecker->areDepsSafe(DependentAccesses,
                                           Accesses.getDependenciesToCheck());
 
-    if (!DepsAreSafe && DepChecker->shouldRetryWithRuntimeCheck()) {
+    if (::forSWPL && !::Reason.empty()) {
+      // Processing was interrupted within areDepsSafe()
+      return true;
+    }
+    if ((EnableRTCheck || !::forSWPL) && !DepsAreSafe && DepChecker->shouldRetryWithRuntimeCheck()) {
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
 
       // Clear the dependency checks. We assume they are not needed.
@@ -2679,6 +2761,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
         recordAnalysis("CantCheckMemDepsAtRunTime", I)
             << "cannot check memory dependencies at runtime";
         LLVM_DEBUG(dbgs() << "LAA: Can't vectorize with memory checks\n");
+        if (::forSWPL) {
+          ::Reason = "Cannot check memory dependencies at runtime.";
+        }
         return false;
       }
       DepsAreSafe = true;
@@ -2690,8 +2775,12 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
         << "cannot add control dependency to convergent operation";
     LLVM_DEBUG(dbgs() << "LAA: We can't vectorize because a runtime check "
                          "would be needed with a convergent operation\n");
+    if (::forSWPL) {
+      ::Reason = "Cannot add control dependency to convergent operation";
+    }
     return false;
   }
+  if (::forSWPL) return DepsAreSafe;
 
   if (DepsAreSafe) {
     LLVM_DEBUG(
@@ -3007,9 +3096,11 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                const TargetTransformInfo *TTI,
                                const TargetLibraryInfo *TLI, AAResults *AA,
-                               DominatorTree *DT, LoopInfo *LI)
+                               DominatorTree *DT, LoopInfo *LI, bool forSWPL)
     : PSE(std::make_unique<PredicatedScalarEvolution>(*SE, *L)),
       PtrRtChecking(nullptr), TheLoop(L) {
+  ::forSWPL = forSWPL;
+  ::Reason = "";
   unsigned MaxTargetVectorWidthInBits = std::numeric_limits<unsigned>::max();
   if (TTI) {
     TypeSize FixedWidth =
@@ -3080,12 +3171,12 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
   PSE->print(OS, Depth);
 }
 
-const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L) {
+const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L, bool forSWPL) {
   const auto &[It, Inserted] = LoopAccessInfoMap.insert({&L, nullptr});
 
   if (Inserted)
     It->second =
-        std::make_unique<LoopAccessInfo>(&L, &SE, TTI, TLI, &AA, &DT, &LI);
+        std::make_unique<LoopAccessInfo>(&L, &SE, TTI, TLI, &AA, &DT, &LI, forSWPL);
 
   return *It->second;
 }
