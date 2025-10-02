@@ -10475,6 +10475,8 @@ bool AArch64InstrInfo::isNonTargetMI4SWPL(MachineInstr &inst) const {
     case AArch64::DMB: /// fence相当
     case AArch64::INLINEASM:
     case AArch64::INLINEASM_BR:
+    case AArch64::BSPv16i8:
+    case AArch64::BSPv8i8:
       return true;
     default:
       return false;
