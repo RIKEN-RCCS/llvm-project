@@ -10472,7 +10472,7 @@ StmRegKind * AArch64InstrInfo::getRegKind(const MachineRegisterInfo &MRI, Regist
 
 bool AArch64InstrInfo::isNonTargetMI4SWPL(MachineInstr &inst) const {
     switch(inst.getOpcode()) {
-    case AArch64::DMB: /// fence相当
+    case AArch64::DMB: /// corresponds to fence
     case AArch64::INLINEASM:
     case AArch64::INLINEASM_BR:
     case AArch64::BSPv16i8:
