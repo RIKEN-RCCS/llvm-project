@@ -115,7 +115,7 @@ DEBUG_COUNTER(VectorizedGraphs, "slp-vectorized",
               "Controls which SLP graphs should be vectorized.");
 
 static cl::opt<bool>
-    RunSLPVectorization("vectorize-slp", cl::init(true), cl::Hidden,
+    RunSLPVectorization("vectorize-slp", cl::init(false), cl::Hidden,
                         cl::desc("Run the SLP vectorization passes"));
 
 static cl::opt<bool>
