@@ -8,7 +8,7 @@
 // "-mllvm -vectorize-slp=false" will disable slp vectorization, overriding
 // the cc1 option.
 //
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -O2 -vectorize-slp -o - -x ir %t.o -fthinlto-index=%t.thinlto.bc 2>&1 | FileCheck %s --check-prefix=SLP
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -O2 -vectorize-slp -mllvm -vectorize-slp -o - -x ir %t.o -fthinlto-index=%t.thinlto.bc 2>&1 | FileCheck %s --check-prefix=SLP
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -O2 -vectorize-slp -mllvm -vectorize-slp=false -o - -x ir %t.o -fthinlto-index=%t.thinlto.bc 2>&1 | FileCheck %s --check-prefix=NOSLP
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -O0 -vectorize-slp -o - -x ir %t.o -fthinlto-index=%t.thinlto.bc 2>&1 | FileCheck %s --check-prefix=NOSLP
 // SLP: extractelement

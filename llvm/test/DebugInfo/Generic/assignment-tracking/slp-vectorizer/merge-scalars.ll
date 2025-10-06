@@ -1,7 +1,7 @@
 ; REQUIRES: x86-registered-target
-; RUN: opt -passes=slp-vectorizer -S -o - %s \
+; RUN: opt -vectorize-slp -passes=slp-vectorizer -S -o - %s \
 ; RUN: | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators -passes=slp-vectorizer -S -o - %s \
+; RUN: opt -vectorize-slp --try-experimental-debuginfo-iterators -passes=slp-vectorizer -S -o - %s \
 ; RUN: | FileCheck %s
 
 ;; $ cat test.cpp
