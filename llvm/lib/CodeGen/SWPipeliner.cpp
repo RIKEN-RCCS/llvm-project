@@ -2733,12 +2733,6 @@ static MachineOperand* used_reg(MachineInstr &phi) {
       if (!o.isReg()) continue;
       if (o.isDef()) continue;
       auto r=o.getReg();
-      if (r.id()==own_r.id()) {
-         if (DebugPrepare) {
-           dbgs() << "DEBUG(used_reg): own-reg(" << printReg(own_r, SWPipeliner::TRI) << ") is used!\n";
-         }
-         return nullptr;
-      }
       if (r.id()==def_r.id()) {
          if (DebugPrepare) {
            dbgs() << "DEBUG(used_reg): def-reg(" << printReg(def_r, SWPipeliner::TRI) << ") is used!\n";
@@ -2955,6 +2949,21 @@ void SwplLoop::convertNonSSA(llvm::MachineBasicBlock *body, llvm::MachineBasicBl
       } else {
         if (DebugPrepare) {
           dbgs() << "DEBUG(convertNonSSA): Suppress the generation of COPY: " << *phi;
+        }
+      }
+      auto *defMI = def_op->getParent();
+      for (auto *I = defMI->getNextNode(); I; I = I->getNextNode()) {
+        for (auto &o : I->operands()) {
+          if (!o.isReg()) continue;
+          if (o.isDef()) continue;
+          auto r=o.getReg();
+          if (r.id()==own_r.id()) {
+            if (DebugPrepare) {
+              dbgs() << "DEBUG(convertNonSSA): change own-reg(" << printReg(own_r, SWPipeliner::TRI)
+                     << ") to def-reg(" << printReg(def_r, SWPipeliner::TRI)<< "): " << *I;
+            }
+            o.setReg(def_r);
+          }
         }
       }
     }
