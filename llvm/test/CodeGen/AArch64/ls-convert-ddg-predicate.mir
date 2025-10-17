@@ -120,16 +120,12 @@
 #CHECK-NEXT: ### to  : ST1D_IMM killed %108:zpr, %33:ppr_3b, %87:gpr64sp, 0 :: (store unknown-size into %ir.lsr.iv, align 64, !tbaa !6)
 #CHECK-NEXT: ### distance:0 delay:9 dep:reg(%108:Float)
 
-#CHECK: ### from: %109:zpr = LD1D_IMM %33:ppr_3b, %87:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv, align 64, !tbaa !6)
-#CHECK-NEXT: ### to  : %90:ppr_3b = nnan ninf nsz arcp contract afn reassoc nofpexcept FCMGT_PPzZ0_D %33:ppr_3b, %109:zpr
-#CHECK-NEXT: ### distance:0 delay:11 dep:reg(%109:Float)
-
-#CHECK: ### from: %109:zpr = LD1D_IMM %33:ppr_3b, %87:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv, align 64, !tbaa !6)
-#CHECK-NEXT: ### to  : %89:zpr = COPY %109:zpr
-#CHECK-NEXT: ### distance:0 delay:11 dep:reg(%109:Float)
+#CHECK: ### from: %89:zpr = LD1D_IMM %33:ppr_3b, %87:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv, align 64, !tbaa !6)
+#CHECK-NEXT: ### to  : %90:ppr_3b = nnan ninf nsz arcp contract afn reassoc nofpexcept FCMGT_PPzZ0_D %33:ppr_3b, %89:zpr
+#CHECK-NEXT: ### distance:0 delay:11 dep:reg(%89:Float)
 
 #CHECK: ### from: %91:ppr_3b = nofpexcept FCMLE_PPzZ0_D %33:ppr_3b, %89:zpr
-#CHECK-NEXT: ### to  : %89:zpr = COPY %109:zpr
+#CHECK-NEXT: ### to  : %89:zpr = LD1D_IMM %33:ppr_3b, %87:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv, align 64, !tbaa !6)
 #CHECK-NEXT: ### distance:0 delay:1 dep:reg(%89:Float)
 
 #CHECK: ### from: %92:zpr = LD1D_IMM %33:ppr_3b, %86:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv98, align 64, !tbaa !6)
@@ -145,7 +141,7 @@
 #CHECK-NEXT: ### distance:0 delay:1 dep:reg(%86:Int)
 
 #CHECK: ### from: %95:ppr_3b = nnan ninf nsz arcp contract afn reassoc nofpexcept FCMGT_PPzZZ_D %33:ppr_3b, %94:zpr, %89:zpr
-#CHECK-NEXT: ### to  : %89:zpr = COPY %109:zpr
+#CHECK-NEXT: ### to  : %89:zpr = LD1D_IMM %33:ppr_3b, %87:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv, align 64, !tbaa !6)
 #CHECK-NEXT: ### distance:0 delay:1 dep:reg(%89:Float)
 
 #CHECK: ### from: %96:zpr = LD1D_IMM %33:ppr_3b, %84:gpr64sp, 0 :: (load unknown-size from %ir.lsr.iv102, align 64, !tbaa !6)
@@ -165,7 +161,7 @@
 #CHECK-NEXT: ### distance:0 delay:1 dep:reg(%84:Int)
 
 #CHECK: ### from: ST1D_IMM %101:zpr, %90:ppr_3b, %84:gpr64sp, 0 :: (store unknown-size into %ir.lsr.iv102, align 8, !tbaa !6)
-#CHECK-NEXT: ### to  : %90:ppr_3b = nnan ninf nsz arcp contract afn reassoc nofpexcept FCMGT_PPzZ0_D %33:ppr_3b, %109:zpr
+#CHECK-NEXT: ### to  : %90:ppr_3b = nnan ninf nsz arcp contract afn reassoc nofpexcept FCMGT_PPzZ0_D %33:ppr_3b, %89:zpr
 #CHECK-NEXT: ### distance:0 delay:1 dep:reg(%90:Predicate)
 
 #CHECK: ### from: ST1D_IMM %101:zpr, %90:ppr_3b, %84:gpr64sp, 0 :: (store unknown-size into %ir.lsr.iv102, align 8, !tbaa !6)
@@ -181,15 +177,15 @@
 #CHECK-NEXT: ### distance:0 delay:1 dep:reg(%85:Int)
 
 #CHECK: ### from: %104:zpr = SEL_ZPZZ_D %90:ppr_3b, killed %103:zpr, %93:zpr
-#CHECK-NEXT: ### to  : %90:ppr_3b = nnan ninf nsz arcp contract afn reassoc nofpexcept FCMGT_PPzZ0_D %33:ppr_3b, %109:zpr
+#CHECK-NEXT: ### to  : %90:ppr_3b = nnan ninf nsz arcp contract afn reassoc nofpexcept FCMGT_PPzZ0_D %33:ppr_3b, %89:zpr
 #CHECK-NEXT: ### distance:0 delay:1 dep:reg(%90:Predicate)
 
 #CHECK: ### from: %106:zpr = SEL_ZPZZ_D %90:ppr_3b, %101:zpr, killed %105:zpr
-#CHECK-NEXT: ### to  : %90:ppr_3b = nnan ninf nsz arcp contract afn reassoc nofpexcept FCMGT_PPzZ0_D %33:ppr_3b, %109:zpr
+#CHECK-NEXT: ### to  : %90:ppr_3b = nnan ninf nsz arcp contract afn reassoc nofpexcept FCMGT_PPzZ0_D %33:ppr_3b, %89:zpr
 #CHECK-NEXT: ### distance:0 delay:1 dep:reg(%90:Predicate)
 
 #CHECK: ### from: %107:zpr = SEL_ZPZZ_D %90:ppr_3b, killed %102:zpr, %94:zpr
-#CHECK-NEXT: ### to  : %90:ppr_3b = nnan ninf nsz arcp contract afn reassoc nofpexcept FCMGT_PPzZ0_D %33:ppr_3b, %109:zpr
+#CHECK-NEXT: ### to  : %90:ppr_3b = nnan ninf nsz arcp contract afn reassoc nofpexcept FCMGT_PPzZ0_D %33:ppr_3b, %89:zpr
 #CHECK-NEXT: ### distance:0 delay:1 dep:reg(%90:Predicate)
 
 --- |

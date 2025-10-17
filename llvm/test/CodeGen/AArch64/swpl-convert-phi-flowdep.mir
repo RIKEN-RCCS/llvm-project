@@ -1,6 +1,5 @@
 # RUN: llc %s -mcpu=a64fx -start-before=aarch64-swpipeliner -O2 -fswp -o /dev/null -swpl-debug-dump-mir=16 2>&1  | FileCheck %s
-# CHECK:%36:fpr64 = COPY %45:fpr64
-# CHECK-NEXT: %50:fpr64 = COPY %37:fpr64
+# CHECK: %50:fpr64 = COPY %37:fpr64
 # CHECK-NEXT: %37:fpr64 = COPY %41:fpr64
 # CHECK-NEXT: %38:fpr64 = COPY %50:fpr64
 

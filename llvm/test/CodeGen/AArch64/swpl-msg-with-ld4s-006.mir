@@ -7,7 +7,7 @@
 # CHECK: remark: sample.c:10:3: distributed loop: 1 of 3 The number of COPY instructions in the kernel loop for software pipelining is 0.
 # CHECK: remark: sample.c:10:3: distributed loop: 1 of 3 software pipelining
 # CHECK: remark: sample.c:10:3: distributed loop: 2 of 3 Since the pragma pipeline_nodep was specified, it was assumed that there is no dependency between memory access instructions in the loop.
-# CHECK: remark: sample.c:10:3: distributed loop: 2 of 3 The number of COPY instructions in the kernel loop for software pipelining is 2.
+# CHECK: remark: sample.c:10:3: distributed loop: 2 of 3 The number of COPY instructions in the kernel loop for software pipelining is 0.
 # CHECK: remark: sample.c:10:3: distributed loop: 2 of 3 software pipelining
 
 --- |
