@@ -1,9 +1,9 @@
 # RUN: llc %s -O3 -fswp -mcpu=a64fx -start-before=aarch64-swpipeliner -swpl-reg-alloc-prio=1 -swpl-debug -o /dev/null 2>&1 | FileCheck %s
-# CHECK:        : (Iterative Modulo Scheduling. ResMII 69. NumOfBodyInsts 138. Budget 3450. II 111. Minimum II = 111.)
-# CHECK-NEXT:        :  (O) Scheduling succeeds    at estimation.          : (II: 111 in [ 111,112]) MVE: 2 Last inst: 0. (Itr Org: 711, Req: 3) (VReg Fp: 18/32, Int: 4/29, Pre: 1/8) Eval:0.000000e+00.
-# CHECK-NEXT:        : Required iteration count in MIR input is        :   3 (= kernel:2 + pro/epilogue:1 + mod:0)
+# CHECK:        : (Iterative Modulo Scheduling. ResMII 68. NumOfBodyInsts 137. Budget 3425. II 111. Minimum II = 111.)
+# CHECK-NEXT:        :  (O) Scheduling succeeds    at estimation.          : (II: 111 in [ 111,112]) MVE: 3 Last inst: 0. (Itr Org: 711, Req: 4) (VReg Fp: 19/32, Int: 4/29, Pre: 1/8) Eval:0.000000e+00.
+# CHECK-NEXT:        : Required iteration count in MIR input is        :   4 (= kernel:3 + pro/epilogue:1 + mod:0)
 # CHECK-NEXT:        : Original iteration count in MIR is found        :   711
-# CHECK-NEXT:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 2, 355, 0)
+# CHECK-NEXT:        :      Non-tuned SWPL (ker exp, ker itr, mod itr) : ( 3, 236, 2)
 # CHECK-NEXT:        : No rescheduling because II is specified in the pragma.
 
 --- |

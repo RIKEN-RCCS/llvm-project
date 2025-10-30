@@ -2,7 +2,6 @@
 #CHECK:*** dump SwplSSSyclicInfo ***
 #CHECK:root : {
 #CHECK-DAG:({{[A-Za-z0-9]+}}:FADDDrr)
-#CHECK-DAG:({{[A-Za-z0-9]+}}:COPY)
 #CHECK-DAG:({{[A-Za-z0-9]+}}:FMULDrr)
 #CHECK-DAG:({{[A-Za-z0-9]+}}:LDRDui)
 #CHECK-DAG:({{[A-Za-z0-9]+}}:ADDXri)
