@@ -117,6 +117,9 @@ static cl::opt<unsigned> DistributeByLimitIreg(
 static cl::opt<unsigned> DistributeByLimitFreg(
     "distribute4swpl-limit-freg", cl::init(20), cl::Hidden,
     cl::desc("Number of fregs limited by merging adjacent division units"));
+static cl::opt<unsigned> DistributeByLimitInst(
+    "distribute4swpl-limit-inst", cl::init(100), cl::Hidden,
+    cl::desc("Number of instructions limited by merging adjacent division units"));
 
 STATISTIC(NumLoopsDistributed4SWPL, "Number of loops distributed for SWPL");
 
@@ -739,9 +742,9 @@ public:
   /// Merging is not possible in the following cases:
   /// - The number of registers in Part I exceeds the specified num of registers
   /// - The number of registers after merging exceeds the specified num of registers
-  bool canMergeByNumRegisters(InstPartition *PartI, InstPartition *PartJ,
-                              unsigned limitFreg, unsigned limitIreg) const {
-    LLVM_DEBUG(dbgs() << "- canMergeByNumRegisters -----------\n");
+  bool canMerge(InstPartition *PartI, InstPartition *PartJ,
+                              unsigned limitFreg, unsigned limitIreg, unsigned limitInst) const {
+    LLVM_DEBUG(dbgs() << "- canMerge -----------\n");
     LLVM_DEBUG(dbgs() << "Partition " << " (" << PartI << "): ");
     PartI->estimateRegs();
     LLVM_DEBUG(dbgs() << "Partition " << " (" << PartJ << "): ");
@@ -772,11 +775,16 @@ public:
       return false;
     }
 
+    if (limitInst < (PartI->getSetSize() + PartJ->getSetSize())) {
+      LLVM_DEBUG(dbgs() << "Do not merge because the number of instructions exceeds the specified limit.\n");
+      return false;
+    }
+
     return true;
   }
 
   /// Merge adjacent partitions within the specified number of registers.
-  void mergeByRegs(unsigned limitFreg, unsigned limitIreg) {
+  void merge(unsigned limitFreg, unsigned limitIreg, unsigned limitInst) {
     for (auto I = PartitionContainer.begin(), E = PartitionContainer.end();
          I != E; ++I) {
       auto J=I;
@@ -791,7 +799,7 @@ public:
         continue;
       }
 
-      if (canMergeByNumRegisters(PartI, PartJ, limitFreg, limitIreg)) {
+      if (canMerge(PartI, PartJ, limitFreg, limitIreg, limitInst)) {
         // Merge by moving instructions
         // from the previous partition to the next partition.
         LLVM_DEBUG(dbgs() << "Merge these partitions.\n");
@@ -1137,16 +1145,17 @@ public:
       Partitions.calcEstimateRegs();
     });
 
-    // If the total number of registers required by adjacent parcels falls below a
+    // If the total number of registers or instructions required by adjacent parcels falls below a
     // specified number, they are merged.
-    LLVM_DEBUG(dbgs() << "\nMerging by number of registers.\n");
+    LLVM_DEBUG(dbgs() << "\nMerging by number of registers and instructions.\n");
     unsigned limitFreg = 0;
     unsigned limitIreg = 0;
-    getMergeLimitRegs(limitFreg, limitIreg);
-    Partitions.mergeByRegs(limitFreg, limitIreg);
+    unsigned limitInst = 0;
+    getMergeLimit(limitFreg, limitIreg, limitInst);
+    Partitions.merge(limitFreg, limitIreg, limitInst);
     if (Partitions.getSize() < 2) {
-      return fail("SingleUnitByRegsMerge",
-                  "The division unit became one, by merging the required number of registers");
+      return fail("SingleUnit",
+                  "The division unit became one, by merging the required number of registers or Instructions");
     } else {
       Partitions.outputAnalysisOfPartitionStatus(ORE);
     }
@@ -1310,13 +1319,16 @@ public:
     return IregInt;
   }
 
-  /// Get the number of registers to be merged
-  void getMergeLimitRegs(unsigned &limitFreg, unsigned &limitIreg) {
+  /// Get the number of registers and instructions to be merged
+  void getMergeLimit(unsigned &limitFreg, unsigned &limitIreg, unsigned &limitInst) {
     // specified num of registers by pragma.
     unsigned pResFreg = getLoopDistributeFreg(L->getLoopID());
     unsigned pResIreg = getLoopDistributeIreg(L->getLoopID());
+    // specified num of instructions by pragma.
+    unsigned pResInst = 0;
 
     unsigned nFreg=0, nIreg=0;
+    unsigned nInst=0;
 
     if ( pResFreg==999 )
       nFreg = DistributeByLimitFreg;
@@ -1332,20 +1344,26 @@ public:
     else
       nIreg = pResIreg;
 
-    // If no regulated number is specified for either Ireg or Freg,
+    if ( pResInst==0 ) // not specify by pragma
+      nInst = UINT_MAX; // UINT_MAX is effectively unned.
+
+    // If no regulated number is specified for either Ireg, Freg or instructions,
     // the default value will be used.
-    if (nFreg==UINT_MAX && nIreg==UINT_MAX) {
+    if (nFreg==UINT_MAX && nIreg==UINT_MAX && nInst==UINT_MAX) {
       nFreg = DistributeByLimitFreg;
       nIreg = DistributeByLimitIreg;
+      nInst = DistributeByLimitInst;
     }
 
     limitFreg = nFreg;
     limitIreg = nIreg;
+    limitInst = nInst;
 
     LLVM_DEBUG(dbgs() << "metadata: distribute4swpl_Freg = " << pResFreg << "\n");
     LLVM_DEBUG(dbgs() << "metadata: distribute4swpl_Ireg = " << pResIreg << "\n");
     LLVM_DEBUG(dbgs() << "merge limit Freg = " << limitFreg << "\n");
     LLVM_DEBUG(dbgs() << "merge limit Ireg = " << limitIreg << "\n");
+    LLVM_DEBUG(dbgs() << "merge limit Inst = " << limitInst << "\n");
     return;
   }
 
