@@ -1,5 +1,7 @@
-; RUN: opt -S -O1 -enable-loop-distribute4swpl -distribute4swpl-limit-freg=5 -distribute4swpl-limit-inst=30 -pass-remarks=loop-dist < %s |& FileCheck %s
-; CHECK: distributed loop. num of distributied is 2.
+; RUN: opt -S -O1 -enable-loop-distribute4swpl -distribute4swpl-limit-freg=5 -distribute4swpl-limit-inst=500 -pass-remarks-analysis=loop-distribute4swpl -pass-remarks=loop-dist < %s |& FileCheck %s
+; CHECK: distributed loop: 1 of 2 ireg=3, freg=4, numInst=22
+; CHECK-NEXT: distributed loop: 2 of 2 ireg=3, freg=5, numInst=16
+; CHECK-NEXT: distributed loop. num of distributied is 2.
 
 ; ModuleID = 'target.c'
 source_filename = "target.c"
