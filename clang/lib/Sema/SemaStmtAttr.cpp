@@ -146,6 +146,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                  .Case("distribute4swpl", LoopHintAttr::Distribute4swpl)
                  .Case("distribute4swpl_freg", LoopHintAttr::Distribute4swplFreg)
                  .Case("distribute4swpl_ireg", LoopHintAttr::Distribute4swplIreg)
+                 .Case("distribute4swpl_limit_inst", LoopHintAttr::Distribute4swplInst)
                  .Default(LoopHintAttr::Vectorize);
     if (Option == LoopHintAttr::VectorizeWidth) {
       assert((ValueExpr || (StateLoc && StateLoc->Ident)) &&
@@ -161,7 +162,8 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                Option == LoopHintAttr::UnrollCount ||
                Option == LoopHintAttr::PipelineInitiationInterval ||
                Option == LoopHintAttr::Distribute4swplFreg ||
-               Option == LoopHintAttr::Distribute4swplIreg ) {
+               Option == LoopHintAttr::Distribute4swplIreg ||
+               Option == LoopHintAttr::Distribute4swplInst ) {
       assert(ValueExpr && "Attribute must have a valid value expression.");
       if (S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc(),
                               /*AllowZero=*/false))
@@ -497,6 +499,7 @@ CheckForIncompatibleAttributes(Sema &S,
     const LoopHintAttr *NodepAttr;
     const LoopHintAttr *DistFregAttr;
     const LoopHintAttr *DistIregAttr;
+    const LoopHintAttr *DistInstAttr;
   } HintAttrs[CategoryType::NumberOfCategories] = {};
 
   for (const auto *I : Attrs) {
@@ -541,6 +544,7 @@ CheckForIncompatibleAttributes(Sema &S,
     case LoopHintAttr::Distribute4swpl:
     case LoopHintAttr::Distribute4swplFreg:
     case LoopHintAttr::Distribute4swplIreg:
+    case LoopHintAttr::Distribute4swplInst:
       // Perform the check for duplicated 'distribute4swpl' hints.
       Category = Distribute4swpl;
       break;
@@ -572,6 +576,10 @@ CheckForIncompatibleAttributes(Sema &S,
       // Numeric hint. distribute4swpl_ireg
       PrevAttr = CategoryState.DistIregAttr;
       CategoryState.DistIregAttr = LH;
+    } else if (Option == LoopHintAttr::Distribute4swplInst) {
+      // Numeric hint. distribute4swpl_limit_inst
+      PrevAttr = CategoryState.DistInstAttr;
+      CategoryState.DistInstAttr = LH;
     } else {
       // Numeric hint.  For example, vectorize_width(8).
       PrevAttr = CategoryState.NumericAttr;
@@ -623,6 +631,15 @@ CheckForIncompatibleAttributes(Sema &S,
           << /*Duplicate=*/false
           << CategoryState.StateAttr->getDiagnosticName(Policy)
           << CategoryState.DistIregAttr->getDiagnosticName(Policy);
+    }
+
+    if (CategoryState.StateAttr && CategoryState.DistInstAttr &&
+        CategoryState.StateAttr->getState() == LoopHintAttr::Disable) {
+      // distribute4swpl(Disable) and distribute4swpl_limit_inst are cannot be specified
+      S.Diag(OptionLoc, diag::err_pragma_loop_compatibility)
+          << /*Duplicate=*/false
+          << CategoryState.StateAttr->getDiagnosticName(Policy)
+          << CategoryState.DistInstAttr->getDiagnosticName(Policy);
     }
 
   }

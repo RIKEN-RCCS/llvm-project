@@ -444,6 +444,8 @@ LoopInfo::createLoopDistribute4swplMetadata(const LoopAttributes &Attrs,
     Enabled = true;
   if (Attrs.Distribute4swplIreg != 0)
     Enabled = true;
+  if (Attrs.Distribute4swplInst != 0)
+    Enabled = true;
 
   if (Enabled != true) {
     SmallVector<Metadata *, 4> NewLoopProperties;
@@ -485,6 +487,14 @@ LoopInfo::createLoopDistribute4swplMetadata(const LoopAttributes &Attrs,
     Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.distribute4swpl.ireg"),
                         ConstantAsMetadata::get(ConstantInt::get(
                             llvm::Type::getInt32Ty(Ctx), Attrs.Distribute4swplIreg))};
+    Args.push_back(MDNode::get(Ctx, Vals));
+  }
+
+  // Setting distribute4swpl.inst
+  if (Attrs.Distribute4swplInst > 0) {
+    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.distribute4swpl.inst"),
+                        ConstantAsMetadata::get(ConstantInt::get(
+                            llvm::Type::getInt32Ty(Ctx), Attrs.Distribute4swplInst))};
     Args.push_back(MDNode::get(Ctx, Vals));
   }
 
@@ -549,7 +559,7 @@ LoopAttributes::LoopAttributes(bool IsParallel)
       DistributeEnable(LoopAttributes::Unspecified), PipelineDisabled(false),
       PipelineInitiationInterval(0), CodeAlign(0), MustProgress(false), 
       PipelineEnabled(false), PipelineNodep(false), Distribute4swplEnable(LoopAttributes::Unspecified),
-      Distribute4swplFreg(0), Distribute4swplIreg(0) {}
+      Distribute4swplFreg(0), Distribute4swplIreg(0), Distribute4swplInst(0) {}
 
 void LoopAttributes::clear() {
   IsParallel = false;
@@ -572,6 +582,7 @@ void LoopAttributes::clear() {
   Distribute4swplEnable = LoopAttributes::Unspecified;
   Distribute4swplFreg = 0;
   Distribute4swplIreg = 0;
+  Distribute4swplInst = 0;
 }
 
 LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
@@ -600,7 +611,8 @@ LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
       Attrs.CodeAlign == 0 &&
       !Attrs.PipelineNodep &&
       Attrs.Distribute4swplEnable == LoopAttributes::Unspecified &&
-      Attrs.Distribute4swplFreg == 0 && Attrs.Distribute4swplIreg == 0 && !StartLoc && !EndLoc && !Attrs.MustProgress)
+      Attrs.Distribute4swplFreg == 0 && Attrs.Distribute4swplIreg == 0 &&
+      Attrs.Distribute4swplInst == 0 && !StartLoc && !EndLoc && !Attrs.MustProgress)
     return;
 
   TempLoopID = MDNode::getTemporary(Header->getContext(), {});
@@ -635,6 +647,7 @@ void LoopInfo::finish() {
     BeforeJam.Distribute4swplEnable = Attrs.Distribute4swplEnable;
     BeforeJam.Distribute4swplFreg = Attrs.Distribute4swplFreg;
     BeforeJam.Distribute4swplIreg = Attrs.Distribute4swplIreg;
+    BeforeJam.Distribute4swplInst = Attrs.Distribute4swplInst;
 
     switch (Attrs.UnrollEnable) {
     case LoopAttributes::Unspecified:
@@ -798,6 +811,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::PipelineNodep:
       case LoopHintAttr::Distribute4swplFreg:
       case LoopHintAttr::Distribute4swplIreg:
+      case LoopHintAttr::Distribute4swplInst:
         llvm_unreachable("Options cannot be disabled.");
         break;
       }
@@ -838,6 +852,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::PipelineInitiationInterval:
       case LoopHintAttr::Distribute4swplFreg:
       case LoopHintAttr::Distribute4swplIreg:
+      case LoopHintAttr::Distribute4swplInst:
         llvm_unreachable("Options cannot enabled.");
         break;
       }
@@ -865,6 +880,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::Distribute4swpl:
       case LoopHintAttr::Distribute4swplFreg:
       case LoopHintAttr::Distribute4swplIreg:
+      case LoopHintAttr::Distribute4swplInst:
         llvm_unreachable("Options cannot be used to assume mem safety.");
         break;
       }
@@ -892,6 +908,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::Distribute4swpl:
       case LoopHintAttr::Distribute4swplFreg:
       case LoopHintAttr::Distribute4swplIreg:
+      case LoopHintAttr::Distribute4swplInst:
         llvm_unreachable("Options cannot be used with 'full' hint.");
         break;
       }
@@ -930,6 +947,9 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
         break;
       case LoopHintAttr::Distribute4swplIreg:
         setDistribute4swplIreg(ValueInt);
+        break;
+      case LoopHintAttr::Distribute4swplInst:
+        setDistribute4swplInst(ValueInt);
         break;
       case LoopHintAttr::Unroll:
       case LoopHintAttr::UnrollAndJam:

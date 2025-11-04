@@ -3671,6 +3671,7 @@ void PragmaLoopHintHandler::HandlePragma(Preprocessor &PP,
                            .Case("distribute4swpl", true)
                            .Case("distribute4swpl_freg", true)
                            .Case("distribute4swpl_ireg", true)
+                           .Case("distribute4swpl_limit_inst", true)
                            .Default(false);
     if (!OptionValid) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_loop_invalid_option)
