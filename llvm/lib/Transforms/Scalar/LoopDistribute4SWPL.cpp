@@ -1319,13 +1319,27 @@ public:
     return IregInt;
   }
 
+  /// Get specified value of llvm.loop.distribute4swpl.inst.
+  /// @param LoopID Metadata node
+  /// @retval 0 distribute4swpl.inst is not specified
+  /// @retval n Specified value of distribute4swpl.inst
+  unsigned getLoopDistributeInst(MDNode *LoopID) {
+    unsigned InstInt = 0;
+    MDNode *MD = findOptionMDForLoopID(LoopID, "llvm.loop.distribute4swpl.inst");
+    if (!MD)
+      return 0;
+    if (ConstantInt *IntMD = mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
+      InstInt = IntMD->getZExtValue();
+    return InstInt;
+  }
+
   /// Get the number of registers and instructions to be merged
   void getMergeLimit(unsigned &limitFreg, unsigned &limitIreg, unsigned &limitInst) {
     // specified num of registers by pragma.
     unsigned pResFreg = getLoopDistributeFreg(L->getLoopID());
     unsigned pResIreg = getLoopDistributeIreg(L->getLoopID());
     // specified num of instructions by pragma.
-    unsigned pResInst = 0;
+    unsigned pResInst = getLoopDistributeInst(L->getLoopID());
 
     unsigned nFreg=0, nIreg=0;
     unsigned nInst=0;
@@ -1346,6 +1360,8 @@ public:
 
     if ( pResInst==0 ) // not specify by pragma
       nInst = UINT_MAX; // UINT_MAX is effectively unned.
+    else
+      nInst = pResInst;
 
     // If no regulated number is specified for either Ireg, Freg or instructions,
     // the default value will be used.

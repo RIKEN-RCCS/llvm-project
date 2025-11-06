@@ -99,6 +99,9 @@ struct LoopAttributes {
 
   /// Value for llvm.loop.distribute4swpl.ireg metadata.
   unsigned Distribute4swplIreg;
+
+  /// Value for llvm.loop.distribute4swpl.inst metadata.
+  unsigned Distribute4swplInst;
 };
 
 /// Information used when generating a structured loop.
@@ -322,6 +325,9 @@ public:
 
   /// Set the Limit on number of integer registers.
   void setDistribute4swplIreg(unsigned C) { StagedAttrs.Distribute4swplIreg = C; }
+
+  /// Set the Limit on number of instructions.
+  void setDistribute4swplInst(unsigned C) { StagedAttrs.Distribute4swplInst = C; }
 
   /// Set value of code align for the next loop pushed.
   void setCodeAlign(unsigned C) { StagedAttrs.CodeAlign = C; }
