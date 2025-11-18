@@ -761,6 +761,12 @@ public:
       return false;
     }
 
+    if (PartI->getSetSize() >= limitInst || PartJ->getSetSize() >= limitInst) {
+      LLVM_DEBUG(dbgs() << "Do not merge because the number of instructions exceeds the specified number.\n");
+      LLVM_DEBUG(dbgs() << "Inst : " << PartI->getSetSize() << " + " << PartJ->getSetSize() << "\n");
+      return false;
+    }
+
     // Use a temporary InstPartition to check the
     // number of registers after merging.
     // If the number of registers after merging exceeds a
@@ -775,8 +781,13 @@ public:
       return false;
     }
 
-    if (limitInst < (PartI->getSetSize() + PartJ->getSetSize())) {
-      LLVM_DEBUG(dbgs() << "Do not merge because the number of instructions exceeds the specified limit.\n");
+    // Verify the number of instructions after merging using a temporary InstPartition.
+    // If the number of instructions after merging exceeds the specified count, do not perform the merge.
+    LLVM_DEBUG(dbgs() << "Estimate instructions result : " <<
+             "inst=" << tmpP.getSetSize() << "\n");
+
+    if (tmpP.getSetSize() > limitInst) {
+      LLVM_DEBUG(dbgs() << "Do not merge because merging would exceed the specified number of instructions.\n");
       return false;
     }
 
