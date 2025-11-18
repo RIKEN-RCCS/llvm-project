@@ -1,9 +1,8 @@
 ; RUN: opt -O1 -S -mcpu=a64fx -pass-remarks=loop-distribute4swpl -pass-remarks-missed=loop-distribute4swpl -pass-remarks-analysis=loop-distribute4swpl -distribute4swpl-limit-freg=30 -distribute4swpl-limit-ireg=30 -o /dev/null < %s |& FileCheck %s
 
-; CHECK: distributed loop: 1 of 3 ireg=6, freg=4, numInst=13
-; CHECK-NEXT: distributed loop: 2 of 3 ireg=8, freg=4, numInst=13
-; CHECK-NEXT: distributed loop: 3 of 3 ireg=4, freg=3, numInst=9
-; CHECK-NEXT: distributed loop. num of distributied is 3.
+; CHECK: distributed loop: 1 of 2 ireg=6, freg=4, numInst=13
+; CHECK-NEXT: distributed loop: 2 of 2 ireg=9, freg=5, numInst=18
+; CHECK-NEXT: distributed loop. num of distributied is 2.
 
 ; ModuleID = './ls4s-pragma-002.c'
 source_filename = "./ls4s-pragma-002.c"
