@@ -112,13 +112,13 @@ static cl::opt<bool> DetailEstimateDebugLog(
     cl::init(false));
 
 static cl::opt<unsigned> DistributeByLimitIreg(
-    "distribute4swpl-limit-ireg", cl::init(20), cl::Hidden,
+    "distribute4swpl-limit-ireg", cl::init(22), cl::Hidden,
     cl::desc("Number of iregs limited by merging adjacent division units"));
 static cl::opt<unsigned> DistributeByLimitFreg(
-    "distribute4swpl-limit-freg", cl::init(20), cl::Hidden,
+    "distribute4swpl-limit-freg", cl::init(22), cl::Hidden,
     cl::desc("Number of fregs limited by merging adjacent division units"));
 static cl::opt<unsigned> DistributeByLimitInst(
-    "distribute4swpl-limit-inst", cl::init(100), cl::Hidden,
+    "distribute4swpl-limit-inst", cl::init(84), cl::Hidden,
     cl::desc("Number of instructions limited by merging adjacent division units"));
 
 STATISTIC(NumLoopsDistributed4SWPL, "Number of loops distributed for SWPL");
