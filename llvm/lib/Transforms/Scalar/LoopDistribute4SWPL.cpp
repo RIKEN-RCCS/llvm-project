@@ -533,10 +533,12 @@ public:
     }
 
     if (LiveOutToAdd.empty())
-        return;
+      return;
 
-    for (auto *LV : LiveOutToAdd)
-        addToNewNonCyclicPartition(LV);
+    addToNewNonCyclicPartition(LiveOutToAdd[0]);
+
+    for (size_t i = 1, N = LiveOutToAdd.size(); i < N; ++i)
+      addToLastNonCyclicPartition(LiveOutToAdd[i]);
 
     PartitionContainer.back().populateUsedSet();
   }
@@ -1159,9 +1161,9 @@ public:
     LLVM_DEBUG(dbgs() << "\nPopulated partitions:\n" << Partitions);
     LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after populate)\n");
 
-    // Add any LiveOut instructions not yet assigned to a partition.
+    // Create new partitions for unassigned LiveOut instructions.
     Partitions.createToLiveOutPartition(DefsUsedOutside);
-    LLVM_DEBUG(dbgs() << "\nAdd to LiveOut partitions:\n" << Partitions);
+    LLVM_DEBUG(dbgs() << "\nCreate to LiveOut Partitions:\n" << Partitions);
     LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after create to LiveOut Partition)\n");
 
     // To avoid changing the order of memory access,
