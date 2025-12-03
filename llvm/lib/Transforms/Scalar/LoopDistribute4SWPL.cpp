@@ -250,7 +250,7 @@ public:
 
   /// Based on the set of instructions selected for this partition,
   /// removes the unnecessary ones.
-  void removeUnusedInsts(DenseMap<Instruction*, std::tuple<int, InstPartition*, PHINode*>> &LiveOutPMap){
+  void removeUnusedInsts(DenseMap<Instruction*, std::tuple<int, InstPartition*, PHINode*>> &LiveOutPMap) {
     SmallVector<Instruction *, 8> Unused;
 
     for (auto *Block : OrigLoop->getBlocks())
@@ -268,18 +268,16 @@ public:
     // Delete the instructions backwards, as it has a reduced likelihood of
     // having to update as many def-use and use-def chains.
     for (auto *Inst : reverse(Unused)) {
-      Value *Rep = nullptr;
-
-      auto It = LiveOutPMap.find(Inst);
-      if (It != LiveOutPMap.end()) {
-        PHINode *PN = std::get<2>(It->second);
-        if (PN)
-          Rep = PN;
+      if (!Inst->use_empty()) {
+        auto It = LiveOutPMap.find(Inst);
+        if (It == LiveOutPMap.end())
+          Inst->replaceAllUsesWith(PoisonValue::get(Inst->getType()));
+        else {
+          PHINode *PN = std::get<2>(It->second);
+          assert(PN && "No corresponding LiveOut PHI node for this instruction reference.");
+          Inst->replaceAllUsesWith(PN);
+        }
       }
-      if (!Rep && !Inst->use_empty())
-        Rep = PoisonValue::get(Inst->getType());
-      if (Rep)
-        Inst->replaceAllUsesWith(Rep);
       Inst->eraseFromParent();
     }
   }
@@ -515,6 +513,32 @@ public:
     assert(getSize()>0);
     assert(!PartitionContainer.back().hasDepCycle());
     PartitionContainer.back().add(Inst);
+  }
+
+  /// Add LiveOut instructions that are not in any partition to new partitions.
+  /// Ensures each LiveOut has a valid partition for later PHI/rename handling.
+  void createToLiveOutPartition(const SmallVectorImpl<Instruction*> &DefsUsedOutside) {
+    llvm::SmallVector<Instruction*, 8> LiveOutToAdd;
+
+    for (auto *LV : DefsUsedOutside) {
+      bool found = false;
+      for (auto &Partition : PartitionContainer) {
+        if (llvm::is_contained(Partition, LV)) {
+          found = true;
+          break;
+        }
+      }
+      if (!found)
+        LiveOutToAdd.push_back(LV);
+    }
+
+    if (LiveOutToAdd.empty())
+        return;
+
+    for (auto *LV : LiveOutToAdd)
+        addToNewNonCyclicPartition(LV);
+
+    PartitionContainer.back().populateUsedSet();
   }
 
   /// Merges partitions in order to ensure that no loads are duplicated.
@@ -1134,6 +1158,11 @@ public:
     Partitions.populateUsedSet();
     LLVM_DEBUG(dbgs() << "\nPopulated partitions:\n" << Partitions);
     LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after populate)\n");
+
+    // Add any LiveOut instructions not yet assigned to a partition.
+    Partitions.createToLiveOutPartition(DefsUsedOutside);
+    LLVM_DEBUG(dbgs() << "\nAdd to LiveOut partitions:\n" << Partitions);
+    LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after create to LiveOut Partition)\n");
 
     // To avoid changing the order of memory access,
     // it is necessary to create partitions for Load and Store.
