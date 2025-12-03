@@ -250,7 +250,7 @@ public:
 
   /// Based on the set of instructions selected for this partition,
   /// removes the unnecessary ones.
-  void removeUnusedInsts() {
+  void removeUnusedInsts(DenseMap<Instruction*, std::tuple<int, InstPartition*, PHINode*>> &LiveOutPMap) {
     SmallVector<Instruction *, 8> Unused;
 
     for (auto *Block : OrigLoop->getBlocks())
@@ -268,8 +268,16 @@ public:
     // Delete the instructions backwards, as it has a reduced likelihood of
     // having to update as many def-use and use-def chains.
     for (auto *Inst : reverse(Unused)) {
-      if (!Inst->use_empty())
-        Inst->replaceAllUsesWith(PoisonValue::get(Inst->getType()));
+      if (!Inst->use_empty()) {
+        auto It = LiveOutPMap.find(Inst);
+        if (It == LiveOutPMap.end())
+          Inst->replaceAllUsesWith(PoisonValue::get(Inst->getType()));
+        else {
+          PHINode *PN = std::get<2>(It->second);
+          assert(PN && "No corresponding LiveOut PHI node for this instruction reference.");
+          Inst->replaceAllUsesWith(PN);
+        }
+      }
       Inst->eraseFromParent();
     }
   }
@@ -507,6 +515,34 @@ public:
     PartitionContainer.back().add(Inst);
   }
 
+  /// Add LiveOut instructions that are not in any partition to new partitions.
+  /// Ensures each LiveOut has a valid partition for later PHI/rename handling.
+  void createToLiveOutPartition(const SmallVectorImpl<Instruction*> &DefsUsedOutside) {
+    llvm::SmallVector<Instruction*, 8> LiveOutToAdd;
+
+    for (auto *LV : DefsUsedOutside) {
+      bool found = false;
+      for (auto &Partition : PartitionContainer) {
+        if (llvm::is_contained(Partition, LV)) {
+          found = true;
+          break;
+        }
+      }
+      if (!found)
+        LiveOutToAdd.push_back(LV);
+    }
+
+    if (LiveOutToAdd.empty())
+      return;
+
+    addToNewNonCyclicPartition(LiveOutToAdd[0]);
+
+    for (size_t i = 1, N = LiveOutToAdd.size(); i < N; ++i)
+      addToLastNonCyclicPartition(LiveOutToAdd[i]);
+
+    PartitionContainer.back().populateUsedSet();
+  }
+
   /// Merges partitions in order to ensure that no loads are duplicated.
   ///
   /// We can't duplicate loads because that could potentially reorder them.
@@ -601,6 +637,26 @@ public:
       P.populateUsedSet();
   }
 
+  /// Map loop live-out definitions to their partition data: partition ID,
+  /// partition pointer, and a nullptr PHI node placeholder.
+  using LiveOutMapT = DenseMap<Instruction*,std::tuple<int, InstPartition*, PHINode*>>;
+  LiveOutMapT getLiveOutMap(const SmallVectorImpl<Instruction*> &DefsUsedOutside) {
+    LiveOutMapT LiveOutPMap;
+
+    for (Instruction *LV : DefsUsedOutside) {
+      auto It = InstToPartitionId.find(LV);
+      if (It != InstToPartitionId.end() && It->second != -1) {
+        unsigned PartitionID = It->second;
+        auto partIt = PartitionContainer.begin();
+        std::advance(partIt, PartitionID);
+        InstPartition* P = &(*partIt);
+
+        LiveOutPMap[LV] = {PartitionID, P, nullptr};
+      }
+    }
+    return LiveOutPMap;
+  }
+
   /// This performs the main chunk of the work of cloning the loops for
   /// the partitions.
   void cloneLoops() {
@@ -656,10 +712,33 @@ public:
           Curr->getDistributedLoop()->getExitingBlock());
   }
 
+  /// Create a PHI node for the LiveOut value. For each entry in `LiveOutPMap`,
+  /// find the cloned value in the partition, insert a PHI node in the end block,
+  /// and add the cloned value from the end block as input.
+  void insertPhiForLiveOut(LiveOutMapT &LiveOutPMap) {
+    for (auto &KV : LiveOutPMap) {
+      Instruction *OrigInst = KV.first;
+      auto &[PartitionID, PartPtr, PN] = KV.second;
+
+      InstPartition &Part = *PartPtr;
+
+      Value *ClonedV = Part.getVMap().lookup(OrigInst);
+      if (!ClonedV)
+        continue;
+
+      BasicBlock *ExitBlock = Part.getDistributedLoop()->getExitBlock();
+      BasicBlock *PredBlock = Part.getDistributedLoop()->getExitingBlock();
+      auto InsertPos = ExitBlock->begin();
+
+      PN = PHINode::Create(OrigInst->getType(), 1, OrigInst->getName() + ".liveout", InsertPos);
+      PN->addIncoming(ClonedV, PredBlock);
+    }
+  }
+
   /// Removes the dead instructions from the cloned loops.
-  void removeUnusedInsts() {
+  void removeUnusedInsts(DenseMap<Instruction*, std::tuple<int, InstPartition*, PHINode*>> LiveOutPMap) {
     for (auto &Partition : PartitionContainer)
-      Partition.removeUnusedInsts();
+      Partition.removeUnusedInsts(LiveOutPMap);
   }
 
   /// For each memory pointer, it computes the partitionId the pointer is
@@ -1071,15 +1150,6 @@ public:
     // partition of the load that we set up in the previous loop (see
     // mergeToAvoidDuplicatedLoads).
     auto DefsUsedOutside = findDefsUsedOutsideOfLoop(L);
-    bool first=true;
-    for (auto *Inst : DefsUsedOutside) {
-      if (first) {
-        Partitions.addToNewNonCyclicPartition(Inst);
-        first=false;
-      } else {
-        Partitions.addToLastNonCyclicPartition(Inst);
-      }
-    }
 
     LLVM_DEBUG(dbgs() << "\nSeeded partitions:\n" << Partitions);
     if (Partitions.getSize() < 2)
@@ -1090,6 +1160,11 @@ public:
     Partitions.populateUsedSet();
     LLVM_DEBUG(dbgs() << "\nPopulated partitions:\n" << Partitions);
     LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after populate)\n");
+
+    // Create new partitions for unassigned LiveOut instructions.
+    Partitions.createToLiveOutPartition(DefsUsedOutside);
+    LLVM_DEBUG(dbgs() << "\nCreate to LiveOut Partitions:\n" << Partitions);
+    LLVM_DEBUG(dbgs() << "Partitions.getSize() = " << Partitions.getSize() << " (after create to LiveOut Partition)\n");
 
     // To avoid changing the order of memory access,
     // it is necessary to create partitions for Load and Store.
@@ -1239,13 +1314,24 @@ public:
       LVer.getNonVersionedLoop()->setLoopID(UnversionedLoopID);
     }
 
+    // Build a map of values defined inside partitions but used outside the loop
+    // (LiveOut values). Each entry records the partition ID, a pointer to the
+    // partition, and a placeholder for the PHI node.
+    auto LiveOutPMap = Partitions.getLiveOutMap(DefsUsedOutside);
+
     // Create identical copies of the original loop for each partition and hook
     // them up sequentially.
     Partitions.cloneLoops();
 
+    // Insert PHI nodes in the loop exit block for all LiveOut values.
+    // These PHI nodes collect the values produced by each partition.
+    Partitions.insertPhiForLiveOut(LiveOutPMap);
+    LLVM_DEBUG(dbgs() << "\nAfter inserting PHI for LiveOut Instrs:\n");
+    LLVM_DEBUG(Partitions.printBlocks());
+
     // Now, we remove the instruction from each loop that don't belong to that
     // partition.
-    Partitions.removeUnusedInsts();
+    Partitions.removeUnusedInsts(LiveOutPMap);
     LLVM_DEBUG(dbgs() << "\nAfter removing unused Instrs:\n");
     LLVM_DEBUG(Partitions.printBlocks());
 
