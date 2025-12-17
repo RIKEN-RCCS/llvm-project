@@ -148,6 +148,9 @@ DiagnosticLocation::DiagnosticLocation(const DebugLoc &DL) {
   File = DL->getFile();
   Line = DL->getLine();
   Column = DL->getColumn();
+  LoopSize = DL.getLoopSize();
+  LoopNum = DL.getLoopNum();
+
 }
 
 DiagnosticLocation::DiagnosticLocation(const DISubprogram *SP) {

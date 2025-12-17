@@ -321,6 +321,8 @@ class DiagnosticLocation {
   DIFile *File = nullptr;
   unsigned Line = 0;
   unsigned Column = 0;
+  unsigned LoopSize = 0;
+  unsigned LoopNum = 0;
 
 public:
   DiagnosticLocation() = default;

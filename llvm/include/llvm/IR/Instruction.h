@@ -129,6 +129,8 @@ public:
   /// attached DbgRecords need to "fall" down onto the next instruction.
   void handleMarkerRemoval();
 
+  DebugLoc *getDbgLoc() { return &DbgLoc; }
+
 protected:
   // The 15 first bits of `Value::SubclassData` are available for subclasses of
   // `Instruction` to use.
