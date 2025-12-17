@@ -920,7 +920,7 @@ public:
   virtual void emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                      unsigned Column, unsigned Flags,
                                      unsigned Isa, unsigned Discriminator,
-                                     StringRef FileName);
+                                     StringRef FileName, unsigned LoopSize = 0, unsigned LoopNum = 0);
 
   /// This implements the '.loc_label Name' directive.
   virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name);

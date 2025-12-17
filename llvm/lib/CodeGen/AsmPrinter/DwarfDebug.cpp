@@ -2068,7 +2068,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     // the entry block.
     assert(MI->getParent() == &*MI->getMF()->begin());
     recordSourceLine(SP->getScopeLine(), 0, SP,
-                     DWARF2_FLAG_PROLOGUE_END | DWARF2_FLAG_IS_STMT);
+                     DWARF2_FLAG_PROLOGUE_END | DWARF2_FLAG_IS_STMT, 0, 0);
     return;
   }
 
@@ -2085,7 +2085,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     if ((LastAsmLine == 0 && DL.getLine() != 0) || Flags) {
       // Reinstate the source location but not marked as a statement.
       const MDNode *Scope = DL.getScope();
-      recordSourceLine(DL.getLine(), DL.getCol(), Scope, Flags);
+      recordSourceLine(DL.getLine(), DL.getCol(), Scope, Flags, DL.getLoopSize(), DL.getLoopNum());
     }
     return;
   }
@@ -2116,7 +2116,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
         Scope = PrevInstLoc.getScope();
         Column = PrevInstLoc.getCol();
       }
-      recordSourceLine(/*Line=*/0, Column, Scope, /*Flags=*/0);
+      recordSourceLine(/*Line=*/0, Column, Scope, /*Flags=*/0, PrevInstLoc.getLoopSize(), PrevInstLoc.getLoopNum());
     }
     return;
   }
@@ -2137,7 +2137,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     Flags |= DWARF2_FLAG_IS_STMT;
 
   const MDNode *Scope = DL.getScope();
-  recordSourceLine(DL.getLine(), DL.getCol(), Scope, Flags);
+  recordSourceLine(DL.getLine(), DL.getCol(), Scope, Flags, DL.getLoopSize(), DL.getLoopNum());
 
   // If we're not at line 0, remember this location.
   if (DL.getLine())
@@ -2272,7 +2272,8 @@ findPrologueEndLoc(const MachineFunction *MF) {
 static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
                              const MDNode *S, unsigned Flags, unsigned CUID,
                              uint16_t DwarfVersion,
-                             ArrayRef<std::unique_ptr<DwarfCompileUnit>> DCUs) {
+                             ArrayRef<std::unique_ptr<DwarfCompileUnit>> DCUs,
+                             unsigned LoopSize, unsigned LoopNum) {
   StringRef Fn;
   unsigned FileNo = 1;
   unsigned Discriminator = 0;
@@ -2286,7 +2287,7 @@ static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
                  .getOrCreateSourceID(Scope->getFile());
   }
   Asm.OutStreamer->emitDwarfLocDirective(FileNo, Line, Col, Flags, 0,
-                                         Discriminator, Fn);
+                                         Discriminator, Fn, LoopSize, LoopNum);
 }
 
 const MachineInstr *
@@ -2323,7 +2324,7 @@ DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
   // We'd like to list the prologue as "not statements" but GDB behaves
   // poorly if we do that. Revisit this with caution/GDB (7.5+) testing.
   ::recordSourceLine(*Asm, SP->getScopeLine(), 0, SP, DWARF2_FLAG_IS_STMT,
-                     CUID, getDwarfVersion(), getUnits());
+                     CUID, getDwarfVersion(), getUnits(), 0, 0);
   return PrologEndLoc;
 }
 
@@ -2617,10 +2618,10 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 // Register a source line with debug info. Returns the  unique label that was
 // emitted and which provides correspondence to the source line list.
 void DwarfDebug::recordSourceLine(unsigned Line, unsigned Col, const MDNode *S,
-                                  unsigned Flags) {
+                                  unsigned Flags, unsigned LoopSize, unsigned LoopNum) {
   ::recordSourceLine(*Asm, Line, Col, S, Flags,
                      Asm->OutStreamer->getContext().getDwarfCompileUnitID(),
-                     getDwarfVersion(), getUnits());
+                     getDwarfVersion(), getUnits(), LoopSize, LoopNum);
 }
 
 //===----------------------------------------------------------------------===//
