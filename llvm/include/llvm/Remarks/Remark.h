@@ -33,6 +33,8 @@ struct RemarkLocation {
   StringRef SourceFilePath;
   unsigned SourceLine = 0;
   unsigned SourceColumn = 0;
+  unsigned LoopSize = 0;
+  unsigned LoopNum = 0;
 
   /// Implement operator<< on RemarkLocation.
   void print(raw_ostream &OS) const;

@@ -53,7 +53,9 @@ toRemarkLocation(const DiagnosticLocation &DL) {
   StringRef File = DL.getRelativePath();
   unsigned Line = DL.getLine();
   unsigned Col = DL.getColumn();
-  return remarks::RemarkLocation{File, Line, Col};
+  unsigned LoopSize = DL.getLoopSize();
+  unsigned LoopNum = DL.getLoopNum();
+  return remarks::RemarkLocation{File, Line, Col, LoopSize, LoopNum};
 }
 
 /// LLVM Diagnostic -> Remark

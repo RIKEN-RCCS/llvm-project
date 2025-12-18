@@ -81,6 +81,8 @@ template <> struct MappingTraits<RemarkLocation> {
     StringRef File = RL.SourceFilePath;
     unsigned Line = RL.SourceLine;
     unsigned Col = RL.SourceColumn;
+    unsigned LoopSize = RL.LoopSize;
+    unsigned LoopNum = RL.LoopNum;
 
     if (auto *Serializer = dyn_cast<YAMLStrTabRemarkSerializer>(
             reinterpret_cast<RemarkSerializer *>(io.getContext()))) {
@@ -94,6 +96,10 @@ template <> struct MappingTraits<RemarkLocation> {
 
     io.mapRequired("Line", Line);
     io.mapRequired("Column", Col);
+    if (LoopSize > 0) {
+      std::string ldist = std::to_string(LoopNum) + '/' + std::to_string(LoopSize);
+      io.mapRequired("ldist", ldist);
+    }
   }
 
   static const bool flow = true;

@@ -336,6 +336,8 @@ public:
   StringRef getRelativePath() const;
   unsigned getLine() const { return Line; }
   unsigned getColumn() const { return Column; }
+  unsigned getLoopSize() const { return LoopSize; }
+  unsigned getLoopNum() const { return LoopNum; }
 };
 
 /// Common features for diagnostics with an associated location.
