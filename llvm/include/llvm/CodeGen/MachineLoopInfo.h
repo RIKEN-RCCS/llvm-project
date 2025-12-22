@@ -85,6 +85,10 @@ public:
   /// yet
   bool isLoopInvariant(MachineInstr &I, const Register ExcludeReg = 0) const;
 
+  /// Retrieve the loop distribute information for the “top-level” block within the loop.
+  /// Return true if retrieved successfully.
+  bool getLoopDistInfo(unsigned &LoopSize, unsigned &LoopNum) const;
+
   void dump() const;
 
 private:
