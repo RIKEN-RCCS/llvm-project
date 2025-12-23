@@ -105,9 +105,11 @@ createHWLoopMissed(StringRef RemarkName, Loop *L, Instruction *I, const TargetTr
   OptimizationRemarkMissed R(DEBUG_TYPE, RemarkName, DL, CodeRegion);
   unsigned distnum=0;
   unsigned loopid=0;
-  if (TTI.getLoopDistributedInfo(L->getLoopID(), distnum, loopid)) {
-    R << "distributed loop: " << ore::NV("NoOfDistributed", loopid)
-    << " of " << ore::NV("NumOfDistributed", distnum) << " ";
+  if (L->getStartLoc().getLoopSize() == 0) {
+    if (TTI.getLoopDistributedInfo(L->getLoopID(), distnum, loopid)) {
+      R << "distributed loop: " << ore::NV("NoOfDistributed", loopid)
+      << " of " << ore::NV("NumOfDistributed", distnum) << " ";
+    }
   }
   R << "hardware-loop not created: ";
   return R;
@@ -128,9 +130,11 @@ createHWLoop(StringRef RemarkName, Loop *L, Instruction *I, const TargetTransfor
   OptimizationRemark R(DEBUG_TYPE, RemarkName, DL, CodeRegion);
   unsigned distnum=0;
   unsigned loopid=0;
-  if (TTI.getLoopDistributedInfo(L->getLoopID(), distnum, loopid)) {
-    R << "distributed loop: " << ore::NV("NoOfDistributed", loopid)
-    << " of " << ore::NV("NumOfDistributed", distnum) << " ";
+  if (L->getStartLoc().getLoopSize() == 0) {
+    if (TTI.getLoopDistributedInfo(L->getLoopID(), distnum, loopid)) {
+      R << "distributed loop: " << ore::NV("NoOfDistributed", loopid)
+      << " of " << ore::NV("NumOfDistributed", distnum) << " ";
+    }
   }
   R << "hardware-loop created";
   return R;

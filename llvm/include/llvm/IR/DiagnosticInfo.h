@@ -363,7 +363,7 @@ public:
   /// Return location information for this diagnostic in three parts:
   /// the relative source file path, line number and column.
   void getLocation(StringRef &RelativePath, unsigned &Line,
-                   unsigned &Column) const;
+                   unsigned &Column, unsigned &LoopSize, unsigned &LoopNum) const;
 
   /// Return the absolute path tot the file.
   std::string getAbsolutePath() const;

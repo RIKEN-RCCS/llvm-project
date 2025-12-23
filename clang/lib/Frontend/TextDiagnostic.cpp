@@ -841,6 +841,12 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
     break;
   }
 
+  if (unsigned LoopSize = PLoc.getLoopSize()) {
+    if (unsigned LoopNum = PLoc.getLoopNum()) {
+      OS << "ldist(" << LoopNum << '/' << LoopSize << ')';
+    }
+  }
+
   if (DiagOpts->ShowSourceRanges && !Ranges.empty()) {
     FileID CaretFileID = Loc.getExpansionLoc().getFileID();
     bool PrintedRange = false;

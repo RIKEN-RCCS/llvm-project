@@ -790,9 +790,11 @@ void SwplTransformMIR::outputLoopoptMessage(int n_body_inst) {
   SWPipeliner::ORE->emit([&]() {
     MachineOptimizationRemark R(DEBUG_TYPE, "SoftwarePipelined",
                                 LoopLoc, Loop.getML()->getHeader());
-    if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
-      R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
-        << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+    if (LoopLoc.getLoopSize() == 0) {
+      if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
+        R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
+          << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+      }
     }
     R << msg;
     return R;
@@ -816,9 +818,11 @@ void SwplTransformMIR::outputLoopoptMessage4LS() {
   SWPipeliner::ORE->emit([&]() {
     MachineOptimizationRemark R(DEBUG_TYPE, "LocalScheduled",
                                 LoopLoc, Loop.getML()->getHeader());
-    if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
-      R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
-        << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+    if( LoopLoc.getLoopSize() == 0) {
+      if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
+        R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
+          << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+      }
     }
     R << msg;
     return R;
@@ -1181,9 +1185,11 @@ void SwplTransformMIR::countKernelCOPY() {
     MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, "countKernelCOPY",
                                         LoopLoc,
                                         Loop.getML()->getHeader());
-    if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
-      R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
-        << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+    if(LoopLoc.getLoopSize() == 0) {
+      if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
+        R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
+          << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+      }
     }
     R << msg << ore::NV("KernelCOPY", count) << ".";
     return R;

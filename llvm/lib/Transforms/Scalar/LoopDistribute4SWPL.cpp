@@ -773,18 +773,11 @@ public:
   void setLoc() {
     auto LoopSize = getSize();
     unsigned LoopNum = 1;
-    for(auto &Partition : PartitionContainer) {
+    for (auto &Partition : llvm::drop_begin(llvm::reverse(PartitionContainer))) {
       Partition.setLoc(LoopSize, LoopNum);
       LoopNum++;
     }
   }
-
-#ifndef NDEBUG
-  void dumpInstLoc() {
-    for(auto &Partition : PartitionContainer)
-      Partition.dumpInstLoc();
-  }
-#endif
 
   /// For each memory pointer, it computes the partitionId the pointer is
   /// used in.
@@ -1382,9 +1375,6 @@ public:
 
     // Set loop distribute information in instruction location data
     Partitions.setLoc();
-#ifndef NDEBUG
-    Partitions.dumpInstLoc();
-#endif
 
     if (LDistVerify) {
       LI->verify(*DT);

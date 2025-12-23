@@ -132,7 +132,8 @@ public:
   void emitDiagnostic(FullSourceLoc Loc, DiagnosticsEngine::Level Level,
                       StringRef Message, ArrayRef<CharSourceRange> Ranges,
                       ArrayRef<FixItHint> FixItHints,
-                      DiagOrStoredDiag D = (Diagnostic *)nullptr);
+                      DiagOrStoredDiag D = (Diagnostic *)nullptr,
+                      unsigned LoopSize = 0, unsigned LoopNum = 0);
 
   void emitStoredDiagnostic(StoredDiagnostic &Diag);
 };
