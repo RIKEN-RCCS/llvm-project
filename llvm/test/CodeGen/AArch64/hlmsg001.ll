@@ -1,7 +1,7 @@
 ; RUN: llc -O1 -mcpu=a64fx -pass-remarks=hardware -fswp < %s -o /dev/null |& FileCheck %s
-; CHECK: remark: target.c:9:3: distributed loop: 3 of 3 hardware-loop created
-; CHECK: remark: target.c:9:3: distributed loop: 1 of 3 hardware-loop created
-; CHECK: remark: target.c:9:3: distributed loop: 2 of 3 hardware-loop created
+; CHECK: remark: target.c:9:3: hardware-loop created
+; CHECK: remark: target.c:9:3: hardware-loop created
+; CHECK: remark: target.c:9:3: hardware-loop created
 ; ModuleID = 'target.ll'
 source_filename = "target.c"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

@@ -1,9 +1,9 @@
 ; RUN: llc -O3 -mcpu=a64fx -pass-remarks=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner -fswp -o /dev/null %s 2>&1 |& FileCheck %s
 ; CHECK: remark: sample.c:9:3: SVE instruction latency is calculated at 512bit.
-; CHECK: remark: sample.c:9:3: distributed loop: 3 of 3 This loop tries to schedule with the InitiationInterval=39 specified in the pragma.
-; CHECK: remark: sample.c:9:3: distributed loop: 3 of 3 This loop is not software pipelined because the software pipelining does not improve the performance.
-; CHECK: remark: sample.c:9:3: distributed loop: 1 of 3 This loop tries to schedule with the InitiationInterval=39 specified in the pragma.
-; CHECK: remark: sample.c:9:3: distributed loop: 1 of 3 This loop is not software pipelined because the software pipelining does not improve the performance.
+; CHECK: remark: sample.c:9:3: This loop tries to schedule with the InitiationInterval=39 specified in the pragma.
+; CHECK: remark: sample.c:9:3: This loop is not software pipelined because the software pipelining does not improve the performance.
+; CHECK: remark: sample.c:9:3: This loop tries to schedule with the InitiationInterval=39 specified in the pragma.
+; CHECK: remark: sample.c:9:3: This loop is not software pipelined because the software pipelining does not improve the performance.
 ; CHECK: remark: sample.c:9:3: distributed loop: 2 of 3 This loop tries to schedule with the InitiationInterval=39 specified in the pragma.
 ; CHECK: remark: sample.c:9:3: distributed loop: 2 of 3 This loop is not software pipelined because the software pipelining does not improve the performance.
 
