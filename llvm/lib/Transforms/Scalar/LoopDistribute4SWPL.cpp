@@ -1381,6 +1381,9 @@ public:
       assert(DT->verify(DominatorTree::VerificationLevel::Fast));
     }
 
+    if (DisableLoopDistributeLoc)
+      ExtentLoopLocInfo = true;
+
     ++NumLoopsDistributed4SWPL;
     // Report the success.
     ORE->emit([&]() {

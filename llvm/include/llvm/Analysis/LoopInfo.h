@@ -543,6 +543,8 @@ public:
 /// flag allows the checks to be enabled selectively without re-compilation.
 extern bool VerifyLoopInfo;
 
+extern bool ExtentLoopLocInfo;
+
 // Allow clients to walk the list of nested loops...
 template <> struct GraphTraits<const Loop *> {
   typedef const Loop *NodeRef;

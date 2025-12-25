@@ -54,6 +54,8 @@ static cl::opt<bool, true>
     VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),
                     cl::Hidden, cl::desc("Verify loop info (time consuming)"));
 
+bool llvm::ExtentLoopLocInfo = false;
+
 //===----------------------------------------------------------------------===//
 // Loop implementation
 //
@@ -633,16 +635,19 @@ DebugLoc Loop::getStartLoc() const { return getLocRange().getStart(); }
 
 Loop::LocRange Loop::getLocRange() const {
   // If we have a debug location in the loop ID, then use it.
+  DebugLoc Start;
+  unsigned LoopSize = 0;
+  unsigned LoopNum = 0;
+  llvm::MDNode *MD = nullptr;
   if (MDNode *LoopID = getLoopID()) {
-    DebugLoc Start;
-    unsigned LoopSize = 0;
-    unsigned LoopNum = 0;
-    auto MD = findOptionMDForLoopID(LoopID, "llvm.loop.distributed4swpl");
-    if (MD) {
-      if (ConstantInt *LoopSizeMD = mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get())) 
-        LoopSize = LoopSizeMD->getZExtValue();
-      if (ConstantInt *LoopNumMD = mdconst::extract_or_null<ConstantInt>(MD->getOperand(2).get())) 
-        LoopNum = LoopNumMD->getZExtValue();
+    if (!ExtentLoopLocInfo) {
+      MD = findOptionMDForLoopID(LoopID, "llvm.loop.distributed4swpl");
+      if (MD) {
+        if (ConstantInt *LoopSizeMD = mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get())) 
+          LoopSize = LoopSizeMD->getZExtValue();
+        if (ConstantInt *LoopNumMD = mdconst::extract_or_null<ConstantInt>(MD->getOperand(2).get())) 
+          LoopNum = LoopNumMD->getZExtValue();
+      }
     }
 
     // We use the first DebugLoc in the header as the start location of the loop
