@@ -1001,9 +1001,11 @@ bool SwplPlanSpec::init(unsigned arg_res_mii, bool &existsPragma) {
     unsigned LoopNum = 0;
     SWPipeliner::ORE->emit([&]() {
       MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, "InitiationInterval", ml->getStartLoc(), ml->getHeader());
-      if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
-        R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
-          << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+      if (ml->getStartLoc().getLoopSize() == 0) {
+        if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
+          R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
+            << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+        }
       }
       R << "This loop tries to schedule with the InitiationInterval=" << ore::NV("InitiationInterval ", ii) << " specified in the pragma.";
       return R;
@@ -1025,9 +1027,11 @@ bool SwplPlanSpec::init(unsigned arg_res_mii, bool &existsPragma) {
     unsigned LoopNum = 0;
     SWPipeliner::ORE->emit([&]() {
       MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, "MaxII", ml->getStartLoc(), ml->getHeader());
-      if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
-        R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
-          << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+      if (ml->getStartLoc().getLoopSize() == 0) {
+        if( getLoopDistributedInfo(lid, LoopDistNum, LoopNum) ) {
+          R << "distributed loop: " << ore::NV("NoOfDistributed", LoopNum)
+            << " of " << ore::NV("NumOfDistributed", LoopDistNum) << " ";
+        }
       }
       R << "Since the calculated min_ii("
         << ore::NV("min_ii", min_ii)

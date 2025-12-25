@@ -142,7 +142,7 @@ public:
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,
                              unsigned Flags, unsigned Isa,
                              unsigned Discriminator,
-                             StringRef FileName) override;
+                             StringRef FileName, unsigned LoopSize = 0, unsigned LoopNum = 0) override;
   void emitDwarfAdvanceLineAddr(int64_t LineDelta, const MCSymbol *LastLabel,
                                 const MCSymbol *Label,
                                 unsigned PointerSize) override;

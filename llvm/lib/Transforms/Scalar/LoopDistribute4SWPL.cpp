@@ -121,6 +121,11 @@ static cl::opt<unsigned> DistributeByLimitInst(
     "distribute4swpl-limit-inst", cl::init(84), cl::Hidden,
     cl::desc("Number of instructions limited by merging adjacent division units"));
 
+static cl::opt<bool> DisableLoopDistributeLoc(
+    "disable-distribute4swpl-loc", cl::Hidden,
+    cl::desc("Disable loop distribute information output for location"),
+    cl::init(false));
+
 STATISTIC(NumLoopsDistributed4SWPL, "Number of loops distributed for SWPL");
 
 namespace {
@@ -453,6 +458,30 @@ public:
   unsigned getSetSize() const {
     return Set.size();
   }
+
+  /// Set loop distribute information in instruction location data
+  void setLoc(int LoopSize, int LoopNum) {
+    if (!DisableLoopDistributeLoc) {
+      // instruction
+      for (auto *Block : getDistributedLoop()->getBlocks()) {
+        for (auto &Inst : *Block) {
+          auto *ILoc = Inst.getDbgLoc();
+          ILoc->setLoopSize(LoopSize);
+          ILoc->setLoopNum(LoopNum);
+        }
+      }
+    }
+  }
+
+  void dumpInstLoc() {
+    for (auto *Block : getDistributedLoop()->getBlocks()) {
+      for (auto &Inst : *Block) {
+        Inst.getDbgLoc()->dump();
+        Inst.dump();
+      }
+    }
+  }
+
 private:
   /// Instructions from OrigLoop selected for this partition.
   InstructionSet Set;
@@ -739,6 +768,15 @@ public:
   void removeUnusedInsts(DenseMap<Instruction*, std::tuple<int, InstPartition*, PHINode*>> LiveOutPMap) {
     for (auto &Partition : PartitionContainer)
       Partition.removeUnusedInsts(LiveOutPMap);
+  }
+
+  void setLoc() {
+    auto LoopSize = getSize();
+    unsigned LoopNum = 1;
+    for (auto &Partition : llvm::drop_begin(llvm::reverse(PartitionContainer))) {
+      Partition.setLoc(LoopSize, LoopNum);
+      LoopNum++;
+    }
   }
 
   /// For each memory pointer, it computes the partitionId the pointer is
@@ -1335,10 +1373,16 @@ public:
     LLVM_DEBUG(dbgs() << "\nAfter removing unused Instrs:\n");
     LLVM_DEBUG(Partitions.printBlocks());
 
+    // Set loop distribute information in instruction location data
+    Partitions.setLoc();
+
     if (LDistVerify) {
       LI->verify(*DT);
       assert(DT->verify(DominatorTree::VerificationLevel::Fast));
     }
+
+    if (DisableLoopDistributeLoc)
+      ExtentLoopLocInfo = true;
 
     ++NumLoopsDistributed4SWPL;
     // Report the success.

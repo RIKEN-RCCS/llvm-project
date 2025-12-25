@@ -1,9 +1,9 @@
 ; RUN: llc -O3 -mcpu=a64fx -pass-remarks=aarch64-swpipeliner -pass-remarks-missed=aarch64-swpipeliner -pass-remarks-analysis=aarch64-swpipeliner -fls -ls-reg-adjustment -o /dev/null %s 2>&1 |& FileCheck %s
 ; CHECK: remark: sample.c:8:3: SVE instruction latency is calculated at 512bit.
-; CHECK: remark: sample.c:8:3: distributed loop: 3 of 3 Adding 0 dependencies as a result of adjusting registers.
-; CHECK: remark: sample.c:8:3: distributed loop: 3 of 3 local scheduling
-; CHECK: remark: sample.c:8:3: distributed loop: 1 of 3 Adding 0 dependencies as a result of adjusting registers.
-; CHECK: remark: sample.c:8:3: distributed loop: 1 of 3 local scheduling
+; CHECK: remark: sample.c:8:3: Adding 0 dependencies as a result of adjusting registers.
+; CHECK: remark: sample.c:8:3: local scheduling
+; CHECK: remark: sample.c:8:3: Adding 0 dependencies as a result of adjusting registers.
+; CHECK: remark: sample.c:8:3: local scheduling
 ; CHECK: remark: sample.c:8:3: distributed loop: 2 of 3 Adding 0 dependencies as a result of adjusting registers.
 ; CHECK: remark: sample.c:8:3: distributed loop: 2 of 3 local scheduling
 

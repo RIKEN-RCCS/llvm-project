@@ -335,6 +335,9 @@ private:
   std::unique_ptr<DiagnosticConsumer> Owner;
   SourceManager *SourceMgr = nullptr;
 
+  unsigned LoopSize = 0;
+  unsigned LoopNum = 0;
+
   /// Mapping information for diagnostics.
   ///
   /// Mapping info is packed into four bits per diagnostic.  The low three
@@ -991,6 +994,11 @@ public:
   inline DiagnosticBuilder Report(unsigned DiagID);
 
   void Report(const StoredDiagnostic &storedDiag);
+
+  unsigned getLoopSize() const { return LoopSize; }
+  unsigned getLoopNum() const { return LoopNum; }
+  void setLoopSize(unsigned s) { LoopSize = s; }
+  void setLoopNum(unsigned n) { LoopNum = n; }
 
 private:
   // This is private state used by DiagnosticBuilder.  We put it here instead of

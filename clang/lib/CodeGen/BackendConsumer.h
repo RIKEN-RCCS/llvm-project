@@ -103,7 +103,8 @@ public:
   const FullSourceLoc getBestLocationFromDebugLoc(
     const llvm::DiagnosticInfoWithLocationBase &D,
     bool &BadDebugInfo, StringRef &Filename,
-    unsigned &Line, unsigned &Column) const;
+    unsigned &Line, unsigned &Column,
+    unsigned &LoopSize, unsigned &LoopNum) const;
 
   std::optional<FullSourceLoc> getFunctionSourceLocation(
     const llvm::Function &F) const;

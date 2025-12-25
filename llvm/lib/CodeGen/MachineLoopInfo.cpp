@@ -126,12 +126,42 @@ MachineBasicBlock *MachineLoop::findLoopControlBlock() const {
   return nullptr;
 }
 
+bool MachineLoop::getLoopDistInfo(unsigned &LoopSize, unsigned &LoopNum) const {
+  MachineBasicBlock *TopMBB = getHeader();
+  MachineFunction::iterator Begin = TopMBB->getParent()->begin();
+  if (TopMBB->getIterator() != Begin) {
+    MachineBasicBlock *PriorMBB = &*std::prev(TopMBB->getIterator());
+    while (contains(PriorMBB)) {
+      TopMBB = PriorMBB;
+      if (TopMBB->getIterator() == Begin)
+        break;
+      PriorMBB = &*std::prev(TopMBB->getIterator());
+    }
+  }
+  for (const auto &I : *TopMBB) {
+    LoopSize = I.getDebugLoc().getLoopSize();
+    if (LoopSize > 0) {
+      LoopNum = I.getDebugLoc().getLoopNum();
+      return true;
+    }
+  }
+  return false;
+}
+
 DebugLoc MachineLoop::getStartLoc() const {
+  unsigned LoopSize = 0;
+  unsigned LoopNum = 0;
+
   // Try the pre-header first.
   if (MachineBasicBlock *PHeadMBB = getLoopPreheader())
     if (const BasicBlock *PHeadBB = PHeadMBB->getBasicBlock())
-      if (DebugLoc DL = PHeadBB->getTerminator()->getDebugLoc())
+      if (DebugLoc DL = PHeadBB->getTerminator()->getDebugLoc()) {
+        if (getLoopDistInfo(LoopSize, LoopNum)) {
+          DL.setLoopSize(LoopSize);
+          DL.setLoopNum(LoopNum);
+        }
         return DL;
+      }
 
   // If we have no pre-header or there are no instructions with debug
   // info in it, try the header.

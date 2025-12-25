@@ -88,7 +88,8 @@ void DiagnosticRenderer::emitDiagnostic(FullSourceLoc Loc,
                                         StringRef Message,
                                         ArrayRef<CharSourceRange> Ranges,
                                         ArrayRef<FixItHint> FixItHints,
-                                        DiagOrStoredDiag D) {
+                                        DiagOrStoredDiag D,
+                                        unsigned LoopSize, unsigned LoopNum) {
   assert(Loc.hasManager() || Loc.isInvalid());
 
   beginDiagnostic(D, Level);
@@ -116,6 +117,8 @@ void DiagnosticRenderer::emitDiagnostic(FullSourceLoc Loc,
     Loc = Loc.getFileLoc();
 
     PresumedLoc PLoc = Loc.getPresumedLoc(DiagOpts->ShowPresumedLoc);
+    PLoc.setLoopSize(LoopSize);
+    PLoc.setLoopNum(LoopNum);
 
     // First, if this diagnostic is not in the main file, print out the
     // "included from" lines.

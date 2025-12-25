@@ -148,6 +148,9 @@ DiagnosticLocation::DiagnosticLocation(const DebugLoc &DL) {
   File = DL->getFile();
   Line = DL->getLine();
   Column = DL->getColumn();
+  LoopSize = DL.getLoopSize();
+  LoopNum = DL.getLoopNum();
+
 }
 
 DiagnosticLocation::DiagnosticLocation(const DISubprogram *SP) {
@@ -179,18 +182,24 @@ std::string DiagnosticInfoWithLocationBase::getAbsolutePath() const {
 
 void DiagnosticInfoWithLocationBase::getLocation(StringRef &RelativePath,
                                                  unsigned &Line,
-                                                 unsigned &Column) const {
+                                                 unsigned &Column,
+                                                 unsigned &LoopSize,
+                                                 unsigned &LoopNum) const {
   RelativePath = Loc.getRelativePath();
   Line = Loc.getLine();
   Column = Loc.getColumn();
+  LoopSize = Loc.getLoopSize();
+  LoopNum = Loc.getLoopNum();
 }
 
 std::string DiagnosticInfoWithLocationBase::getLocationStr() const {
   StringRef Filename("<unknown>");
   unsigned Line = 0;
   unsigned Column = 0;
+  unsigned LoopSize = 0;
+  unsigned LoopNum = 0;
   if (isLocationAvailable())
-    getLocation(Filename, Line, Column);
+    getLocation(Filename, Line, Column, LoopSize, LoopNum);
   return (Filename + ":" + Twine(Line) + ":" + Twine(Column)).str();
 }
 

@@ -154,7 +154,8 @@ void TextDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
 
   TextDiag->emitDiagnostic(
       FullSourceLoc(Info.getLocation(), Info.getSourceManager()), Level,
-      DiagMessageStream.str(), Info.getRanges(), Info.getFixItHints());
+      DiagMessageStream.str(), Info.getRanges(), Info.getFixItHints(), 
+      nullptr, Info.getDiags()->getLoopSize(), Info.getDiags()->getLoopNum());
 
   OS.flush();
 }

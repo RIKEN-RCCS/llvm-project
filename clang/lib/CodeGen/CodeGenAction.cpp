@@ -539,13 +539,13 @@ bool BackendConsumer::ResourceLimitDiagHandler(
 
 const FullSourceLoc BackendConsumer::getBestLocationFromDebugLoc(
     const llvm::DiagnosticInfoWithLocationBase &D, bool &BadDebugInfo,
-    StringRef &Filename, unsigned &Line, unsigned &Column) const {
+    StringRef &Filename, unsigned &Line, unsigned &Column, unsigned &LoopSize, unsigned &LoopNum) const {
   SourceManager &SourceMgr = Context->getSourceManager();
   FileManager &FileMgr = SourceMgr.getFileManager();
   SourceLocation DILoc;
 
   if (D.isLocationAvailable()) {
-    D.getLocation(Filename, Line, Column);
+    D.getLocation(Filename, Line, Column, LoopSize, LoopNum);
     if (Line > 0) {
       auto FE = FileMgr.getOptionalFileRef(Filename);
       if (!FE)
@@ -597,6 +597,7 @@ void BackendConsumer::UnsupportedDiagHandler(
 
   StringRef Filename;
   unsigned Line, Column;
+  unsigned LoopSize, LoopNum;
   bool BadDebugInfo = false;
   FullSourceLoc Loc;
   std::string Msg;
@@ -605,7 +606,7 @@ void BackendConsumer::UnsupportedDiagHandler(
   // Context will be nullptr for IR input files, we will construct the diag
   // message from llvm::DiagnosticInfoUnsupported.
   if (Context != nullptr) {
-    Loc = getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
+    Loc = getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column, LoopSize, LoopNum);
     MsgStream << D.getMessage();
   } else {
     DiagnosticPrinterRawOStream DP(MsgStream);
@@ -634,6 +635,7 @@ void BackendConsumer::EmitOptimizationMessage(
 
   StringRef Filename;
   unsigned Line, Column;
+  unsigned LoopSize, LoopNum;
   bool BadDebugInfo = false;
   FullSourceLoc Loc;
   std::string Msg;
@@ -642,7 +644,7 @@ void BackendConsumer::EmitOptimizationMessage(
   // Context will be nullptr for IR input files, we will construct the remark
   // message from llvm::DiagnosticInfoOptimizationBase.
   if (Context != nullptr) {
-    Loc = getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
+    Loc = getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column, LoopSize, LoopNum);
     MsgStream << D.getMsg();
   } else {
     DiagnosticPrinterRawOStream DP(MsgStream);
@@ -652,6 +654,8 @@ void BackendConsumer::EmitOptimizationMessage(
   if (D.getHotness())
     MsgStream << " (hotness: " << *D.getHotness() << ")";
 
+  Diags.setLoopSize(LoopSize);
+  Diags.setLoopNum(LoopNum);
   Diags.Report(Loc, DiagID) << AddFlagValue(D.getPassName()) << Msg;
 
   if (BadDebugInfo)
@@ -743,9 +747,10 @@ void BackendConsumer::MisExpectDiagHandler(
     const llvm::DiagnosticInfoMisExpect &D) {
   StringRef Filename;
   unsigned Line, Column;
+  unsigned LoopSize, LoopNum;
   bool BadDebugInfo = false;
   FullSourceLoc Loc =
-      getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
+      getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column, LoopSize, LoopNum);
 
   Diags.Report(Loc, diag::warn_profile_data_misexpect) << D.getMsg().str();
 

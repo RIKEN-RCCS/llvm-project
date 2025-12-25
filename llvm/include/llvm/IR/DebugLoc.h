@@ -32,6 +32,8 @@ namespace llvm {
   /// one based on relatively opaque \a MDNode pointers.
   class DebugLoc {
     TrackingMDNodeRef Loc;
+    unsigned LoopSize = 0;
+    unsigned LoopNum = 0;
 
   public:
     DebugLoc() = default;
@@ -116,6 +118,11 @@ namespace llvm {
 
     /// prints source location /path/to/file.exe:line:col @[inlined at]
     void print(raw_ostream &OS) const;
+
+    unsigned getLoopSize() const { return LoopSize; };
+    unsigned getLoopNum() const { return LoopNum; };
+    void setLoopSize(unsigned s) { LoopSize = s; };
+    void setLoopNum(unsigned n) { LoopNum = n; };
   };
 
 } // end namespace llvm

@@ -321,6 +321,8 @@ class DiagnosticLocation {
   DIFile *File = nullptr;
   unsigned Line = 0;
   unsigned Column = 0;
+  unsigned LoopSize = 0;
+  unsigned LoopNum = 0;
 
 public:
   DiagnosticLocation() = default;
@@ -334,6 +336,8 @@ public:
   StringRef getRelativePath() const;
   unsigned getLine() const { return Line; }
   unsigned getColumn() const { return Column; }
+  unsigned getLoopSize() const { return LoopSize; }
+  unsigned getLoopNum() const { return LoopNum; }
 };
 
 /// Common features for diagnostics with an associated location.
@@ -359,7 +363,7 @@ public:
   /// Return location information for this diagnostic in three parts:
   /// the relative source file path, line number and column.
   void getLocation(StringRef &RelativePath, unsigned &Line,
-                   unsigned &Column) const;
+                   unsigned &Column, unsigned &LoopSize, unsigned &LoopNum) const;
 
   /// Return the absolute path tot the file.
   std::string getAbsolutePath() const;

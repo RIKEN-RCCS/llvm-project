@@ -305,7 +305,7 @@ public:
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,
                              unsigned Flags, unsigned Isa,
                              unsigned Discriminator,
-                             StringRef FileName) override;
+                             StringRef FileName, unsigned LoopSize = 0, unsigned LoopNum = 0) override;
   virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
 
   MCSymbol *getDwarfLineTableSymbol(unsigned CUID) override;
@@ -1750,7 +1750,7 @@ void MCAsmStreamer::emitDwarfFile0Directive(
 void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                           unsigned Column, unsigned Flags,
                                           unsigned Isa, unsigned Discriminator,
-                                          StringRef FileName) {
+                                          StringRef FileName, unsigned LoopSize, unsigned LoopNum) {
   // If target doesn't support .loc/.file directive, we need to record the lines
   // same way like we do in object mode.
   if (MAI->isAIX()) {
@@ -1791,6 +1791,8 @@ void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
     OS.PadToColumn(MAI->getCommentColumn());
     OS << MAI->getCommentString() << ' ' << FileName << ':'
        << Line << ':' << Column;
+    if (LoopSize > 0)
+      OS << " ldist(" << LoopNum << '/' << LoopSize << ')';
   }
   EmitEOL();
   this->MCStreamer::emitDwarfLocDirective(FileNo, Line, Column, Flags, Isa,

@@ -307,6 +307,7 @@ class PresumedLoc {
   FileID ID;
   unsigned Line, Col;
   SourceLocation IncludeLoc;
+  unsigned LoopSize = 0, LoopNum = 0;
 
 public:
   PresumedLoc() = default;
@@ -357,6 +358,19 @@ public:
     assert(isValid());
     return IncludeLoc;
   }
+
+  unsigned getLoopSize() const {
+    assert(isValid());
+    return LoopSize;
+  }
+
+  unsigned getLoopNum() const {
+    assert(isValid());
+    return LoopNum;
+  }
+
+  void setLoopSize( unsigned s) { LoopSize = s; }
+  void setLoopNum( unsigned n) { LoopNum = n; }
 };
 
 /// A SourceLocation and its associated SourceManager.

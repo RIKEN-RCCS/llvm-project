@@ -150,6 +150,9 @@ void DebugLoc::print(raw_ostream &OS) const {
   OS << ':' << getLine();
   if (getCol() != 0)
     OS << ':' << getCol();
+  if (getLoopSize() != 0 && getLoopNum() !=0 ) {
+    OS << ": ldist(" << getLoopNum() << '/' << getLoopSize() << ')';
+  }
 
   if (DebugLoc InlinedAtDL = getInlinedAt()) {
     OS << " @[ ";
